@@ -175,3 +175,80 @@
 #### 13) その他
 - association_role
 - created_at, updated_at
+
+---
+
+## tournaments
+
+### 役割
+大会の中心テーブル。大会名・開催日・会場情報（会場名/住所/連絡先）・主催/協賛・配信/告知・エントリー期間・レーン抽選時間・PDF/画像などの公開素材・サイドバー表示用JSONなどを保持する。
+
+### 主キー
+- id (bigint)
+
+### 外部キー（DB上で確認できたもの）
+- tournaments.venue_id -> venues.id
+- game_scores.tournament_id -> tournaments.id
+- stage_settings.tournament_id -> tournaments.id
+- tournament_entries.tournament_id -> tournaments.id
+- tournament_files.tournament_id -> tournaments.id
+- tournament_organizations.tournament_id -> tournaments.id
+
+### カラム分類（迷子防止の“地図”）
+#### 1) 基本
+- name
+- start_date, end_date
+- year
+- created_at, updated_at
+
+#### 2) 会場（入力/表示用）
+- venue_id（venues 参照）
+- venue_name, venue_address, venue_tel, venue_fax
+- extra_venues (json)（追加会場などがあれば）
+
+#### 3) 主催・協賛・関係者
+- host
+- special_sponsor
+- sponsor
+- support
+- supervisor
+- authorized_by
+
+#### 4) 公開情報（配信・告知・リンク）
+- broadcast
+- streaming
+- broadcast_url
+- streaming_url
+- previous_event
+- previous_event_url
+
+#### 5) エントリー・運営スケジュール
+- entry_conditions (text)
+- materials (text)
+- entry_start, entry_end（timestamp）
+- inspection_required (boolean)
+- shift_codes（character varying）
+- shift_draw_open_at, shift_draw_close_at
+- lane_draw_open_at, lane_draw_close_at
+- lane_from, lane_to
+
+#### 6) 区分・公式設定
+- gender（NO: NOT NULL）
+- official_type（NO: NOT NULL）
+- title_category（NO: NOT NULL）
+
+#### 7) 表彰/賞・観客向け
+- prize
+- audience
+- admission_fee (text)
+
+#### 8) 画像・PDF・表示素材（主に公開/フロント用）
+- image_path
+- hero_image_path
+- title_logo_path
+- poster_images (json)
+- gallery_items (json)
+- award_highlights (json)
+- sidebar_schedule (json)
+- simple_result_pdfs (json)
+- result_cards (json)
