@@ -13,7 +13,7 @@
         <a href="{{ route('tournament_results.index') }}" class="btn btn-secondary">大会一覧へ戻る</a>
 
         {{-- 大会に紐づく新規登録（1件 or 複数） --}}
-        <a href="{{ route('tournaments.results.create', $tournament) }}" class="btn btn-success">新規登録</a>
+        <a href="{{ route('tournament_results.create', $tournament) }}" class="btn btn-success">新規登録</a>
 
         {{-- 既存の一括登録画面（クエリで大会IDを渡す互換） --}}
         <a href="{{ route('tournament_results.batchCreate', ['tournament_id' => $tournament->id]) }}"
@@ -73,14 +73,20 @@
                 <td>{{ isset($result->average) ? number_format($result->average, 2) : '-' }}</td>
                 <td>{{ isset($result->prize_money) ? '¥'.number_format($result->prize_money) : '-' }}</td>
                 <td>
+                    {{-- shallowリソースなので編集は results.edit でOK --}}
                     <a href="{{ route('results.edit', $result) }}" class="btn btn-primary btn-sm">編集</a>
-                    <form action="{{ route('tournament_results.destroy', $result->id) }}"
+
+                    @if(auth()->user()?->isAdmin())
+                        {{-- 削除は admin 側に寄せたため、admin.tournaments.results.destroy を使用
+                            パラメータは [tournament_id, result_id] の順。--}}
+                        <form action="{{ route('admin.tournaments.results.destroy', [$result->tournament_id, $result->id]) }}"
                             method="POST" class="d-inline"
                             onsubmit="return confirm('この成績を削除します。よろしいですか？');">
                         @csrf
                         @method('DELETE')
                         <button type="submit" class="btn btn-outline-danger btn-sm">削除</button>
-                    </form>
+                        </form>
+                    @endif
                 </td>
             </tr>
         @endforeach

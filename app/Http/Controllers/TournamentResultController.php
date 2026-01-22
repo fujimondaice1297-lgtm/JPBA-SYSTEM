@@ -115,7 +115,7 @@ class TournamentResultController extends Controller
         TournamentResult::create($data);
 
         return redirect()
-            ->route('tournaments.results.show', (int)$v['tournament_id'])
+            ->route('tournaments.results.index', (int)$v['tournament_id'])
             ->with('success', '大会成績を登録しました。');
     }
 
@@ -134,7 +134,7 @@ class TournamentResultController extends Controller
         // 2) "M/F + 0* + 数字" を標準化して探す（M1278 と M01278 の相互ヒット）
         if (preg_match('/^([MF])\s*0*?(\d+)$/i', $k, $m)) {
             $letter = strtoupper($m[1]);
-            $digits = ltrim($m[2], '0');   // 標準化（頭の0除去）… "1278"
+            $digits = ltrim($m[2], '0');   // 標準化（頭の0除去）
             if ($digits === '') $digits = '0';
 
             // a) 正規化版（M1278）
@@ -143,20 +143,20 @@ class TournamentResultController extends Controller
 
             // b) よくあるゼロ詰め（3～6桁まで面倒見ます）
             foreach ([3,4,5,6] as $len) {
-                $candidate = $letter . str_pad($digits, $len, '0', STR_PAD_LEFT); // M001278 など
+                $candidate = $letter . str_pad($digits, $len, '0', STR_PAD_LEFT);
                 $hit = ProBowler::whereRaw('upper(license_no) = ?', [$candidate])->first();
                 if ($hit) return $hit;
             }
 
-            // c) 最後の手段：DBから同じ先頭文字の候補を取り出して PHP 側でゼロを無視して照合
+            // c) 最後の手段：同じ先頭文字の候補を取り出し、ゼロ無視で照合
             $candidates = ProBowler::whereRaw('upper(left(license_no,1)) = ?', [$letter])->get();
             foreach ($candidates as $p) {
-                $pDigits = preg_replace('/^[MF]0*/i', '', $p->license_no); // M0001278 -> 1278
+                $pDigits = preg_replace('/^[MF]0*/i', '', $p->license_no);
                 if ((string)$pDigits === (string)$digits) return $p;
             }
         }
 
-        // 3) 氏名（漢字・フリガナ）：完全一致 → 前方一致で1件だけならOK
+        // 3) 氏名（漢字・フリガナ）
         $byExact = ProBowler::where('name_kanji', $k)->orWhere('name_kana', $k)->get();
         if ($byExact->count() === 1) return $byExact->first();
         if ($byExact->count() > 1)  return null;
@@ -205,9 +205,8 @@ class TournamentResultController extends Controller
             'ranking_year'          => $request->ranking_year,
         ]);
 
-        // ★ 成績一覧へ戻す（フラッシュ付き）
         return redirect()
-            ->route('tournaments.results.show', (int)$result->tournament_id)
+            ->route('tournaments.results.index', (int)$result->tournament_id)
             ->with('success', '成績を更新しました。');
     }
 
@@ -351,7 +350,7 @@ class TournamentResultController extends Controller
             TournamentResult::create($data);
         }
 
-        return redirect()->route('tournaments.results.show', $tid)
+        return redirect()->route('tournaments.results.index', $tid)
                         ->with('success','一括登録を完了しました。');
     }
 
@@ -412,15 +411,14 @@ class TournamentResultController extends Controller
 
             $payload = [
                 'pro_bowler_id' => $bowlerId,
-                'tournament_id' => $tournament->id,           // ← FKで紐付け
-                'title_name'    => $tournament->name,         // ← 表示用スナップショットは title_name に保存
+                'tournament_id' => $tournament->id,
+                'title_name'    => $tournament->name,
                 'year'          => $r->ranking_year
                                     ?? ($r->year ?? (optional($r->date)->year) ?? $tournament->year),
                 'won_date'      => $r->date ?? null,
                 'source'        => 'sync_from_results',
             ];
 
-            // 同一大会（＝同一 tournament_id）での重複作成を防止
             $unique = [
                 'pro_bowler_id' => $payload['pro_bowler_id'],
                 'tournament_id' => $payload['tournament_id'],
@@ -472,14 +470,16 @@ class TournamentResultController extends Controller
         return $pdf->download('tournament_results.pdf');
     }
 
-    public function destroy(TournamentResult $result)
+    public function destroy(Tournament $tournament, TournamentResult $result)
     {
-        $tid = $result->tournament_id;
+        if (!auth()->user()?->isAdmin()) {
+            abort(403, 'この操作は許可されていません。');
+        }
+
         $result->delete();
 
         return redirect()
-            ->route('tournaments.results.show', $tid)
+            ->route('tournaments.results.index', $tournament) // モデルで渡すとキレイ
             ->with('success', '成績を削除しました。');
     }
-
 }

@@ -2,14 +2,12 @@
 
 @section('content')
 <div class="container">
-  <<div class="d-flex justify-content-between align-items-center mb-3">
+  <div class="d-flex justify-content-between align-items-center mb-3">
     <h2 class="mb-0">大会成績 登録フォーム</h2>
     <div class="d-flex gap-2">
-        <a href="{{ route('athlete.index') }}" class="btn btn-secondary">インデックスへ戻る</a>
-        <a href="{{ route('tournament_results.index') }}" id="btn-cancel" class="btn btn-outline-dark">
-        キャンセル
-        </a>
-        <button type="button" id="btn-bulk" class="btn btn-warning">この大会の一括登録</button>
+      <a href="{{ route('athlete.index') }}" class="btn btn-secondary">インデックスへ戻る</a>
+      <a href="#" id="btn-cancel" class="btn btn-outline-dark">キャンセル</a>
+      <button type="button" id="btn-bulk" class="btn btn-warning" disabled>この大会の一括登録</button>
     </div>
   </div>
 
@@ -17,7 +15,8 @@
     <div class="alert alert-danger"><ul>@foreach ($errors->all() as $e)<li>{{ $e }}</li>@endforeach</ul></div>
   @endif
 
-  <form action="{{ route('tournament_results.store') }}" method="POST">
+  {{-- ★action は JS で大会IDを選んだ時に /tournaments/{id}/results（POST）へ差し替え --}}
+  <form id="result-form" method="POST" action="#">
     @csrf
 
     <div class="mb-3">
@@ -25,7 +24,9 @@
       <select name="tournament_id" class="form-control" required id="tournament_id">
         <option value="">-- 大会を選択 --</option>
         @foreach ($tournaments as $t)
-          <option value="{{ $t->id }}" {{ old('tournament_id') == $t->id ? 'selected' : '' }}>{{ $t->name }}</option>
+          <option value="{{ $t->id }}" {{ old('tournament_id') == $t->id ? 'selected' : '' }}>
+            {{ $t->name }}
+          </option>
         @endforeach
       </select>
     </div>
@@ -53,7 +54,6 @@
              value="{{ old('pro_key') }}">
       <datalist id="pro-candidates">
         @foreach ($players as $p)
-          {{-- 候補値は「ライセンス + スペース + 氏名」両方でヒットできる形式に --}}
           <option value="{{ $p->license_no }} {{ $p->name }}"></option>
           <option value="{{ $p->name }}"></option>
         @endforeach
@@ -87,7 +87,7 @@
       <input type="number" name="ranking_year" class="form-control" value="{{ old('ranking_year', date('Y')) }}" required>
     </div>
 
-    <button type="submit" class="btn btn-primary">登録</button>
+    <button type="submit" class="btn btn-primary" id="btn-submit" disabled>登録</button>
   </form>
 </div>
 @endsection
@@ -95,32 +95,70 @@
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-  const tournamentSelect = document.getElementById('tournament_id');
-  const bulkBtn  = document.getElementById('btn-bulk');
-  const cancelBtn= document.getElementById('btn-cancel');
+  const form       = document.getElementById('result-form');
+  const tournament = document.getElementById('tournament_id');
+  const bulkBtn    = document.getElementById('btn-bulk');
+  const cancelBtn  = document.getElementById('btn-cancel');
+  const submitBtn  = document.getElementById('btn-submit');
 
-  // 一括登録遷移
+  // ★ 既存ルートに依存しないよう URL 文字列テンプレートで構築
+  const postTpl  = @json(url('/tournaments/__ID__/results'));     // POST: store
+  const indexTpl = @json(url('/tournaments/__ID__/results'));     // GET : index（一覧）
+  const tourList = @json(route('tournaments.index'));             // 大会一覧（大会未選択のキャンセル先）
+
+  // 一括登録入口（既存の機能を使う前提。クエリで tournament_id を渡す）
   const bulkBase = @json(route('tournament_results.batchCreate'));
 
-  // キャンセル遷移（大会選択済みならその大会の成績一覧、未選択なら大会一覧）
-  const showTpl  = @json(url('/tournaments/__ID__/results'));
-  const listUrl  = @json(route('tournament_results.index'));
+  function applyTournament(id){
+    if(id){
+      form.action   = postTpl.replace('__ID__', id);
+      cancelBtn.href= indexTpl.replace('__ID__', id);
+      bulkBtn.disabled  = false;
+      submitBtn.disabled= false;
+    }else{
+      form.action   = '#';
+      cancelBtn.href= tourList;
+      bulkBtn.disabled  = true;
+      submitBtn.disabled= true;
+    }
+  }
 
-  const updateBulk = () => { bulkBtn.disabled = !tournamentSelect.value; };
-  const updateCancel = () => {
-    const tid = tournamentSelect.value;
-    cancelBtn.href = tid ? showTpl.replace('__ID__', tid) : listUrl;
-  };
+  // URL が /tournaments/{id}/results/create なら初期大会IDを自動反映
+  (function preselectFromUrl(){
+    const m = location.pathname.match(/\/tournaments\/(\d+)\/results\/create/);
+    if(m){
+      const id = m[1];
+      const opt = tournament.querySelector(`option[value="${id}"]`);
+      if(opt) opt.selected = true;
+      applyTournament(id);
+    }else{
+      applyTournament(tournament.value);
+    }
+  })();
 
-  updateBulk(); updateCancel();
-  tournamentSelect.addEventListener('change', () => { updateBulk(); updateCancel(); });
+  tournament.addEventListener('change', e => applyTournament(e.target.value));
 
   bulkBtn.addEventListener('click', () => {
-    const tid = tournamentSelect.value;
-    if (!tid) { alert('先に大会を選んでください'); return; }
-    window.location.href = `${bulkBase}?tournament_id=${encodeURIComponent(tid)}`;
+    const id = tournament.value;
+    if(!id){ alert('先に大会を選んでください'); return; }
+    window.location.href = `${bulkBase}?tournament_id=${encodeURIComponent(id)}`;
   });
+
+  // プロ／アマの切り替えで入力欄を出し分け
+  const proBlock = document.getElementById('pro_block');
+  const amaBlock = document.getElementById('ama_block');
+  function toggleMode(){
+    const mode = document.querySelector('input[name="player_mode"]:checked')?.value || 'pro';
+    if(mode === 'pro'){
+      proBlock.classList.remove('d-none');
+      amaBlock.classList.add('d-none');
+    }else{
+      proBlock.classList.add('d-none');
+      amaBlock.classList.remove('d-none');
+    }
+  }
+  document.querySelectorAll('input[name="player_mode"]').forEach(r => r.addEventListener('change', toggleMode));
+  toggleMode();
 });
 </script>
 @endpush
-

@@ -135,6 +135,9 @@ class TournamentEntryBallController extends Controller
      */
     public function destroy(TournamentEntry $entry, UsedBall $usedBall)
     {
+        if (!auth()->user()->isAdmin()) {
+            abort(403, 'この操作は許可されていません。');
+        }
         if (! (Auth::user()->is_admin ?? false)) {
             abort(403);
         }

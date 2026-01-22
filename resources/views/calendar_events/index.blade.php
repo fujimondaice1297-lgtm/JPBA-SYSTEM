@@ -25,11 +25,17 @@
           <td>{{ $e->venue }}</td>
           <td class="text-end">
             <a href="{{ route('calendar_events.edit',$e->id) }}" class="btn btn-sm btn-outline-primary">編集</a>
-            <form method="POST" action="{{ route('calendar_events.destroy',$e->id) }}" class="d-inline" onsubmit="return confirm('削除しますか？')">
-              @csrf @method('DELETE')
-              <button class="btn btn-sm btn-outline-danger">削除</button>
-            </form>
+            @if(auth()->user()?->isAdmin())
+              <form method="POST"
+                    action="{{ route('admin.calendar_events.destroy',$e->id) }}"
+                    class="d-inline"
+                    onsubmit="return confirm('削除しますか？')">
+                @csrf @method('DELETE')
+                <button class="btn btn-sm btn-outline-danger">削除</button>
+              </form>
+            @endif
           </td>
+
         </tr>
       @endforeach
     </tbody>

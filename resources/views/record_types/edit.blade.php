@@ -78,10 +78,14 @@
         </div>
     </form>
     <hr class="my-4">
-    <form action="{{ route('record_types.destroy', $recordType->id) }}" method="POST" onsubmit="return confirm('本当にこの記録を削除しますか？');">
-        @csrf
-        @method('DELETE')
-        <button type="submit" class="btn btn-danger">削除</button>
-    </form>
+        @if(auth()->user()?->isAdmin())
+        <form action="{{ route('admin.record_types.destroy', $recordType->id) }}"
+                method="POST"
+                onsubmit="return confirm('本当にこの記録を削除しますか？');">
+            @csrf
+            @method('DELETE')
+            <button type="submit" class="btn btn-danger">削除</button>
+        </form>
+        @endif
 </div>
 @endsection

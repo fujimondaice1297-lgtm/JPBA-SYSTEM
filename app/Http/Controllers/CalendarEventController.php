@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\CalendarEvent;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Carbon;
 
 class CalendarEventController extends Controller
 {
@@ -25,6 +26,9 @@ class CalendarEventController extends Controller
     /** 登録（保存後はその月の月間カレンダーへ：現仕様を維持） */
     public function store(Request $r)
     {
+        // 1) 受け取った日付を "YYYY-MM-DD" に正規化（スラッシュ/全角などを吸収）
+        $this->normalizeDates($r);
+
         $data = $this->validateData($r);
 
         // 同名 × 同開始日の重複を事前ブロック（DBユニーク張ってなくても安全）
@@ -39,7 +43,9 @@ class CalendarEventController extends Controller
 
         $ev = CalendarEvent::create($data);
         [$yy, $mm] = $this->ym($ev->start_date);
-        return redirect()->route('calendar.monthly', [$yy, $mm])
+
+        return redirect()
+            ->route('calendar.monthly', [$yy, $mm])
             ->with('status', 'カレンダーに追加しました');
     }
 
@@ -52,6 +58,8 @@ class CalendarEventController extends Controller
     /** 更新（保存後はその月の月間カレンダーへ） */
     public function update(Request $r, CalendarEvent $event)
     {
+        $this->normalizeDates($r);
+
         $data = $this->validateData($r);
 
         $exists = CalendarEvent::where('title', $data['title'])
@@ -66,13 +74,18 @@ class CalendarEventController extends Controller
 
         $event->update($data);
         [$yy, $mm] = $this->ym($event->start_date);
-        return redirect()->route('calendar.monthly', [$yy, $mm])
+
+        return redirect()
+            ->route('calendar.monthly', [$yy, $mm])
             ->with('status', '更新しました');
     }
 
     /** 削除（一覧へ戻す。必要なら直前月へ飛ばす実装にも変えられる） */
     public function destroy(CalendarEvent $event)
     {
+        if (!auth()->user()->isAdmin()) {
+            abort(403, 'この操作は許可されていません。');
+        }
         $event->delete();
         return back()->with('status', '削除しました');
     }
@@ -120,10 +133,18 @@ class CalendarEventController extends Controller
             while (($row = fgetcsv($fh, 0, $delimiter)) !== false) {
                 if (count($row) === 1 && trim($row[0]) === '') { continue; }
 
+                // 生データ
+                $rawStart = $row[$idx['start_date']] ?? '';
+                $rawEnd   = $row[$idx['end_date']]   ?: ($row[$idx['start_date']] ?? '');
+
+                // 正規化（スラッシュ→ハイフン等）
+                $start = $this->toDateString($rawStart);
+                $end   = $this->toDateString($rawEnd ?: $rawStart);
+
                 $data = [
                     'title'      => $row[$idx['title']] ?? '',
-                    'start_date' => $row[$idx['start_date']] ?? '',
-                    'end_date'   => $row[$idx['end_date']]   ?: ($row[$idx['start_date']] ?? ''),
+                    'start_date' => $start,
+                    'end_date'   => $end,
                     'venue'      => $row[$idx['venue']] ?? null,
                     'kind'       => $row[$idx['kind']]  ?? 'other',
                 ];
@@ -183,5 +204,35 @@ class CalendarEventController extends Controller
     {
         $ts = is_string($date) ? strtotime($date) : strtotime((string)$date);
         return [ (int)date('Y', $ts), (int)date('n', $ts) ];
+    }
+
+    /** 受け取った Request の日付を安全に YYYY-MM-DD へマージ */
+    private function normalizeDates(Request $r): void
+    {
+        $start = $this->toDateString($r->input('start_date'));
+        $end   = $this->toDateString($r->input('end_date'));
+
+        // 終了日未入力なら開始日で補完
+        if (!$end && $start) { $end = $start; }
+
+        $r->merge([
+            'start_date' => $start,
+            'end_date'   => $end,
+        ]);
+    }
+
+    /** "2025/12/14" などを "2025-12-14" に。解釈不可なら null */
+    private function toDateString(?string $v): ?string
+    {
+        if (!$v) return null;
+        $v = trim($v);
+        // 全角スラッシュ・ハイフンを半角に寄せ、スラッシュはハイフン化
+        $v = strtr($v, ['／'=>'/','ー'=>'-','－'=>'-','―'=>'-']);
+        $v = str_replace('/', '-', $v);
+        try {
+            return Carbon::parse($v)->toDateString();
+        } catch (\Throwable $e) {
+            return null;
+        }
     }
 }

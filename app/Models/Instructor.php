@@ -27,7 +27,7 @@ class Instructor extends Model
     ];
 
     protected $casts = [
-        'sex' => 'boolean', 
+        'sex' => 'boolean',
         'is_active' => 'boolean',
         'is_visible' => 'boolean',
         'coach_qualification' => 'boolean',

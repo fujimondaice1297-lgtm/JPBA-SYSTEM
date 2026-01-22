@@ -81,10 +81,14 @@
               @if($row['source']==='registered')
                 {{-- 本登録の編集/削除 --}}
                 <a href="{{ route('registered_balls.edit', $row['_model']->id) }}" class="btn btn-sm btn-outline-primary">編集</a>
-                <form action="{{ route('registered_balls.destroy', $row['_model']->id) }}" method="POST" onsubmit="return confirm('削除しますか？')">
-                  @csrf @method('DELETE')
-                  <button class="btn btn-sm btn-outline-danger">削除</button>
-                </form>
+                 @if(auth()->user()?->isAdmin())
+                    <form action="{{ route('admin.registered_balls.destroy', $row['_model']->id) }}"
+                          method="POST" onsubmit="return confirm('削除しますか？')">
+                        @csrf
+                        @method('DELETE')
+                        <button type="submit" class="btn btn-danger btn-sm">削除</button>
+                    </form>
+                 @endif
               @else
                 {{-- 仮登録（used_balls）→ 本登録へ誘導（項目をある程度プリフィル） --}}
                 <a

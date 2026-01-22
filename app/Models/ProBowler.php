@@ -190,4 +190,11 @@ protected $casts = [
         return $this->hasMany(\App\Models\TournamentEntry::class, 'pro_bowler_id');
     }
 
+    public function groups()
+    {
+        return $this->belongsToMany(\App\Models\Group::class, 'group_members', 'pro_bowler_id', 'group_id')
+                    ->withPivot(['source','assigned_at','expires_at'])
+                    ->withTimestamps();
+    }
+
 }

@@ -15,6 +15,7 @@ class CalendarEvent extends Model
 
     // カラーとラベル（薄い紫）
     public function getColorClassAttribute(): string { return 'bg-manual'; }
+
     public function getKindLabelAttribute(): string
     {
         return match($this->kind){

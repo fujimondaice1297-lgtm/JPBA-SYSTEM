@@ -20,18 +20,20 @@
             <li><a href="{{ route('informations.index') }}">INFORMATION</a></li>
             <li><a href="{{ route('informations.member') }}">会員用INFORMATION</a></li>
             <li><a href="{{ route('pro_bowlers.list') }}">全プロデータ</a></li>
-            <li><a href="#">トーナメントプロデータ</a></li>
-            <li><a href="#">TP登録会受講情報</a></li>
+            <li><a href="{{ route('pro_groups.index') }}">プロボウラーグループ管理</a></li>
+            <li><a href="{{ route('hof.index') }}">日本プロボウリング殿堂</a></li>
+            <li><a href="{{ route('eligibility.evergreen') }}">永久シード一覧</a></li>
+            <li><a href="{{ route('eligibility.a_class.m') }}">男子A級ライセンス</a></li>
+            <li><a href="{{ route('eligibility.a_class.f') }}">女子A級ライセンス</a></li>
             <li><a href="{{ route('tournaments.index') }}">大会情報</a></li>
             <li><a href="{{ route('tournament_results.index') }}">大会成績</a></li>
             <li><a href="{{ route('record_types.index') }}">公認パーフェクト等の記録</a></li>
-            <li><a href="#">プログループ管理</a></li>
             <li><a href="{{ route('instructors.index') }}">認定インストラクター情報</a></li>
             <li><a href="{{ route('approved_balls.index') }}">アブプールボールリスト</a></li>
             <li><a href="{{ route('registered_balls.index') }}">選手登録ボール管理</a></li>
             <li><a href="{{ route('trainings.bulk') }}">講習一括登録</a></li>
-            <li><a href="#">大会別使用ボール登録</a></li>
-            <li><a href="#">トップ</a></li>
+            <li><a href="{{ route('flash_news.index') }}">大会速報ページ</a></li>
+            <li><a href="{{ route('scores.input') }}">大会成績速報入力管理</a></li>
             <li><a href="#">選手マイページ</a></li>
         </ul>
     </aside>
@@ -101,44 +103,44 @@
                 <th>地区</th>
                 <th>性別</th>
                 <th>期別</th>
-                <th>スポーツコーチ</th> {{-- ★追加 --}}
+                <th>会員種別</th> {{-- ★ここをスポーツコーチ→会員種別に変更 --}}
                 </tr>
             </thead>
             <tbody>
                 @foreach ($bowlers as $bowler)
                 <tr data-id="{{ $bowler->id }}">
                     <td>
-                    <a href="{{ route('pro_bowlers.edit', $bowler->id) }}" class="text-decoration-none text-dark">
-                        {{ $bowler->license_no ?? '-' }}
-                    </a>
+                        <a href="{{ route('pro_bowlers.edit', $bowler->id) }}" class="text-decoration-none text-dark">
+                            {{ $bowler->license_no ?? '-' }}
+                        </a>
                     </td>
                     <td>
-                    <a href="{{ route('pro_bowlers.edit', $bowler->id) }}" class="text-decoration-none text-dark">
-                        {{ $bowler->name_kanji ?? '-' }}
-                    </a>
+                        <a href="{{ route('pro_bowlers.edit', $bowler->id) }}" class="text-decoration-none text-dark">
+                            {{ $bowler->name_kanji ?? '-' }}
+                        </a>
                     </td>
                     <td>
-                    <a href="{{ route('pro_bowlers.edit', $bowler->id) }}" class="text-decoration-none text-dark">
-                        {{ $bowler->district->label ?? '-' }}
-                    </a>
+                        <a href="{{ route('pro_bowlers.edit', $bowler->id) }}" class="text-decoration-none text-dark">
+                            {{ $bowler->district->label ?? '-' }}
+                        </a>
                     </td>
                     <td>
-                    <a href="{{ route('pro_bowlers.edit', $bowler->id) }}" class="text-decoration-none text-dark">
-                        @if ($bowler->sex === 1) 男性
-                        @elseif ($bowler->sex === 2) 女性
-                        @else -
-                        @endif
-                    </a>
+                        <a href="{{ route('pro_bowlers.edit', $bowler->id) }}" class="text-decoration-none text-dark">
+                            @if ($bowler->sex === 1) 男性
+                            @elseif ($bowler->sex === 2) 女性
+                            @else -
+                            @endif
+                        </a>
                     </td>
                     <td>
-                    <a href="{{ route('pro_bowlers.edit', $bowler->id) }}" class="text-decoration-none text-dark">
-                        {{ $bowler->kibetsu ? $bowler->kibetsu.'期' : '-' }}
-                    </a>
+                        <a href="{{ route('pro_bowlers.edit', $bowler->id) }}" class="text-decoration-none text-dark">
+                            {{ $bowler->kibetsu ? $bowler->kibetsu.'期' : '-' }}
+                        </a>
                     </td>
-                    <td>
-                    <a href="{{ route('pro_bowlers.edit', $bowler->id) }}" class="text-decoration-none text-dark">
-                        {{ $bowler->sports_coach_label }} {{-- ★ここがミソ（4/3/1の最大だけ） --}}
-                    </a>
+                    <td title="{{ $bowler->membership_type ?? '' }}">
+                        <a href="{{ route('pro_bowlers.edit', $bowler->id) }}" class="text-decoration-none text-dark">
+                            {{ $bowler->membership_type ?? '-' }} {{-- ★そのまま表示 --}}
+                        </a>
                     </td>
                 </tr>
                 @endforeach
@@ -152,7 +154,6 @@
             <p>該当する選手データが見つかりませんでした。</p>
         @endif
         </div>
-
 
     </main>
 </div>

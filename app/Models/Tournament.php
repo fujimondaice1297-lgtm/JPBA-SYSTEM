@@ -25,18 +25,37 @@ class Tournament extends Model
         'authorized_by',
         'broadcast',
         'streaming',
+        'broadcast_url',
+        'streaming_url',
         'prize',
-        'audience',
+        'admission_fee',
+        'spectator_policy',
         'entry_conditions',
         'materials',
         'previous_event',
+        'previous_event_url',
         'image_path',
+        'hero_image_path',
+        'title_logo_path',     // ★ タイトル左ロゴ
+        'poster_images',
         'year',
-        'gender',         
-        'official_type', 
+        'gender',
+        'official_type',
         'entry_start',
         'entry_end',
         'inspection_required',
+        'title_category',
+        'venue_id',
+        'extra_venues',
+
+        // 右サイド・ギャラリー等
+        'sidebar_schedule',     // JSON [{date,label,href}|{separator:true}]
+        'award_highlights',     // JSON [{type,player,game,lane,note,title,photo}]
+        'gallery_items',        // JSON [{photo,title}]
+        'simple_result_pdfs',   // JSON [{file,title}]
+
+        // ★ 新規：大会終了後の「優勝者・トーナメント」カード
+        'result_cards',         // JSON [{title,player,balls,note,url,photo,file}]
     ];
 
     protected $casts = [
@@ -45,6 +64,13 @@ class Tournament extends Model
         'entry_start'=> 'date:Y-m-d',
         'entry_end'  => 'date:Y-m-d',
         'inspection_required' => 'boolean',
+        'poster_images' => 'array',
+        'extra_venues'  => 'array',
+        'sidebar_schedule' => 'array',
+        'award_highlights' => 'array',
+        'gallery_items' => 'array',
+        'simple_result_pdfs' => 'array',
+        'result_cards' => 'array',   // ★ 追加
     ];
 
     public function prizeDistributions()
@@ -57,7 +83,21 @@ class Tournament extends Model
         return $this->hasMany(PointDistribution::class);
     }
 
-    // 表示用ラベル
+    public function venue()
+    {
+        return $this->belongsTo(Venue::class);
+    }
+
+    public function organizations()
+    {
+        return $this->hasMany(TournamentOrganization::class);
+    }
+
+    public function files()
+    {
+        return $this->hasMany(TournamentFile::class);
+    }
+
     public function getGenderLabelAttribute(): string
     {
         return match($this->gender) {
@@ -86,15 +126,14 @@ class Tournament extends Model
 
         static::saving(function ($tournament) {
             if ($tournament->start_date && !$tournament->year) {
-                // casts が効くのでそのまま year が取れる
                 $sd = $tournament->start_date instanceof \DateTimeInterface
                     ? $tournament->start_date
                     : Carbon::parse($tournament->start_date);
                 $tournament->year = $sd->year;
             }
-            // デフォルト保険
             if (!$tournament->gender) $tournament->gender = 'X';
             if (!$tournament->official_type) $tournament->official_type = 'official';
+            if (!$tournament->title_category) $tournament->title_category = 'normal';
         });
     }
 }

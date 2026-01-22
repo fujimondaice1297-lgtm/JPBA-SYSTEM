@@ -563,14 +563,29 @@ editing_id={{ $bowler->id ?? 'new' }}
   </div>
 </form>
 
-@if(isset($bowler))
-  @foreach ($bowler->titles as $t)
-    <form id="title-del-{{ $t->id }}" method="POST" action="{{ route('pro_bowler_titles.destroy', [$bowler->id, $t->id]) }}" class="d-none">
-      @csrf @method('DELETE')
+  @if (isset($bowler))
+    {{-- 削除フォームは管理者だけに用意（admin.付きルート名を使用） --}}
+    @auth
+      @if (auth()->user()->isAdmin())
+        @foreach ($bowler->titles as $t)
+          <form id="title-del-{{ $t->id }}"
+                method="POST"
+                action="{{ route('admin.pro_bowler_titles.destroy', [$bowler->id, $t->id]) }}"
+                class="d-none">
+            @csrf
+            @method('DELETE')
+          </form>
+        @endforeach
+      @endif
+    @endauth
+
+    {{-- 追加フォームは従来どおり（admin.なしの store を使う設計） --}}
+    <form id="title-add-form"
+          method="POST"
+          action="{{ route('pro_bowler_titles.store', $bowler->id) }}"
+          class="d-none">
+      @csrf
     </form>
-  @endforeach
-  <form id="title-add-form" method="POST" action="{{ route('pro_bowler_titles.store', $bowler->id) }}" class="d-none">
-    @csrf
-  </form>
-@endif
+  @endif
+
 @endsection

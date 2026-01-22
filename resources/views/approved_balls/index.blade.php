@@ -11,7 +11,7 @@
             <a href="{{ route('approved_balls.create') }}" class="btn btn-success me-2">+ 新規登録（最大10件）</a>
 
             {{-- ④ CSVインポートボタン --}}
-            <a href="{{ route('approved_balls.import') }}" class="btn btn-outline-secondary me-2">CSVインポート</a>
+            <a href="{{ route('approved_balls.import_form') }}" class="btn btn-outline-secondary me-2">CSVインポート</a>
 
             {{-- ⑤ インデックスへ戻るボタン --}}
             <a href="{{ route('athlete.index') }}" class="btn btn-secondary">インデックスへ戻る</a>
@@ -56,21 +56,24 @@
         @forelse ($balls as $ball)
             <tr>
                 <td>{{ $ball->id }}</td>
-                <td>{{ $ball->release_year }}</td>
+                <td>{{ optional($ball->release_date)->format('Y-m-d') }}</td>
                 <td>{{ $ball->manufacturer }}</td>
                 <td>{{ $ball->name }}</td>
                 <td>{{ $ball->name_kana }}</td>
                 <td>{{ $ball->approved ? '〇' : '' }}</td>
                 <td class="d-flex gap-2">
-                    {{-- ② 編集ボタン --}}
+                    {{-- 編集 --}}
                     <a href="{{ route('approved_balls.edit', $ball->id) }}" class="btn btn-sm btn-outline-primary">編集</a>
 
-                    {{-- ③ 削除ボタン --}}
-                    <form action="{{ route('approved_balls.destroy', $ball->id) }}" method="POST" onsubmit="return confirm('本当に削除しますか？')">
+                    {{-- 削除（adminのみ） --}}
+                    @if(auth()->user()?->isAdmin())
+                        <form action="{{ route('admin.approved_balls.destroy', $ball->id) }}"
+                            method="POST" onsubmit="return confirm('本当に削除しますか？')">
                         @csrf
                         @method('DELETE')
                         <button class="btn btn-sm btn-outline-danger">削除</button>
-                    </form>
+                        </form>
+                    @endif
                 </td>
             </tr>
         @empty

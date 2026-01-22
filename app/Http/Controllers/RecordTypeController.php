@@ -134,6 +134,9 @@ class RecordTypeController extends Controller
 
     public function destroy($id)
     {
+        if (!auth()->user()->isAdmin()) {
+            abort(403, 'この操作は許可されていません。');
+        }
         $recordType = RecordType::findOrFail($id);
         $bowlerId = (int)$recordType->pro_bowler_id;
         $recordType->delete();

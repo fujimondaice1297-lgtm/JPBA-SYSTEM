@@ -6,6 +6,10 @@ use Illuminate\Http\Request;
 use App\Models\ProBowler;
 use App\Models\District;
 use App\Models\Instructor;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Artisan;
 
 class ProBowlerController extends Controller
 {
@@ -83,6 +87,10 @@ class ProBowlerController extends Controller
         $this->authorizeAdmin();
 
         $validated = $request->validate($this->adminRules());
+
+        // 画像保存（自動で /storage リンク作成 or /uploads に直置き）
+        $this->handleUploads($request, null);
+
         $data = $this->buildAdminPayload($request, $validated);
 
         if ($data['mailing_addr_same_as_org'] ?? false) {
@@ -99,11 +107,27 @@ class ProBowlerController extends Controller
             $data['birthdate_public'] = $data['birthdate'];
         }
 
-        $bowler = ProBowler::create($data);
-        $this->syncInstructor($request, $bowler);
+        DB::beginTransaction();
+        try {
+            $bowler = ProBowler::create($data);
+            DB::commit();
+            $this->syncInstructor($request, $bowler);
+        } catch (QueryException $e) {
+            DB::rollBack();
+            $isUniqueViolation = (string)$e->getCode() === '23505';
+            if ($isUniqueViolation) {
+                $bowler = ProBowler::where('license_no', $data['license_no'])->first();
+                if ($bowler) {
+                    $bowler->update($data);
+                    $this->syncInstructor($request, $bowler);
+                    $back = $request->input('return') ?: route('pro_bowlers.list', session('pro_bowlers.last_filters', []));
+                    return redirect()->to($back)->with('success', 'すでに登録済みのため内容を更新しました');
+                }
+            }
+            throw $e;
+        }
 
-        $back = $request->input('return')
-            ?: route('pro_bowlers.list', session('pro_bowlers.last_filters', []));
+        $back = $request->input('return') ?: route('pro_bowlers.list', session('pro_bowlers.last_filters', []));
         return redirect()->to($back)->with('success', '登録完了');
     }
 
@@ -125,8 +149,7 @@ class ProBowlerController extends Controller
     }
 
     /* =========================
-       更新（管理者：全項目 / 選手：自己の“選手編集可能項目”のみ）
-       ※この update は従来どおり（管理ルート向け）。自己更新は updateSelf を使用。
+       更新
     ========================== */
     public function update(Request $request, $id)
     {
@@ -138,6 +161,10 @@ class ProBowlerController extends Controller
 
         if ($isAdmin) {
             $validated = $request->validate($this->adminRules());
+
+            // 画像保存（旧ファイルがローカルなら削除）
+            $this->handleUploads($request, $bowler);
+
             $data = $this->buildAdminPayload($request, $validated);
 
             if ($data['mailing_addr_same_as_org'] ?? false) {
@@ -157,17 +184,15 @@ class ProBowlerController extends Controller
             $bowler->update($data);
             $this->syncInstructor($request, $bowler);
         } else {
-            // 自己更新（プレイヤー）
             return $this->updateSelf($request, $bowler);
         }
 
-        $back = $request->input('return')
-            ?: route('pro_bowlers.list', session('pro_bowlers.last_filters', []));
+        $back = $request->input('return') ?: route('pro_bowlers.list', session('pro_bowlers.last_filters', []));
         return redirect()->to($back)->with('success', '更新完了');
     }
 
     /* =========================
-       一般ユーザー用の自己更新ルート
+       一般ユーザーの自己更新
     ========================== */
     public function updateSelf(Request $request, ProBowler $bowler)
     {
@@ -179,12 +204,9 @@ class ProBowlerController extends Controller
         $payload = [];
         foreach ($this->playerEditableKeys() as $k) {
             switch ($k) {
-                case 'height_cm':
-                    $payload[$k] = $this->intOrNull($request->input($k), 0, 300); break;
-                case 'weight_kg':
-                    $payload[$k] = $this->intOrNull($request->input($k), 0, 400); break;
-                case 'blood_type':
-                    $payload[$k] = $this->normalizeBlood($request->input($k)); break;
+                case 'height_cm':  $payload[$k] = $this->intOrNull($request->input($k), 0, 300); break;
+                case 'weight_kg':  $payload[$k] = $this->intOrNull($request->input($k), 0, 400); break;
+                case 'blood_type': $payload[$k] = $this->normalizeBlood($request->input($k)); break;
                 case 'height_is_public':
                 case 'weight_is_public':
                 case 'blood_type_is_public':
@@ -196,7 +218,6 @@ class ProBowlerController extends Controller
 
         $bowler->update($payload);
 
-        // 自己更新後はマイページ等へ戻す
         return redirect()->route('athlete.index')->with('success', 'プロフィールを更新しました');
     }
 
@@ -270,6 +291,12 @@ class ProBowlerController extends Controller
             'membership_type'    => 'nullable|string|max:255',
             'license_issue_date' => 'nullable|date',
             'phone_home'         => 'nullable|string|max:20',
+
+            // 画像（ここを追加）
+            'public_image_path'    => 'nullable|file|image|max:5120',
+            'profile_image_public' => 'nullable|file|image|max:5120',
+            'qr_code_path'         => 'nullable|file|image|max:5120',
+
             'birthdate'                   => 'nullable|date',
             'birthdate_public'            => 'nullable|date',
             'birthdate_public_hide_year'  => 'sometimes|boolean',
@@ -340,7 +367,6 @@ class ProBowlerController extends Controller
 
     private function playerRules(): array
     {
-        // 選手が触れる項目だけ
         return [
             'height_cm'            => 'nullable|integer|min:0|max:300',
             'height_is_public'     => 'sometimes|boolean',
@@ -408,6 +434,11 @@ class ProBowlerController extends Controller
             'membership_type'    => $validated['membership_type'] ?? null,
             'license_issue_date' => $validated['license_issue_date'] ?? null,
             'phone_home'         => $validated['phone_home'] ?? null,
+
+            // ← ここに handleUploads が request->merge したパスが入る
+            'qr_code_path'       => $request->input('qr_code_path') ?: null,
+            'public_image_path'  => $request->input('public_image_path') ?: null,
+
             'birthdate'          => $this->ymd($request->input('birthdate')),
             'birthdate_public'   => $this->ymd($request->input('birthdate_public')),
             'birthdate_public_hide_year'  => $hideYear,
@@ -494,7 +525,7 @@ class ProBowlerController extends Controller
     }
 
     /* =========================
-       Instructor 同期（store/update 共通）
+       Instructor 同期
     ========================== */
     private function syncInstructor(Request $request, ProBowler $bowler): void
     {
@@ -509,21 +540,79 @@ class ProBowlerController extends Controller
             'license_no'          => $bowler->license_no,
             'name'                => $bowler->name_kanji,
             'name_kana'           => $bowler->name_kana,
-            'sex'                 => ((int)$bowler->sex) === 1,       // true: 男性
+            'sex'                 => ((int)$bowler->sex) === 1,
             'district_id'         => $bowler->district_id,
             'instructor_type'     => 'pro',
             'is_active'           => true,
             'is_visible'          => true,
             'coach_qualification' => ($bowler->school_license_status ?? $request->input('school_license_status')) === '有',
         ];
-        if ($grade !== null) {
-            $payload['grade'] = $grade;
+        if ($grade !== null) $payload['grade'] = $grade;
+
+        Instructor::updateOrCreate(['pro_bowler_id' => $bowler->id], $payload);
+    }
+
+    /* =========================
+       画像アップロード（/storage or /uploads）
+    ========================== */
+    private function handleUploads(Request $request, ?ProBowler $current): void
+    {
+        $useStorageLink = $this->ensurePublicStorageReady();
+
+        // 共通クロージャ：保存してURLを返す
+        $save = function (\Illuminate\Http\UploadedFile $file, string $subdir) use ($useStorageLink): string {
+            if ($useStorageLink) {
+                $p = $file->store($subdir, 'public');            // storage/app/public/...
+                return '/storage/' . $p;                          // ブラウザ公開URL
+            } else {
+                $dir = public_path('uploads/'.$subdir);
+                if (!is_dir($dir)) { @mkdir($dir, 0775, true); }
+                $name = date('Ymd_His').'_'.bin2hex(random_bytes(4)).'.'.$file->getClientOriginalExtension();
+                $file->move($dir, $name);
+                return '/uploads/'.$subdir.'/'.$name;
+            }
+        };
+
+        // プロフィール写真（name="profile_image_public" または "public_image_path"）
+        if ($request->hasFile('profile_image_public') && $request->file('profile_image_public')->isValid()) {
+            $url = $save($request->file('profile_image_public'), 'profiles');
+            if ($current && $current->public_image_path) $this->deleteOldPublicFile($current->public_image_path);
+            $request->merge(['public_image_path' => $url]);
+        } elseif ($request->hasFile('public_image_path') && $request->file('public_image_path')->isValid()) {
+            $url = $save($request->file('public_image_path'), 'profiles');
+            if ($current && $current->public_image_path) $this->deleteOldPublicFile($current->public_image_path);
+            $request->merge(['public_image_path' => $url]);
         }
 
-        Instructor::updateOrCreate(
-            ['pro_bowler_id' => $bowler->id],
-            $payload
-        );
+        // QRコード画像
+        if ($request->hasFile('qr_code_path') && $request->file('qr_code_path')->isValid()) {
+            $url = $save($request->file('qr_code_path'), 'qrs');
+            if ($current && $current->qr_code_path) $this->deleteOldPublicFile($current->qr_code_path);
+            $request->merge(['qr_code_path' => $url]);
+        }
+    }
+
+    private function ensurePublicStorageReady(): bool
+    {
+        $pub = public_path('storage');
+        if (is_link($pub) || is_dir($pub)) return true;
+
+        try { Artisan::call('storage:link'); } catch (\Throwable $e) {}
+        return (is_link($pub) || is_dir($pub));
+    }
+
+    private function deleteOldPublicFile(string $urlOrPath): void
+    {
+        $path = parse_url($urlOrPath, PHP_URL_PATH) ?: $urlOrPath; // '/storage/..' or '/uploads/..'
+        $path = ltrim($path, '/');
+
+        if (str_starts_with($path, 'storage/')) {
+            // /storage/xxx -> disk('public')->delete('xxx')
+            $rel = substr($path, strlen('storage/'));
+            try { Storage::disk('public')->delete($rel); } catch (\Throwable $e) {}
+        } elseif (str_starts_with($path, 'uploads/')) {
+            @unlink(public_path($path));
+        }
     }
 
     /* =========================
@@ -541,7 +630,6 @@ class ProBowlerController extends Controller
         return max($min, min($max, $n));
     }
 
-    // 血液型を A/B/AB/O のいずれかに正規化（それ以外は null）
     private function normalizeBlood(?string $v): ?string
     {
         if ($v === null || $v === '') return null;
@@ -577,9 +665,7 @@ class ProBowlerController extends Controller
     }
 
     private function nullIfBlank($v) {
-        // 前後の空白（半角/全角/ノーブレーク/改行など）をまとめて除去
         $s = preg_replace('/^[\h\v\p{Zs}\p{Zl}\p{Zp}]+|[\h\v\p{Zs}\p{Zl}\p{Zp}]+$/u', '', (string)$v);
         return $s === '' ? null : $s;
     }
-
 }

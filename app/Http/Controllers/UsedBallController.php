@@ -12,19 +12,27 @@ class UsedBallController extends Controller
 {
     public function index(Request $request)
     {
+        $user  = $request->user();
+
         $query = UsedBall::with(['approvedBall', 'proBowler']);
 
-        // 検索：プロボウラーのIDまたは名前
+        // キーワード検索
         if ($request->filled('search')) {
-            $keyword = $request->input('search');
+            $keyword = $request->string('search');
             $query->whereHas('proBowler', function ($q) use ($keyword) {
-                $q->where('id', 'like', "%$keyword%")
-                ->orWhere('name_kanji', 'like', "%$keyword%")
-                ->orWhere('license_no', 'like', "%$keyword%");
+                $q->where('id', 'like', "%{$keyword}%")
+                ->orWhere('name_kanji', 'like', "%{$keyword}%")
+                ->orWhere('license_no', 'like', "%{$keyword}%");
             });
         }
 
-        // ★修正：仮登録（expires_at が NULL）も表示対象に含める
+        // ★ここが肝：role で見える範囲を制限
+        if (!($user->isAdmin() || $user->isEditor())) {
+            // member は自分のボールのみ
+            $query->where('pro_bowler_id', $user->pro_bowler_id);
+        }
+
+        // 仮登録（expires_at が NULL）も含む
         $query->where(function($q){
             $q->whereNull('expires_at')
             ->orWhereDate('expires_at', '>=', today());
@@ -34,6 +42,7 @@ class UsedBallController extends Controller
 
         return view('used_balls.index', compact('usedBalls'));
     }
+
 
     public function create(Request $request)
     {
@@ -102,6 +111,9 @@ class UsedBallController extends Controller
     // 削除処理
     public function destroy(UsedBall $usedBall)
     {
+        if (!auth()->user()->isAdmin()) {
+            abort(403, 'この操作は許可されていません。');
+        }
         $usedBall->delete();
         return back()->with('success', '削除しました');
     }

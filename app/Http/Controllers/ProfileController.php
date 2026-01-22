@@ -42,6 +42,9 @@ class ProfileController extends Controller
      */
     public function destroy(Request $request): RedirectResponse
     {
+        if (!auth()->user()->isAdmin()) {
+            abort(403, 'この操作は許可されていません。');
+        }
         $request->validateWithBag('userDeletion', [
             'password' => ['required', 'current_password'],
         ]);

@@ -147,10 +147,16 @@
                     $ed = $ev->end_date ? \Carbon\Carbon::parse($ev->end_date) : $sd;
                     $period = $sd ? ($sd->equalTo($ed) ? $sd->format('Y/m/d') : $sd->format('Y/m/d').' - '.$ed->format('Y/m/d')) : '';
                     $detailUrl = $isManual ? null : route('tournaments.show', $ev->id);
-                    $badge = $isManual ? '（手入力）' : (
-                        (($ev->official_type ?? 'official') === 'approved') ? '（承認）' :
-                        ((($ev->official_type ?? 'official') === 'other') ? '（その他）' : '（公認）')
-                    );
+
+                    // ★ 表示バッジ（手入力は kind を見て日本語化）
+                    if ($isManual) {
+                        $kind = $ev->kind ?? 'other';
+                        $kindLabel = $kind === 'pro_test' ? 'プロテスト' : ($kind === 'approved' ? '承認大会' : 'その他');
+                        $badge = '（' . $kindLabel . '）';
+                    } else {
+                        $official = $ev->official_type ?? 'official';
+                        $badge = '（' . ($official === 'approved' ? '承認大会' : ($official === 'other' ? 'その他' : '公認')) . '）';
+                    }
                   @endphp
 
                   <div class="small mt-1">

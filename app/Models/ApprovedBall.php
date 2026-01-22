@@ -8,13 +8,12 @@ class ApprovedBall extends Model
 {
     protected $table = 'approved_balls';
 
-    protected $fillable = [
-        'release_year',
-        'manufacturer',
-        'name',
-        'name_kana',
-        'approved', // ← これが抜けてると保存されない
+    protected $fillable = ['id','name','manufacturer','name_kana','approved','release_date'];
+    protected $casts = [
+        'approved'     => 'boolean',
+        'release_date' => 'date', // ← これで $ball->release_date->format() が使える
     ];
+
 
     public function proBowlers()
     {

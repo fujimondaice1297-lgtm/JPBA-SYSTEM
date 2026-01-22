@@ -42,9 +42,13 @@
 </table>
 
 <a href="{{ route('record_types.edit', $recordType->id) }}">編集</a> |
-<form action="{{ route('record_types.destroy', $recordType->id) }}" method="POST" style="display:inline;">
-    @csrf
-    @method('DELETE')
-    <button type="submit" onclick="return confirm('本当に削除しますか？')">削除</button>
-</form> |
+    @if(auth()->user()?->isAdmin())
+    <form action="{{ route('admin.record_types.destroy', $recordType->id) }}"
+            method="POST" style="display:inline;">
+        @csrf
+        @method('DELETE')
+        <button type="submit" onclick="return confirm('本当に削除しますか？')">削除</button>
+    </form>
+    @endif
+
 <a href="{{ route('record_types.index') }}">← 一覧に戻る</a>

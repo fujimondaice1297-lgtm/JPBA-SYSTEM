@@ -23,12 +23,17 @@
                     <td>{{ $pd->rank }}</td>
                     <td>{{ number_format($pd->amount) }} 円</td>
                     <td>
-                        <a href="{{ route('tournaments.prize_distributions.edit', [$tournament->id, $pd->id]) }}" class="btn btn-sm btn-primary">編集</a>
-                        <form action="{{ route('tournaments.prize_distributions.destroy', [$tournament->id, $pd->id]) }}" method="POST" style="display:inline;">
+                        <a href="{{ route('tournaments.prize_distributions.edit', [$tournament->id, $pd->id]) }}"
+                            class="btn btn-sm btn-primary">編集</a>
+
+                        @if(auth()->user()?->isAdmin())
+                            <form action="{{ route('admin.tournaments.prize_distributions.destroy', [$tournament->id, $pd->id]) }}"
+                                method="POST" style="display:inline;">
                             @csrf
                             @method('DELETE')
                             <button class="btn btn-sm btn-danger" onclick="return confirm('本当に削除しますか？')">削除</button>
-                        </form>
+                            </form>
+                        @endif
                     </td>
                 </tr>
             @endforeach

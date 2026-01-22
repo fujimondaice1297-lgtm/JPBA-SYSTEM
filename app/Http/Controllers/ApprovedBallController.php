@@ -26,13 +26,12 @@ class ApprovedBallController extends Controller
         // 明示的に全部のカラムを取得
         $balls = $query->select([
             'id',
-            'release_year',
+            'release_date',
             'manufacturer',
             'name',
             'name_kana',
-            'approved'
-        ])->orderBy('release_year', 'desc')
-        ->paginate(20);
+            'approved',
+        ])->orderBy('release_date', 'desc')->paginate(20);
 
         $manufacturers = ApprovedBall::distinct()
             ->pluck('manufacturer')
@@ -58,15 +57,13 @@ class ApprovedBallController extends Controller
         $ball = ApprovedBall::findOrFail($id);
 
         $validated = $request->validate([
-            'release_year' => 'nullable|digits:4|integer|min:1900|max:' . date('Y'),
+            'release_date' => 'nullable|date|before_or_equal:today',
             'manufacturer' => 'required|string|max:255',
-            'name' => 'required|string|max:255',
-            'name_kana' => 'nullable|string|max:255',
-            'approved' => 'nullable|boolean',
+            'name'         => 'required|string|max:255',
+            'name_kana'    => 'nullable|string|max:255',
+            'approved'     => 'nullable|boolean',
         ]);
-
-        $validated['approved'] = $request->has('approved'); // チェックされてたら true
-
+        $validated['approved'] = $request->has('approved');
         $ball->update($validated);
 
         return redirect()->route('approved_balls.index')->with('success', 'ボール情報を更新しました。');

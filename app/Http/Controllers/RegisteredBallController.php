@@ -15,8 +15,15 @@ class RegisteredBallController extends Controller
 {
     public function index(Request $request)
     {
-        // ===== まずは RegisteredBall（本登録） =====
+        $user = $request->user();
+
+        // ===== 本登録 =====
         $regQ = RegisteredBall::with(['approvedBall', 'proBowler']);
+
+        // ★ 会員は自分だけ（license_no で紐付け）
+        if (!($user->isAdmin() || $user->isEditor())) {
+            $regQ->where('license_no', $user->pro_bowler_license_no);
+        }
 
         if ($request->filled('license_no')) {
             $regQ->where('license_no', 'like', '%' . $request->license_no . '%');
@@ -26,17 +33,15 @@ class RegisteredBallController extends Controller
                 $qq->where('name_kanji', 'like', '%' . $request->name . '%');
             });
         }
-        // 1=あり, 0=なし, 空=両方
         if ($request->has('has_certificate') && $request->has_certificate !== '') {
-            if ($request->has_certificate === '1') {
-                $regQ->whereNotNull('inspection_number');
-            } else {
-                $regQ->whereNull('inspection_number');
-            }
+            $request->has_certificate === '1'
+                ? $regQ->whereNotNull('inspection_number')
+                : $regQ->whereNull('inspection_number');
         }
+
         $regs = $regQ->get()->map(function (RegisteredBall $rb) {
             return [
-                'source'            => 'registered', // 本登録
+                'source'            => 'registered',
                 'id'                => $rb->id,
                 'license_no'        => optional($rb->proBowler)->license_no,
                 'name_kanji'        => optional($rb->proBowler)->name_kanji,
@@ -46,39 +51,34 @@ class RegisteredBallController extends Controller
                 'registered_at'     => $rb->registered_at,
                 'expires_at'        => $rb->expires_at,
                 'inspection_number' => $rb->inspection_number,
-                // 画面用に元モデルも持たせておく（編集リンク等で使用）
                 '_model'            => $rb,
             ];
         });
 
-        // ===== 次に UsedBall（仮登録＝検量証未入力のみを拾う） =====
+        // ===== 仮登録（UsedBall：検量証なしのみ） =====
         $usedQ = UsedBall::with(['approvedBall', 'proBowler'])
-            ->whereNull('inspection_number'); // 仮登録だけ
+            ->whereNull('inspection_number');
+
+        // ★ 会員は自分だけ（pro_bowler_id で絞る）
+        if (!($user->isAdmin() || $user->isEditor())) {
+            $usedQ->where('pro_bowler_id', $user->pro_bowler_id);
+        }
 
         if ($request->filled('license_no')) {
-            // used_balls 側は license_no を pro_bowlers 経由で絞り込み
             $license = $request->license_no;
-            $usedQ->whereHas('proBowler', function ($qq) use ($license) {
-                $qq->where('license_no', 'like', '%' . $license . '%');
-            });
+            $usedQ->whereHas('proBowler', fn($qq) => $qq->where('license_no','like',"%{$license}%"));
         }
         if ($request->filled('name')) {
             $name = $request->name;
-            $usedQ->whereHas('proBowler', function ($qq) use ($name) {
-                $qq->where('name_kanji', 'like', '%' . $name . '%');
-            });
+            $usedQ->whereHas('proBowler', fn($qq) => $qq->where('name_kanji','like',"%{$name}%"));
         }
-        // 検量証フィルタ：1=あり の場合は仮登録は対象外、0=なし の場合だけ含める、空は両方表示（=仮登録も表示）
         if ($request->has('has_certificate') && $request->has_certificate !== '') {
-            if ($request->has_certificate === '1') {
-                $usedQ->whereRaw('1=0'); // 強制的に0件（仮登録は検量証なしのため）
-            } else {
-                // 0 のときはそのまま（検量証なし＝仮登録を表示）
-            }
+            if ($request->has_certificate === '1') $usedQ->whereRaw('1=0');
         }
+
         $useds = $usedQ->get()->map(function (UsedBall $ub) {
             return [
-                'source'            => 'used', // 仮登録
+                'source'            => 'used',
                 'id'                => $ub->id,
                 'license_no'        => optional($ub->proBowler)->license_no,
                 'name_kanji'        => optional($ub->proBowler)->name_kanji,
@@ -86,26 +86,24 @@ class RegisteredBallController extends Controller
                 'ball_name'         => $ub->approvedBall->name ?? '',
                 'serial_number'     => $ub->serial_number,
                 'registered_at'     => $ub->registered_at,
-                'expires_at'        => $ub->expires_at,      // 仮登録は基本 null
-                'inspection_number' => $ub->inspection_number, // 仮登録は null
+                'expires_at'        => $ub->expires_at,
+                'inspection_number' => $ub->inspection_number,
                 '_model'            => $ub,
             ];
         });
 
-        // ===== 結合して新しい順にソート、手動ページネーション =====
-        /** @var \Illuminate\Support\Collection $all */
+        // ===== 結合・ソート・ページネーション =====
         $all = $regs->concat($useds)->sortByDesc(function ($row) {
-            // 日付優先、同日なら「仮→本」より「本→仮」の優先を下げたいなら id で調整
             return sprintf('%s-%09d', optional($row['registered_at'])->format('YmdHis') ?? '00000000000000', $row['id']);
         })->values();
 
-        $perPage  = 20;
-        $page     = (int)($request->input('page', 1));
-        $slice    = $all->slice(($page - 1) * $perPage, $perPage)->values();
-        $balls    = new LengthAwarePaginator($slice, $all->count(), $perPage, $page, [
-            'path'     => $request->url(),
-            'query'    => $request->query(),
-        ]);
+        $perPage = 20;
+        $page = (int) $request->input('page', 1);
+        $slice = $all->slice(($page - 1) * $perPage, $perPage)->values();
+        $balls = new \Illuminate\Pagination\LengthAwarePaginator(
+            $slice, $all->count(), $perPage, $page,
+            ['path' => $request->url(), 'query' => $request->query()]
+        );
 
         return view('registered_balls.index', compact('balls'));
     }
@@ -197,6 +195,9 @@ class RegisteredBallController extends Controller
 
     public function destroy(RegisteredBall $registeredBall)
     {
+        if (!auth()->user()->isAdmin()) {
+            abort(403, 'この操作は許可されていません。');
+        }
         $registeredBall->delete();
         return redirect()->route('registered_balls.index')->with('success', '削除完了');
     }

@@ -28,6 +28,9 @@ class ProBowlerTitleController extends Controller
 
     public function destroy($bowlerId, $titleId)
     {
+        if (!auth()->user()->isAdmin()) {
+            abort(403, 'この操作は許可されていません。');
+        }
         $title = ProBowlerTitle::where('pro_bowler_id', $bowlerId)->findOrFail($titleId);
         $title->delete();
         return back()->with('success', 'タイトルを削除しました');

@@ -20,27 +20,28 @@
 
     <div class="row g-3">
       <div class="col-md-6">
-        <label>ライセンスNo<span class="text-danger">*</span></label>
+        <label id="label-license" class="form-label">ライセンスNo<span class="text-danger">*</span></label>
         <input type="text" name="license_no" class="form-control" value="{{ old('license_no') }}" required>
+        <div class="form-text">プロ：プロライセンス番号／認定：認定番号を入力</div>
       </div>
       <div class="col-md-6">
-        <label>氏名<span class="text-danger">*</span></label>
+        <label class="form-label">氏名<span class="text-danger">*</span></label>
         <input type="text" name="name" class="form-control" value="{{ old('name') }}" required>
       </div>
       <div class="col-md-6">
-        <label>フリガナ</label>
+        <label class="form-label">フリガナ</label>
         <input type="text" name="name_kana" class="form-control" value="{{ old('name_kana') }}">
       </div>
       <div class="col-md-6">
-        <label>性別<span class="text-danger">*</span></label>
+        <label class="form-label">性別<span class="text-danger">*</span></label>
         <select name="sex" class="form-select" required>
           <option value="">選択してください</option>
-          <option value="1" {{ old('sex', $instructor->sex ?? '') == '1' ? 'selected' : '' }}>男性</option>
-          <option value="0" {{ old('sex', $instructor->sex ?? '') == '0' ? 'selected' : '' }}>女性</option>
+          <option value="1" {{ old('sex') == '1' ? 'selected' : '' }}>男性</option>
+          <option value="0" {{ old('sex') == '0' ? 'selected' : '' }}>女性</option>
         </select>
       </div>
       <div class="col-md-6">
-        <label>地区</label>
+        <label class="form-label">地区</label>
         <select name="district_id" class="form-select">
           <option value="">選択してください</option>
           @foreach ($districts as $district)
@@ -49,15 +50,15 @@
         </select>
       </div>
       <div class="col-md-6">
-        <label>インストラクター種別<span class="text-danger">*</span></label>
-        <select name="instructor_type" class="form-select" required>
+        <label class="form-label">インストラクター種別<span class="text-danger">*</span></label>
+        <select name="instructor_type" id="instructor_type" class="form-select" required>
           <option value="">選択してください</option>
           <option value="pro" {{ old('instructor_type') == 'pro' ? 'selected' : '' }}>プロインストラクター</option>
           <option value="certified" {{ old('instructor_type') == 'certified' ? 'selected' : '' }}>認定インストラクター</option>
         </select>
       </div>
       <div class="col-md-6">
-        <label>資格等級<span class="text-danger">*</span></label>
+        <label class="form-label">資格等級<span class="text-danger">*</span></label>
         <select name="grade" class="form-select" required>
           <option value="">選択してください</option>
           @foreach (["C級", "準B級", "B級", "準A級", "A級", "2級", "1級"] as $grade)
@@ -67,7 +68,6 @@
       </div>
     </div>
 
-    {{-- Hidden flags --}}
     <input type="hidden" name="is_active" value="1">
     <input type="hidden" name="is_visible" value="1">
     <input type="hidden" name="coach_qualification" value="0">
@@ -78,4 +78,16 @@
     </div>
   </form>
 </main>
+
+@push('scripts')
+<script>
+  (function(){
+    const sel = document.getElementById('instructor_type');
+    const lbl = document.getElementById('label-license');
+    function sync(){ lbl.textContent = (sel.value === 'certified') ? '認定番号*' : 'ライセンスNo*'; }
+    sel?.addEventListener('change', sync);
+    sync();
+  })();
+</script>
+@endpush
 @endsection

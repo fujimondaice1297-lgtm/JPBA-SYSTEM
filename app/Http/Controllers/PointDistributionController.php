@@ -88,6 +88,9 @@ class PointDistributionController extends Controller
 
     public function destroy(Tournament $tournament, PointDistribution $point_distribution)
     {
+        if (!auth()->user()->isAdmin()) {
+            abort(403, 'この操作は許可されていません。');
+        }
         $point_distribution->delete();
 
         return redirect()->route('tournaments.point_distributions.index', $tournament->id)

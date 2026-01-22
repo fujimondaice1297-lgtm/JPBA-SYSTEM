@@ -7,9 +7,9 @@ use Illuminate\Http\Request;
 use App\Models\Instructor;
 use App\Models\District;
 use App\Models\ProBowler;
-use Barryvdh\DomPDF\Facade\Pdf;
 use Dompdf\Dompdf;
 use Dompdf\Options;
+use Illuminate\Validation\Rule;
 
 class InstructorController extends Controller
 {
@@ -66,14 +66,21 @@ class InstructorController extends Controller
 
     public function store(Request $request)
     {
+        $type = $request->input('instructor_type');
+
         $validated = $request->validate([
-            'license_no' => 'required|unique:instructors,license_no',
-            'name' => 'required|string',
-            'name_kana' => 'nullable|string', 
-            'sex' => 'required|boolean',
-            'district_id' => 'nullable|exists:districts,id',
+            // instructor_type ごとに license_no の重複を禁止
+            'license_no'      => [
+                'required','string',
+                Rule::unique('instructors', 'license_no')
+                    ->where(fn($q) => $q->where('instructor_type', $type))
+            ],
+            'name'            => 'required|string',
+            'name_kana'       => 'nullable|string',
+            'sex'             => 'required|boolean',
+            'district_id'     => 'nullable|exists:districts,id',
             'instructor_type' => 'required|in:pro,certified',
-            'grade' => 'required|string',
+            'grade'           => 'required|string',
         ]);
 
         $instructor = new Instructor($validated);
@@ -101,27 +108,42 @@ class InstructorController extends Controller
     public function update(Request $request, $licenseNo)
     {
         $instructor = Instructor::where('license_no', $licenseNo)->firstOrFail();
+        $type = $request->input('instructor_type', $instructor->instructor_type);
 
-        $instructor->update($request->only([
-            'name',
-            'name_kana',
-            'sex',
-            'district_id',
-            'instructor_type',
-            'grade',
-        ]));
+        $validated = $request->validate([
+            'license_no'      => [
+                'required','string',
+                Rule::unique('instructors', 'license_no')
+                    ->where(fn($q) => $q->where('instructor_type', $type))
+                    ->ignore($instructor->license_no, 'license_no')
+            ],
+            'name'            => 'required|string',
+            'name_kana'       => 'nullable|string',
+            'sex'             => 'required|boolean',
+            'district_id'     => 'nullable|exists:districts,id',
+            'instructor_type' => 'required|in:pro,certified',
+            'grade'           => 'required|string',
+        ]);
+
+        $instructor->fill($validated);
+
+        if ($validated['instructor_type'] === 'pro') {
+            $pro = ProBowler::where('license_no', $validated['license_no'])->first();
+            $instructor->pro_bowler_id = $pro?->id;
+        } else {
+            $instructor->pro_bowler_id = null;
+        }
+
+        $instructor->save();
 
         return redirect()->route('instructors.index')->with('success', '更新完了');
     }
 
     public function exportPdf(Request $request)
     {
-        // 検索処理はそのまま
         $query = Instructor::query()->with('district');
-        // ...検索条件略...
         $instructors = $query->get();
 
-        // Dompdf直書き版
         $options = new Options();
         $options->set('defaultFont', 'ipaexg');
         $dompdf = new Dompdf($options);
@@ -136,6 +158,4 @@ class InstructorController extends Controller
             ->header('Content-Type', 'application/pdf')
             ->header('Content-Disposition', 'attachment; filename="instructors.pdf"');
     }
-
-
 }

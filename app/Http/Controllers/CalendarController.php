@@ -40,17 +40,18 @@ class CalendarController extends Controller
         return count($eventsOfDay) ? 'bg-mixed' : '';
     }
 
-    /** 年間一覧（詳細なし） */
+    /** 年間一覧（大会 + 手入力イベントを月別にまとめて表示） */
     public function annual(?int $year = null)
     {
         $year = (int)($year ?? request('year') ?? now()->year);
 
-        $data = Cache::remember("calendar:annual:$year", 3600, function () use ($year) {
+        // v2 をつけて旧キャッシュと区別
+        $data = Cache::remember("calendar:annual:v2:$year", 3600, function () use ($year) {
             $start = Carbon::create($year, 1, 1)->startOfDay();
             $end   = Carbon::create($year, 12, 31)->endOfDay();
 
             // 大会（この年にかすっていれば対象）
-            $events = Tournament::query()
+            $tournaments = Tournament::query()
                 ->where(function ($q) use ($start, $end) {
                     $q->whereBetween('start_date', [$start, $end])
                       ->orWhereBetween('end_date', [$start, $end])
@@ -65,19 +66,41 @@ class CalendarController extends Controller
                 ->orderBy('start_date')
                 ->get();
 
-            // （必要なら）手入力イベントも混ぜたい場合はここで concat して groupBy のロジックを合わせる
-            // 今回の年間一覧は大会中心なのでそのまま。
+            // 手入力イベント（CalendarEvent）
+            $manuals = CalendarEvent::query()
+                ->where(function ($q) use ($start, $end) {
+                    $q->whereBetween('start_date', [$start, $end])
+                      ->orWhereBetween('end_date', [$start, $end])
+                      ->orWhere(function ($qq) use ($start, $end) {
+                          $qq->where('start_date', '<=', $end)
+                             ->where(function ($q3) use ($start) {
+                                 $q3->whereNull('end_date')
+                                    ->orWhere('end_date', '>=', $start);
+                             });
+                      });
+                })
+                ->orderBy('start_date')
+                ->get();
 
-            $grouped = $events->groupBy(function ($t) {
+            // まとめて月別にグループ化（基準は開始日、無ければ終了日）
+            $all = $tournaments->concat($manuals)
+                ->sortBy(function ($t) {
+                    $s = $this->c($t->start_date);
+                    $e = $this->c($t->end_date);
+                    return ($s ?: $e)?->timestamp ?? PHP_INT_MAX;
+                })
+                ->values();
+
+            $grouped = $all->groupBy(function ($t) {
                 $s = $this->c($t->start_date);
                 $e = $this->c($t->end_date);
                 $base = $s ?: $e;
-                return $base ? $base->month : 0;
+                return $base ? (int)$base->month : 0;
             });
 
             return [
                 'year'    => $year,
-                'grouped' => $grouped,
+                'grouped' => $grouped, // ← 大会も手入力もこの中に入る
             ];
         });
 
@@ -99,14 +122,14 @@ class CalendarController extends Controller
             $events = Tournament::query()
                 ->where(function ($q) use ($start, $end) {
                     $q->whereBetween('start_date', [$start, $end])
-                    ->orWhereBetween('end_date', [$start, $end])
-                    ->orWhere(function ($qq) use ($start, $end) {
-                        $qq->where('start_date', '<=', $end)
-                            ->where(function ($q3) use ($start) {
-                                $q3->whereNull('end_date')
+                      ->orWhereBetween('end_date', [$start, $end])
+                      ->orWhere(function ($qq) use ($start, $end) {
+                          $qq->where('start_date', '<=', $end)
+                             ->where(function ($q3) use ($start) {
+                                 $q3->whereNull('end_date')
                                     ->orWhere('end_date', '>=', $start);
-                            });
-                    });
+                             });
+                      });
                 })
                 ->orderBy('start_date')
                 ->get();
@@ -115,14 +138,14 @@ class CalendarController extends Controller
             $manuals = CalendarEvent::query()
                 ->where(function ($q) use ($start, $end) {
                     $q->whereBetween('start_date', [$start, $end])
-                    ->orWhereBetween('end_date', [$start, $end])
-                    ->orWhere(function ($qq) use ($start, $end) {
-                        $qq->where('start_date', '<=', $end)
-                            ->where(function ($q3) use ($start) {
-                                $q3->whereNull('end_date')
+                      ->orWhereBetween('end_date', [$start, $end])
+                      ->orWhere(function ($qq) use ($start, $end) {
+                          $qq->where('start_date', '<=', $end)
+                             ->where(function ($q3) use ($start) {
+                                 $q3->whereNull('end_date')
                                     ->orWhere('end_date', '>=', $start);
-                            });
-                    });
+                             });
+                      });
                 })
                 ->orderBy('start_date')
                 ->get();
@@ -153,7 +176,7 @@ class CalendarController extends Controller
                 $bgMap[$dateKey] = $this->bgClassForDay($evts);
             }
 
-            // ★ 祝日・六曜を読み込んでビューへ渡す（キー: YYYY-mm-dd）
+            // 祝日・六曜を読み込んでビューへ渡す（キー: YYYY-mm-dd）
             $dayMeta = [];
             $dayRows = CalendarDay::whereBetween('date', [$start, $end])->get();
             foreach ($dayRows as $row) {
@@ -171,7 +194,7 @@ class CalendarController extends Controller
                 'gridEnd'   => $gridEnd,
                 'map'       => $map,
                 'bgMap'     => $bgMap,
-                'dayMeta'   => $dayMeta, // ★ 追加
+                'dayMeta'   => $dayMeta,
             ];
         });
 

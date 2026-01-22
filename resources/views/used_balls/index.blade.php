@@ -2,8 +2,14 @@
 @extends('layouts.app')
 
 @section('content')
+@php $viewer = auth()->user(); @endphp
 <div class="container">
-    <h2>使用ボール 一覧 <small class="text-muted">(管理)</small></h2>
+    <h2>
+        使用ボール 一覧
+        <small class="text-muted">
+            ({{ ($viewer?->isAdmin() || $viewer?->isEditor()) ? '全件（管理）' : '自分のボール' }})
+        </small>
+    </h2>
 
     @if (session('success'))
         <div class="alert alert-success">{{ session('success') }}</div>
@@ -16,13 +22,15 @@
         <a href="{{ route('approved_balls.index') }}" class="btn btn-outline-secondary">承認ボール一覧へ</a>
     </div>
 
-    {{-- 検索フォーム --}}
+    {{-- 検索フォーム（管理者・編集者のみ） --}}
+    @if($viewer?->isAdmin() || $viewer?->isEditor())
     <form method="GET" action="{{ route('used_balls.index') }}" class="mb-3">
         <div class="d-flex gap-2">
             <input type="text" name="search" value="{{ request('search') }}" placeholder="名前・ライセンス番号で検索" class="form-control">
             <button type="submit" class="btn btn-primary">検索</button>
         </div>
     </form>
+    @endif
 
     <div class="mb-3">
         <a href="{{ route('used_balls.create') }}" class="btn btn-outline-primary">＋ 使用ボールを登録</a>
@@ -73,11 +81,15 @@
 
                     <td class="d-flex gap-1">
                         <a href="{{ route('used_balls.edit', $ball->id) }}" class="btn btn-success btn-sm">更新</a>
-                        <form action="{{ route('used_balls.destroy', $ball->id) }}" method="POST" onsubmit="return confirm('削除しますか？')">
+
+                        @if(auth()->user()?->isAdmin())
+                            <form action="{{ route('admin.used_balls.destroy', $ball->id) }}"
+                                method="POST" onsubmit="return confirm('削除しますか？')">
                             @csrf
                             @method('DELETE')
                             <button type="submit" class="btn btn-danger btn-sm">削除</button>
-                        </form>
+                            </form>
+                        @endif
                     </td>
                 </tr>
             @empty

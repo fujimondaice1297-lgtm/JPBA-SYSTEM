@@ -12,11 +12,11 @@
 
 <div class="container">
   <div class="d-flex justify-content-between align-items-center mb-3">
-    <h2>{{ $year }}年 大会一覧</h2>
+    <h2>{{ $year }}年 年間スケジュール</h2>
     <div class="d-flex gap-2">
       @php
         $prevY = $year - 1; $nextY = $year + 1;
-        $years = range($year-3, $year+3); // ざっくり前後3年
+        $years = range($year-3, $year+3);
       @endphp
       <a class="btn btn-outline-secondary btn-sm" href="{{ route('calendar.annual', [$prevY]) }}">← {{ $prevY }}</a>
 
@@ -26,8 +26,6 @@
             <option value="{{ $y }}" {{ $y==$year ? 'selected' : '' }}>{{ $y }}年</option>
           @endforeach
         </select>
-        {{-- GET /calendar?year=2027 → コントローラ側で拾う実装を追加済みにするなら hidden不要
-            そのまま /calendar/2027 にしたいならJSで遷移でもOK --}}
       </form>
 
       <a class="btn btn-outline-secondary btn-sm" href="{{ route('calendar.annual', [$nextY]) }}">{{ $nextY }} →</a>
@@ -47,7 +45,7 @@
     <table class="table table-sm table-striped align-middle mt-2">
       <thead><tr>
         <th style="width:220px;">日程</th>
-        <th>大会名</th>
+        <th>大会名 / イベント名</th>
         <th style="width:100px;">種別</th>
         <th style="width:240px;">会場</th>
       </tr></thead>
@@ -58,8 +56,8 @@
           $isManual = $t instanceof \App\Models\CalendarEvent;
 
           // 表示テキスト
-          $name  = $isManual ? $t->title : $t->name;
-          $venue = $isManual ? $t->venue  : $t->venue_name;
+          $name  = $isManual ? $t->title : ($t->name ?? '-');
+          $venue = $isManual ? ($t->venue ?? null) : ($t->venue_name ?? null);
 
           // 期間表示
           $sd = $t->start_date ? \Carbon\Carbon::parse($t->start_date) : null;
@@ -68,12 +66,12 @@
             ? ($sd->equalTo($ed) ? $sd->format('Y/m/d') : $sd->format('Y/m/d').' - '.$ed->format('Y/m/d'))
             : '—';
 
-          // 種別表示（手入力は kind、Tournament は今は性別列が無いので "—"）
+          // 種別表示
           $kindText = $isManual
-            ? (match($t->kind){ 'pro_test'=>'プロテスト','approved'=>'承認大会', default=>'その他' })
+            ? ($t->kind_label ?? 'その他')  /* ← モデルのアクセサを利用 */
             : '—';
 
-          // 色チップ（gender列が無ければ混合扱い）
+          // 色チップ
           $dotClass = $isManual ? 'dot-manual'
                      : ((property_exists($t,'gender') && $t->gender === 'M') ? 'dot-men'
                      : ((property_exists($t,'gender') && $t->gender === 'F') ? 'dot-women' : 'dot-mixed'));
