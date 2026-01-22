@@ -24,7 +24,6 @@
 - license
 - organization_masters
 - place
-- record_types
 - sexes
 - sponsors
 - stage_settings
@@ -63,6 +62,9 @@
 - pro_bowlers
 - pro_dsp
 - trainings
+
+### 実績/記録系（※マスタではない）
+- record_types
 
 ### プロテスト関連
 - pro_test
@@ -349,7 +351,8 @@
 大会内の「順位→ポイント表」（配点表）を持つテーブル。大会ごとにポイント配分が違う場合に対応。
 
 ### 主キー
-- tournament_id (bigint) ※現状はPK指定なし（DBML/辞書上の扱いは要検討）
+- （現状DB上のPKは未確認/未設定の可能性）
+- 推奨：複合キー (tournament_id, rank)
 
 ### 主要カラム
 - tournament_id（どの大会の配点表か）
@@ -357,7 +360,7 @@
 - point（ポイント：NOT NULL）
 
 ### 注意（設計改善ポイント）
-- PKが `id` ではなく、行構造的には `(tournament_id, rank)` を複合一意にしたい可能性が高い。
+- 行構造的には `(tournament_id, rank)` を複合一意にしたい可能性が高い。
 
 ---
 
@@ -365,6 +368,8 @@
 
 ### 役割
 「プロボウラー試験」の受験者・受験情報を管理する中心テーブル。性別・エリア・ライセンス区分・会場・種別・結果ステータスなどの“参照マスタID”を束ねる。
+
+※あなたの申告どおり、現状は「まだ中身を作成していない（空）」でOK。
 
 ### 主キー
 - id (bigint)
@@ -385,6 +390,14 @@
 - remarks（備考）
 - update_date（更新日時）
 - created_by / updated_by（更新者）
+
+### 注意（超重要）
+- `record_type_id` は bigint（NOT NULL）なので「何かのID参照」を想定している。
+- ただし `record_types` は “個人の実績/履歴” テーブル寄りで、受験者（pro_test）の参照先としては不自然になりやすい。
+- ここは後で必ず整理ポイント：
+  - A案：`pro_test_record_types` のような「受験種別マスタ」を新設してそこを参照
+  - B案：`record_type_id` をやめて `record_type`（文字列）で持つ
+  - C案：既存のどこか別テーブルが本来の参照先（命名だけズレている）
 
 ---
 
@@ -482,16 +495,31 @@
 
 ---
 
-## area
+## sexes
 
 ### 役割
-エリア（地区/地域）マスタ。pro_test.area_id などから参照される想定。
+性別マスタ。`pro_test.sex_id` が参照する想定。
+（`pro_bowlers.sex` も内部的にこのマスタ相当を想定している可能性あり）
 
 ### 主キー
 - id (bigint)
 
 ### 主なカラム
-- name（名称）
+- label（表示名：NOT NULL）
+- update_date / created_by / updated_by
+
+---
+
+## area
+
+### 役割
+エリア（地区/地域）マスタ。`pro_test.area_id` などから参照される想定。
+
+### 主キー
+- id (bigint)
+
+### 主なカラム
+- name（名称：NOT NULL）
 - update_date / created_by / updated_by
 
 ---
@@ -499,27 +527,13 @@
 ## license
 
 ### 役割
-ライセンス種別マスタ（例：会員種別・受験区分など）。pro_test.license_id などから参照される想定。
+ライセンス種別マスタ（例：会員種別・受験区分など）。`pro_test.license_id` などから参照される想定。
 
 ### 主キー
 - id (bigint)
 
 ### 主なカラム
-- name（名称）
-- update_date / created_by / updated_by
-
----
-
-## sexes
-
-### 役割
-性別マスタ。pro_test.sex_id や pro_bowlers.sex などで利用される想定。
-
-### 主キー
-- id (bigint)
-
-### 主なカラム
-- label（表示名）
+- name（名称：NOT NULL）
 - update_date / created_by / updated_by
 
 ---
@@ -527,13 +541,13 @@
 ## kaiin_status
 
 ### 役割
-会員ステータスマスタ（例：現役/退会/休会など想定）。pro_test.kaiin_status_id などから参照される想定。
+会員ステータスマスタ（例：現役/退会/休会など想定）。`pro_test.kaiin_status_id` などから参照される想定。
 
 ### 主キー
 - id (bigint)
 
 ### 主なカラム
-- name（名称）
+- name（名称：NOT NULL）
 - reg_date（登録日時）
 - del_flg（削除/無効フラグ：NOT NULL）
 - update_date / created_by / updated_by
@@ -543,13 +557,13 @@
 ## pro_test_category
 
 ### 役割
-プロテストのカテゴリ/種別マスタ。pro_test.test_category_id が参照する想定。
+プロテストのカテゴリ/種別マスタ。`pro_test.test_category_id` が参照する想定。
 
 ### 主キー
 - id (bigint)
 
 ### 主なカラム
-- name（名称）
+- name（名称：NOT NULL）
 - update_date / created_by / updated_by
 
 ---
@@ -557,13 +571,13 @@
 ## pro_test_venue
 
 ### 役割
-プロテスト会場マスタ。pro_test.test_venue_id が参照する想定。
+プロテスト会場マスタ。`pro_test.test_venue_id` が参照する想定。
 
 ### 主キー
 - id (bigint)
 
 ### 主なカラム
-- name（会場名）
+- name（会場名：NOT NULL）
 - address（住所）
 - phone（電話）
 - update_date / created_by / updated_by
@@ -573,13 +587,13 @@
 ## place
 
 ### 役割
-場所マスタ（出身地/在住地/会場とは別の「場所」用途がありそう）。pro_test.place_id が参照する想定。
+場所マスタ（出身地/在住地/会場とは別の「場所」用途がありそう）。`pro_test.place_id` が参照する想定。
 
 ### 主キー
 - id (bigint)
 
 ### 主なカラム
-- name（名称）
+- name（名称：NOT NULL）
 - address（住所：nullable）
 - phone（電話：nullable）
 - update_date / created_by / updated_by
@@ -590,13 +604,13 @@
 
 ### 役割
 ※名前は “マスタっぽい” が、実体は「個人の実績/履歴」テーブル。
-pro_bowler_id を持ち、大会名・ゲーム数・フレーム数・認定番号・授与日などを記録する。
+`pro_bowler_id` を持ち、大会名・ゲーム数・フレーム数・認定番号・授与日などを記録する。
 
 ### 主キー
 - id (bigint)
 
-### 外部キー（DB上のFKは未確認だが構造上は想定）
-- pro_bowler_id -> pro_bowlers.id
+### 参照（想定）
+- pro_bowler_id -> pro_bowlers.id（FKは未設定/未確認の可能性あり）
 
 ### 主なカラム
 - record_type（実績種別：文字列）
