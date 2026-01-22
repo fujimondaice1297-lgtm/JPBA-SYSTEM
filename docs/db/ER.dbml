@@ -1,127 +1,100 @@
+// Auto-generated from docs/db/data_dictionary.md
+// Generated at: 2026-01-22T10:18:45+01:00
+
 Project JPBA_SYSTEM {
-  database_type: "PostgreSQL"
+  database_type: 'PostgreSQL'
 }
 
-//// Minimal ER from DB foreign keys (18 refs)
-//// Generated from information_schema FK list
+Table area {
+  // columns omitted (see docs/db/columns_by_table.md)
+}
+
+Table kaiin_status {
+  // columns omitted (see docs/db/columns_by_table.md)
+}
+
+Table license {
+  // columns omitted (see docs/db/columns_by_table.md)
+}
+
+Table place {
+  // columns omitted (see docs/db/columns_by_table.md)
+}
 
 Table pro_bowlers {
-  id bigint [pk]
+  // columns omitted (see docs/db/columns_by_table.md)
 }
 
-Table users {
-  id bigint [pk]
-  pro_bowler_id bigint
+Table pro_test {
+  // columns omitted (see docs/db/columns_by_table.md)
 }
 
-Table annual_dues {
-  id bigint [pk]
-  pro_bowler_id bigint
+Table pro_test_category {
+  // columns omitted (see docs/db/columns_by_table.md)
 }
 
-Table tournaments {
-  id bigint [pk]
-  venue_id bigint
+Table pro_test_result_status {
+  // columns omitted (see docs/db/columns_by_table.md)
 }
 
-Table venues {
-  id bigint [pk]
+Table pro_test_schedule {
+  // columns omitted (see docs/db/columns_by_table.md)
 }
 
-Table game_scores {
-  id bigint [pk]
-  tournament_id bigint
+Table pro_test_score {
+  // columns omitted (see docs/db/columns_by_table.md)
 }
 
-Table groups {
-  id bigint [pk]
+Table pro_test_score_summary {
+  // columns omitted (see docs/db/columns_by_table.md)
 }
 
-Table group_mailouts {
-  id bigint [pk]
-  group_id bigint
-  sender_user_id bigint
+Table pro_test_status_log {
+  // columns omitted (see docs/db/columns_by_table.md)
 }
 
-Table group_mail_recipients {
-  id bigint [pk]
-  mailout_id bigint
-  pro_bowler_id bigint
+Table pro_test_venue {
+  // columns omitted (see docs/db/columns_by_table.md)
 }
 
-Table group_members {
-  id bigint [pk]
-  group_id bigint
-  pro_bowler_id bigint
+Table record_types {
+  // columns omitted (see docs/db/columns_by_table.md)
 }
 
-Table hof_inductions {
-  id bigint [pk]
-}
-
-Table hof_photos {
-  id bigint [pk]
-  hof_id bigint
-}
-
-Table stage_settings {
-  id bigint [pk]
-  tournament_id bigint
+Table sexes {
+  // columns omitted (see docs/db/columns_by_table.md)
 }
 
 Table tournament_entries {
-  id bigint [pk]
-  tournament_id bigint
-  pro_bowler_id bigint
-}
-
-Table used_balls {
-  id bigint [pk]
+  // columns omitted (see docs/db/columns_by_table.md)
 }
 
 Table tournament_entry_balls {
-  id bigint [pk]
-  tournament_entry_id bigint
-  used_ball_id bigint
+  // columns omitted (see docs/db/columns_by_table.md)
 }
 
-Table tournament_files {
-  id bigint [pk]
-  tournament_id bigint
+Table tournament_participants {
+  // columns omitted (see docs/db/columns_by_table.md)
 }
 
-Table tournament_organizations {
-  id bigint [pk]
-  tournament_id bigint
+Table tournament_points {
+  // columns omitted (see docs/db/columns_by_table.md)
 }
 
-//// Refs (foreign keys)
+Table tournament_results {
+  // columns omitted (see docs/db/columns_by_table.md)
+}
 
-Ref: annual_dues.pro_bowler_id > pro_bowlers.id
-Ref: game_scores.tournament_id > tournaments.id
+Table tournaments {
+  // columns omitted (see docs/db/columns_by_table.md)
+}
 
-Ref: group_mail_recipients.mailout_id > group_mailouts.id
-Ref: group_mail_recipients.pro_bowler_id > pro_bowlers.id
-
-Ref: group_mailouts.group_id > groups.id
-Ref: group_mailouts.sender_user_id > users.id
-
-Ref: group_members.group_id > groups.id
-Ref: group_members.pro_bowler_id > pro_bowlers.id
-
-Ref: hof_photos.hof_id > hof_inductions.id
-
-Ref: stage_settings.tournament_id > tournaments.id
-
-Ref: tournament_entries.pro_bowler_id > pro_bowlers.id
-Ref: tournament_entries.tournament_id > tournaments.id
-
-Ref: tournament_entry_balls.tournament_entry_id > tournament_entries.id
-Ref: tournament_entry_balls.used_ball_id > used_balls.id
-
-Ref: tournament_files.tournament_id > tournaments.id
-Ref: tournament_organizations.tournament_id > tournaments.id
-
-Ref: tournaments.venue_id > venues.id
-
-Ref: users.pro_bowler_id > pro_bowlers.id
+Ref: pro_test.area_id > area.id
+Ref: pro_test.kaiin_status_id > kaiin_status.id
+Ref: pro_test.license_id > license.id
+Ref: pro_test.place_id > place.id
+Ref: pro_test.sex_id > sexes.id
+Ref: pro_test.test_category_id > pro_test_category.id
+Ref: pro_test.test_result_status_id > pro_test_result_status.id
+Ref: pro_test.test_venue_id > pro_test_venue.id
+Ref: record_types.pro_bowler_id > pro_bowlers.id
