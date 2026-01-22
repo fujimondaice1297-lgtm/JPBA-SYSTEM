@@ -369,16 +369,16 @@
 ### 主キー
 - id (bigint)
 
-### 参照しているマスタ（IDで持つ）
-- sex_id
-- area_id
-- license_id
-- place_id
-- record_type_id
-- kaiin_status_id
-- test_category_id
-- test_venue_id
-- test_result_status_id
+### 参照しているマスタ（想定：FK制約は未定義）
+- sex_id -> sexes.id
+- area_id -> area.id
+- license_id -> license.id
+- place_id -> place.id
+- kaiin_status_id -> kaiin_status.id
+- test_category_id -> pro_test_category.id
+- test_venue_id -> pro_test_venue.id
+- test_result_status_id -> pro_test_result_status.id
+- record_type_id -> （要確認：現状は参照先未確定）
 
 ### 主なカラム
 - name（受験者名）
