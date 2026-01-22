@@ -1,0 +1,3 @@
+Project JPBA_SYSTEM {
+  database_type: "PostgreSQL"
+}
