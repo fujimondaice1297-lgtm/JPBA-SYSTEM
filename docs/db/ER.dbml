@@ -1,3 +1,127 @@
 Project JPBA_SYSTEM {
   database_type: "PostgreSQL"
 }
+
+//// Minimal ER from DB foreign keys (18 refs)
+//// Generated from information_schema FK list
+
+Table pro_bowlers {
+  id bigint [pk]
+}
+
+Table users {
+  id bigint [pk]
+  pro_bowler_id bigint
+}
+
+Table annual_dues {
+  id bigint [pk]
+  pro_bowler_id bigint
+}
+
+Table tournaments {
+  id bigint [pk]
+  venue_id bigint
+}
+
+Table venues {
+  id bigint [pk]
+}
+
+Table game_scores {
+  id bigint [pk]
+  tournament_id bigint
+}
+
+Table groups {
+  id bigint [pk]
+}
+
+Table group_mailouts {
+  id bigint [pk]
+  group_id bigint
+  sender_user_id bigint
+}
+
+Table group_mail_recipients {
+  id bigint [pk]
+  mailout_id bigint
+  pro_bowler_id bigint
+}
+
+Table group_members {
+  id bigint [pk]
+  group_id bigint
+  pro_bowler_id bigint
+}
+
+Table hof_inductions {
+  id bigint [pk]
+}
+
+Table hof_photos {
+  id bigint [pk]
+  hof_id bigint
+}
+
+Table stage_settings {
+  id bigint [pk]
+  tournament_id bigint
+}
+
+Table tournament_entries {
+  id bigint [pk]
+  tournament_id bigint
+  pro_bowler_id bigint
+}
+
+Table used_balls {
+  id bigint [pk]
+}
+
+Table tournament_entry_balls {
+  id bigint [pk]
+  tournament_entry_id bigint
+  used_ball_id bigint
+}
+
+Table tournament_files {
+  id bigint [pk]
+  tournament_id bigint
+}
+
+Table tournament_organizations {
+  id bigint [pk]
+  tournament_id bigint
+}
+
+//// Refs (foreign keys)
+
+Ref: annual_dues.pro_bowler_id > pro_bowlers.id
+Ref: game_scores.tournament_id > tournaments.id
+
+Ref: group_mail_recipients.mailout_id > group_mailouts.id
+Ref: group_mail_recipients.pro_bowler_id > pro_bowlers.id
+
+Ref: group_mailouts.group_id > groups.id
+Ref: group_mailouts.sender_user_id > users.id
+
+Ref: group_members.group_id > groups.id
+Ref: group_members.pro_bowler_id > pro_bowlers.id
+
+Ref: hof_photos.hof_id > hof_inductions.id
+
+Ref: stage_settings.tournament_id > tournaments.id
+
+Ref: tournament_entries.pro_bowler_id > pro_bowlers.id
+Ref: tournament_entries.tournament_id > tournaments.id
+
+Ref: tournament_entry_balls.tournament_entry_id > tournament_entries.id
+Ref: tournament_entry_balls.used_ball_id > used_balls.id
+
+Ref: tournament_files.tournament_id > tournaments.id
+Ref: tournament_organizations.tournament_id > tournaments.id
+
+Ref: tournaments.venue_id > venues.id
+
+Ref: users.pro_bowler_id > pro_bowlers.id
