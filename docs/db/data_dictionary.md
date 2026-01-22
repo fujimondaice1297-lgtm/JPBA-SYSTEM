@@ -359,3 +359,123 @@
 ### 注意（設計改善ポイント）
 - PKが `id` ではなく、行構造的には `(tournament_id, rank)` を複合一意にしたい可能性が高い。
 
+---
+
+## pro_test
+
+### 役割
+「プロボウラー試験」の受験者・受験情報を管理する中心テーブル。性別・エリア・ライセンス区分・会場・種別・結果ステータスなどの“参照マスタID”を束ねる。
+
+### 主キー
+- id (bigint)
+
+### 参照しているマスタ（IDで持つ）
+- sex_id
+- area_id
+- license_id
+- place_id
+- record_type_id
+- kaiin_status_id
+- test_category_id
+- test_venue_id
+- test_result_status_id
+
+### 主なカラム
+- name（受験者名）
+- remarks（備考）
+- update_date（更新日時）
+- created_by / updated_by（更新者）
+
+---
+
+## pro_test_schedule
+
+### 役割
+年度ごとの「プロテスト日程」を管理するテーブル。募集期間・実施期間・会場（venue_id）を持つ。
+
+### 主キー
+- id (bigint)
+
+### 主なカラム
+- year（年度：NOT NULL）
+- schedule_name（名称：NOT NULL）
+- start_date / end_date（実施期間）
+- application_start / application_end（応募期間）
+- venue_id（会場：nullable）
+- update_date / created_by / updated_by
+
+### 注意（設計ポイント）
+- venue_id は nullable なので、会場未確定の状態にも対応できる。
+
+---
+
+## pro_test_status_log
+
+### 役割
+プロテスト受験者（pro_test）に対する「状態遷移ログ」。status_code で状態を持ち、changed_at にいつ変わったかを記録する。
+
+### 主キー
+- id (bigint)
+
+### 外部キー（想定：※DB上のFKは未確認）
+- pro_test_id（pro_test.id を参照する想定）
+
+### 主なカラム
+- pro_test_id（対象）
+- status_code（状態コード：NOT NULL）
+- memo（メモ）
+- changed_at（変更日時）
+- updated_by（更新者）
+
+---
+
+## pro_test_score
+
+### 役割
+プロテスト受験者（pro_test）の「ゲームごとのスコア」を管理する。
+
+### 主キー
+- id (bigint)
+
+### 外部キー（想定：※DB上のFKは未確認）
+- pro_test_id（pro_test.id を参照する想定）
+
+### 主なカラム
+- pro_test_id（誰のスコアか）
+- game_no（何ゲーム目か：NOT NULL）
+- score（スコア：NOT NULL）
+- update_date / created_by / updated_by
+
+---
+
+## pro_test_score_summary
+
+### 役割
+プロテスト受験者（pro_test）のスコアを集計したサマリ。合計・平均・合否を保持する。
+
+### 主キー
+- id (bigint)
+
+### 外部キー（想定：※DB上のFKは未確認）
+- pro_test_id（pro_test.id を参照する想定）
+
+### 主なカラム
+- total_score（合計：nullable）
+- average_score（平均：numeric：nullable）
+- passed_flag（合否：NOT NULL）
+- remarks（備考）
+- update_date / created_by / updated_by
+
+---
+
+## pro_test_result_status
+
+### 役割
+プロテスト結果のステータスマスタ（合格/不合格/保留など）。`pro_test.test_result_status_id` が参照する前提。
+
+### 主キー
+- id (bigint)
+
+### 主なカラム
+- status（ステータス名：NOT NULL）
+- update_date / created_by / updated_by
