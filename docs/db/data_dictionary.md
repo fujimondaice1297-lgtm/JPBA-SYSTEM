@@ -479,3 +479,133 @@
 ### 主なカラム
 - status（ステータス名：NOT NULL）
 - update_date / created_by / updated_by
+
+---
+
+## area
+
+### 役割
+エリア（地区/地域）マスタ。pro_test.area_id などから参照される想定。
+
+### 主キー
+- id (bigint)
+
+### 主なカラム
+- name（名称）
+- update_date / created_by / updated_by
+
+---
+
+## license
+
+### 役割
+ライセンス種別マスタ（例：会員種別・受験区分など）。pro_test.license_id などから参照される想定。
+
+### 主キー
+- id (bigint)
+
+### 主なカラム
+- name（名称）
+- update_date / created_by / updated_by
+
+---
+
+## sexes
+
+### 役割
+性別マスタ。pro_test.sex_id や pro_bowlers.sex などで利用される想定。
+
+### 主キー
+- id (bigint)
+
+### 主なカラム
+- label（表示名）
+- update_date / created_by / updated_by
+
+---
+
+## kaiin_status
+
+### 役割
+会員ステータスマスタ（例：現役/退会/休会など想定）。pro_test.kaiin_status_id などから参照される想定。
+
+### 主キー
+- id (bigint)
+
+### 主なカラム
+- name（名称）
+- reg_date（登録日時）
+- del_flg（削除/無効フラグ：NOT NULL）
+- update_date / created_by / updated_by
+
+---
+
+## pro_test_category
+
+### 役割
+プロテストのカテゴリ/種別マスタ。pro_test.test_category_id が参照する想定。
+
+### 主キー
+- id (bigint)
+
+### 主なカラム
+- name（名称）
+- update_date / created_by / updated_by
+
+---
+
+## pro_test_venue
+
+### 役割
+プロテスト会場マスタ。pro_test.test_venue_id が参照する想定。
+
+### 主キー
+- id (bigint)
+
+### 主なカラム
+- name（会場名）
+- address（住所）
+- phone（電話）
+- update_date / created_by / updated_by
+
+---
+
+## place
+
+### 役割
+場所マスタ（出身地/在住地/会場とは別の「場所」用途がありそう）。pro_test.place_id が参照する想定。
+
+### 主キー
+- id (bigint)
+
+### 主なカラム
+- name（名称）
+- address（住所：nullable）
+- phone（電話：nullable）
+- update_date / created_by / updated_by
+
+---
+
+## record_types
+
+### 役割
+※名前は “マスタっぽい” が、実体は「個人の実績/履歴」テーブル。
+pro_bowler_id を持ち、大会名・ゲーム数・フレーム数・認定番号・授与日などを記録する。
+
+### 主キー
+- id (bigint)
+
+### 外部キー（DB上のFKは未確認だが構造上は想定）
+- pro_bowler_id -> pro_bowlers.id
+
+### 主なカラム
+- record_type（実績種別：文字列）
+- tournament_name（大会名）
+- game_numbers / frame_number（回数・フレーム）
+- awarded_on（授与日）
+- certification_number（認定番号）
+- created_at / updated_at
+
+### 注意（整合性チェックポイント）
+- pro_test.record_type_id（bigint）と、record_types（履歴テーブル）は役割が一致していない可能性が高い。
+  後で「pro_testが本当に参照したいテーブル」はどれかを確認して整理する。
