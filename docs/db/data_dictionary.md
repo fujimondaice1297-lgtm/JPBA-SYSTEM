@@ -252,3 +252,110 @@
 - sidebar_schedule (json)
 - simple_result_pdfs (json)
 - result_cards (json)
+
+---
+
+## tournament_entries
+
+### 役割
+大会への「出場エントリー」を表す中心テーブル。プロボウラーと大会をつなぎ、支払い状況・抽選状況・レーン/シフト割当・チェックイン時刻など運営状態を持つ。
+
+### 主キー
+- id (bigint)
+
+### 外部キー（DB上で確認できたもの）
+- tournament_entries.pro_bowler_id -> pro_bowlers.id
+- tournament_entries.tournament_id -> tournaments.id
+- tournament_entry_balls.tournament_entry_id -> tournament_entries.id
+
+### 主要カラム
+- pro_bowler_id（誰が）
+- tournament_id（どの大会に）
+- status（状態：文字列）
+- is_paid（支払い済み）
+- shift_drawn / lane_drawn（抽選済みフラグ）
+- shift（シフトコード）
+- lane（レーン番号）
+- checked_in_at（チェックイン時刻）
+
+---
+
+## tournament_entry_balls
+
+### 役割
+「エントリー（tournament_entries）」と「使用ボール（used_balls）」を紐づける中間テーブル。
+
+### 主キー
+- id (bigint)
+
+### 外部キー（DB上で確認できたもの）
+- tournament_entry_balls.tournament_entry_id -> tournament_entries.id
+- tournament_entry_balls.used_ball_id -> used_balls.id
+
+### 注意
+- tournament_entry_id / used_ball_id が nullable になっているので、将来的に運用上「必須」にしたいなら NOT NULL + FK を強化する余地あり。
+
+---
+
+## tournament_participants
+
+### 役割
+大会の参加者一覧（または参加枠）を保持するテーブル。`pro_bowler_license_no` を持っているので、現状は「ライセンス番号文字列」で参加者を管理している形。
+
+### 主キー
+- id (bigint)
+
+### 主要カラム
+- tournament_id（どの大会）
+- pro_bowler_license_no（参加者のライセンス番号：文字列）
+
+### 注意（設計改善ポイント）
+- `pro_bowler_id` ではなく `pro_bowler_license_no` で持っているため、
+  - `pro_bowlers` へのFKが貼れない
+  - ライセンス番号変更時の整合性が弱い
+- 将来的には `pro_bowler_id` に寄せる（または両方持つ）方がDB的に強い。
+
+---
+
+## tournament_results
+
+### 役割
+大会結果（順位・ポイント・トータルピン・アベレージ・賞金など）を保持するテーブル。参加者は `pro_bowler_license_no`（文字列）で識別している。
+
+### 主キー
+- id (bigint)
+
+### 主要カラム
+- tournament_id（どの大会）
+- pro_bowler_license_no（誰の結果か：文字列）
+- ranking（順位）
+- points（ポイント）
+- total_pin（合計ピン）
+- games（ゲーム数）
+- average（アベレージ）
+- prize_money（賞金）
+- ranking_year（年度：NOT NULL）
+- amateur_name（アマ参加者名：nullable）
+
+### 注意（設計改善ポイント）
+- `pro_bowler_license_no` で管理しているため、`pro_bowlers` へのFKが貼れない。
+- アマ参加者は `amateur_name` で持てる設計だが、将来は参加者マスタを作るとさらに整理できる。
+
+---
+
+## tournament_points
+
+### 役割
+大会内の「順位→ポイント表」（配点表）を持つテーブル。大会ごとにポイント配分が違う場合に対応。
+
+### 主キー
+- tournament_id (bigint) ※現状はPK指定なし（DBML/辞書上の扱いは要検討）
+
+### 主要カラム
+- tournament_id（どの大会の配点表か）
+- rank（順位：NOT NULL）
+- point（ポイント：NOT NULL）
+
+### 注意（設計改善ポイント）
+- PKが `id` ではなく、行構造的には `(tournament_id, rank)` を複合一意にしたい可能性が高い。
+
