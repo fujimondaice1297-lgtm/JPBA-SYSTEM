@@ -9,3 +9,14 @@
 /.github export-ignore
 CHANGELOG.md export-ignore
 .styleci.yml export-ignore
+
+* text=auto
+
+# Markdown / Docs
+*.md text eol=lf
+
+# PHP
+*.php text eol=lf
+
+# DBML
+*.dbml text eol=lf
