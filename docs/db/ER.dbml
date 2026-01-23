@@ -1,11 +1,27 @@
 // Auto-generated from docs/db/data_dictionary.md
-// Generated at: 2026-01-22T10:18:45+01:00
+// Generated at: 2026-01-23T01:08:31+01:00
 
 Project JPBA_SYSTEM {
   database_type: 'PostgreSQL'
 }
 
+Table annual_dues {
+  // columns omitted (see docs/db/columns_by_table.md)
+}
+
 Table area {
+  // columns omitted (see docs/db/columns_by_table.md)
+}
+
+Table game_scores {
+  // columns omitted (see docs/db/columns_by_table.md)
+}
+
+Table group_mail_recipients {
+  // columns omitted (see docs/db/columns_by_table.md)
+}
+
+Table group_members {
   // columns omitted (see docs/db/columns_by_table.md)
 }
 
@@ -65,11 +81,23 @@ Table sexes {
   // columns omitted (see docs/db/columns_by_table.md)
 }
 
+Table stage_settings {
+  // columns omitted (see docs/db/columns_by_table.md)
+}
+
 Table tournament_entries {
   // columns omitted (see docs/db/columns_by_table.md)
 }
 
 Table tournament_entry_balls {
+  // columns omitted (see docs/db/columns_by_table.md)
+}
+
+Table tournament_files {
+  // columns omitted (see docs/db/columns_by_table.md)
+}
+
+Table tournament_organizations {
   // columns omitted (see docs/db/columns_by_table.md)
 }
 
@@ -89,6 +117,22 @@ Table tournaments {
   // columns omitted (see docs/db/columns_by_table.md)
 }
 
+Table used_balls {
+  // columns omitted (see docs/db/columns_by_table.md)
+}
+
+Table users {
+  // columns omitted (see docs/db/columns_by_table.md)
+}
+
+Table venues {
+  // columns omitted (see docs/db/columns_by_table.md)
+}
+
+Ref: annual_dues.pro_bowler_id > pro_bowlers.id
+Ref: game_scores.tournament_id > tournaments.id
+Ref: group_mail_recipients.pro_bowler_id > pro_bowlers.id
+Ref: group_members.pro_bowler_id > pro_bowlers.id
 Ref: pro_test.area_id > area.id
 Ref: pro_test.kaiin_status_id > kaiin_status.id
 Ref: pro_test.license_id > license.id
@@ -97,4 +141,12 @@ Ref: pro_test.sex_id > sexes.id
 Ref: pro_test.test_category_id > pro_test_category.id
 Ref: pro_test.test_result_status_id > pro_test_result_status.id
 Ref: pro_test.test_venue_id > pro_test_venue.id
-Ref: record_types.pro_bowler_id > pro_bowlers.id
+Ref: stage_settings.tournament_id > tournaments.id
+Ref: tournament_entries.pro_bowler_id > pro_bowlers.id
+Ref: tournament_entries.tournament_id > tournaments.id
+Ref: tournament_entry_balls.tournament_entry_id > tournament_entries.id
+Ref: tournament_entry_balls.used_ball_id > used_balls.id
+Ref: tournament_files.tournament_id > tournaments.id
+Ref: tournament_organizations.tournament_id > tournaments.id
+Ref: tournaments.venue_id > venues.id
+Ref: users.pro_bowler_id > pro_bowlers.id

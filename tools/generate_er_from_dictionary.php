@@ -31,20 +31,9 @@ if ($md === false) {
     exit(1);
 }
 
-/**
- * Parse format assumption in data_dictionary.md:
- *
- * ## table_name
- * ### 主キー
- * - id (bigint)
- *
- * ### 参照しているマスタ
- * - sex_id -> sexes.id
- * - area_id -> area.id
- * ...
- */
-
-// 1) Collect tables (## table_name)
+// -------------------------
+// 1) Collect tables from headings: "## table_name"
+// -------------------------
 $tables = [];
 if (preg_match_all('/^##\s+([a-zA-Z0-9_]+)\s*$/m', $md, $m)) {
     foreach ($m[1] as $t) {
@@ -52,31 +41,81 @@ if (preg_match_all('/^##\s+([a-zA-Z0-9_]+)\s*$/m', $md, $m)) {
     }
 }
 
-// 2) Collect references inside each table section
-//    We'll split by "## " headings.
+// Helper: ensure table exists in $tables
+$ensureTable = function(string $t) use (&$tables): void {
+    if ($t === '') return;
+    if (!isset($tables[$t])) {
+        $tables[$t] = ['refs' => []]; // auto-add (even if no section exists)
+    }
+};
+
+// -------------------------
+// 2) Parse references from ANY section lines like:
+//    A) "- col -> table.col"
+//    B) "- table.col -> table.col"
+// -------------------------
+$refs = [];
+
+// Split by headings "## " to keep context (not strictly required)
 $sections = preg_split('/^##\s+/m', $md);
 foreach ($sections as $sec) {
     $sec = trim($sec);
     if ($sec === '') continue;
 
-    // first token is table name until newline
+    // Determine section table name (first line until newline)
     $lines = preg_split("/\r\n|\n|\r/", $sec);
-    $tableName = trim($lines[0] ?? '');
-    if ($tableName === '' || !isset($tables[$tableName])) continue;
+    $sectionTable = trim($lines[0] ?? '');
 
-    // find "- xxx -> yyy.zzz" lines
-    if (preg_match_all('/^\s*-\s*([a-zA-Z0-9_]+)\s*->\s*([a-zA-Z0-9_]+)\.([a-zA-Z0-9_]+)\s*$/m', $sec, $rm)) {
-        $count = count($rm[1]);
-        for ($i = 0; $i < $count; $i++) {
-            $fromCol = $rm[1][$i];
-            $toTable = $rm[2][$i];
-            $toCol   = $rm[3][$i];
-            $tables[$tableName]['refs'][] = [$fromCol, $toTable, $toCol];
+    // Match BOTH formats. We read line-by-line.
+    foreach ($lines as $line) {
+        $line = trim($line);
+
+        // Only lines beginning with "-" are considered
+        if (!preg_match('/^\-\s+/', $line)) continue;
+
+        // Remove leading "- "
+        $body = preg_replace('/^\-\s+/', '', $line);
+
+        // Format B: fromTable.fromCol -> toTable.toCol
+        if (preg_match('/^([a-zA-Z0-9_]+)\.([a-zA-Z0-9_]+)\s*->\s*([a-zA-Z0-9_]+)\.([a-zA-Z0-9_]+)\s*$/', $body, $rm)) {
+            $fromTable = $rm[1];
+            $fromCol   = $rm[2];
+            $toTable   = $rm[3];
+            $toCol     = $rm[4];
+
+            $ensureTable($fromTable);
+            $ensureTable($toTable);
+
+            $key = "{$fromTable}.{$fromCol}>{$toTable}.{$toCol}";
+            $refs[$key] = [$fromTable, $fromCol, $toTable, $toCol];
+            continue;
+        }
+
+        // Format A: fromCol -> toTable.toCol
+        if (preg_match('/^([a-zA-Z0-9_]+)\s*->\s*([a-zA-Z0-9_]+)\.([a-zA-Z0-9_]+)\s*$/', $body, $rm)) {
+            $fromCol = $rm[1];
+            $toTable = $rm[2];
+            $toCol   = $rm[3];
+
+            // If section table is known, use it; otherwise we can't place it.
+            if ($sectionTable === '') {
+                continue;
+            }
+            $fromTable = $sectionTable;
+
+            $ensureTable($fromTable);
+            $ensureTable($toTable);
+
+            $key = "{$fromTable}.{$fromCol}>{$toTable}.{$toCol}";
+            $refs[$key] = [$fromTable, $fromCol, $toTable, $toCol];
+            continue;
         }
     }
 }
 
+// -------------------------
 // 3) Build DBML
+// -------------------------
 $out = [];
 $out[] = "// Auto-generated from docs/db/data_dictionary.md";
 $out[] = "// Generated at: " . date('c');
@@ -89,7 +128,7 @@ $out[] = "";
 $allTableNames = array_keys($tables);
 sort($allTableNames);
 
-// Minimal Table blocks (we won't enumerate columns here; refs are the priority)
+// Minimal Table blocks (columns are omitted)
 foreach ($allTableNames as $t) {
     $out[] = "Table {$t} {";
     $out[] = "  // columns omitted (see docs/db/columns_by_table.md)";
@@ -97,17 +136,10 @@ foreach ($allTableNames as $t) {
     $out[] = "";
 }
 
-// Refs
+// Refs (sorted, de-duplicated)
 $refLines = [];
-foreach ($allTableNames as $fromTable) {
-    foreach ($tables[$fromTable]['refs'] as [$fromCol, $toTable, $toCol]) {
-        // Only output if target table exists in doc; if not, still output but mark comment
-        $comment = '';
-        if (!isset($tables[$toTable])) {
-            $comment = " // NOTE: target table '{$toTable}' not defined in data_dictionary.md";
-        }
-        $refLines[] = "Ref: {$fromTable}.{$fromCol} > {$toTable}.{$toCol}{$comment}";
-    }
+foreach ($refs as [$fromTable, $fromCol, $toTable, $toCol]) {
+    $refLines[] = "Ref: {$fromTable}.{$fromCol} > {$toTable}.{$toCol}";
 }
 sort($refLines);
 
