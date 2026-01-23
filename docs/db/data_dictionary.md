@@ -178,8 +178,10 @@
 - association_role
 - created_at, updated_at
 
----
+### 外部キー（自動反映：refs_missing.md）
+- pro_bowlers.district_id -> districts.id
 
+---
 ## tournaments
 
 ### 役割
@@ -317,8 +319,10 @@
   - ライセンス番号変更時の整合性が弱い
 - 将来的には `pro_bowler_id` に寄せる（または両方持つ）方がDB的に強い。
 
----
+### 外部キー（自動反映：refs_missing.md）
+- tournament_participants.tournament_id -> tournaments.id
 
+---
 ## tournament_results
 
 ### 役割
@@ -343,8 +347,10 @@
 - `pro_bowler_license_no` で管理しているため、`pro_bowlers` へのFKが貼れない。
 - アマ参加者は `amateur_name` で持てる設計だが、将来は参加者マスタを作るとさらに整理できる。
 
----
+### 外部キー（自動反映：refs_missing.md）
+- tournament_results.tournament_id -> tournaments.id
 
+---
 ## tournament_points
 
 ### 役割
@@ -362,8 +368,10 @@
 ### 注意（設計改善ポイント）
 - 行構造的には `(tournament_id, rank)` を複合一意にしたい可能性が高い。
 
----
+### 外部キー（自動反映：refs_missing.md）
+- tournament_points.tournament_id -> tournaments.id
 
+---
 ## pro_test
 
 ### 役割
@@ -420,8 +428,10 @@
 ### 注意（設計ポイント）
 - venue_id は nullable なので、会場未確定の状態にも対応できる。
 
----
+### 外部キー（自動反映：refs_missing.md）
+- pro_test_schedule.venue_id -> venues.id
 
+---
 ## pro_test_status_log
 
 ### 役割
@@ -430,7 +440,9 @@
 ### 主キー
 - id (bigint)
 
-### 外部キー（想定：※DB上のFKは未確認）
+### 外部キー（想定：※DB上のFKは未確認）
+- pro_test_status_log.pro_test_id -> pro_test.id
+
 - pro_test_id（pro_test.id を参照する想定）
 
 ### 主なカラム
@@ -450,7 +462,9 @@
 ### 主キー
 - id (bigint)
 
-### 外部キー（想定：※DB上のFKは未確認）
+### 外部キー（想定：※DB上のFKは未確認）
+- pro_test_score.pro_test_id -> pro_test.id
+
 - pro_test_id（pro_test.id を参照する想定）
 
 ### 主なカラム
@@ -469,7 +483,9 @@
 ### 主キー
 - id (bigint)
 
-### 外部キー（想定：※DB上のFKは未確認）
+### 外部キー（想定：※DB上のFKは未確認）
+- pro_test_score_summary.pro_test_id -> pro_test.id
+
 - pro_test_id（pro_test.id を参照する想定）
 
 ### 主なカラム
@@ -623,3 +639,131 @@
 ### 注意（整合性チェックポイント）
 - pro_test.record_type_id（bigint）と、record_types（履歴テーブル）は役割が一致していない可能性が高い。
   後で「pro_testが本当に参照したいテーブル」はどれかを確認して整理する。
+### 外部キー（自動反映：refs_missing.md）
+- record_types.pro_bowler_id -> pro_bowlers.id
+
+---
+## approved_ball_pro_bowler
+
+### 外部キー（自動反映：refs_missing.md）
+- approved_ball_pro_bowler.approved_ball_id -> approved_balls.id
+---
+
+## group_mailouts
+
+### 外部キー（自動反映：refs_missing.md）
+- group_mailouts.group_id -> groups.id
+- group_mailouts.sender_user_id -> users.id
+---
+
+## group_members
+
+### 外部キー（自動反映：refs_missing.md）
+- group_members.group_id -> groups.id
+---
+
+## instructors
+
+### 外部キー（自動反映：refs_missing.md）
+- instructors.pro_bowler_id -> pro_bowlers.id
+- instructors.district_id -> districts.id
+---
+
+## media_publications
+
+### 外部キー（自動反映：refs_missing.md）
+- media_publications.tournament_id -> tournaments.id
+---
+
+## point_distributions
+
+### 外部キー（自動反映：refs_missing.md）
+- point_distributions.tournament_id -> tournaments.id
+---
+
+## prize_distributions
+
+### 外部キー（自動反映：refs_missing.md）
+- prize_distributions.tournament_id -> tournaments.id
+---
+
+## pro_bowler_biographies
+
+### 外部キー（自動反映：refs_missing.md）
+- pro_bowler_biographies.pro_bowler_id -> pro_bowlers.id
+---
+
+## pro_bowler_instructor_info
+
+### 外部キー（自動反映：refs_missing.md）
+- pro_bowler_instructor_info.pro_bowler_id -> pro_bowlers.id
+---
+
+## pro_bowler_links
+
+### 外部キー（自動反映：refs_missing.md）
+- pro_bowler_links.pro_bowler_id -> pro_bowlers.id
+---
+
+## pro_bowler_profiles
+
+### 外部キー（自動反映：refs_missing.md）
+- pro_bowler_profiles.pro_bowler_id -> pro_bowlers.id
+---
+
+## pro_bowler_sponsors
+
+### 外部キー（自動反映：refs_missing.md）
+- pro_bowler_sponsors.pro_bowler_id -> pro_bowlers.id
+---
+
+## pro_bowler_titles
+
+### 外部キー（自動反映：refs_missing.md）
+- pro_bowler_titles.pro_bowler_id -> pro_bowlers.id
+- pro_bowler_titles.tournament_id -> tournaments.id
+---
+
+## pro_bowler_trainings
+
+### 外部キー（自動反映：refs_missing.md）
+- pro_bowler_trainings.pro_bowler_id -> pro_bowlers.id
+- pro_bowler_trainings.training_id -> trainings.id
+---
+
+## pro_test_attachment
+
+### 外部キー（自動反映：refs_missing.md）
+- pro_test_attachment.pro_test_id -> pro_test.id
+---
+
+## pro_test_comment
+
+### 外部キー（自動反映：refs_missing.md）
+- pro_test_comment.pro_test_id -> pro_test.id
+---
+
+## registered_balls
+
+### 外部キー（自動反映：refs_missing.md）
+- registered_balls.approved_ball_id -> approved_balls.id
+---
+
+## sessions
+
+### 外部キー（自動反映：refs_missing.md）
+- sessions.user_id -> users.id
+---
+
+## tournament_awards
+
+### 外部キー（自動反映：refs_missing.md）
+- tournament_awards.tournament_id -> tournaments.id
+---
+
+## used_balls
+
+### 外部キー（自動反映：refs_missing.md）
+- used_balls.pro_bowler_id -> pro_bowlers.id
+- used_balls.approved_ball_id -> approved_balls.id
+
