@@ -112,6 +112,31 @@
 - group_mail_recipients.pro_bowler_id -> pro_bowlers.id
 - group_members.pro_bowler_id -> pro_bowlers.id
 - tournament_entries.pro_bowler_id -> pro_bowlers.id
+- approved_ball_pro_bowler.approved_ball_id -> approved_balls.id
+- group_mailouts.group_id -> groups.id
+- group_mailouts.sender_user_id -> users.id
+- group_members.group_id -> groups.id
+- instructors.pro_bowler_id -> pro_bowlers.id
+- instructors.district_id -> districts.id
+- media_publications.tournament_id -> tournaments.id
+- point_distributions.tournament_id -> tournaments.id
+- prize_distributions.tournament_id -> tournaments.id
+- pro_bowler_biographies.pro_bowler_id -> pro_bowlers.id
+- pro_bowler_instructor_info.pro_bowler_id -> pro_bowlers.id
+- pro_bowler_links.pro_bowler_id -> pro_bowlers.id
+- pro_bowler_profiles.pro_bowler_id -> pro_bowlers.id
+- pro_bowler_sponsors.pro_bowler_id -> pro_bowlers.id
+- pro_bowler_titles.pro_bowler_id -> pro_bowlers.id
+- pro_bowler_titles.tournament_id -> tournaments.id
+- pro_bowler_trainings.pro_bowler_id -> pro_bowlers.id
+- pro_bowler_trainings.training_id -> trainings.id
+- record_types.pro_bowler_id -> pro_bowlers.id
+- registered_balls.approved_ball_id -> approved_balls.id
+- sessions.user_id -> users.id
+- tournament_awards.tournament_id -> tournaments.id
+- used_balls.pro_bowler_id -> pro_bowlers.id
+- used_balls.approved_ball_id -> approved_balls.id
+
 
 ### カラムの分類（迷子防止のための“地図”）
 #### 1) ID・所属・状態
@@ -649,7 +674,6 @@
 ## approved_ball_pro_bowler
 
 ### 外部キー（自動反映：refs_missing.md）
-- approved_ball_pro_bowler.approved_ball_id -> approved_balls.id
 ---
 
 ## group_mailouts
@@ -683,13 +707,13 @@
 ### 外部キー（自動反映：refs_missing.md）
 - point_distributions.tournament_id -> tournaments.id
 - point_distributions.pattern_id -> distribution_patterns.id
-- prize_distributions.pattern_id -> distribution_patterns.id
 ---
 
 ## prize_distributions
 
 ### 外部キー（自動反映：refs_missing.md）
 - prize_distributions.tournament_id -> tournaments.id
+- prize_distributions.pattern_id -> distribution_patterns.id
 ---
 
 ## pro_bowler_biographies
