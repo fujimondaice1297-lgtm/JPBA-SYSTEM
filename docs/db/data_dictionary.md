@@ -440,7 +440,8 @@
 ### 主キー
 - id (bigint)
 
-### 外部キー（想定：※DB上のFKは未確認）
+### 外部キー（想定：※DB上のFKは未確認）
+
 - pro_test_status_log.pro_test_id -> pro_test.id
 
 - pro_test_id（pro_test.id を参照する想定）
@@ -462,7 +463,8 @@
 ### 主キー
 - id (bigint)
 
-### 外部キー（想定：※DB上のFKは未確認）
+### 外部キー（想定：※DB上のFKは未確認）
+
 - pro_test_score.pro_test_id -> pro_test.id
 
 - pro_test_id（pro_test.id を参照する想定）
@@ -483,7 +485,8 @@
 ### 主キー
 - id (bigint)
 
-### 外部キー（想定：※DB上のFKは未確認）
+### 外部キー（想定：※DB上のFKは未確認）
+
 - pro_test_score_summary.pro_test_id -> pro_test.id
 
 - pro_test_id（pro_test.id を参照する想定）
@@ -679,6 +682,8 @@
 
 ### 外部キー（自動反映：refs_missing.md）
 - point_distributions.tournament_id -> tournaments.id
+- point_distributions.pattern_id -> distribution_patterns.id
+- prize_distributions.pattern_id -> distribution_patterns.id
 ---
 
 ## prize_distributions
@@ -766,4 +771,16 @@
 ### 外部キー（自動反映：refs_missing.md）
 - used_balls.pro_bowler_id -> pro_bowlers.id
 - used_balls.approved_ball_id -> approved_balls.id
+
+## group_mail_recipients
+### 外部キー（DB上で確認できたもの）
+- group_mail_recipients.mailout_id -> group_mailouts.id
+
+## hof_photos
+### 外部キー（DB上で確認できたもの）
+- hof_photos.hof_id -> hof_inductions.id
+
+## hof_inductions
+### 外部キー（DB上で確認できたもの）
+- hof_inductions.pro_id -> pro_bowlers.id
 

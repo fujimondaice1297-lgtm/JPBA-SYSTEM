@@ -1,5 +1,5 @@
 // Auto-generated from docs/db/data_dictionary.md
-// Generated at: 2026-01-23T01:25:33+01:00
+// Generated at: 2026-01-26T08:03:19+01:00
 
 Project JPBA_SYSTEM {
   database_type: 'PostgreSQL'
@@ -18,6 +18,10 @@ Table approved_balls {
 }
 
 Table area {
+  // columns omitted (see docs/db/columns_by_table.md)
+}
+
+Table distribution_patterns {
   // columns omitted (see docs/db/columns_by_table.md)
 }
 
@@ -42,6 +46,14 @@ Table group_members {
 }
 
 Table groups {
+  // columns omitted (see docs/db/columns_by_table.md)
+}
+
+Table hof_inductions {
+  // columns omitted (see docs/db/columns_by_table.md)
+}
+
+Table hof_photos {
   // columns omitted (see docs/db/columns_by_table.md)
 }
 
@@ -220,15 +232,20 @@ Table venues {
 Ref: annual_dues.pro_bowler_id > pro_bowlers.id
 Ref: approved_ball_pro_bowler.approved_ball_id > approved_balls.id
 Ref: game_scores.tournament_id > tournaments.id
+Ref: group_mail_recipients.mailout_id > group_mailouts.id
 Ref: group_mail_recipients.pro_bowler_id > pro_bowlers.id
 Ref: group_mailouts.group_id > groups.id
 Ref: group_mailouts.sender_user_id > users.id
 Ref: group_members.group_id > groups.id
 Ref: group_members.pro_bowler_id > pro_bowlers.id
+Ref: hof_inductions.pro_id > pro_bowlers.id
+Ref: hof_photos.hof_id > hof_inductions.id
 Ref: instructors.district_id > districts.id
 Ref: instructors.pro_bowler_id > pro_bowlers.id
 Ref: media_publications.tournament_id > tournaments.id
+Ref: point_distributions.pattern_id > distribution_patterns.id
 Ref: point_distributions.tournament_id > tournaments.id
+Ref: prize_distributions.pattern_id > distribution_patterns.id
 Ref: prize_distributions.tournament_id > tournaments.id
 Ref: pro_bowler_biographies.pro_bowler_id > pro_bowlers.id
 Ref: pro_bowler_instructor_info.pro_bowler_id > pro_bowlers.id
