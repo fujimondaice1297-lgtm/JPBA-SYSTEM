@@ -20,3 +20,8 @@ CHANGELOG.md export-ignore
 
 # DBML
 *.dbml text eol=lf
+
+# Normalize line endings for docs to avoid CRLF/LF noise
+docs/**/*.md   text eol=lf
+docs/**/*.dbml text eol=lf
+docs/**/*.sql  text eol=lf
