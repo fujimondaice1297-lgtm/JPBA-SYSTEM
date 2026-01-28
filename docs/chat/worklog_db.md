@@ -2006,3 +2006,27 @@ tournaments テーブルに result_cards（JSON/JSONB）列が存在しないと
 ## 備考
 - gitの CRLF→LF 警告はエラーではなく警告（push成功している）
 - 次の作業は refs_skipped.md の未確定参照を ADR（例: ADR-0002）で決定して固定化する段階。
+
+## 2026-01-27〜28 パスワードリセット〜ログイン復旧メモ
+
+### 状況
+- パスワードを変更したはずなのにブラウザでログインできない。
+- `MAIL_MAILER=log` のため、リセットメールは実メールではなく `storage/logs/laravel.log` に出力される。
+
+### 確認したこと（ログ）
+- `ForgotPasswordController@sendResetLinkEmail hit` → リセット要求が到達
+- `status: passwords.sent` → リセットリンク生成・送信（ログ出力）
+- ログに `Reset Password: http://127.0.0.1:8000/reset-password/{token}?email=...` が出る
+- `ForgotPasswordController@reset status: passwords.reset` → パスワード更新成功
+- その後 `role-mw ... actual:"member" uid:2` → 認証後のミドルウェアも動作
+
+### 途中で出た典型エラーと原因
+- `passwords.user`：そのメールアドレスのユーザーが存在しない（入力ミスが原因）
+- `passwords.token`：トークン不一致/期限切れ/メール不一致（古いURL使用 or email入力違い）
+- ログイン不可：パスワードに全角/末尾スペース等が混入して `Hash::check` が false になっていた可能性
+
+### 最終的に確実に直った手順（tinkerで検証・復旧）
+1) ユーザー存在確認
+```php
+use App\Models\User;
+User::where('email','domaine-d@i.softbank.jp')->exists(); // true
