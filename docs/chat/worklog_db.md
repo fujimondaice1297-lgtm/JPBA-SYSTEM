@@ -2030,3 +2030,42 @@ tournaments テーブルに result_cards（JSON/JSONB）列が存在しないと
 ```php
 use App\Models\User;
 User::where('email','domaine-d@i.softbank.jp')->exists(); // true
+
+## これまでの作業履歴（DB/認証まわり：パスワードリセット不具合対応の要約）
+
+- **事象**：パスワード変更（リセット）後にブラウザログイン不可。  
+  `Password Broker` の戻り値が `passwords.user` / `passwords.token` になり分岐調査。
+
+- **DB確認（tinker）**
+  - `users` に対象メールが存在することを確認：`User::where('email', ...)->exists()` → `true`
+  - 対象ユーザー取得し、`password` ハッシュ・`updated_at` を確認。
+  - `Hash::check(plain, $u->password)` が `false` のケースを起点に、**DB側が更新されていない/入力値不一致**を切り分け。
+
+- **原因パターン整理**
+  - `passwords.user`：メール誤入力（例：`domane`）または users 側未作成/未一致。
+  - `passwords.token`：古いURL（token）使用、token/email組み合わせ不一致、期限切れ。
+  - フォーム側で email 手入力がミス誘発要因になり得る（token と email がズレると失敗）。
+
+- **Reset URL（token）取得フロー**
+  - ローカルメール送信は log に出力される前提で、`storage/logs/laravel.log` から最新の `Reset Password:` 行を抽出。
+  - PowerShell：`Select-String ... "Reset Password:" | Select-Object -Last 1` で最新URLを取得し、**必ず最新リンク**でリセット画面へ。
+
+- **ルーティング確認**
+  - `GET reset-password/{token}`（フォーム表示）
+  - `POST reset-password`（更新処理 / `password.update`）
+  - `route:list | findstr reset-password` で一致を確認。
+
+- **実装（DB/認証連携の要点）**
+  - `Auth\ForgotPasswordController` を使用し、`reset()` で `Password::reset(...)` を実行して `users.password` を更新。
+  - 成功ログ：`passwords.reset` と `updated user` を出力して **DB更新成功を確証**。
+
+- **tinker による最終確定テスト**
+  - 直接 `Hash::make()` でパスワード再設定 → `save()` → `Hash::check()` → `Auth::attempt()` を実行し、認証成功を確認。
+  - 最終的に **ブラウザログインも成功**。
+
+- **Git状態整理（作業成果物）**
+  - modified：`ForgotPasswordController.php` / `reset-password.blade.php` / `docs/chat/worklog_db.md`
+  - untracked：`PasswordSetupController.php` / `password_setup_request.blade.php` / `password_setup_reset.blade.php` / `check_tables.sql`
+  - push手順：`git add -A` → `git commit -m ...` → `git push origin main`
+
+（以上）
