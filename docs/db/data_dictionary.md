@@ -20,6 +20,7 @@
 - area
 - districts
 - informations
+- information_files
 - kaiin_status
 - license
 - organization_masters
@@ -808,3 +809,61 @@
 ### 外部キー（DB上で確認できたもの）
 - hof_inductions.pro_id -> pro_bowlers.id
 
+---
+
+## informations
+
+### 役割
+JPBAサイトの「お知らせ（NEWS / イベント / 大会 / インストラクター等）」の本文を格納する。
+
+### 主キー
+- id (bigint)
+
+### 主なカラム
+- title (string) : タイトル
+- body (text) : 本文
+- is_public (boolean, default true) : 公開/非公開
+- category (string(32), default 'NEWS') : 一覧表示のカテゴリ
+- published_at (timestamp, nullable) : 一覧先頭に出る表示日
+- starts_at (timestamp, nullable) : 掲載開始（期間運用用）
+- ends_at (timestamp, nullable) : 掲載終了（期間運用用）
+- audience (enum: public/members/district_leaders/needs_training, default public) : 誰向けか
+- required_training_id (bigint, nullable) : needs_training の場合の対象講習
+- created_at / updated_at
+
+### 外部キー（FK）
+- required_training_id -> trainings.id（ON DELETE SET NULL）
+
+### インデックス
+- (is_public, audience)
+- (starts_at, ends_at)
+- required_training_id
+- category
+- published_at
+
+---
+
+## information_files
+
+### 役割
+informations に紐づく添付ファイル（PDF/画像など）を 1:N で保持する。
+
+### 主キー
+- id (bigint)
+
+### 主なカラム
+- information_id (bigint) : 親情報
+- type (string(32)) : pdf / image / custom など
+- title (string, nullable) : 表示名（任意）
+- file_path (string) : storage パス
+- visibility (string(16), default 'public') : public / members
+- sort_order (int, default 0) : 表示順
+- created_at / updated_at
+
+### 外部キー（FK）
+- information_id -> informations.id（ON DELETE CASCADE）
+
+### インデックス
+- (information_id, sort_order)
+- type
+- visibility
