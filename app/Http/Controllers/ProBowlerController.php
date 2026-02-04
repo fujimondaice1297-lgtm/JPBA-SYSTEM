@@ -243,9 +243,21 @@ class ProBowlerController extends Controller
             'instructor_grade',
             'coach_name',
             'include_inactive',            // 退会者も含む
+            'sort', 'dir',                 // ★追加：ソート
         ]);
 
-        $query = ProBowler::query();
+        // ★タイトル数：pro_bowler_titles を集計して JOIN（titles_count を“列として作る”）
+        $titlesAgg = DB::table('pro_bowler_titles')
+            ->select('pro_bowler_id', DB::raw('count(*) as titles_count'))
+            ->groupBy('pro_bowler_id');
+
+        $query = ProBowler::query()
+            ->with('district')
+            ->leftJoinSub($titlesAgg, 'titles_agg', function ($join) {
+                $join->on('pro_bowlers.id', '=', 'titles_agg.pro_bowler_id');
+            })
+            ->addSelect('pro_bowlers.*')
+            ->addSelect(DB::raw('coalesce(titles_agg.titles_count, 0) as titles_count'));
 
         // 退会者（=非アクティブ）を含めるか
         $includeInactive = (bool)($request->input('include_inactive') ?? false);
@@ -269,7 +281,6 @@ class ProBowlerController extends Controller
         }
 
         // ====== JPBA式：No.範囲検索（数字） ======
-        // 優先：id_start / id_end
         $start = trim((string)($filters['id_start'] ?? ''));
         $end   = trim((string)($filters['id_end'] ?? ''));
 
@@ -283,7 +294,7 @@ class ProBowlerController extends Controller
             $startIsNum = ($start !== '' && ctype_digit($start));
             $endIsNum   = ($end !== '' && ctype_digit($end));
 
-            // どちらかが英数字（例: T007）なら「完全一致検索」に倒す（JPBAの注意書きと同じ発想）
+            // 英字No（例: T007）なら完全一致へ
             if (($start !== '' && !$startIsNum) || ($end !== '' && !$endIsNum)) {
                 $val = $start !== '' ? $start : $end;
                 $query->whereRaw('lower(license_no) = lower(?)', [$val]);
@@ -300,9 +311,6 @@ class ProBowlerController extends Controller
             $d = $filters['district'];
             if (ctype_digit((string)$d)) {
                 $query->where('district_id', (int)$d);
-            } else {
-                // 文字で来た場合は districts.name を引けないので、互換として pro_bowlers 側の district文字列運用はしない方針。
-                // ここでは何もしない（事故回避）
             }
         }
 
@@ -311,10 +319,8 @@ class ProBowlerController extends Controller
 
         if (!empty($filters['gender'])) {
             $gender = $filters['gender'];
-
             if ($gender === '男性') $query->where('sex', 1);
             if ($gender === '女性') $query->where('sex', 2);
-
         } elseif ($sexFilter !== null && $sexFilter !== '' && in_array((int)$sexFilter, [1, 2], true)) {
             $query->where('sex', (int)$sexFilter);
         }
@@ -332,8 +338,18 @@ class ProBowlerController extends Controller
             }
         }
 
-        // タイトル保有者
-        if (!empty($filters['has_title'])) $query->where('has_title', true);
+        // タイトル：★has_title は pro_bowlers.has_title ではなく “実タイトル件数” で判定（ズレ防止）
+        if (!empty($filters['has_title'])) {
+            $query->whereRaw('coalesce(titles_agg.titles_count, 0) > 0');
+        }
+        if (!empty($filters['titles_from'])) {
+            $query->whereRaw('coalesce(titles_agg.titles_count, 0) >= ?', [(int)$filters['titles_from']]);
+        }
+        if (!empty($filters['titles_to'])) {
+            $query->whereRaw('coalesce(titles_agg.titles_count, 0) <= ?', [(int)$filters['titles_to']]);
+        }
+
+        // 他フラグ
         if (!empty($filters['is_district_leader'])) $query->where('is_district_leader', true);
         if (!empty($filters['has_sports_coach_license'])) $query->where('has_sports_coach_license', true);
 
@@ -343,10 +359,20 @@ class ProBowlerController extends Controller
             $query->where('coach', 'like', "%{$coach}%");
         }
 
-        // 並び順：数字No → 文字No（null）→ license_no
+        // ====== ソート ======
+        $sort = (string)($filters['sort'] ?? '');
+        $dir  = strtolower((string)($filters['dir'] ?? 'asc'));
+        $dir  = $dir === 'desc' ? 'desc' : 'asc';
+
+        if ($sort === 'titles') {
+            $query->orderByRaw('coalesce(titles_agg.titles_count, 0) ' . $dir);
+        }
+
+        // 既定の並び（最後に安定化）
+        $query->orderByRaw('license_no_num asc nulls last')
+            ->orderBy('license_no');
+
         $proBowlers = $query
-            ->orderByRaw('license_no_num asc nulls last')
-            ->orderBy('license_no')
             ->paginate(50)
             ->appends($filters);
 

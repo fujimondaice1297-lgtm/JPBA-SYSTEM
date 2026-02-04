@@ -17,7 +17,6 @@
       // 期待：id => label
       $districtOptions = [];
       if (isset($districts) && is_iterable($districts)) {
-          // 1) id => label の配列/Collectionを想定
           foreach ($districts as $k => $v) {
               if (is_object($v) && isset($v->id)) {
                   $districtOptions[$v->id] = $v->label ?? ($v->name ?? (string)$v->id);
@@ -47,10 +46,33 @@
       $districtLabelForHidden = ($districtSelected !== null && $districtSelected !== '' && isset($districtOptions[$districtSelected]))
           ? $districtOptions[$districtSelected]
           : (string)request('district', '');
+
+      // ソート＆表示件数
+      $currentSort = (string)request('sort', 'license_no');
+      $currentDir  = strtolower((string)request('dir', 'asc')) === 'desc' ? 'desc' : 'asc';
+      $perPage     = (int)request('per_page', 50);
+
+      $sortIcon = function(string $col) use ($currentSort, $currentDir) {
+          if ($currentSort !== $col) return '';
+          return $currentDir === 'asc' ? ' ▲' : ' ▼';
+      };
+
+      $sortUrl = function(string $col) use ($currentSort, $currentDir) {
+          $q = request()->query();
+          $nextDir = ($currentSort === $col && $currentDir === 'asc') ? 'desc' : 'asc';
+          $q['sort'] = $col;
+          $q['dir']  = $nextDir;
+          unset($q['page']); // ソート変えたら1ページ目へ
+          return route('pro_bowlers.list') . '?' . http_build_query($q);
+      };
     @endphp
 
     <!-- 検索フォーム -->
     <form method="GET" action="{{ route('pro_bowlers.list') }}" class="mb-4">
+        {{-- ソート条件維持（検索しても並び順が戻らないように） --}}
+        <input type="hidden" name="sort" value="{{ $currentSort }}">
+        <input type="hidden" name="dir" value="{{ $currentDir }}">
+
         <div class="row g-3">
 
             <div class="col-md-3">
@@ -112,6 +134,16 @@
                        value="{{ request('age_to') }}">
             </div>
 
+            <div class="col-md-2">
+                <select name="per_page" class="form-select">
+                    @foreach ([10,25,50,100,200] as $n)
+                        <option value="{{ $n }}" {{ (int)$perPage === (int)$n ? 'selected' : '' }}>
+                            表示 {{ $n }} 件
+                        </option>
+                    @endforeach
+                </select>
+            </div>
+
             <div class="col-md-12">
                 <div class="form-check form-check-inline">
                     <input class="form-check-input" type="checkbox" name="has_title" value="1"
@@ -132,7 +164,7 @@
                 </div>
 
                 <div class="form-check form-check-inline" style="min-width:260px;">
-                    <input type="text" name="coach_name" class="form-control" placeholder="コーチ資格名（部分一致）"
+                    <input type="text" name="coach_name" class="form-control" placeholder="コーチ名（部分一致）"
                            value="{{ request('coach_name') }}">
                 </div>
 
@@ -154,17 +186,50 @@
         </div>
     </form>
 
+    @if ($bowlers)
+        <div class="mb-2 text-muted">
+            全 {{ $bowlers->total() }} 件
+            @if ($bowlers->total() > 0)
+                （{{ $bowlers->firstItem() }} - {{ $bowlers->lastItem() }} 件目を表示）
+            @endif
+        </div>
+    @endif
+
     <!-- データテーブル -->
     <div class="table-responsive">
         <table class="table table-bordered align-middle">
             <thead class="table-dark">
                 <tr>
-                    <th>ライセンスNo.</th>
-                    <th>氏名</th>
-                    <th>地区</th>
-                    <th>性別</th>
-                    <th>期別</th>
-                    <th>タイトル</th>
+                    <th>
+                        <a href="{{ $sortUrl('license_no') }}" class="text-white text-decoration-none">
+                            ライセンスNo.{{ $sortIcon('license_no') }}
+                        </a>
+                    </th>
+                    <th>
+                        <a href="{{ $sortUrl('name') }}" class="text-white text-decoration-none">
+                            氏名{{ $sortIcon('name') }}
+                        </a>
+                    </th>
+                    <th>
+                        <a href="{{ $sortUrl('district') }}" class="text-white text-decoration-none">
+                            地区{{ $sortIcon('district') }}
+                        </a>
+                    </th>
+                    <th>
+                        <a href="{{ $sortUrl('sex') }}" class="text-white text-decoration-none">
+                            性別{{ $sortIcon('sex') }}
+                        </a>
+                    </th>
+                    <th>
+                        <a href="{{ $sortUrl('kibetsu') }}" class="text-white text-decoration-none">
+                            期別{{ $sortIcon('kibetsu') }}
+                        </a>
+                    </th>
+                    <th>
+                        <a href="{{ $sortUrl('titles') }}" class="text-white text-decoration-none">
+                            タイトル{{ $sortIcon('titles') }}
+                        </a>
+                    </th>
                     <th>褒章</th>
                     <th>地区長</th>
                     <th>インストラクター級</th>
