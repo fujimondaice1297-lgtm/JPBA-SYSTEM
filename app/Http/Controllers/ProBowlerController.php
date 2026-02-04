@@ -226,55 +226,133 @@ class ProBowlerController extends Controller
     ========================== */
     public function list(Request $request)
     {
-        $filters = $request->query();
-        session(['pro_bowlers.last_filters' => $filters]);
+        // 画面から来る入力（既存のfiltersも壊さない）
+        $filters = $request->only([
+            'license_no',
+            'id_start', 'id_end',          // JPBA式（No.範囲）
+            'id_from', 'id_to',            // 旧UI互換（あっても無視しない）
+            'pro_entry_year_from', 'pro_entry_year_to',
+            'name',
+            'district_id', 'district',     // district_id優先、districtは互換
+            'gender', 'sex',               // gender優先、sexは互換
+            'age_from', 'age_to',
+            'titles_from', 'titles_to',
+            'has_title',
+            'is_district_leader',
+            'has_sports_coach_license',
+            'instructor_grade',
+            'coach_name',
+            'include_inactive',            // 退会者も含む
+        ]);
 
-        $titleYear = $request->integer('title_year');
-        $titleFrom = $request->integer('title_year_from');
-        $titleTo   = $request->integer('title_year_to');
+        $query = ProBowler::query();
 
-        $query = ProBowler::with('district')->withCount('titles');
-
-        if ($titleYear) {
-            $query->withCount([
-                'titles as titles_count_'.$titleYear => fn($q) => $q->where('year', $titleYear)
-            ]);
+        // 退会者（=非アクティブ）を含めるか
+        $includeInactive = (bool)($request->input('include_inactive') ?? false);
+        if (!$includeInactive) {
+            $query->where('is_active', true);
         }
-        if ($titleFrom && $titleTo) {
-            $query->withCount([
-                'titles as titles_count_range' => fn($q) => $q->whereBetween('year', [$titleFrom, $titleTo])
-            ]);
-        }
 
-        if ($request->filled('license_no'))          $query->where('license_no', 'like', '%'.$request->license_no.'%');
-        if ($request->filled('pro_entry_year_from')) $query->where('pro_entry_year', '>=', $request->pro_entry_year_from);
-        if ($request->filled('pro_entry_year_to'))   $query->where('pro_entry_year', '<=', $request->pro_entry_year_to);
-        if ($request->filled('name'))                $query->where('pro_bowlers.name_kanji', 'like', '%'.$request->name.'%');
-        if ($request->filled('id_from'))             $query->where('pro_bowlers.id', '>=', $request->id_from);
-        if ($request->filled('id_to'))               $query->where('pro_bowlers.id', '<=', $request->id_to);
-        if ($request->filled('district'))            $query->whereHas('district', fn($q) => $q->where('label', $request->district));
-        if ($request->filled('gender'))              $query->where('pro_bowlers.sex', $request->gender === '男性' ? 1 : 2);
-        if ($request->filled('age_from'))            $query->whereRaw('EXTRACT(YEAR FROM AGE(CURRENT_DATE, birthdate)) >= ?', [$request->age_from]);
-        if ($request->filled('age_to'))              $query->whereRaw('EXTRACT(YEAR FROM AGE(CURRENT_DATE, birthdate)) <= ?', [$request->age_to]);
-        if ($request->boolean('has_title'))          $query->has('titles');
-        if ($request->boolean('has_sports_coach_license')) {
-            $query->where(function($q){
-                $q->where('coach_1_status','有')
-                  ->orWhere('coach_3_status','有')
-                  ->orWhere('coach_4_status','有');
+        // 氏名（漢字/カナどちらでも部分一致）
+        if (!empty($filters['name'])) {
+            $name = trim((string)$filters['name']);
+            $query->where(function ($q) use ($name) {
+                $q->where('name_kanji', 'like', "%{$name}%")
+                ->orWhere('name_kana', 'like', "%{$name}%");
             });
         }
-        if ($request->boolean('is_district_leader')) $query->where('is_district_leader', true);
 
-        $bowlers = $query->paginate(10)->appends($filters);
+        // ライセンスNo（ピンポイントや部分一致用：任意で残す）
+        if (!empty($filters['license_no'])) {
+            $license = trim((string)$filters['license_no']);
+            $query->where('license_no', 'like', "%{$license}%");
+        }
 
-        $districtOrder = ['北海道','東北','北関東','埼玉','千葉','城東','城南','城西','三多摩','神奈川・東','神奈川・西','静岡','甲信越','東海','北陸','関西・東','関西・西','関西・南','中国四国','九州・北','九州･南／沖縄','海外'];
-        $districts = District::all()
-            ->sortBy(fn($d) => array_search($d->label, $districtOrder))
-            ->pluck('label', 'id');
+        // ====== JPBA式：No.範囲検索（数字） ======
+        // 優先：id_start / id_end
+        $start = trim((string)($filters['id_start'] ?? ''));
+        $end   = trim((string)($filters['id_end'] ?? ''));
 
-        return view('pro_bowlers.list', compact('bowlers', 'districts', 'filters'));
+        // 旧UI互換：id_from / id_to が入ってたら fallback
+        if ($start === '' && $end === '') {
+            $start = trim((string)($filters['id_from'] ?? ''));
+            $end   = trim((string)($filters['id_to'] ?? ''));
+        }
+
+        if ($start !== '' || $end !== '') {
+            $startIsNum = ($start !== '' && ctype_digit($start));
+            $endIsNum   = ($end !== '' && ctype_digit($end));
+
+            // どちらかが英数字（例: T007）なら「完全一致検索」に倒す（JPBAの注意書きと同じ発想）
+            if (($start !== '' && !$startIsNum) || ($end !== '' && !$endIsNum)) {
+                $val = $start !== '' ? $start : $end;
+                $query->whereRaw('lower(license_no) = lower(?)', [$val]);
+            } else {
+                if ($start !== '') $query->where('license_no_num', '>=', (int)$start);
+                if ($end !== '')   $query->where('license_no_num', '<=', (int)$end);
+            }
+        }
+
+        // 地区：district_idを優先（districtは互換）
+        if (!empty($filters['district_id'])) {
+            $query->where('district_id', (int)$filters['district_id']);
+        } elseif (!empty($filters['district'])) {
+            $d = $filters['district'];
+            if (ctype_digit((string)$d)) {
+                $query->where('district_id', (int)$d);
+            } else {
+                // 文字で来た場合は districts.name を引けないので、互換として pro_bowlers 側の district文字列運用はしない方針。
+                // ここでは何もしない（事故回避）
+            }
+        }
+
+        // 性別：gender（男性/女性）を優先、sex（数値）は互換
+        $sexFilter = $filters['sex'] ?? null;
+
+        if (!empty($filters['gender'])) {
+            $gender = $filters['gender'];
+
+            if ($gender === '男性') $query->where('sex', 1);
+            if ($gender === '女性') $query->where('sex', 2);
+
+        } elseif ($sexFilter !== null && $sexFilter !== '' && in_array((int)$sexFilter, [1, 2], true)) {
+            $query->where('sex', (int)$sexFilter);
+        }
+
+        // 年齢フィルタ（birthdateがある前提）
+        if (!empty($filters['age_from']) || !empty($filters['age_to'])) {
+            $today = now();
+            if (!empty($filters['age_from'])) {
+                $maxBirth = $today->copy()->subYears((int)$filters['age_from'])->endOfDay();
+                $query->where('birthdate', '<=', $maxBirth);
+            }
+            if (!empty($filters['age_to'])) {
+                $minBirth = $today->copy()->subYears((int)$filters['age_to'] + 1)->addDay()->startOfDay();
+                $query->where('birthdate', '>=', $minBirth);
+            }
+        }
+
+        // タイトル保有者
+        if (!empty($filters['has_title'])) $query->where('has_title', true);
+        if (!empty($filters['is_district_leader'])) $query->where('is_district_leader', true);
+        if (!empty($filters['has_sports_coach_license'])) $query->where('has_sports_coach_license', true);
+
+        // コーチ名（pro_bowlers.coach を想定）
+        if (!empty($filters['coach_name'])) {
+            $coach = trim((string)$filters['coach_name']);
+            $query->where('coach', 'like', "%{$coach}%");
+        }
+
+        // 並び順：数字No → 文字No（null）→ license_no
+        $proBowlers = $query
+            ->orderByRaw('license_no_num asc nulls last')
+            ->orderBy('license_no')
+            ->paginate(50)
+            ->appends($filters);
+
+        return view('pro_bowlers.list', compact('proBowlers', 'filters'));
     }
+
 
     /* =========================
        バリデーション定義

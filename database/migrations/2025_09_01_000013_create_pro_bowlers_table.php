@@ -96,6 +96,7 @@ return new class extends Migration {
             $table->string('school_license_year')->nullable();
         });
     }
+    
 
     public function down(): void
     {
