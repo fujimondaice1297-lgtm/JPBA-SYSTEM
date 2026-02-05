@@ -99,6 +99,30 @@
 
 ---
 
+## districts
+
+### 役割
+地区マスタ。`pro_bowlers.district_id` / `instructors.district_id` などが参照する。
+UIで表示する地区名は **label を正本**とし、旧運用の `name` は互換のため残す（migrationで label を name からバックフィル）。
+
+### 主キー
+- id (bigint)
+
+### 主要カラム
+- name (string) : 旧運用/取り込み元の名称（互換用）
+- label (string(100), nullable) : 表示用地区名（UIの正本）
+- created_at / updated_at
+
+### 参照される外部キー（主なもの）
+- pro_bowlers.district_id -> districts.id
+- instructors.district_id -> districts.id
+
+### 運用メモ
+- 表示は `districts.label` を優先し、空の場合のみ `districts.name` へフォールバックする。
+- `districts.label` はデータ投入時に必ず埋める（空を許さない運用）。
+
+---
+
 ## pro_bowlers
 
 ### 役割
@@ -349,6 +373,7 @@
 - tournament_participants.tournament_id -> tournaments.id
 
 ---
+
 ## tournament_results
 
 ### 役割
@@ -377,6 +402,7 @@
 - tournament_results.tournament_id -> tournaments.id
 
 ---
+
 ## tournament_points
 
 ### 役割
@@ -398,6 +424,7 @@
 - tournament_points.tournament_id -> tournaments.id
 
 ---
+
 ## pro_test
 
 ### 役割
@@ -458,6 +485,7 @@
 - pro_test_schedule.venue_id -> venues.id
 
 ---
+
 ## pro_test_status_log
 
 ### 役割

@@ -1,5 +1,5 @@
 // Auto-generated from docs/db/data_dictionary.md
-// Generated at: 2026-02-03T12:16:14+01:00
+// Generated at: 2026-02-05T01:31:32+01:00
 
 Project JPBA_SYSTEM {
   database_type: 'PostgreSQL'
@@ -28,15 +28,6 @@ Table distribution_patterns {
 Table districts {
   // columns omitted (see docs/db/columns_by_table.md)
 }
-
-Table informations {
-  // columns omitted (see docs/db/columns_by_table.md)
-}
-
-Table information_files {
-  // columns omitted (see docs/db/columns_by_table.md)
-}
-
 
 Table game_scores {
   // columns omitted (see docs/db/columns_by_table.md)
@@ -306,6 +297,3 @@ Ref: tournaments.venue_id > venues.id
 Ref: used_balls.approved_ball_id > approved_balls.id
 Ref: used_balls.pro_bowler_id > pro_bowlers.id
 Ref: users.pro_bowler_id > pro_bowlers.id
-Ref: informations.required_training_id > trainings.id
-Ref: information_files.information_id > informations.id
-
