@@ -102,7 +102,7 @@
 ## districts
 
 ### 役割
-地区マスタ。`pro_bowlers.district_id` / `instructors.district_id` などが参照する。
+地区マスタ。`pro_bowlers.district_id` / `instructors.district_id` などが参照する。  
 UIで表示する地区名は **label を正本**とし、旧運用の `name` は互換のため残す（migrationで label を name からバックフィル）。
 
 ### 主キー
