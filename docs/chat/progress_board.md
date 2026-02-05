@@ -3,7 +3,7 @@
 ## Phase 0：整合の土台
 - [✓] data_dictionary.md を正本として更新する運用が回っている
 - [✓] generate_er_from_dictionary.php で ER.dbml が生成される（手編集しない）
-- [ ] refs_missing / refs_skipped の運用が回っている（不明FKを決め打ちしない）
+- [✓] refs_missing / refs_skipped の運用が回っている（不明FKを決め打ちしない）
 - [ ] 「同じ変更を複数migrationでやっていない」状態になっている（重複排除）
 
 ## Phase 1：JPBAサイト踏襲（最優先）

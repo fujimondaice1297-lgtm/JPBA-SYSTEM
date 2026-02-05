@@ -3,8 +3,8 @@
 - Generated at: 2026-02-05T00:00:00+09:00
 - Notes: This file is curated. refs_missing.md is auto-detected.
 
-- pro_bowlers.login_id
-- pro_test.record_type_id
+- pro_bowlers.login_id (ADR-0002-defer-pro_bowlers-login_id)
+- pro_test.record_type_id (ADR-0003-defer-pro_test-record_type_id)
 
 ## Pending decisions (skipped for now)
 

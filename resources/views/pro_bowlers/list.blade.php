@@ -259,7 +259,8 @@
                         {{-- 地区 --}}
                         <td>
                             <a href="{{ $editUrl }}" class="text-decoration-none text-dark">
-                                {{ $bowler->district->label ?? '-' }}
+                                {{ $bowler->district->label ?? $bowler->district->name ?? '-' }}
+
                             </a>
                         </td>
 
