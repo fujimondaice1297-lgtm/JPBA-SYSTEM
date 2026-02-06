@@ -19,16 +19,33 @@
   </form>
 
   @forelse ($infos as $info)
+    @php
+      $showUrl = route('informations.show', $info->id);
+    @endphp
+
     <div class="card mb-3">
       <div class="card-body">
-        <h5 class="card-title mb-2">{{ $info->title }}</h5>
-        <div class="text-muted small mb-2">
-          @if($info->starts_at) 公開: {{ $info->starts_at->format('Y-m-d H:i') }} @endif
-          @if($info->ends_at) / 終了: {{ $info->ends_at->format('Y-m-d H:i') }} @endif
-          <span class="badge text-bg-secondary ms-2">一般公開</span>
-          <span class="badge text-bg-light ms-2">更新: {{ $info->updated_at->format('Y-m-d') }}</span>
+        <h5 class="card-title mb-2">
+          <a href="{{ $showUrl }}" class="text-decoration-none">{{ $info->title }}</a>
+        </h5>
+
+        <div class="text-muted small mb-2 d-flex flex-wrap align-items-center gap-2">
+          @if($info->starts_at) <span>公開: {{ $info->starts_at->format('Y-m-d H:i') }}</span> @endif
+          @if($info->ends_at) <span>/ 終了: {{ $info->ends_at->format('Y-m-d H:i') }}</span> @endif
+
+          <span class="badge text-bg-secondary">一般公開</span>
+          <span class="badge text-bg-light">更新: {{ $info->updated_at->format('Y-m-d') }}</span>
+
+          @if(($info->files_count ?? 0) > 0)
+            <span class="badge text-bg-info text-dark">添付: {{ $info->files_count }}</span>
+          @endif
         </div>
+
         <div class="card-text" style="white-space:pre-wrap">{{ $info->body }}</div>
+
+        <div class="mt-3">
+          <a href="{{ $showUrl }}" class="btn btn-sm btn-outline-primary">詳細 / 添付を見る</a>
+        </div>
       </div>
     </div>
   @empty

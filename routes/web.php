@@ -213,6 +213,13 @@ Route::middleware(['auth','role:member,editor,admin'])->group(function () {
     Route::get('/certificates', [CertificateController::class, 'index'])->name('certificates.index');
     Route::get('/member/info', [InformationController::class,'member'])->name('informations.member');
     Route::get('/info', [InformationController::class,'index'])->name('informations.index');
+    // お知らせ 詳細（一覧→詳細）
+    Route::get('/info/{information}', [InformationController::class,'show'])->name('informations.show');
+    Route::get('/member/info/{information}', [InformationController::class,'show'])->name('informations.member.show');
+
+    // 添付ファイルDL
+    Route::get('/info/files/{informationFile}', [InformationController::class,'downloadFile'])->name('information_files.download');
+    Route::get('/member/info/files/{informationFile}', [InformationController::class,'downloadFile'])->name('information_files.member.download');
 
     // 大会成績（閲覧）
     Route::get('/tournament_results', [TournamentResultController::class, 'list'])->name('tournament_results.index');

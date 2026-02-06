@@ -4,17 +4,28 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Information extends Model
 {
     protected $table = 'informations';
 
     protected $fillable = [
-        'title','body','is_public','starts_at','ends_at','audience','required_training_id'
+        'title',
+        'body',
+        'is_public',
+        'category',
+        'published_at',
+        'starts_at',
+        'ends_at',
+        'audience',
+        'required_training_id',
     ];
 
     protected $casts = [
         'is_public' => 'bool',
+        'published_at' => 'datetime',
         'starts_at' => 'datetime',
         'ends_at'   => 'datetime',
     ];
@@ -36,7 +47,20 @@ class Information extends Model
         return $q->where('is_public', true);
     }
 
-    public function proBowler(){ return $this->belongsTo(\App\Models\ProBowler::class, 'pro_bowler_id'); }
+    public function proBowler(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\ProBowler::class, 'pro_bowler_id');
+    }
+
+    public function training(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\Training::class, 'required_training_id');
+    }
+
+    public function files(): HasMany
+    {
+        return $this->hasMany(\App\Models\InformationFile::class, 'information_id');
+    }
 
     /** ログインユーザ向け絞り込み（公開＋条件） */
     public function scopeForUser(Builder $q, ?\App\Models\User $user): Builder
@@ -72,10 +96,5 @@ class Information extends Model
         }
 
         return $q;
-    }
-
-    public function training()
-    {
-        return $this->belongsTo(\App\Models\Training::class, 'required_training_id');
     }
 }
