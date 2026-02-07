@@ -6,6 +6,22 @@
 
 作業履歴
 
+## 2026-02-06 お知らせ（info）詳細＋添付DL
+
+- 目的: /info の一覧から詳細へ遷移し、添付をDLできるようにする
+- 変更:
+  - app/Models/InformationFile.php 新規
+  - app/Models/Information.php files() 追加
+  - app/Http/Controllers/InformationController.php show()/downloadFile() 追加
+  - resources/views/informations/show.blade.php 新規
+  - resources/views/informations/index.blade.php タイトルを詳細リンクに（必要なら）
+- 動作確認:
+  - /info → 詳細リンク → /info/{id} 表示OK
+  - 添付DL: /info/files/{id} OK
+- 次:
+  - （必要なら）会員向け表示条件・ファイルvisibilityの制御
+
+
 チャット①
 
 これまでの作業履歴（DB構築 / このチャットの要約）
