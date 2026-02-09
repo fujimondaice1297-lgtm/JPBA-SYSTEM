@@ -228,8 +228,9 @@ UIで表示する地区名は **label を正本**とし、旧運用の `name` �
 - association_role
 - created_at, updated_at
 
-### 外部キー（自動反映：refs_missing.md）
+### 外部キー（DB上で確認できたもの）
 - pro_bowlers.district_id -> districts.id
+- pro_bowlers.sex -> sexes.id
 
 ---
 ## tournaments
@@ -571,8 +572,7 @@ UIで表示する地区名は **label を正本**とし、旧運用の `name` �
 ## sexes
 
 ### 役割
-性別マスタ。`pro_test.sex_id` が参照する想定。
-（`pro_bowlers.sex` も内部的にこのマスタ相当を想定している可能性あり）
+「性別マスタ。pro_bowlers.sex が sexes.id を参照する（1=男性, 2=女性）」
 
 ### 主キー
 - id (bigint)
