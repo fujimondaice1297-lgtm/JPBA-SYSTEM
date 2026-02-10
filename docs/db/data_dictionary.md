@@ -231,6 +231,14 @@ UIで表示する地区名は **label を正本**とし、旧運用の `name` �
 ### 外部キー（DB上で確認できたもの）
 - pro_bowlers.district_id -> districts.id
 - pro_bowlers.sex -> sexes.id
+- pro_bowlers.membership_type -> kaiin_status.namegit rev-parse --short HEAD
+
+### このテーブルが参照しているFK（外向き）
+- pro_bowlers.district_id -> districts.id（ON UPDATE CASCADE / ON DELETE SET NULL）
+- pro_bowlers.sex -> sexes.id（ON UPDATE RESTRICT / ON DELETE RESTRICT）
+- pro_bowlers.membership_type -> kaiin_status.name（ON UPDATE CASCADE / ON DELETE RESTRICT）
+  - 案B：`membership_type` は文字列のまま運用し、`kaiin_status.name`（UNIQUE）にFKを張って整合性を担保する
+
 
 ---
 ## tournaments
@@ -572,7 +580,8 @@ UIで表示する地区名は **label を正本**とし、旧運用の `name` �
 ## sexes
 
 ### 役割
-「性別マスタ。pro_bowlers.sex が sexes.id を参照する（1=男性, 2=女性）」
+性別マスタ。案Bでは既存データの数値コードを維持し、`pro_bowlers.sex` が `sexes.id`（1=男性, 2=女性）を参照する。
+（Phase3の `pro_test.sex_id` などから参照する可能性もある）
 
 ### 主キー
 - id (bigint)
@@ -614,7 +623,8 @@ UIで表示する地区名は **label を正本**とし、旧運用の `name` �
 ## kaiin_status
 
 ### 役割
-会員ステータスマスタ（例：現役/退会/休会など想定）。`pro_test.kaiin_status_id` などから参照される想定。
+会員ステータスマスタ。案Bでは `pro_bowlers.membership_type`（文字列）が `kaiin_status.name`（UNIQUE）を参照する。
+（Phase3の `pro_test.kaiin_status_id -> kaiin_status.id` は「将来想定」として残す）
 
 ### 主キー
 - id (bigint)
