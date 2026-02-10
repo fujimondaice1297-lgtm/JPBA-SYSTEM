@@ -231,7 +231,8 @@ UIで表示する地区名は **label を正本**とし、旧運用の `name` �
 ### 外部キー（DB上で確認できたもの）
 - pro_bowlers.district_id -> districts.id
 - pro_bowlers.sex -> sexes.id
-- pro_bowlers.membership_type -> kaiin_status.namegit rev-parse --short HEAD
+- pro_bowlers.membership_type -> kaiin_status.name
+
 
 ### このテーブルが参照しているFK（外向き）
 - pro_bowlers.district_id -> districts.id（ON UPDATE CASCADE / ON DELETE SET NULL）
@@ -623,8 +624,8 @@ UIで表示する地区名は **label を正本**とし、旧運用の `name` �
 ## kaiin_status
 
 ### 役割
-会員ステータスマスタ。案Bでは `pro_bowlers.membership_type`（文字列）が `kaiin_status.name`（UNIQUE）を参照する。
-（Phase3の `pro_test.kaiin_status_id -> kaiin_status.id` は「将来想定」として残す）
+会員ステータスマスタ。現行DBでは `pro_bowlers.membership_type` が `kaiin_status.name` を参照する（FK）。
+（例：トーナメントプロ / プロインストラクター / 退会届 / 除名 / 死亡 など）
 
 ### 主キー
 - id (bigint)
@@ -634,6 +635,9 @@ UIで表示する地区名は **label を正本**とし、旧運用の `name` �
 - reg_date（登録日時）
 - del_flg（削除/無効フラグ：NOT NULL）
 - update_date / created_by / updated_by
+
+### 参照される外部キー（DB上で確認できたもの）
+- pro_bowlers.membership_type -> kaiin_status.name
 
 ---
 
