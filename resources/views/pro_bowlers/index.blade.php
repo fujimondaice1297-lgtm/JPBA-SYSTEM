@@ -1,160 +1,104 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="container-fluid d-flex">
+<div class="container">
 
-    {{-- 左サイドバー --}}
-    <style>
-        .sidebar a {
-            white-space: nowrap;
-            display: block;
-            padding: 5px 10px;
-        }
-    </style>
+    {{-- ✅検索フォーム --}}
+    <form method="GET" action="{{ route('pro_bowlers.index') }}" class="mb-4">
+        <div class="row">
+            <div class="col-md-6">
+                <label class="form-label">名前</label>
+                <input type="text" name="name" value="{{ request('name') }}" class="form-control">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">ライセンスNo</label>
+                <input type="text" name="license_no" value="{{ request('license_no') }}" class="form-control">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">地区</label>
+                <select name="district_id" class="form-select">
+                    <option value="">すべて</option>
+                    @foreach($districts as $id => $label)
+                        <option value="{{ $id }}" {{ request('district_id') == $id ? 'selected' : '' }}>
+                            {{ $label }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
 
-    <aside class="sidebar bg-light p-3" style="width: 220px;">
-        <h5>Menu</h5>
-        <ul class="list-unstyled">
-            <li><a href="#">ログアウト</a></li>
-            <li><a href="{{ route('calendar.annual') }}">カレンダー</a></li>
-            <li><a href="{{ route('informations.index') }}">INFORMATION</a></li>
-            <li><a href="{{ route('informations.member') }}">会員用INFORMATION</a></li>
-            <li><a href="{{ route('pro_bowlers.list') }}">全プロデータ</a></li>
-            <li><a href="{{ route('pro_groups.index') }}">プロボウラーグループ管理</a></li>
-            <li><a href="{{ route('hof.index') }}">日本プロボウリング殿堂</a></li>
-            <li><a href="{{ route('eligibility.evergreen') }}">永久シード一覧</a></li>
-            <li><a href="{{ route('eligibility.a_class.m') }}">男子A級ライセンス</a></li>
-            <li><a href="{{ route('eligibility.a_class.f') }}">女子A級ライセンス</a></li>
-            <li><a href="{{ route('tournaments.index') }}">大会情報</a></li>
-            <li><a href="{{ route('tournament_results.index') }}">大会成績</a></li>
-            <li><a href="{{ route('record_types.index') }}">公認パーフェクト等の記録</a></li>
-            <li><a href="{{ route('instructors.index') }}">認定インストラクター情報</a></li>
-            <li><a href="{{ route('approved_balls.index') }}">アブプールボールリスト</a></li>
-            <li><a href="{{ route('registered_balls.index') }}">選手登録ボール管理</a></li>
-            <li><a href="{{ route('trainings.bulk') }}">講習一括登録</a></li>
-            <li><a href="{{ route('flash_news.index') }}">大会速報ページ</a></li>
-            <li><a href="{{ route('scores.input') }}">大会成績速報入力管理</a></li>
-            <li><a href="#">選手マイページ</a></li>
-        </ul>
-    </aside>
+            <div class="col-md-3 mt-3">
+                <label class="form-label">性別</label>
+                <select name="gender" class="form-select">
+                    <option value="">すべて</option>
+                    <option value="男性" {{ request('gender') == '男性' ? 'selected' : '' }}>男性</option>
+                    <option value="女性" {{ request('gender') == '女性' ? 'selected' : '' }}>女性</option>
+                </select>
+            </div>
 
-    {{-- メインコンテンツ --}}
-    <main class="flex-fill px-4 py-4">
+            <div class="col-md-3 mt-3">
+                <select name="membership_type" class="form-select">
+                    <option value="">すべて会員種別</option>
+                    @foreach ($kaiinStatuses as $s)
+                        <option value="{{ $s->name }}" {{ request("membership_type") == $s->name ? "selected" : "" }}>{{ $s->name }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div class="col-md-3 mt-3 d-flex align-items-center">
+                <div class="form-check mt-4">
+                    <input class="form-check-input" type="checkbox" name="include_retired" id="include_retired" value="1" {{ request("include_retired") ? "checked" : "" }}>
+                    <label class="form-check-label" for="include_retired">退会者も表示</label>
+                </div>
+            </div>
 
-        <h3 class="fw-bold mb-4">選手データ</h3>
+            <div class="col-md-3 mt-3">
+                <label class="form-label">プロ入り年（From）</label>
+                <input type="number" name="term_from" value="{{ request('term_from') }}" class="form-control">
+            </div>
+            <div class="col-md-3 mt-3">
+                <label class="form-label">プロ入り年（To）</label>
+                <input type="number" name="term_to" value="{{ request('term_to') }}" class="form-control">
+            </div>
 
-        {{-- 検索フォーム --}}
-        <div class="mb-4">
-            <div class="bg-secondary text-white px-3 py-2 fw-bold">検索条件（HPに表示）</div>
-            <div class="border px-4 py-4 bg-white">
-                <form method="GET" action="{{ route('pro_bowlers.index') }}" class="mb-4">
-                    <div class="row g-3">
-                        {{-- 1列目 --}}
-                        <div class="col-md-3">
-                            <input type="text" name="name" class="form-control" placeholder="例：山田 太郎" value="{{ request('name') }}">
-                        </div>
-                        <div class="col-md-3">
-                            <input type="text" name="license_no" class="form-control" placeholder="ライセンスNo." value="{{ request('license_no') }}">
-                        </div>
-                        <div class="col-md-3">
-                            <select name="district" class="form-select">
-                                <option value="">すべて地区</option>
-                                @foreach ($districts as $label)
-                                    <option value="{{ $label }}" {{ request('district') == $label ? 'selected' : '' }}>{{ $label }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div class="col-md-3">
-                            <select name="gender" class="form-select">
-                                <option value="">性別を選んでください</option>
-                                <option value="男性" {{ request('gender') == '男性' ? 'selected' : '' }}>男性</option>
-                                <option value="女性" {{ request('gender') == '女性' ? 'selected' : '' }}>女性</option>
-                            </select>
-                        </div>
-
-                        {{-- 2列目 --}}
-                        <div class="col-md-3">
-                            <input type="number" name="term_from" class="form-control" placeholder="期別（開始）" value="{{ request('term_from') }}">
-                        </div>
-                        <div class="col-md-3">
-                            <input type="number" name="term_to" class="form-control" placeholder="期別（終了）" value="{{ request('term_to') }}">
-                        </div>
-
-                        {{-- ボタン群 --}}
-                        <div class="col-md-6 d-flex align-items-center gap-2">
-                            <button type="submit" class="btn btn-primary">検索</button>
-                            <a href="{{ route('pro_bowlers.index') }}" class="btn btn-warning">リセット</a>
-                            <a href="{{ route('pro_bowlers.create') }}" class="btn btn-success">新規登録</a>
-                        </div>
-                    </div>
-                </form>
+            <div class="col-md-3 mt-3 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary w-100">検索</button>
             </div>
         </div>
+    </form>
 
-        {{-- 検索結果一覧 --}}
-        <div class="bg-white border p-4">
-        @if ($bowlers->count())
-            <table class="table table-bordered">
-            <thead>
-                <tr>
-                {{-- IDは表示しない。必要なら<tr data-id>で保持 --}}
-                <th>ライセンスNo.</th>
+    {{-- ✅一覧テーブル --}}
+    <table class="table table-bordered">
+        <thead>
+            <tr>
+                <th>ライセンスNo</th>
                 <th>氏名</th>
                 <th>地区</th>
                 <th>性別</th>
-                <th>期別</th>
-                <th>会員種別</th> {{-- ★ここをスポーツコーチ→会員種別に変更 --}}
+                <th>プロ入り年</th>
+                <th>会員種別</th>
+            </tr>
+        </thead>
+        <tbody>
+            @forelse($bowlers as $bowler)
+                <tr>
+                    <td>{{ $bowler->license_no }}</td>
+                    <td>{{ $bowler->name }}</td>
+                    <td>{{ optional($bowler->district)->label }}</td>
+                    <td>@if ($bowler->sex === 1) 男性 @elseif ($bowler->sex === 2) 女性 @else - @endif</td>
+                    <td>{{ $bowler->pro_entry_year }}</td>
+                    <td>{{ $bowler->membership_type }}</td>
                 </tr>
-            </thead>
-            <tbody>
-                @foreach ($bowlers as $bowler)
-                <tr data-id="{{ $bowler->id }}">
-                    <td>
-                        <a href="{{ route('pro_bowlers.edit', $bowler->id) }}" class="text-decoration-none text-dark">
-                            {{ $bowler->license_no ?? '-' }}
-                        </a>
-                    </td>
-                    <td>
-                        <a href="{{ route('pro_bowlers.edit', $bowler->id) }}" class="text-decoration-none text-dark">
-                            {{ $bowler->name_kanji ?? '-' }}
-                        </a>
-                    </td>
-                    <td>
-                        <a href="{{ route('pro_bowlers.edit', $bowler->id) }}" class="text-decoration-none text-dark">
-                            {{ $bowler->district->label ?? '-' }}
-                        </a>
-                    </td>
-                    <td>
-                        <a href="{{ route('pro_bowlers.edit', $bowler->id) }}" class="text-decoration-none text-dark">
-                            @if ($bowler->sex === 1) 男性
-                            @elseif ($bowler->sex === 2) 女性
-                            @else -
-                            @endif
-                        </a>
-                    </td>
-                    <td>
-                        <a href="{{ route('pro_bowlers.edit', $bowler->id) }}" class="text-decoration-none text-dark">
-                            {{ $bowler->kibetsu ? $bowler->kibetsu.'期' : '-' }}
-                        </a>
-                    </td>
-                    <td title="{{ $bowler->membership_type ?? '' }}">
-                        <a href="{{ route('pro_bowlers.edit', $bowler->id) }}" class="text-decoration-none text-dark">
-                            {{ $bowler->membership_type ?? '-' }} {{-- ★そのまま表示 --}}
-                        </a>
-                    </td>
+            @empty
+                <tr>
+                    <td colspan="6" class="text-center">該当するプロボウラーがいません。</td>
                 </tr>
-                @endforeach
-            </tbody>
-            </table>
+            @endforelse
+        </tbody>
+    </table>
 
-            <div>
-            {{ $bowlers->appends(request()->query())->links() }}
-            </div>
-        @else
-            <p>該当する選手データが見つかりませんでした。</p>
-        @endif
-        </div>
+    {{-- ✅ページネーション --}}
+    <div class="d-flex justify-content-center">
+        {{ $bowlers->links() }}
+    </div>
 
-    </main>
 </div>
 @endsection
