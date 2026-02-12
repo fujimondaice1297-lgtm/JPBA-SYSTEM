@@ -33,6 +33,17 @@
           }
       }
 
+      // 会員種別（kaiin_status）: Controllerから渡されなければDBから取得
+      if (!isset($kaiinStatuses)) {
+          try {
+              $kaiinStatuses = \Illuminate\Support\Facades\DB::table('kaiin_status')
+                  ->orderBy('id')
+                  ->get(['id', 'name', 'is_retired']);
+          } catch (\Throwable $e) {
+              $kaiinStatuses = collect();
+          }
+      }
+
       // JPBA式 No.範囲（新旧パラメータ互換）
       $idStart = request('id_start', request('id_from'));
       $idEnd   = request('id_end', request('id_to'));
@@ -126,7 +137,18 @@
             </div>
 
             <div class="col-md-2">
-                <input type="number" name="age_from" class="form-control" placeholder="年齢（開始）"
+                <select name="membership_type" class="form-select">
+                    <option value="">会員種別（全て）</option>
+                    @foreach($kaiinStatuses as $st)
+                        <option value="{{ $st->name }}" {{ request('membership_type')===$st->name ? 'selected' : '' }}>
+                            {{ $st->name }}@if(!empty($st->is_retired))（退会）@endif
+                        </option>
+                    @endforeach
+                </select>
+            </div>
+
+            <div class="col-md-2">
+                <input type="number" name="age_from class="form-control" placeholder="年齢（開始）"
                        value="{{ request('age_from') }}">
             </div>
             <div class="col-md-2">
