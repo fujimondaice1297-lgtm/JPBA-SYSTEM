@@ -148,7 +148,7 @@
             </div>
 
             <div class="col-md-2">
-                <input type="number" name="age_from class="form-control" placeholder="年齢（開始）"
+                <input type="number" name="age_from" class="form-control" placeholder="年齢（開始）"
                        value="{{ request('age_from') }}">
             </div>
             <div class="col-md-2">
@@ -281,8 +281,7 @@
                         {{-- 地区 --}}
                         <td>
                             <a href="{{ $editUrl }}" class="text-decoration-none text-dark">
-                                {{ $bowler->district->label ?? $bowler->district->name ?? '-' }}
-
+                                {{ $bowler->district?->label ?? $bowler->district?->name ?? '-' }}
                             </a>
                         </td>
 
