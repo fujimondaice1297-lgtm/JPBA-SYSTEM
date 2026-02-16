@@ -14,7 +14,7 @@
 ## Unresolved (needs decision)
 
 ### pro_bowlers
-- pro_bowlers.login_id （参照先がDB上で未確定：FKなし）
+- pro_bowlers.login_id（FKではない：varchar のログイン識別子。*_id 命名の例外）
 
 ### pro_test
 - pro_test.record_type_id （参照先がDB上で未確定：FKなし）
@@ -22,9 +22,9 @@
 ## Pending decisions (skipped for now)
 
 ### pro_bowlers.login_id
-- 状態: DB上でFKなし（参照先未確定）
-- 理由: 旧システム由来の login 系マスタの実体（テーブル/仕様）が未確定のため決め打ちしない
-- 対応方針: 参照先の仕様が確定した段階で、FK追加 or 正規化（login系マスタ作成）を行う
+- 決定: **FKにはしない**（login_id は文字列）
+- 根拠: migration で varchar(255)、アプリ側 validation も nullable|string|max:255
+- 対応方針: 将来的に rename（legacy_login_id 等）/ 置換 / 廃止を検討
 
 ### pro_test.record_type_id
 - 状態: DB上でFKなし（参照先未確定）

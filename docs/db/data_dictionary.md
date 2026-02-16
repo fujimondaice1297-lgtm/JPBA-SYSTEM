@@ -221,6 +221,7 @@ UIで表示する地区名は **label を正本**とし、旧運用の `name` �
 
 #### 12) マイページ/認証・公開制御
 - login_id, mypage_temp_password, password_change_status
+- ※ login_id は **文字列(varchar)**。命名が *_id だが **外部キーではない**（旧システム由来のログイン識別子）。
 - birthdate_public, birthdate_public_hide_year, birthdate_public_is_private
 - height_is_public, weight_is_public, blood_type_is_public
 
