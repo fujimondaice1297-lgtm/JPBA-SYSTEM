@@ -6,6 +6,8 @@
 
 作業履歴
 
+2026-02-16 Task-001: tournament_results/participants に pro_bowler_id 追加（非破壊・バックフィル）
+
 ## 2026-02-06 お知らせ（info）詳細＋添付DL
 
 - 目的: /info の一覧から詳細へ遷移し、添付をDLできるようにする

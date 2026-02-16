@@ -1,5 +1,5 @@
 // Auto-generated from docs/db/data_dictionary.md
-// Generated at: 2026-02-16T02:05:38+01:00
+// Generated at: 2026-02-16T02:56:45+01:00
 
 Project JPBA_SYSTEM {
   database_type: 'PostgreSQL'
@@ -93,14 +93,6 @@ Table prize_distributions {
   // columns omitted (see docs/db/columns_by_table.md)
 }
 
-Table pro_bowler_biographies {
-  // columns omitted (see docs/db/columns_by_table.md)
-}
-
-Table pro_bowler_instructor_info {
-  // columns omitted (see docs/db/columns_by_table.md)
-}
-
 Table pro_bowler_links {
   // columns omitted (see docs/db/columns_by_table.md)
 }
@@ -125,63 +117,11 @@ Table pro_bowlers {
   // columns omitted (see docs/db/columns_by_table.md)
 }
 
-Table pro_test {
-  // columns omitted (see docs/db/columns_by_table.md)
-}
-
-Table pro_test_attachment {
-  // columns omitted (see docs/db/columns_by_table.md)
-}
-
-Table pro_test_category {
-  // columns omitted (see docs/db/columns_by_table.md)
-}
-
-Table pro_test_comment {
-  // columns omitted (see docs/db/columns_by_table.md)
-}
-
-Table pro_test_result_status {
-  // columns omitted (see docs/db/columns_by_table.md)
-}
-
-Table pro_test_schedule {
-  // columns omitted (see docs/db/columns_by_table.md)
-}
-
-Table pro_test_score {
-  // columns omitted (see docs/db/columns_by_table.md)
-}
-
-Table pro_test_score_summary {
-  // columns omitted (see docs/db/columns_by_table.md)
-}
-
-Table pro_test_status_log {
-  // columns omitted (see docs/db/columns_by_table.md)
-}
-
-Table pro_test_venue {
-  // columns omitted (see docs/db/columns_by_table.md)
-}
-
-Table record_types {
-  // columns omitted (see docs/db/columns_by_table.md)
-}
-
-Table registered_balls {
-  // columns omitted (see docs/db/columns_by_table.md)
-}
-
 Table sessions {
   // columns omitted (see docs/db/columns_by_table.md)
 }
 
 Table sexes {
-  // columns omitted (see docs/db/columns_by_table.md)
-}
-
-Table stage_settings {
   // columns omitted (see docs/db/columns_by_table.md)
 }
 
@@ -255,8 +195,6 @@ Ref: point_distributions.pattern_id > distribution_patterns.id
 Ref: point_distributions.tournament_id > tournaments.id
 Ref: prize_distributions.pattern_id > distribution_patterns.id
 Ref: prize_distributions.tournament_id > tournaments.id
-Ref: pro_bowler_biographies.pro_bowler_id > pro_bowlers.id
-Ref: pro_bowler_instructor_info.pro_bowler_id > pro_bowlers.id
 Ref: pro_bowler_links.pro_bowler_id > pro_bowlers.id
 Ref: pro_bowler_profiles.pro_bowler_id > pro_bowlers.id
 Ref: pro_bowler_sponsors.pro_bowler_id > pro_bowlers.id
@@ -267,24 +205,7 @@ Ref: pro_bowler_trainings.training_id > trainings.id
 Ref: pro_bowlers.district_id > districts.id
 Ref: pro_bowlers.membership_type > kaiin_status.name
 Ref: pro_bowlers.sex > sexes.id
-Ref: pro_test.area_id > area.id
-Ref: pro_test.kaiin_status_id > kaiin_status.id
-Ref: pro_test.license_id > license.id
-Ref: pro_test.place_id > place.id
-Ref: pro_test.sex_id > sexes.id
-Ref: pro_test.test_category_id > pro_test_category.id
-Ref: pro_test.test_result_status_id > pro_test_result_status.id
-Ref: pro_test.test_venue_id > pro_test_venue.id
-Ref: pro_test_attachment.pro_test_id > pro_test.id
-Ref: pro_test_comment.pro_test_id > pro_test.id
-Ref: pro_test_schedule.venue_id > venues.id
-Ref: pro_test_score.pro_test_id > pro_test.id
-Ref: pro_test_score_summary.pro_test_id > pro_test.id
-Ref: pro_test_status_log.pro_test_id > pro_test.id
-Ref: record_types.pro_bowler_id > pro_bowlers.id
-Ref: registered_balls.approved_ball_id > approved_balls.id
 Ref: sessions.user_id > users.id
-Ref: stage_settings.tournament_id > tournaments.id
 Ref: tournament_awards.tournament_id > tournaments.id
 Ref: tournament_entries.pro_bowler_id > pro_bowlers.id
 Ref: tournament_entries.tournament_id > tournaments.id
@@ -292,10 +213,10 @@ Ref: tournament_entry_balls.tournament_entry_id > tournament_entries.id
 Ref: tournament_entry_balls.used_ball_id > used_balls.id
 Ref: tournament_files.tournament_id > tournaments.id
 Ref: tournament_organizations.tournament_id > tournaments.id
+Ref: tournament_participants.pro_bowler_id > pro_bowlers.id
 Ref: tournament_participants.tournament_id > tournaments.id
 Ref: tournament_points.tournament_id > tournaments.id
+Ref: tournament_results.pro_bowler_id > pro_bowlers.id
 Ref: tournament_results.tournament_id > tournaments.id
 Ref: tournaments.venue_id > venues.id
-Ref: used_balls.approved_ball_id > approved_balls.id
-Ref: used_balls.pro_bowler_id > pro_bowlers.id
 Ref: users.pro_bowler_id > pro_bowlers.id
