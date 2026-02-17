@@ -1,5 +1,5 @@
 // Auto-generated from docs/db/data_dictionary.md
-// Generated at: 2026-02-17T01:33:53+01:00
+// Generated at: 2026-02-17T02:12:20+01:00
 
 Project JPBA_SYSTEM {
   database_type: 'PostgreSQL'
@@ -179,6 +179,7 @@ Table venues {
 
 Ref: annual_dues.pro_bowler_id > pro_bowlers.id
 Ref: approved_ball_pro_bowler.approved_ball_id > approved_balls.id
+Ref: approved_ball_pro_bowler.pro_bowler_id > pro_bowlers.id
 Ref: game_scores.tournament_id > tournaments.id
 Ref: group_mail_recipients.mailout_id > group_mailouts.id
 Ref: group_mail_recipients.pro_bowler_id > pro_bowlers.id

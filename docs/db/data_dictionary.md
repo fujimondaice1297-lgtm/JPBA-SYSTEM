@@ -105,7 +105,8 @@ JPBA SYSTEM Database Data Dictionary
 ## approved_ball_pro_bowler
 
 ### 役割
-公認ボールとプロボウラーの紐付け（年単位の使用状況）を保持する中間テーブル。
+公認ボールとプロボウラーの紐付け（年度など）を保持する中間テーブル。
+既存の `pro_bowler_license_no`（文字列）を残しつつ、段階移行のため `pro_bowler_id`（nullable）を追加して「ID参照」も可能にする。
 
 ### 主キー
 - id (bigint)
@@ -115,12 +116,9 @@ JPBA SYSTEM Database Data Dictionary
 - approved_ball_id（公認ボールID）
 - year（年度）
 
-### 注意（設計改善ポイント）
-- pro_bowler_license_no（文字列）で持っているため、`pro_bowlers` へのFKは貼れていない。
-
-### 外部キー（FK）
-- approved_ball_id -> approved_balls.id
-
+### 外部キー（自動反映：refs_missing.md）
+- approved_ball_pro_bowler.approved_ball_id -> approved_balls.id
+- approved_ball_pro_bowler.pro_bowler_id -> pro_bowlers.id
 ---
 
 ## approved_balls
