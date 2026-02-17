@@ -1,5 +1,5 @@
 // Auto-generated from docs/db/data_dictionary.md
-// Generated at: 2026-02-16T02:56:45+01:00
+// Generated at: 2026-02-17T01:33:53+01:00
 
 Project JPBA_SYSTEM {
   database_type: 'PostgreSQL'
@@ -213,10 +213,8 @@ Ref: tournament_entry_balls.tournament_entry_id > tournament_entries.id
 Ref: tournament_entry_balls.used_ball_id > used_balls.id
 Ref: tournament_files.tournament_id > tournaments.id
 Ref: tournament_organizations.tournament_id > tournaments.id
-Ref: tournament_participants.pro_bowler_id > pro_bowlers.id
 Ref: tournament_participants.tournament_id > tournaments.id
 Ref: tournament_points.tournament_id > tournaments.id
-Ref: tournament_results.pro_bowler_id > pro_bowlers.id
 Ref: tournament_results.tournament_id > tournaments.id
 Ref: tournaments.venue_id > venues.id
 Ref: users.pro_bowler_id > pro_bowlers.id

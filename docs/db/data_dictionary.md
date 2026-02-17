@@ -647,25 +647,23 @@ SNS等リンク集を保持するテーブル。
 
 ### 役割
 大会の参加者一覧（または参加枠）を保持するテーブル。
-従来は `pro_bowler_license_no`（文字列）で参加者を管理していたが、整合性強化のため `pro_bowler_id`（nullable）を追加し、プロは可能な範囲で `pro_bowlers.id` に寄せていく。
+既存の `pro_bowler_license_no`（文字列）を残しつつ、段階移行のため `pro_bowler_id`（nullable）を追加して「ID参照」も可能にする。
 
 ### 主キー
 - id (bigint)
 
 ### 主要カラム
 - tournament_id（どの大会）
-- pro_bowler_license_no（参加者のライセンス番号：文字列。既存互換のため残す）
-- pro_bowler_id（参加者の pro_bowlers.id：nullable。プロの場合は埋める）
+- pro_bowler_license_no（参加者のライセンス番号：文字列：既存互換のため保持）
+- pro_bowler_id（参加者の pro_bowlers.id：nullable。埋められる行はIDで紐付ける）
 
-### 運用方針（非破壊・段階移行）
-- まず `pro_bowler_license_no` を残したまま `pro_bowler_id` を追加し、既存データは `pro_bowlers.license_no` と突合してバックフィルする。
-- 参照は新規実装から `pro_bowler_id` 優先に寄せる（ただし既存コードは即時破壊しない）。
-- アマ参加者等で突合できない行は `pro_bowler_id` を NULL のまま許容する。
+### 注意（運用方針）
+- 既存データは `pro_bowler_license_no` のままでも壊れない。
+- 可能な行は `pro_bowler_id` を埋め、アプリ側は将来的に `pro_bowler_id` 優先で参照する。
 
-### 外部キー（自動反映：refs_missing.md）
+### 外部キー（DB上で確認できたもの）
 - tournament_participants.tournament_id -> tournaments.id
-- tournament_participants.pro_bowler_id -> pro_bowlers.id
-
+- tournament_participants.pro_bowler_id -> pro_bowlers.id（ON DELETE SET NULL）
 
 ---
 
@@ -673,15 +671,15 @@ SNS等リンク集を保持するテーブル。
 
 ### 役割
 大会結果（順位・ポイント・トータルピン・アベレージ・賞金など）を保持するテーブル。
-従来は `pro_bowler_license_no`（文字列）で識別していたが、整合性強化のため `pro_bowler_id`（nullable）を追加し、プロは可能な範囲で `pro_bowlers.id` に寄せていく。
+既存の `pro_bowler_license_no`（文字列）を残しつつ、段階移行のため `pro_bowler_id`（nullable）を追加して「ID参照」も可能にする。
 
 ### 主キー
 - id (bigint)
 
 ### 主要カラム
 - tournament_id（どの大会）
-- pro_bowler_license_no（誰の結果か：文字列。既存互換のため残す）
-- pro_bowler_id（誰の結果か：pro_bowlers.id：nullable。プロの場合は埋める）
+- pro_bowler_license_no（誰の結果か：文字列：既存互換のため保持）
+- pro_bowler_id（誰の結果か：pro_bowlers.id：nullable。埋められる行はIDで紐付ける）
 - ranking（順位）
 - points（ポイント）
 - total_pin（合計ピン）
@@ -691,14 +689,13 @@ SNS等リンク集を保持するテーブル。
 - ranking_year（年度：NOT NULL）
 - amateur_name（アマ参加者名：nullable）
 
-### 運用方針（非破壊・段階移行）
-- まず `pro_bowler_license_no` を残したまま `pro_bowler_id` を追加し、既存データは `pro_bowlers.license_no` と突合してバックフィルする。
-- アマ参加者等で突合できない行は `pro_bowler_id` を NULL のまま許容し、従来どおり `amateur_name` 等で表現する。
+### 注意（運用方針）
+- 既存データは `pro_bowler_license_no` のままでも壊れない。
+- アマ参加者は `amateur_name`（および `pro_bowler_id` NULL）で保持する。
 
-### 外部キー（自動反映：refs_missing.md）
+### 外部キー（DB上で確認できたもの）
 - tournament_results.tournament_id -> tournaments.id
-- tournament_results.pro_bowler_id -> pro_bowlers.id
-
+- tournament_results.pro_bowler_id -> pro_bowlers.id（ON DELETE SET NULL）
 
 ---
 
