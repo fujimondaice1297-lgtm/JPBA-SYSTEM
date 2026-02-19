@@ -828,3 +828,11 @@ SNS等リンク集を保持するテーブル。
 
 ### 外部キー（FK）
 - user_id -> users.id
+
+## registered_balls
+
+### 外部キー（自動反映：refs_missing.md）
+- registered_balls.approved_ball_id -> approved_balls.id
+- registered_balls.pro_bowler_id -> pro_bowlers.id
+
+---
