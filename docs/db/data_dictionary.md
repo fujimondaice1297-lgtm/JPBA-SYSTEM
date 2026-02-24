@@ -368,6 +368,7 @@ JPBA公認ボールのマスタ。
 ### 外部キー（FK）
 - pro_bowler_id -> pro_bowlers.id
 - district_id -> districts.id
+- instructors.pro_bowler_id -> pro_bowlers.id（ON DELETE SET NULL）
 
 ---
 
