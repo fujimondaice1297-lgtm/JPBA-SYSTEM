@@ -178,19 +178,31 @@ JPBA公認ボールのマスタ。
 ## game_scores
 
 ### 役割
-大会のゲーム別スコア（ゲームNoごとの点数）を保持するテーブル。
+大会のゲーム別スコア（1ゲームごとの点数）を保持するテーブル。
+旧データ互換のため `license_number`（文字列）や `name` を残しつつ、段階移行のため `pro_bowler_id`（nullable）を追加して「ID参照」も可能にする。
 
 ### 主キー
 - id (bigint)
 
-### 主要カラム
+### 主要カラム（DB実体）
 - tournament_id（どの大会）
-- game_no（何ゲーム目か）
-- score（点数）
-- pro_bowler_license_no（ライセンス番号：文字列）
+- stage（ステージ：入力元の値を保持）
+- shift（シフト：入力元の値を保持）
+- gender（性別：入力元の値を保持）
+- license_number（ライセンス番号：文字列）
+- name（氏名：入力元の値を保持）
+- entry_number（エントリー番号：入力元の値を保持）
+- game_number（ゲーム番号）
+- score（スコア）
+- pro_bowler_id（pro_bowlers.id：nullable。埋められる行はIDで紐付ける）
 
 ### 外部キー（FK）
 - tournament_id -> tournaments.id
+- pro_bowler_id -> pro_bowlers.id（ON DELETE SET NULL）
+
+### 注意（運用方針）
+- `license_number` / `name` はスナップショット（当時の表記）として残す。
+- アプリ側は将来的に `pro_bowler_id` 優先で参照する。
 
 ---
 
