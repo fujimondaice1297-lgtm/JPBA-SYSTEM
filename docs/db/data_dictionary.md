@@ -825,6 +825,9 @@ SNS等リンク集を保持するテーブル。
 ### 外部キー（FK）
 - pro_bowler_id -> pro_bowlers.id
 
+- users は pro_bowler_id を正規の紐付け軸とする（FK: users.pro_bowler_id -> pro_bowlers.id）。
+- users.pro_bowler_license_no / users.license_no は互換・移行用の文字列として残す（当面は削除しない）。
+
 ---
 
 ## sessions
@@ -847,5 +850,23 @@ SNS等リンク集を保持するテーブル。
 ### 外部キー（自動反映：refs_missing.md）
 - registered_balls.approved_ball_id -> approved_balls.id
 - registered_balls.pro_bowler_id -> pro_bowlers.id
+
+------
+
+## pro_dsp
+
+### 役割
+旧システム由来のプロボウラー詳細（ProDsp）情報を保持するテーブル。
+旧互換として `license_no`（文字列）を保持しつつ、正規の結線軸は `pro_bowler_id`（nullable）で `pro_bowlers` に寄せる。
+
+### 主キー
+- id (bigint) ※（列詳細は columns_by_table.md を参照）
+
+### 主要カラム（抜粋）
+- license_no（旧互換：文字列）
+- pro_bowler_id（pro_bowlers.id：nullable）
+
+### 外部キー（FK）
+- pro_dsp.pro_bowler_id -> pro_bowlers.id（ON DELETE SET NULL）
 
 ---
