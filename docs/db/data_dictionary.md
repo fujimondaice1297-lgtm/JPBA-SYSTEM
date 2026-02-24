@@ -179,7 +179,7 @@ JPBA公認ボールのマスタ。
 
 ### 役割
 大会のゲーム別スコア（1ゲームごとの点数）を保持するテーブル。
-旧データ互換のため `license_number`（文字列）や `name` を残しつつ、段階移行のため `pro_bowler_id`（nullable）を追加して「ID参照」も可能にする。
+旧データ互換のため `license_number`（文字列）や `name` を残しつつ、段階移行のため `pro_bowler_id`（nullable）で `pro_bowlers` と紐付けられるようにする。
 
 ### 主キー
 - id (bigint)
