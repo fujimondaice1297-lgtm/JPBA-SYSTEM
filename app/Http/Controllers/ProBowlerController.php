@@ -229,6 +229,8 @@ class ProBowlerController extends Controller
         // 画面から来る入力（既存のfiltersも壊さない）
         $filters = $request->only([
             'license_no',
+            'license_pattern',             // ★追加：ライセンス形式（A/B）
+            'license_prefix',              // ★追加：ライセンス先頭（例:F / M / M0000P）
             'id_start', 'id_end',          // JPBA式（No.範囲）
             'id_from', 'id_to',            // 旧UI互換（あっても無視しない）
             'pro_entry_year_from', 'pro_entry_year_to',
@@ -242,10 +244,18 @@ class ProBowlerController extends Controller
             'has_sports_coach_license',
             'instructor_grade',
             'coach_name',
-            'membership_type',            // 会員種別（kaiin_status.name）
+            'membership_type',             // 会員種別（kaiin_status.name）
             'include_inactive',            // 退会者も含む
-            'sort', 'dir',                 // ★追加：ソート
+            'per_page',                    // ★追加：表示件数
+            'sort', 'dir',                 // ソート
         ]);
+
+        // 表示件数（UIの選択肢に合わせて制限）
+        $perPage = (int)($filters['per_page'] ?? 50);
+        $allowedPerPage = [10, 25, 50, 100, 200];
+        if (!in_array($perPage, $allowedPerPage, true)) {
+            $perPage = 50;
+        }
 
         // 会員種別マスタ（ドロップダウン用）
         $kaiinStatuses = DB::table('kaiin_status')
@@ -299,14 +309,29 @@ class ProBowlerController extends Controller
             $name = trim((string)$filters['name']);
             $query->where(function ($q) use ($name) {
                 $q->where('name_kanji', 'like', "%{$name}%")
-                ->orWhere('name_kana', 'like', "%{$name}%");
+                  ->orWhere('name_kana', 'like', "%{$name}%");
             });
         }
 
-        // ライセンスNo（ピンポイントや部分一致用：任意で残す）
+        // ライセンスNo（部分一致）
         if (!empty($filters['license_no'])) {
             $license = trim((string)$filters['license_no']);
             $query->where('license_no', 'like', "%{$license}%");
+        }
+
+        // ★ライセンス形式フィルタ（A/B）
+        $licensePattern = strtoupper(trim((string)($filters['license_pattern'] ?? '')));
+        if ($licensePattern === 'A') {
+            $query->whereRaw("license_no ~ '^[A-Z][0-9]{7,10}$'");
+        } elseif ($licensePattern === 'B') {
+            $query->whereRaw("license_no ~ '^[A-Z][0-9]{4}[A-Z][0-9]{3,4}$'");
+        }
+
+        // ★ライセンス先頭フィルタ（例: F / M / M0000P）
+        $licensePrefix = strtoupper(trim((string)($filters['license_prefix'] ?? '')));
+        $licensePrefix = preg_replace('/[^A-Z0-9]/', '', $licensePrefix);
+        if ($licensePrefix !== '') {
+            $query->whereRaw('upper(license_no) like ?', [$licensePrefix . '%']);
         }
 
         // ====== JPBA式：No.範囲検索（数字） ======
@@ -323,7 +348,7 @@ class ProBowlerController extends Controller
             $startIsNum = ($start !== '' && ctype_digit($start));
             $endIsNum   = ($end !== '' && ctype_digit($end));
 
-            // 英字No（例: T007）なら完全一致へ
+            // 英字No（例: T007）なら完全一致へ（範囲では扱わない）
             if (($start !== '' && !$startIsNum) || ($end !== '' && !$endIsNum)) {
                 $val = $start !== '' ? $start : $end;
                 $query->whereRaw('lower(license_no) = lower(?)', [$val]);
@@ -389,21 +414,47 @@ class ProBowlerController extends Controller
         }
 
         // ====== ソート ======
-        $sort = (string)($filters['sort'] ?? '');
+        $sort = (string)($filters['sort'] ?? 'license_no');
         $dir  = strtolower((string)($filters['dir'] ?? 'asc'));
         $dir  = $dir === 'desc' ? 'desc' : 'asc';
 
-        if ($sort === 'titles') {
-            $query->orderByRaw('coalesce(titles_agg.titles_count, 0) ' . $dir);
+        if ($sort === '' || $sort === 'license_no') {
+            // ライセンス（既定）
+            $query->orderByRaw("license_no_num {$dir} nulls last")
+                  ->orderBy('license_no', $dir);
+        } elseif ($sort === 'name') {
+            $query->orderByRaw("name_kanji {$dir} nulls last")
+                  ->orderByRaw("name_kana {$dir} nulls last")
+                  ->orderByRaw("license_no_num asc nulls last")
+                  ->orderBy('license_no');
+        } elseif ($sort === 'district') {
+            $query->orderByRaw("district_id {$dir} nulls last")
+                  ->orderByRaw("license_no_num asc nulls last")
+                  ->orderBy('license_no');
+        } elseif ($sort === 'sex') {
+            $query->orderByRaw("sex {$dir} nulls last")
+                  ->orderByRaw("license_no_num asc nulls last")
+                  ->orderBy('license_no');
+        } elseif ($sort === 'kibetsu') {
+            $query->orderByRaw("kibetsu {$dir} nulls last")
+                  ->orderByRaw("license_no_num asc nulls last")
+                  ->orderBy('license_no');
+        } elseif ($sort === 'titles') {
+            $query->orderByRaw('coalesce(titles_agg.titles_count, 0) ' . $dir)
+                  ->orderByRaw("license_no_num asc nulls last")
+                  ->orderBy('license_no');
+        } else {
+            // 未定義は既定にフォールバック
+            $query->orderByRaw("license_no_num asc nulls last")
+                  ->orderBy('license_no');
         }
 
-        // 既定の並び（最後に安定化）
-        $query->orderByRaw('license_no_num asc nulls last')
-            ->orderBy('license_no');
-
         $proBowlers = $query
-            ->paginate(50)
+            ->paginate($perPage)
             ->appends($filters);
+
+        // “戻り先”用途（store/update で使用）
+        session(['pro_bowlers.last_filters' => $filters]);
 
         return view('pro_bowlers.list', compact('proBowlers', 'filters', 'kaiinStatuses'));
     }
@@ -595,45 +646,45 @@ class ProBowlerController extends Controller
             'instagram'          => $validated['instagram'] ?? null,
             'rankseeker'         => $validated['rankseeker'] ?? null,
             'jbc_driller_cert'   => $validated['jbc_driller_cert'] ?? null,
-            'a_license_date'     => $validated['a_license_date'] ?? null,
-            'permanent_seed_date'=> $validated['permanent_seed_date'] ?? null,
-            'hall_of_fame_date'  => $validated['hall_of_fame_date'] ?? null,
-            'memo'               => $validated['memo'] ?? null,
-            'usbc_coach'         => $validated['usbc_coach'] ?? null,
-            'is_district_leader' => $isLeader ? 1 : 0,
+            'a_license_date'         => $validated['a_license_date'] ?? null,
+            'permanent_seed_date'    => $validated['permanent_seed_date'] ?? null,
+            'hall_of_fame_date'      => $validated['hall_of_fame_date'] ?? null,
+            'memo'                   => $validated['memo'] ?? null,
+            'usbc_coach'             => $validated['usbc_coach'] ?? null,
+            'is_district_leader'     => $isLeader,
 
-            'height_cm'            => $this->intOrNull($request->input('height_cm'), 0, 300),
-            'height_is_public'     => $request->boolean('height_is_public'),
-            'weight_kg'            => $this->intOrNull($request->input('weight_kg'), 0, 400),
-            'weight_is_public'     => $request->boolean('weight_is_public'),
-            'blood_type'           => $this->normalizeBlood($request->input('blood_type')),
-            'blood_type_is_public' => $request->boolean('blood_type_is_public'),
-            'dominant_arm'         => $request->input('dominant_arm') ?: null,
-            'sponsor_a'            => $this->nullIfBlank($request->input('sponsor_a')),
-            'sponsor_a_url'        => $this->nullIfBlank($request->input('sponsor_a_url')),
-            'sponsor_b'            => $this->nullIfBlank($request->input('sponsor_b')),
-            'sponsor_b_url'        => $this->nullIfBlank($request->input('sponsor_b_url')),
-            'sponsor_c'            => $this->nullIfBlank($request->input('sponsor_c')),
-            'sponsor_c_url'        => $this->nullIfBlank($request->input('sponsor_c_url')),
-            'equipment_contract'   => $this->nullIfBlank($request->input('equipment_contract')),
-            'coaching_history'     => $this->nullIfBlank($request->input('coaching_history')),
-            'motto'                => $this->nullIfBlank($request->input('motto')),
+            'height_cm'              => $this->intOrNull($request->input('height_cm'), 0, 300),
+            'height_is_public'       => $request->boolean('height_is_public'),
+            'weight_kg'              => $this->intOrNull($request->input('weight_kg'), 0, 400),
+            'weight_is_public'       => $request->boolean('weight_is_public'),
+            'blood_type'             => $this->normalizeBlood($request->input('blood_type')),
+            'blood_type_is_public'   => $request->boolean('blood_type_is_public'),
+            'dominant_arm'           => $request->input('dominant_arm') ?: null,
+            'sponsor_a'              => $this->nullIfBlank($request->input('sponsor_a')),
+            'sponsor_a_url'          => $this->nullIfBlank($request->input('sponsor_a_url')),
+            'sponsor_b'              => $this->nullIfBlank($request->input('sponsor_b')),
+            'sponsor_b_url'          => $this->nullIfBlank($request->input('sponsor_b_url')),
+            'sponsor_c'              => $this->nullIfBlank($request->input('sponsor_c')),
+            'sponsor_c_url'          => $this->nullIfBlank($request->input('sponsor_c_url')),
+            'equipment_contract'     => $this->nullIfBlank($request->input('equipment_contract')),
+            'coaching_history'       => $this->nullIfBlank($request->input('coaching_history')),
+            'motto'                  => $this->nullIfBlank($request->input('motto')),
             'mailing_addr_same_as_org' => $request->boolean('mailing_addr_same_as_org'),
-            'mailing_zip'          => $this->nullIfBlank($request->input('mailing_zip')),
-            'mailing_addr1'        => $this->nullIfBlank($request->input('mailing_addr1')),
-            'mailing_addr2'        => $this->nullIfBlank($request->input('mailing_addr2')),
+            'mailing_zip'   => $this->nullIfBlank($request->input('mailing_zip')),
+            'mailing_addr1' => $this->nullIfBlank($request->input('mailing_addr1')),
+            'mailing_addr2' => $this->nullIfBlank($request->input('mailing_addr2')),
             'login_id'             => $this->nullIfBlank($request->input('login_id')),
             'mypage_temp_password' => $this->nullIfBlank($request->input('mypage_temp_password')),
-            'organization_name'    => $this->nullIfBlank($request->input('organization_name')),
-            'organization_zip'     => $this->nullIfBlank($request->input('organization_zip')),
-            'organization_addr1'   => $this->nullIfBlank($request->input('organization_addr1')),
-            'organization_addr2'   => $this->nullIfBlank($request->input('organization_addr2')),
-            'organization_url'     => $this->nullIfBlank($request->input('organization_url')),
+            'organization_name'  => $this->nullIfBlank($request->input('organization_name')),
+            'organization_zip'   => $this->nullIfBlank($request->input('organization_zip')),
+            'organization_addr1' => $this->nullIfBlank($request->input('organization_addr1')),
+            'organization_addr2' => $this->nullIfBlank($request->input('organization_addr2')),
+            'organization_url'   => $this->nullIfBlank($request->input('organization_url')),
             'public_addr_same_as_org' => $request->boolean('public_addr_same_as_org'),
-            'public_zip'           => $this->nullIfBlank($request->input('public_zip')),
-            'public_addr1'         => $this->nullIfBlank($request->input('public_addr1')),
-            'public_addr2'         => $this->nullIfBlank($request->input('public_addr2')),
-            'a_license_number'     => $request->filled('a_license_number') ? (int)$request->input('a_license_number') : null,
+            'public_zip'   => $this->nullIfBlank($request->input('public_zip')),
+            'public_addr1' => $this->nullIfBlank($request->input('public_addr1')),
+            'public_addr2' => $this->nullIfBlank($request->input('public_addr2')),
+            'a_license_number' => $request->filled('a_license_number') ? (int)$request->input('a_license_number') : null,
             'password_change_status' => $this->normalizePwdChangeStatus($request->input('password_change_status')),
 
             'a_class_status'         => $request->input('a_class_status'),

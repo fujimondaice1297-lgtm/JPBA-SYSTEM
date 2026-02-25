@@ -97,6 +97,19 @@
             </div>
 
             <div class="col-md-2">
+                <select name="license_pattern" class="form-select">
+                    <option value="">ライセンス形式（全て）</option>
+                    <option value="A" {{ request('license_pattern')==='A' ? 'selected' : '' }}>A：英字+数字（例：F00000001）</option>
+                    <option value="B" {{ request('license_pattern')==='B' ? 'selected' : '' }}>B：混在形式（例：M0000P014）</option>
+                </select>
+            </div>
+
+            <div class="col-md-2">
+                <input type="text" name="license_prefix" class="form-control" placeholder="先頭（例：F / M / M0000P）"
+                       value="{{ request('license_prefix') }}">
+            </div>
+
+            <div class="col-md-2">
                 <input type="text" name="id_start" class="form-control" placeholder="No.（開始）"
                        value="{{ $idStart }}">
                 <small class="text-muted">※英字Noは片方だけ入力</small>
