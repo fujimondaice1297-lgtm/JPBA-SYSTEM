@@ -6,6 +6,12 @@
 
 作業履歴
 
+## 2026-02-25 ProBowler CSV インポート不具合（license列誤指定）対処
+- Pro_colum.csv の実ライセンスは「#ID（idx=0）」に F00000001… が入っている。ヘッダ「ライセンスNo（idx=1）」は空。
+- ライセンス形式は複数あり、例：F00000001（英字+8桁）/ M0000P014（英字+4桁+英字+3桁）
+- 誤って別列を license-index 指定すると license_no に郵便番号（099-0403 等）が混入するため、Importerに形式検証を追加して弾く
+- 混入済み40件は psql で license_no 正規表現に合わない行を削除し、件数を 2263 に復旧
+
 2026-02-16 Task-001: tournament_results/participants に pro_bowler_id 追加（非破壊・バックフィル）
 
 ## 2026-02-06 お知らせ（info）詳細＋添付DL
@@ -20,6 +26,9 @@
 - 動作確認:
   - /info → 詳細リンク → /info/{id} 表示OK
   - 添付DL: /info/files/{id} OK
+  - ルート確認: informations.show / information_files.download / information_files.member.download が route:list で確認できた
+  - 画面: /info は表示できる（現時点では一般公開のお知らせ0件のため「ありません」表示）
+  - 補足: show.blade.php / InformationFile モデルを新規作成し、添付DL導線まで実装
 - 次:
   - （必要なら）会員向け表示条件・ファイルvisibilityの制御
 
