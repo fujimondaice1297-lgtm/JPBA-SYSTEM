@@ -14,7 +14,14 @@ class InformationController extends Controller
     public function index(Request $request)
     {
         $year = $request->input('year');
-        if ($year === null) { $year = now()->year; } // デフォルト：今年
+        if ($year === null) { $year = now()->year; } // デフォルト：今年（未指定時のみ）
+
+        $categories = $this->categories();
+        $category = (string)($request->input('category') ?? '');
+        $category = trim($category);
+        if ($category === '' || !in_array($category, $categories, true)) {
+            $category = null;
+        }
 
         $infos = Information::active()->public()
             // 一般公開では、添付も visibility=public のみカウント
@@ -25,6 +32,9 @@ class InformationController extends Controller
                 // updated_at の年でフィルタ。なければ starts_at/created_at を使っても良いが設計統一のため updated_at で。
                 $q->whereYear('updated_at', $year);
             })
+            ->when($category, function ($q) use ($category) {
+                $q->where('category', $category);
+            })
             ->orderByDesc('updated_at')
             ->orderByDesc('starts_at')
             ->orderByDesc('id')
@@ -33,7 +43,7 @@ class InformationController extends Controller
 
         $availableYears = $this->years();
 
-        return view('informations.index', compact('infos','availableYears'));
+        return view('informations.index', compact('infos','availableYears','categories'));
     }
 
     /** 会員向け（要ログイン） */
@@ -43,10 +53,18 @@ class InformationController extends Controller
         $year = $request->input('year');
         if ($year === null) { $year = now()->year; }
 
+        $categories = $this->categories();
+        $category = (string)($request->input('category') ?? '');
+        $category = trim($category);
+        if ($category === '' || !in_array($category, $categories, true)) {
+            $category = null;
+        }
+
         $infos = Information::active()->forUser($user)
             // 会員向けでは public / members どちらもカウント（運用上は visibility で出し分け可能）
             ->withCount('files')
             ->when($year, fn($q) => $q->whereYear('updated_at', $year))
+            ->when($category, fn($q) => $q->where('category', $category))
             ->orderByDesc('updated_at')
             ->orderByDesc('starts_at')
             ->orderByDesc('id')
@@ -55,13 +73,14 @@ class InformationController extends Controller
 
         $availableYears = $this->years();
 
-        return view('informations.member', compact('infos','availableYears'));
+        return view('informations.member', compact('infos','availableYears','categories'));
     }
 
     /**
      * お知らせ 詳細（一般公開 / 会員どちらのルートから来ても同じ画面）
      * - /info/{information}            → 一般公開として扱う（添付も public のみ）
      * - /member/info/{information}     → 会員向けとして扱う（添付 public + members）
+     * - /info/{information}?mode=member → 会員でログイン済みなら member 扱い（ルート追加なしで対応）
      */
     public function show(Request $request, Information $information)
     {
@@ -179,10 +198,23 @@ class InformationController extends Controller
             ->all();
     }
 
+    /** カテゴリ（正本：data_dictionary） */
+    private function categories(): array
+    {
+        return ['NEWS', 'イベント', '大会', 'ｲﾝｽﾄﾗｸﾀｰ'];
+    }
+
     /** /member/info 配下かどうか（ルート名依存を避け、URLで判定） */
     private function isMemberMode(Request $request): bool
     {
         $path = ltrim((string)$request->path(), '/');
-        return str_starts_with($path, 'member/info');
+        if (str_starts_with($path, 'member/info')) {
+            return true;
+        }
+
+        // ルート追加無しで member 表示したい場合：/info/{id}?mode=member
+        // ※ログインしていない場合は member 扱いにしない（forUser の安全のため）
+        $mode = (string)($request->query('mode') ?? '');
+        return ($mode === 'member') && ($request->user() !== null);
     }
 }

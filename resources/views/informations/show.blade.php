@@ -24,6 +24,11 @@
         @if($information->ends_at) <span>/ 終了: {{ $information->ends_at->format('Y-m-d H:i') }}</span> @endif
 
         <span class="badge text-bg-secondary">{{ $labelMode }}</span>
+
+        @if(!empty($information->category))
+          <span class="badge text-bg-success">{{ $information->category }}</span>
+        @endif
+
         <span class="badge text-bg-light">更新: {{ optional($information->updated_at)->format('Y-m-d') }}</span>
       </div>
 

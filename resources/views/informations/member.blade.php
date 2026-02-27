@@ -4,7 +4,7 @@
 <div class="container" style="max-width:860px">
   <h2 class="mb-3">会員向けお知らせ</h2>
 
-  {{-- 年度フィルタ + 戻る --}}
+  {{-- 年度フィルタ + カテゴリ + 戻る --}}
   <form method="GET" class="d-flex flex-wrap gap-2 mb-3">
     <select name="year" class="form-select" style="max-width: 180px;">
       <option value="">すべての年度</option>
@@ -14,6 +14,16 @@
         </option>
       @endforeach
     </select>
+
+    <select name="category" class="form-select" style="max-width: 220px;">
+      <option value="">全カテゴリ</option>
+      @foreach($categories as $c)
+        <option value="{{ $c }}" {{ (string)$c === (string)request('category','') ? 'selected' : '' }}>
+          {{ $c }}
+        </option>
+      @endforeach
+    </select>
+
     <button class="btn btn-primary">表示</button>
     <a href="{{ route('athlete.index') }}" class="btn btn-outline-secondary">インデックスへ戻る</a>
   </form>
@@ -26,18 +36,39 @@
         'district_leaders' => '地区長',
         'needs_training' => '未受講',
       ][$info->audience] ?? 'その他';
+
+      // ルート追加無しで member 判定させるため query を付ける
+      $showUrl = route('informations.show', $info->id) . '?mode=member';
     @endphp
 
     <div class="card mb-3">
       <div class="card-body">
-        <h5 class="card-title mb-2">{{ $info->title }}</h5>
-        <div class="text-muted small mb-2">
-          @if($info->starts_at) 公開: {{ optional($info->starts_at)->format('Y-m-d H:i') }} @endif
-          @if($info->ends_at) / 終了: {{ optional($info->ends_at)->format('Y-m-d H:i') }} @endif
-          <span class="badge text-bg-primary ms-2">{{ $badge }}</span>
-          <span class="badge text-bg-light ms-2">更新: {{ $info->updated_at->format('Y-m-d') }}</span>
+        <h5 class="card-title mb-2">
+          <a href="{{ $showUrl }}" class="text-decoration-none">{{ $info->title }}</a>
+        </h5>
+
+        <div class="text-muted small mb-2 d-flex flex-wrap align-items-center gap-2">
+          @if($info->starts_at) <span>公開: {{ optional($info->starts_at)->format('Y-m-d H:i') }}</span> @endif
+          @if($info->ends_at) <span>/ 終了: {{ optional($info->ends_at)->format('Y-m-d H:i') }}</span> @endif
+
+          <span class="badge text-bg-primary">{{ $badge }}</span>
+
+          @if(!empty($info->category))
+            <span class="badge text-bg-success">{{ $info->category }}</span>
+          @endif
+
+          <span class="badge text-bg-light">更新: {{ $info->updated_at->format('Y-m-d') }}</span>
+
+          @if(($info->files_count ?? 0) > 0)
+            <span class="badge text-bg-info text-dark">添付: {{ $info->files_count }}</span>
+          @endif
         </div>
+
         <div class="card-text" style="white-space:pre-wrap">{{ $info->body }}</div>
+
+        <div class="mt-3">
+          <a href="{{ $showUrl }}" class="btn btn-sm btn-outline-primary">詳細 / 添付を見る</a>
+        </div>
       </div>
     </div>
   @empty
