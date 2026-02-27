@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Artisan;
 
 use App\Http\Controllers\Admin\AdminHomeController;
+use App\Http\Controllers\Admin\InformationAdminController;
 use App\Http\Controllers\Auth\ForgotPasswordController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\Auth\ChangePasswordController;
@@ -475,6 +476,13 @@ Route::prefix('admin')->name('admin.')
     ->middleware(['auth','role:admin'])
     ->group(function () {
         Route::get('/', [AdminHomeController::class, 'index'])->name('home');
+
+        // INFORMATION（管理）最小CRUD
+        Route::get('/informations', [InformationAdminController::class, 'index'])->name('informations.index');
+        Route::get('/informations/create', [InformationAdminController::class, 'create'])->name('informations.create');
+        Route::post('/informations', [InformationAdminController::class, 'store'])->name('informations.store');
+        Route::get('/informations/{information}/edit', [InformationAdminController::class, 'edit'])->name('informations.edit');
+        Route::put('/informations/{information}', [InformationAdminController::class, 'update'])->name('informations.update');
 
         Route::delete('/hof/photos/{photo}', [HofManageController::class, 'destroyPhoto'])
         ->whereNumber('photo')
