@@ -318,10 +318,28 @@ JPBA公認ボールのマスタ。
 - id (bigint)
 
 ### 主要カラム
-- title（タイトル）
-- body（本文）
-- visibility（公開範囲: public/members 等）
-- published_at（公開日時：nullable）
+- title（タイトル：string）
+- category（カテゴリ：string(32), nullable）
+  - 許容値: NEWS / イベント / 大会 / ｲﾝｽﾄﾗｸﾀｰ
+  - 備考: DB制約（CHECK）で上記以外は拒否（NULLは許容）
+- body（本文：text）
+- is_public（公開フラグ：boolean, default true）
+- starts_at（公開開始：timestamp, nullable）
+- ends_at（公開終了：timestamp, nullable）
+- audience（公開対象：enum, default 'public'）
+  - public / members / district_leaders / needs_training
+- required_training_id（対象講習：bigint, nullable）
+  - 備考: 参照先未確定（FKなし。refs_skipped / ADR参照）
+- created_at / updated_at
+
+### 制約
+- informations_category_check（category の許容値制約）
+
+### インデックス
+- (is_public, audience)
+- (starts_at, ends_at)
+- required_training_id
+- category
 
 ---
 
