@@ -6,6 +6,23 @@
 
 作業履歴
 
+## 2026-02-27 INFORMATION 管理（admin/informations）最小CRUD 追加
+- 目的: 管理者が「お知らせ」を一覧・新規作成・編集更新できるようにする（削除/添付管理は後回し）
+- 追加:
+  - routes/web.php: admin グループに admin.informations.*（index/create/store/edit/update）を追加
+  - app/Http/Controllers/Admin/InformationAdminController.php 新規
+  - resources/views/admin/informations/index.blade.php / create.blade.php / edit.blade.php / form.blade.php 新規
+- 動作確認:
+  - /admin/informations 表示OK（一覧）
+  - 新規作成/編集→保存 OK（テスト1件で確認）
+- 補足:
+  - 反映が怪しいときは route:clear / view:clear を実行して確認
+  - 今回はDBスキーマ変更なし（辞書/ERは再生成して差分有無を確認する方針）
+
+## 2026-02-27 新PC環境: PHP CLI を導入
+- Visual C++ 再頒布可能パッケージ（2015–2022）を導入
+- PHP 8.4.16（NTS / VS17 x64）を C:\PHP に配置し、PATH を通して `php artisan` が動く状態に復旧
+
 ## 2026-02-25 ProBowler CSV インポート不具合（license列誤指定）対処
 - Pro_colum.csv の実ライセンスは「#ID（idx=0）」に F00000001… が入っている。ヘッダ「ライセンスNo（idx=1）」は空。
 - ライセンス形式は複数あり、例：F00000001（英字+8桁）/ M0000P014（英字+4桁+英字+3桁）
