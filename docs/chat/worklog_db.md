@@ -6,7 +6,7 @@
 
 作業履歴
 
-## 2026-03-05 Codex導入（OpenAI Codex CLI）＋ DBガードレール追加
+## 2026-03-05 Codex導入（OpenAI Codex CLI）＋DBガードレール
 
 - 目的:
   - ChatGPT/AIが「既存migrationを再生成」「存在しないカラムを参照」などの事故を起こしやすい問題を、リポジトリ側の“参照物”と“作業前チェック”で潰す。
@@ -16,6 +16,7 @@
   - Node.js（Windows）導入で権限/セキュリティ制約に当たりやすい環境のため、PowerShellでは `.ps1` がブロックされる前提で運用。
     - 実行は `npm` ではなく `npm.cmd` / `npx.cmd` を優先（PowerShellの実行ポリシー回避）。
     - Codex起動も `codex` がダメなら `codex.cmd` を使う（PowerShellが `codex.ps1` を優先して失敗するケースを回避）。
+  - Codex CLIの対話画面で貼り付けできない場合は、右クリック貼り付けで回避（Ctrl+Vが効かない環境向け）。
   - Codex CLI を導入し、リポジトリをスキャンしてから変更させる運用へ切替（手元の前提共有を毎回貼り直さないため）。
 
 - DBガードレール（新規追加・正本化）:
