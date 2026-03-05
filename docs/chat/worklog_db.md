@@ -6,6 +6,34 @@
 
 作業履歴
 
+## 2026-03-05 Codex導入（OpenAI Codex CLI）＋ DBガードレール追加
+
+- 目的:
+  - ChatGPT/AIが「既存migrationを再生成」「存在しないカラムを参照」などの事故を起こしやすい問題を、リポジトリ側の“参照物”と“作業前チェック”で潰す。
+  - 作業者がコードを読めなくても、AIが「現状の正本」を毎回確認できる状態を作る。
+
+- 実施内容（要点）:
+  - Node.js（Windows）導入で権限/セキュリティ制約に当たりやすい環境のため、PowerShellでは `.ps1` がブロックされる前提で運用。
+    - 実行は `npm` ではなく `npm.cmd` / `npx.cmd` を優先（PowerShellの実行ポリシー回避）。
+    - Codex起動も `codex` がダメなら `codex.cmd` を使う（PowerShellが `codex.ps1` を優先して失敗するケースを回避）。
+  - Codex CLI を導入し、リポジトリをスキャンしてから変更させる運用へ切替（手元の前提共有を毎回貼り直さないため）。
+
+- DBガードレール（新規追加・正本化）:
+  - `docs/db/SCHEMA.sql` を作成（pg_dump -sでスキーマだけをスナップショット化）
+    - 以後「実DBの現物スキーマ確認」はこのファイルを参照する。
+  - `docs/db/MIGRATIONS_INDEX.md` を作成（database/migrationsの一覧を可視化）
+    - タイムスタンプ重複（例：`2025_09_02_000026` が2件）を検知できる状態に。
+  - `docs/db/PREFLIGHT.md` を作成（作業前チェックリスト）
+    - 重複timestampの既存2件は、migrate履歴を壊す可能性があるため「既知のレガシー問題」として扱い、無計画にリネーム/削除しない。
+
+- コミット:
+  - `24050b8923ab50c7b78d87fb37b469ec7a093663` Add DB schema snapshot and migration preflight docs
+
+- 今後の運用ルール（超重要）:
+  1) DB変更（migration追加/修正）をする前に `docs/db/PREFLIGHT.md` を必ず通す
+  2) DB変更後は `docs/db/SCHEMA.sql` を pg_dump で更新してコミットする（現物とドキュメントのズレ防止）
+  3) 既存migrationファイルの“安易なリネーム/削除”は禁止（migrate履歴が死ぬ）
+
 ## 2026-02-27 INFORMATION 管理（admin/informations）最小CRUD 追加
 - 目的: 管理者が「お知らせ」を一覧・新規作成・編集更新できるようにする（削除/添付管理は後回し）
 - 追加:

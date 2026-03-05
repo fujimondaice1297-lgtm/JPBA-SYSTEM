@@ -5,6 +5,9 @@
 - [✓] generate_er_from_dictionary.php で ER.dbml が生成される（手編集しない）
 - [✓] refs_missing / refs_skipped の運用が回っている（不明FKを決め打ちしない）
 - [✓] 「同じ変更を複数migrationでやっていない」状態になっている（重複排除）
+- [✓] docs/db/SCHEMA.sql（pg_dump -s）を“現物スキーマのスナップショット”として更新運用する
+- [✓] docs/db/PREFLIGHT.md を「作業前チェック」として運用し、重複migration/存在しないカラム事故を防ぐ
+- [✓] Codex（CLI）導入済み：作業開始時にリポジトリをスキャンさせてから変更する（前提共有の手貼りを減らす）
 
 ## Phase 1：JPBAサイト踏襲（最優先）
 ### 1) INFORMATION
