@@ -29,6 +29,7 @@
 
 - コミット:
   - `24050b8923ab50c7b78d87fb37b469ec7a093663` Add DB schema snapshot and migration preflight docs
+  - 短縮表記: `24050b8923...`
 
 - 今後の運用ルール（超重要）:
   1) DB変更（migration追加/修正）をする前に `docs/db/PREFLIGHT.md` を必ず通す
