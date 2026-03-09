@@ -42,12 +42,15 @@ class ProBowlerController extends Controller
             ]);
         }
 
-        if ($request->filled('license_no'))  $query->where('license_no', 'like', '%'.$request->license_no.'%');
-        if ($request->filled('name'))        $query->where('name_kanji', 'like', '%'.$request->name.'%');
+        if ($request->filled('license_no'))  $query->where('license_no', 'like', '%'.trim((string) $request->license_no).'%');
+        if ($request->filled('name')) {
+            $name = trim((string) $request->name);
+            $query->where(fn ($q) => $q->where('name_kanji', 'like', '%'.$name.'%')->orWhere('name_kana', 'like', '%'.$name.'%'));
+        }
         if ($request->filled('district'))    $query->whereHas('district', fn ($q) => $q->where('label', $request->district));
         if ($request->filled('gender'))      $query->where('sex', $request->gender === '男性' ? 1 : 2);
-        if ($request->filled('term_from'))   $query->where('pro_entry_year', '>=', $request->term_from);
-        if ($request->filled('term_to'))     $query->where('pro_entry_year', '<=', $request->term_to);
+        if ($request->filled('term_from'))   $query->where('kibetsu', '>=', $request->term_from);
+        if ($request->filled('term_to'))     $query->where('kibetsu', '<=', $request->term_to);
         if ($request->boolean('has_title'))  $query->has('titles');
         if ($request->boolean('has_sports_coach_license')) {
             $query->where(fn ($q) => $q->where('coach_1_status','有')->orWhere('coach_3_status','有')->orWhere('coach_4_status','有'));
