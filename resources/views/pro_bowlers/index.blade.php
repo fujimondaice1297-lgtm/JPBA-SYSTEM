@@ -83,7 +83,7 @@
                             <button type="submit" class="btn btn-primary">検索</button>
                             <a href="{{ route('pro_bowlers.index') }}" class="btn btn-warning">リセット</a>
                             <a href="{{ route('pro_bowlers.create') }}" class="btn btn-success">新規登録</a>
-                            <a href="#" class="btn btn-secondary">インデックスへ戻る</a>
+                            <a href="{{ route('athlete.index') }}" class="btn btn-secondary">インデックスへ戻る</a>
                         </div>
                     </div>
                 </form>
