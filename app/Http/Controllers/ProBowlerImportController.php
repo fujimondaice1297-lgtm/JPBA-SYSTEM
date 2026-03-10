@@ -54,6 +54,11 @@ class ProBowlerImportController extends Controller
             return $s;
         };
 
+        $normalizeDistrictKey = function ($value) use ($normalizeCompact): string {
+            $s = $normalizeCompact($value);
+            return str_replace(['・', '･', '·', '•', '‧'], '', $s);
+        };
+
         $headerMap = [];
         foreach ($header as $i => $name) {
             $key = $normalizeHeader($name);
@@ -169,12 +174,19 @@ class ProBowlerImportController extends Controller
             'coach_hist' => $col(['主な指導歴']),
         ];
 
-        $districtMap = District::query()
-            ->get(['id', 'label'])
-            ->mapWithKeys(function ($district) use ($normalizeCompact) {
-                return [$normalizeCompact($district->label) => (int) $district->id];
-            })
-            ->all();
+        $districtModels = District::query()->get(['id', 'name', 'label']);
+
+        $districtMap = [];
+        foreach ($districtModels as $district) {
+            $districtMap[$normalizeDistrictKey($district->label)] = (int) $district->id;
+
+            if (!empty($district->name)) {
+                $districtMap[$normalizeDistrictKey($district->name)] = (int) $district->id;
+            }
+        }
+
+        $notApplicableDistrictId = optional($districtModels->firstWhere('name', 'not_applicable'))->id
+            ?? ($districtMap[$normalizeDistrictKey('該当なし')] ?? null);
 
         $val = function (array $row, ?int $index) {
             if ($index === null || !array_key_exists($index, $row)) {
@@ -203,9 +215,10 @@ class ProBowlerImportController extends Controller
 
                 $raw = mb_strtoupper($raw, 'UTF-8');
                 $raw = preg_replace('/[\x{00A0}\x{3000}\s]+/u', '', $raw);
+                $raw = preg_replace('/[^A-Z0-9]/u', '', $raw);
 
-                if (preg_match('/^([A-Z])[^\d]*([0-9]+)$/u', $raw, $m)) {
-                    return $m[1] . $m[2];
+                if ($raw !== '' && preg_match('/[A-Z]/', $raw) && preg_match('/\d/', $raw)) {
+                    return $raw;
                 }
             }
 
@@ -240,21 +253,22 @@ class ProBowlerImportController extends Controller
             return 0;
         };
 
-        $district = function ($v) use ($districtMap, $normalizeCompact) {
+        $district = function ($v) use ($districtMap, $normalizeCompact, $normalizeDistrictKey, $notApplicableDistrictId) {
             if ($v === null) {
-                return null;
+                return $notApplicableDistrictId;
             }
 
             $s = $normalizeCompact($v);
             if ($s === '') {
-                return null;
+                return $notApplicableDistrictId;
             }
 
             if (ctype_digit($s)) {
                 return (int) $s;
             }
 
-            return $districtMap[$s] ?? null;
+            $k = $normalizeDistrictKey($s);
+            return $districtMap[$k] ?? null;
         };
 
         $parseProEntry = function ($s) {
@@ -428,11 +442,17 @@ class ProBowlerImportController extends Controller
                     continue;
                 }
 
+                $isTeachingPro = preg_match('/^T/i', $licenseNo) === 1;
+
                 [$proYear, $kibetsuFromPro] = $parseProEntry($val($row, $C->pro));
                 $kibetsu = $kibetsuFromPro;
 
                 if ($kibetsu === null && $C->kibetsu !== null) {
                     $kibetsu = $int($val($row, $C->kibetsu));
+                }
+
+                if ($isTeachingPro) {
+                    $kibetsu = null;
                 }
 
                 $mobile = $val($row, $C->telmobile);
@@ -521,6 +541,16 @@ class ProBowlerImportController extends Controller
                 $model = ProBowler::where('license_no', $licenseNo)->first();
 
                 if ($model) {
+                    if ($data['district_id'] === null) {
+                        $data['district_id'] = $model->district_id;
+                    }
+                    if ($data['kibetsu'] === null && !$isTeachingPro) {
+                        $data['kibetsu'] = $model->kibetsu;
+                    }
+                    if ($data['pro_entry_year'] === null) {
+                        $data['pro_entry_year'] = $model->pro_entry_year;
+                    }
+
                     $model->fill($data)->save();
                     $updated++;
                 } else {
