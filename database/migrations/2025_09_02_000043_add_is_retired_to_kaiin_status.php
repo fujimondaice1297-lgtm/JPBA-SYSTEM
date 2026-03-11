@@ -16,15 +16,15 @@ return new class extends Migration
             }
         });
 
-        // 既存データを一括でマーク（案B：マスタ側で判定を持つ）
-        // 退会届 / 除名 / 死亡 を退会扱いにする
+        // 既存データを正本でマーク（現役/退会ステータス判定用）
+        // 死亡 / 除名 / 退会届 を退会扱いにする
         DB::table('kaiin_status')
-            ->whereIn('name', ['退会届', '除名', '死亡'])
+            ->whereIn('name', ['死亡', '除名', '退会届'])
             ->update(['is_retired' => true]);
 
-        // 念のため、その他は false に寄せる（既にdefault falseだが明示）
+        // それ以外は false に統一
         DB::table('kaiin_status')
-            ->whereNotIn('name', ['退会届', '除名', '死亡'])
+            ->whereNotIn('name', ['死亡', '除名', '退会届'])
             ->update(['is_retired' => false]);
     }
 

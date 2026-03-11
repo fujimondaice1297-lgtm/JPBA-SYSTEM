@@ -394,13 +394,18 @@ JPBA公認ボールのマスタ。
 ## kaiin_status
 
 ### 役割
-会員種別マスタ（正/準/一般等）。
+会員種別マスタ。`pro_bowlers.membership_type` の参照先であり、現役/退会等の判定正本として利用する。
 
 ### 主キー
 - id (bigint)
 
 ### 主要カラム
 - name（会員種別名）
+- is_retired（退会扱いフラグ：boolean）
+
+### 注意（運用方針）
+- `死亡` / `除名` / `退会届` は `is_retired = true` とする。
+- `pro_bowlers.is_active` は、`membership_type` と `kaiin_status.is_retired` に整合するよう importer / backfill で維持する。
 
 ---
 
@@ -501,9 +506,15 @@ JPBA公認ボールのマスタ。
 - name_kanji / name_kana
 - sex（sexes.id 参照）
 - district_id（所属地区：nullable）
-- is_active / is_visible
+- membership_type（会員種別：`kaiin_status.name` 参照）
+- is_active（有効フラグ。運用上は `membership_type` と `kaiin_status.is_retired` に整合させる）
+- is_visible
 - login_id（参照先未確定のためFKなし：ADR参照）
 - （他、多数）
+
+### 注意（運用方針）
+- 現役/退会等の正本は `membership_type` と `kaiin_status.is_retired` とする。
+- `is_active` は公開・検索などで使う補助フラグであり、`membership_type` と不整合にならないよう importer / migration で維持する。
 
 ### 外部キー（自動反映：refs_missing.md）
 - pro_bowlers.district_id -> districts.id

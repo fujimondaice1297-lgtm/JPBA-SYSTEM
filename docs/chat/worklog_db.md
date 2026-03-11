@@ -132,6 +132,24 @@
     - アベレージ集計
   - `pro_bowler_yearly` / `season_summary` / `result_summary` などの別テーブルは存在せず、現行設計では **`tournament_results` を正本として年度別サマリを集計利用する方針** と判断。
   - 以上より、`PLAYER DATA` の「年度別成績サマリ（順位/ゲーム数/ピン/ポイント/AVG/賞金）の保存先」は `tournament_results` で確定とした。
+- 追加対応（pro_bowlers ステータス整合）:
+  - 調査の結果、`pro_bowlers` は `membership_type` と `kaiin_status.is_retired` で退会判定できる一方、`is_active` がその状態を正しく表していなかった。
+  - 確認時点では、`is_active = true` かつ `membership_type in (死亡, 除名, 退会届)` が 1018 件あり、ステータスが一意に決まらない状態だった。
+  - 対応として以下を実施。
+    - `database/migrations/2025_09_02_000043_add_is_retired_to_kaiin_status.php`
+      - 文字化けを修正し、`死亡` / `除名` / `退会届` を `is_retired = true` とする定義を明確化。
+    - `database/migrations/2025_09_02_000202_backfill_pro_bowlers_is_active_from_membership_type.php`
+      - 既存 `pro_bowlers` 全件について、`membership_type` と `kaiin_status.is_retired` を正本に `is_active` を backfill。
+    - `app/Http/Controllers/ProBowlerImportController.php`
+      - 今後のCSV再取込でも `membership_type` から `is_active` を自動決定するよう修正。
+    - `docs/db/data_dictionary.md`
+      - `kaiin_status` と `pro_bowlers` の運用方針を更新。
+    - `docs/db/ER.dbml`
+      - 辞書から再生成。
+  - 実行後の確認結果:
+    - `active_but_retired = 0`
+    - `inactive_but_not_retired = 0`
+  - 以上より、`pro_bowlers` のステータス（現役/退会等）は一意に扱える状態になった。
 
 ## 2026-03-05 Codex導入（OpenAI Codex CLI）＋DBガードレール
 

@@ -6,6 +6,7 @@ use App\Models\District;
 use App\Models\ProBowler;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class ProBowlerImportController extends Controller
 {
@@ -187,6 +188,28 @@ class ProBowlerImportController extends Controller
 
         $notApplicableDistrictId = optional($districtModels->firstWhere('name', 'not_applicable'))->id
             ?? ($districtMap[$normalizeDistrictKey('該当なし')] ?? null);
+
+        $retiredMembershipNames = [];
+        if (Schema::hasTable('kaiin_status') && Schema::hasColumn('kaiin_status', 'name')) {
+            $retiredQuery = DB::table('kaiin_status');
+
+            if (Schema::hasColumn('kaiin_status', 'is_retired')) {
+                $retiredQuery->where('is_retired', true);
+            } else {
+                $retiredQuery->whereIn('name', ['死亡', '除名', '退会届']);
+            }
+
+            $retiredMembershipNames = $retiredQuery
+                ->pluck('name')
+                ->map(fn ($name) => $normalizeCompact($name))
+                ->filter()
+                ->values()
+                ->all();
+        }
+
+        if (empty($retiredMembershipNames)) {
+            $retiredMembershipNames = array_map($normalizeCompact, ['死亡', '除名', '退会届']);
+        }
 
         $val = function (array $row, ?int $index) {
             if ($index === null || !array_key_exists($index, $row)) {
@@ -420,6 +443,19 @@ class ProBowlerImportController extends Controller
             return null;
         };
 
+        $resolveIsActive = function ($membershipType, ?bool $fallback = true) use ($normalizeCompact, $retiredMembershipNames): bool {
+            if ($membershipType === null) {
+                return (bool) $fallback;
+            }
+
+            $normalized = $normalizeCompact($membershipType);
+            if ($normalized === '') {
+                return (bool) $fallback;
+            }
+
+            return !in_array($normalized, $retiredMembershipNames, true);
+        };
+
         $created = 0;
         $updated = 0;
         $skipped = 0;
@@ -458,6 +494,7 @@ class ProBowlerImportController extends Controller
                 $mobile = $val($row, $C->telmobile);
                 $home = $val($row, $C->telhome);
                 $phone = $mobile ?: $home;
+                $membershipType = $val($row, $C->membership);
 
                 $data = [
                     'license_no'             => $licenseNo,
@@ -466,7 +503,8 @@ class ProBowlerImportController extends Controller
                     'sex'                    => $sex($val($row, $C->sex)),
                     'district_id'            => $district($val($row, $C->district)),
                     'kibetsu'                => $kibetsu,
-                    'membership_type'        => $val($row, $C->membership),
+                    'membership_type'        => $membershipType,
+                    'is_active'              => $resolveIsActive($membershipType, true),
                     'license_issue_date'     => $date($val($row, $C->issue)),
                     'birthdate'              => $date($val($row, $C->birth)),
                     'birthplace'             => $val($row, $C->birthplace),
@@ -550,6 +588,11 @@ class ProBowlerImportController extends Controller
                     if ($data['pro_entry_year'] === null) {
                         $data['pro_entry_year'] = $model->pro_entry_year;
                     }
+                    if ($data['membership_type'] === null) {
+                        $data['membership_type'] = $model->membership_type;
+                    }
+
+                    $data['is_active'] = $resolveIsActive($data['membership_type'], (bool) $model->is_active);
 
                     $model->fill($data)->save();
                     $updated++;
