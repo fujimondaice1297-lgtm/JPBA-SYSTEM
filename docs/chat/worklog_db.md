@@ -6,6 +6,133 @@
 
 作業履歴
 
+## 2026-03-10 pro_bowlers 地区・期別の再取込（新CSV正本への切替）
+
+- 目的:
+  - 既存 `pro_bowlers` の `district_id` / `kibetsu` が旧CSV由来で壊れていたため、「既存値の補正」ではなく **新CSVを正本として再取込** する方針へ切替。
+  - `/athletes` の検索（名前・ライセンスNo・地区・期別）が成立する状態まで戻す。
+
+- 前提整理:
+  - 既存データでは `district_id` / `kibetsu` が大量に未反映。
+  - 旧 backfill は `skipped_invalid_license=2263` で失敗。
+  - 原因は「ライセンス列の読み違い」だけではなく、**期別データ自体が壊れていた**こと。
+  - このため、CSV正本の再投入を優先し、DBスキーマ変更は行わない方針にした。
+
+- 実施内容（コード修正）:
+  - `app/Http/Controllers/ProBowlerImportController.php`
+    - CSVのライセンス番号取得を見直し、`#ID` / `ライセンスNo` の両方に対応。
+    - `F00000001` だけでなく `M0000K001` / `F0000T004` のような **途中英字を含む license_no** をそのまま正規化して保持する実装へ修正。
+    - 取込時に `district_id` を再解決し、地区空欄は **「該当なし」** へ寄せる実装を追加。
+    - 地区表記ゆれとして、中点入り（例: `九州・北` / `神奈川・西` / `関西・西` / `関西・南`）を吸収するように修正。
+    - `T` から始まるライセンス番号は **ティーチングプロ** とみなし、`kibetsu` は常に `null` にするよう修正。
+    - 更新時、CSV側が `null` の項目で既存 `district_id` / `kibetsu` / `pro_entry_year` を不用意に潰さないようガードを追加。
+    - `dominant_arm` / `sex` / 郵便番号 / 電話番号などの正規化ロジックも再整理。
+
+  - `database/seeders/DistrictSeeder.php`
+    - ファイル自体の文字コード/文字化け状態を修正し、地区ラベルを **UTF-8の正しい日本語** で定義し直した。
+    - `updateOrCreate` のキーを `label` ではなく `name` に変更し、既存 `name` unique 制約と衝突しないよう修正。
+    - `not_applicable` / `該当なし` をシーダーに追加し、地区空欄の受け皿を永続化。
+
+- 作業中に判明したこと:
+  - `districts` は `name` が NOT NULL + UNIQUE のため、`label` だけで `該当なし` を追加しようとすると失敗する。
+  - そのため `DistrictSeeder` で `name=not_applicable, label=該当なし` を持つ状態に整理した。
+  - 残り未反映の地区は最終的に「表記ゆれ」ではなく **途中英字を含む license_no を importer が正しく突合できていなかったこと** が原因だった。
+
+- 確認結果:
+  - 再取込後の件数は以下。
+    - total = 2267
+    - district_filled = 2267
+    - district_null = 0
+    - kibetsu_filled = 2148
+    - kibetsu_null = 119
+  - `T` ライセンスで `kibetsu IS NOT NULL` は 0 件。
+  - `/athletes` で **名前・ライセンスNo・地区・期別** の検索が通ることを確認。
+
+- 結論:
+  - **地区未反映は全件解消。**
+  - **ティーチングプロは期別なし** の扱いも反映完了。
+  - 残りの `kibetsu_null=119` は、CSV正本側の未設定/年度のみデータを含むため、今回の取込仕様では許容とする。
+
+- 今回の変更ファイル:
+  - `app/Http/Controllers/ProBowlerImportController.php`
+  - `database/seeders/DistrictSeeder.php`
+
+- ドキュメント更新方針:
+  - 今回は **DBスキーマ変更なし** のため、
+    - `docs/db/data_dictionary.md`
+    - `docs/db/ER.dbml`
+    - `docs/db/refs_missing.md`
+    - `docs/db/refs_skipped.md`
+    は更新なし。
+
+- 追加確認（検索動作の実地確認）:
+  - `/athletes`
+    - 名前 / ライセンスNo / 地区 / 期別 に加え、**性別検索**も確認。
+    - 男性指定時、一覧の性別列が男性で揃うことを確認。
+  - `/pro_bowlers/list?id_from=1&id_to=20`
+    - **Noレンジ検索**を確認。
+    - 結果は 41件で、`F00000001` だけでなく `M0000K001` / `M0000P001` / `M0000S001` など、
+      英字混在ライセンスも同じ数字帯として検索対象に入ることを確認。
+  - `/pro_bowlers/list`
+    - デフォルト表示は **1249件**。
+  - `/pro_bowlers/list?include_inactive=1`
+    - **2267件** となり、`退会者も含む` の切替が実際に動作することを確認。
+
+- 今回の確認で確定したこと:
+  - `PLAYER DATA` の検索条件のうち、**氏名 / Noレンジ / 地区 / 性別 / 退会者** は再現可能。
+  - 画面の役割は以下のとおり。
+    - `/athletes` = 簡易検索（氏名 / ライセンスNo / 地区 / 性別 / 期別）
+    - `/pro_bowlers/list` = 詳細検索（Noレンジ / 会員種別 / 退会者を含む など）
+- 追加確認（districts / sexes マスタ）:
+  - `districts` 実値を確認。
+    - 日本語ラベル自体は整理済み。
+    - ただし `該当なし` が 2 件存在。
+      - `id=25, name=該当なし, label=該当なし`
+      - `id=27, name=not_applicable, label=該当なし`
+    - 画面側は `label` を使って地区選択肢を出す箇所があるため、districts は **サイト表示と完全一致とはまだ言えない** と判断。
+  - `sexes` 実値を確認。
+    - `0=不明 / 1=男性 / 2=女性`
+    - `pro_bowlers.sex` の表示・検索実装とも整合しており、sexes は一致扱いで問題なし。
+
+- 現時点の判断:
+  - `districts / sexes マスタがサイト表示と一致` のうち、
+    - `sexes` は確認完了
+    - `districts` は `該当なし` 重複の整理が残課題
+- 追加対応（districts の `該当なし` 重複解消）:
+  - `districts` には一時的に以下の 2 件が存在していた。
+    - `id=25, name=該当なし, label=該当なし`
+    - `id=27, name=not_applicable, label=該当なし`
+  - 実参照を確認したところ、運用上の正本は `id=27 / name=not_applicable` 側だった。
+    - `pro_bowlers.district_id=27` : 333件
+    - `instructors.district_id=27` : 1件
+  - `districts.id` を FK 参照しているのは `pro_bowlers.district_id` のみと確認。
+    - その後、新規 migration `2025_09_02_000054_cleanup_duplicate_not_applicable_district` を追加して実行し、`該当なし` は以下の 1 件に統一された。
+    - `id=27, name=not_applicable, label=該当なし`
+
+- この時点の判断:
+  - `districts / sexes マスタがサイト表示と一致` は完了扱いでよい。
+  - 今回はスキーマ変更ではなくデータ整理のため、`docs/db/data_dictionary.md` / `docs/db/ER.dbml` の更新は不要。
+- 追加確認（ライセンスNoの並び替え/レンジ検索設計）:
+  - `ProBowlerController` で `license_no_num` を用いた並び替え・レンジ検索が実装済みであることを確認。
+  - 互換入力として `id_from` / `id_to` を受けつつ、`license_pattern`（A/B）・`license_prefix` にも対応している。
+  - `/pro_bowlers/list?id_from=1&id_to=20` の実地確認では 41件ヒットし、`F00000001` だけでなく `M0000K001` / `M0000P001` / `M0000S001` などの英字混在ライセンスも同じ数字帯として検索対象に入ることを確認。
+  - 以上より、「文字混在を考慮したライセンスNoの並び替え/レンジ検索設計」は導入済みと判断。
+- 追加確認（年度別成績サマリの保存先）:
+  - `tournament_results` に以下の年度別成績サマリ構成要素がすでに存在することを確認。
+    - `ranking`（順位）
+    - `points`（ポイント）
+    - `total_pin`（合計ピン）
+    - `games`（ゲーム数）
+    - `average`（アベレージ）
+    - `prize_money`（賞金）
+    - `ranking_year`（年度）
+  - `TournamentResultController` でも、`ranking_year` を基準に `tournament_results` から年度別ランキングを集計していることを確認。
+    - 賞金合計
+    - ポイント合計
+    - アベレージ集計
+  - `pro_bowler_yearly` / `season_summary` / `result_summary` などの別テーブルは存在せず、現行設計では **`tournament_results` を正本として年度別サマリを集計利用する方針** と判断。
+  - 以上より、`PLAYER DATA` の「年度別成績サマリ（順位/ゲーム数/ピン/ポイント/AVG/賞金）の保存先」は `tournament_results` で確定とした。
+
 ## 2026-03-05 Codex導入（OpenAI Codex CLI）＋DBガードレール
 
 - 目的:
