@@ -382,7 +382,22 @@ JPBA公認ボールのマスタ。
 ### 主要カラム
 - pro_bowler_id（対象プロボウラー）
 - district_id（所属地区）
-- rank（A/B/C 等：nullable）
+- grade（インストラクター区分：nullable）
+- coach_qualification（スクール開講資格等の補助フラグ）
+
+### grade の運用値
+- `C級`
+- `準B級`
+- `B級`
+- `準A級`
+- `A級`
+- `2級`
+- `1級`
+
+### 注意（運用方針）
+- `grade` の正本は上記7値とする。
+- `master_status` は `pro_bowlers` 側の別資格として扱い、`instructors.grade` には含めない。
+- `pro_bowlers` の `a_class_status / b_class_status / c_class_status` は資格保持フラグであり、`instructors.grade` の単一値とは分けて扱う。
 
 ### 外部キー（FK）
 - pro_bowler_id -> pro_bowlers.id

@@ -150,6 +150,38 @@
     - `active_but_retired = 0`
     - `inactive_but_not_retired = 0`
   - 以上より、`pro_bowlers` のステータス（現役/退会等）は一意に扱える状態になった。
+  
+## 2026-03-11 INSTRUCTOR 区分マスタ確認
+
+- 目的:
+  - `INSTRUCTOR` の残タスクである「区分マスタ（A/B/C等）が確定」を整理する。
+
+- 調査結果:
+  - `instructors` テーブルには `grade` カラムが存在する。
+  - インストラクター画面（create / edit / index）の選択肢は以下の7値で統一されていた。
+    - `C級`
+    - `準B級`
+    - `B級`
+    - `準A級`
+    - `A級`
+    - `2級`
+    - `1級`
+  - `pro_bowlers` 側には `a_class_status / b_class_status / c_class_status / master_status` があるが、これは資格保持フラグであり、`instructors.grade` の単一値とは別概念として扱うのが自然と判断。
+  - `master_status` も `instructors.grade` には含めず、別資格として扱う方針にした。
+  - `docs/db/data_dictionary.md` の `instructors` セクションでは `rank` と記載されていたが、実カラム名は `grade` であるため修正対象とした。
+
+- 実施内容:
+  - `database/migrations/2025_09_02_000203_add_check_constraint_to_instructors_grade.php`
+    - `instructors.grade` に CHECK 制約を追加。
+    - 許容値を `C級 / 準B級 / B級 / 準A級 / A級 / 2級 / 1級` に固定。
+  - `docs/db/data_dictionary.md`
+    - `instructors.grade` を正本カラムとして明記。
+    - `master_status` は別資格であることを追記。
+  - `docs/db/ER.dbml`
+    - 辞書から再生成。
+
+- 結論:
+  - `INSTRUCTOR` の「区分マスタ（A/B/C等）が確定」は完了扱いでよい。
 
 ## 2026-03-05 Codex導入（OpenAI Codex CLI）＋DBガードレール
 
