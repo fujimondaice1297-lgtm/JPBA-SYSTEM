@@ -29,6 +29,7 @@ JPBA SYSTEM Database Data Dictionary
   - [hof_photos](#hof_photos)
   - [information_files](#information_files)
   - [informations](#informations)
+  - [instructor_registry](#instructor_registry)
   - [instructors](#instructors)
   - [kaiin_status](#kaiin_status)
   - [license](#license)
@@ -371,10 +372,66 @@ JPBA公認ボールのマスタ。
 
 ---
 
+## instructor_registry
+
+### 役割
+インストラクター情報の新正本。
+既存 `instructors` は `license_no` 主キー前提の互換テーブルとして残し、今後の正本管理は `instructor_registry` に段階移行する。
+
+### 主キー
+- id (bigint)
+
+### 主要カラム
+- source_type（取込元種別。例: `legacy_instructors` / `pro_bowler` / `manual`）
+- source_key（source_type 内で一意なキー）
+- legacy_instructor_license_no（旧 `instructors.license_no` の退避：nullable）
+- pro_bowler_id（対象プロボウラー：nullable）
+- license_no（ライセンス番号：nullable）
+- cert_no（認定番号：nullable）
+- name / name_kana
+- sex（boolean, nullable）
+- district_id（所属地区：nullable）
+- instructor_category（`pro_bowler` / `pro_instructor` / `certified`）
+- grade（インストラクター区分：nullable）
+- coach_qualification（スクール開講資格等の補助フラグ）
+- is_active
+- is_visible
+- last_synced_at（最終同期日時：nullable）
+- notes（備考：nullable）
+
+### 制約
+- `(source_type, source_key)` 一意
+- `instructor_category` は `pro_bowler / pro_instructor / certified`
+- `grade` は `instructors.grade` と同じ許容値
+
+### grade の運用値
+- `C級`
+- `準B級`
+- `B級`
+- `準A級`
+- `A級`
+- `2級`
+- `1級`
+
+### 注意（運用方針）
+- 新規正本は `instructor_registry` とする。
+- 既存 `instructors` は既存画面・既存Controller互換のため当面維持する。
+- 初回 backfill は既存 `instructors` から `source_type = legacy_instructors` として投入する。
+- `license_no` / `cert_no` はどちらか片方だけでも保持できる設計にする。
+- 旧 `authinstructor` 由来の認定インストラクターは、legacy 接続または dump / CSV が再取得でき次第、別ソースとして投入する。
+- `legacy_instructor_license_no` は互換移行用の退避列であり、FKは張らない。
+
+### 外部キー（FK）
+- instructor_registry.pro_bowler_id -> pro_bowlers.id（ON DELETE SET NULL）
+- instructor_registry.district_id -> districts.id（ON DELETE SET NULL）
+
+---
+
 ## instructors
 
 ### 役割
-インストラクター認定情報を保持するテーブル。
+旧インストラクター管理の互換テーブル。
+既存画面・既存Controllerが `license_no` 主キー前提で動いているため当面は残すが、新規正本は `instructor_registry` とする。
 
 ### 主キー
 - license_no (string)
@@ -401,11 +458,11 @@ JPBA公認ボールのマスタ。
 - `1級`
 
 ### 注意（運用方針）
-- `instructor_type = 'pro'` のうち `pro_bowler_id` が入っている行は、`pro_bowlers` の資格フラグから同期する。
-- 同期対象判定には、`a_class_status / b_class_status / c_class_status / master_status / school_license_status / coach_4_status / coach_3_status / coach_1_status / kenkou_status` を使う。
-- `grade` は `A級 / B級 / C級` を優先して単一値に正規化する。
+- 新規正本は `instructor_registry` とする。
+- `instructors` は既存画面互換のため当面維持する。
+- `instructor_type = 'pro'` のうち `pro_bowler_id` が入っている行は、既存のプロ資格同期で使う互換データとして扱う。
+- `certified` 系の行は、将来的には `instructor_registry` 側へ寄せる。
 - `master_status` は別資格であり、`grade` には含めない。
-- `certified` 系の行は別ソースで管理する。
 
 ### 外部キー（FK）
 - instructors.pro_bowler_id -> pro_bowlers.id（ON DELETE SET NULL）

@@ -6,6 +6,47 @@
 
 作業履歴
 
+## 2026-03-12 INSTRUCTOR 新正本 `instructor_registry` 追加準備
+
+- 目的:
+  - `instructors` が `license_no` 主キー前提で、認定インストラクターのような「license_no 前提でない行」を自然に保持しづらい問題を、既存画面を壊さずに解消する。
+
+- 判断:
+  - 既存 `instructors` は互換レイヤとして残す。
+  - 新正本 `instructor_registry` を追加し、以後の管理対象をこちらへ段階移行する。
+  - 今回は非破壊変更のみとし、既存画面・既存Controllerの書込先まではまだ切り替えない。
+
+- 実施内容:
+  - `database/migrations/2025_09_02_000205_create_instructor_registry_table.php`
+    - 新正本 `instructor_registry` を追加。
+    - 正本キーを `(source_type, source_key)` に変更。
+    - `license_no` / `cert_no` を nullable にし、source 単位で一意管理できる形にした。
+    - `instructor_category` を `pro_bowler / pro_instructor / certified` に整理。
+  - `database/migrations/2025_09_02_000206_bootstrap_instructor_registry_from_instructors_table.php`
+    - 既存 `instructors` を `source_type = legacy_instructors` として新正本へ bootstrap。
+  - `docs/db/data_dictionary.md`
+    - `instructor_registry` を追加。
+    - `instructors` を「互換テーブル」として再定義。
+  - `docs/db/ER.dbml`
+    - 辞書更新後に再生成。
+  - `docs/db/refs_skipped.md`
+    - `legacy_instructor_license_no` を移行用の非FK列として明記。
+
+- 設計要点:
+  - 既存 `instructors` の主キーは今後も `license_no` のまま残す。
+  - 新規正本は `id` 主キー + `(source_type, source_key)` 一意で管理する。
+  - `legacy_instructor_license_no` は旧 `instructors.license_no` の退避列。
+  - `license_no` が無い認定系でも `cert_no` や manual source で登録できる土台にした。
+
+- 今回まだやっていないこと:
+  - `InstructorController` の読込先切替
+  - `ProBowlerImportController` の書込先切替
+  - 旧 `authinstructor` 系データの取り込み
+
+- 次タスク:
+  - 既存画面の参照先を `instructor_registry` に段階移行する。
+  - `authinstructor` の dump / CSV / 接続のどれかが取れたら、認定インストラクターを `source_type` 別に投入する。
+
 ## 2026-03-12 INSTRUCTOR 名簿表示改善
 
 - 目的:

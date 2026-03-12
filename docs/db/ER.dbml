@@ -1,5 +1,5 @@
 // Auto-generated from docs/db/data_dictionary.md
-// Generated at: 2026-03-12T09:57:04+09:00
+// Generated at: 2026-03-13T01:27:17+09:00
 
 Project JPBA_SYSTEM {
   database_type: 'PostgreSQL'
@@ -62,6 +62,10 @@ Table information_files {
 }
 
 Table informations {
+  // columns omitted (see docs/db/columns_by_table.md)
+}
+
+Table instructor_registry {
   // columns omitted (see docs/db/columns_by_table.md)
 }
 

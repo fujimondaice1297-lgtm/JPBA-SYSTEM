@@ -47,6 +47,8 @@
 - [✓] 名簿表示に必要な項目が揃う
 - [ ] 講習/資格/更新履歴の持ち方が決まる
 - [ ] プロインストラクター / 認定インストラクターの投入元を確定（`authinstructor` 候補だが legacy 未接続のため保留）
+- [✓] `license_no` 非依存で認定系も保持できる新正本 `instructor_registry` の方針を確定
+- [ ] 既存 `instructors` / 画面 / Controller を `instructor_registry` ベースへ段階移行
 
 ## Phase 2：大会（管理・公開の整合）
 - [ ] tournaments 周辺の最終スキーマが辞書に確定

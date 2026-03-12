@@ -6,6 +6,16 @@
 ## Naming exceptions (NOT foreign keys)
 
 - pro_bowlers.login_id (varchar: legacy login identifier; NOT a FK)
+- instructor_registry.legacy_instructor_license_no (varchar: 旧 instructors.license_no の退避列; NOT a FK)
+
+### instructor_registry.legacy_instructor_license_no
+- 決定: **FKにはしない**（互換移行用の退避列）
+- 根拠:
+  - `instructors` は当面互換レイヤとして残すが、新正本は `instructor_registry`
+  - この列は旧主キーを保持するためのスナップショットであり、参照整合の正本ではない
+- 対応方針:
+  - 既存画面の移行完了までは文字列として保持
+  - `instructors` 廃止時に削除可否を判断する
 
 ### pro_bowlers.login_id
 - 決定: **FKにはしない**（login_id は文字列）
