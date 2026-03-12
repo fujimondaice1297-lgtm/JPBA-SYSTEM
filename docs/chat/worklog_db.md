@@ -6,6 +6,94 @@
 
 作業履歴
 
+## 2026-03-12 INSTRUCTOR 名簿表示改善
+
+- 目的:
+  - インストラクター一覧画面で、名簿表示に必要な項目が揃っているかを確認し、表示不具合を解消する。
+
+- 調査結果:
+  - `instructors` テーブル自体には名簿表示に必要な列が揃っていた。
+    - `license_no`
+    - `name`
+    - `sex`
+    - `district_id`
+    - `instructor_type`
+    - `grade`
+    - `is_active`
+    - `is_visible`
+  - 一方で、実データは `instructors_total = 1` しかなく、`pro_bowlers` 側の資格フラグ件数（A/B/C級など）と大きく乖離していた。
+  - 原因は、`ProBowlerController` のフォーム保存時には `syncInstructor()` が走るが、CSV再取込時の `ProBowlerImportController` では `instructors` 同期が行われていなかったこと。
+
+- 実施内容:
+  - `app/Http/Controllers/InstructorController.php`
+    - 一覧検索処理を整理。
+    - `district_id` / `sex` / `grade` / `instructor_class` の条件を正しく適用。
+    - PDF出力でも現在の検索条件を使うよう修正。
+  - `resources/views/instructors/index.blade.php`
+    - 文字化けを解消。
+    - 一覧表示列を整理（氏名 / ライセンスNo. / 地区 / 性別 / 種別 / 区分 / 有効 / 表示）。
+    - 地区・性別・種別・区分の検索UIを修正。
+  - `resources/views/instructors/pdf.blade.php`
+    - 文字化けを解消。
+    - 一覧画面と同じ主要列で PDF 出力するよう修正。
+  - `app/Models/Instructor.php`
+    - 種別ラベルの文字化けを修正。
+  - `app/Http/Controllers/ProBowlerImportController.php`
+    - `pro_bowlers` の資格フラグから `instructors` を同期する処理を追加。
+  - `database/migrations/2025_09_02_000204_sync_pro_instructors_from_pro_bowlers.php`
+    - 既存 `pro_bowlers` を元に `instructors` を backfill。
+    - `A級 / B級 / C級` を単一の `grade` に正規化して投入。
+  - `docs/db/data_dictionary.md`
+    - `instructors` の役割と同期方針を更新。
+  - `docs/db/ER.dbml`
+    - 辞書から再生成。
+
+- 実行後の確認結果:
+  - `instructors_total = 1345`
+  - `instructor_type = pro` のみ 1345件
+  - `grade` 内訳
+    - `A級` 104件
+    - `B級` 189件
+    - `C級` 1000件
+    - `null` 52件
+  - ブラウザ確認では、`プロボウラー × C級` の検索で 1000件が表示されることを確認。
+
+- 結論:
+  - `INSTRUCTOR` の「名簿表示に必要な項目が揃う」は完了扱いでよい。
+  - なお、`プロインストラクター` / `認定インストラクター` が 0 件なのは検索不具合ではなく、現時点でその種別データが未投入であるため。これは別タスクとして扱う。
+
+## 2026-03-11 INSTRUCTOR 区分マスタ確認
+
+- 目的:
+  - `INSTRUCTOR` の残タスクである「区分マスタ（A/B/C等）が確定」を整理する。
+
+- 調査結果:
+  - `instructors` テーブルには `grade` カラムが存在する。
+  - インストラクター画面（create / edit / index）の選択肢は以下の7値で統一されていた。
+    - `C級`
+    - `準B級`
+    - `B級`
+    - `準A級`
+    - `A級`
+    - `2級`
+    - `1級`
+  - `pro_bowlers` 側には `a_class_status / b_class_status / c_class_status / master_status` があるが、これは資格保持フラグであり、`instructors.grade` の単一値とは別概念として扱うのが自然と判断。
+  - `master_status` も `instructors.grade` には含めず、別資格として扱う方針にした。
+  - `docs/db/data_dictionary.md` の `instructors` セクションでは `rank` と記載されていたが、実カラム名は `grade` であるため修正対象とした。
+
+- 実施内容:
+  - `database/migrations/2025_09_02_000203_add_check_constraint_to_instructors_grade.php`
+    - `instructors.grade` に CHECK 制約を追加。
+    - 許容値を `C級 / 準B級 / B級 / 準A級 / A級 / 2級 / 1級` に固定。
+  - `docs/db/data_dictionary.md`
+    - `instructors.grade` を正本カラムとして明記。
+    - `master_status` は別資格であることを追記。
+  - `docs/db/ER.dbml`
+    - 辞書から再生成。
+
+- 結論:
+  - `INSTRUCTOR` の「区分マスタ（A/B/C等）が確定」は完了扱いでよい。
+
 ## 2026-03-10 pro_bowlers 地区・期別の再取込（新CSV正本への切替）
 
 - 目的:
@@ -150,38 +238,6 @@
     - `active_but_retired = 0`
     - `inactive_but_not_retired = 0`
   - 以上より、`pro_bowlers` のステータス（現役/退会等）は一意に扱える状態になった。
-  
-## 2026-03-11 INSTRUCTOR 区分マスタ確認
-
-- 目的:
-  - `INSTRUCTOR` の残タスクである「区分マスタ（A/B/C等）が確定」を整理する。
-
-- 調査結果:
-  - `instructors` テーブルには `grade` カラムが存在する。
-  - インストラクター画面（create / edit / index）の選択肢は以下の7値で統一されていた。
-    - `C級`
-    - `準B級`
-    - `B級`
-    - `準A級`
-    - `A級`
-    - `2級`
-    - `1級`
-  - `pro_bowlers` 側には `a_class_status / b_class_status / c_class_status / master_status` があるが、これは資格保持フラグであり、`instructors.grade` の単一値とは別概念として扱うのが自然と判断。
-  - `master_status` も `instructors.grade` には含めず、別資格として扱う方針にした。
-  - `docs/db/data_dictionary.md` の `instructors` セクションでは `rank` と記載されていたが、実カラム名は `grade` であるため修正対象とした。
-
-- 実施内容:
-  - `database/migrations/2025_09_02_000203_add_check_constraint_to_instructors_grade.php`
-    - `instructors.grade` に CHECK 制約を追加。
-    - 許容値を `C級 / 準B級 / B級 / 準A級 / A級 / 2級 / 1級` に固定。
-  - `docs/db/data_dictionary.md`
-    - `instructors.grade` を正本カラムとして明記。
-    - `master_status` は別資格であることを追記。
-  - `docs/db/ER.dbml`
-    - 辞書から再生成。
-
-- 結論:
-  - `INSTRUCTOR` の「区分マスタ（A/B/C等）が確定」は完了扱いでよい。
 
 ## 2026-03-05 Codex導入（OpenAI Codex CLI）＋DBガードレール
 

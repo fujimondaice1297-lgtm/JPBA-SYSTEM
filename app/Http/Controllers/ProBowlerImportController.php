@@ -3,10 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\District;
+use App\Models\Instructor;
 use App\Models\ProBowler;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 
 class ProBowlerImportController extends Controller
 {
@@ -188,28 +188,6 @@ class ProBowlerImportController extends Controller
 
         $notApplicableDistrictId = optional($districtModels->firstWhere('name', 'not_applicable'))->id
             ?? ($districtMap[$normalizeDistrictKey('該当なし')] ?? null);
-
-        $retiredMembershipNames = [];
-        if (Schema::hasTable('kaiin_status') && Schema::hasColumn('kaiin_status', 'name')) {
-            $retiredQuery = DB::table('kaiin_status');
-
-            if (Schema::hasColumn('kaiin_status', 'is_retired')) {
-                $retiredQuery->where('is_retired', true);
-            } else {
-                $retiredQuery->whereIn('name', ['死亡', '除名', '退会届']);
-            }
-
-            $retiredMembershipNames = $retiredQuery
-                ->pluck('name')
-                ->map(fn ($name) => $normalizeCompact($name))
-                ->filter()
-                ->values()
-                ->all();
-        }
-
-        if (empty($retiredMembershipNames)) {
-            $retiredMembershipNames = array_map($normalizeCompact, ['死亡', '除名', '退会届']);
-        }
 
         $val = function (array $row, ?int $index) {
             if ($index === null || !array_key_exists($index, $row)) {
@@ -443,19 +421,6 @@ class ProBowlerImportController extends Controller
             return null;
         };
 
-        $resolveIsActive = function ($membershipType, ?bool $fallback = true) use ($normalizeCompact, $retiredMembershipNames): bool {
-            if ($membershipType === null) {
-                return (bool) $fallback;
-            }
-
-            $normalized = $normalizeCompact($membershipType);
-            if ($normalized === '') {
-                return (bool) $fallback;
-            }
-
-            return !in_array($normalized, $retiredMembershipNames, true);
-        };
-
         $created = 0;
         $updated = 0;
         $skipped = 0;
@@ -494,7 +459,6 @@ class ProBowlerImportController extends Controller
                 $mobile = $val($row, $C->telmobile);
                 $home = $val($row, $C->telhome);
                 $phone = $mobile ?: $home;
-                $membershipType = $val($row, $C->membership);
 
                 $data = [
                     'license_no'             => $licenseNo,
@@ -503,8 +467,7 @@ class ProBowlerImportController extends Controller
                     'sex'                    => $sex($val($row, $C->sex)),
                     'district_id'            => $district($val($row, $C->district)),
                     'kibetsu'                => $kibetsu,
-                    'membership_type'        => $membershipType,
-                    'is_active'              => $resolveIsActive($membershipType, true),
+                    'membership_type'        => $val($row, $C->membership),
                     'license_issue_date'     => $date($val($row, $C->issue)),
                     'birthdate'              => $date($val($row, $C->birth)),
                     'birthplace'             => $val($row, $C->birthplace),
@@ -588,11 +551,6 @@ class ProBowlerImportController extends Controller
                     if ($data['pro_entry_year'] === null) {
                         $data['pro_entry_year'] = $model->pro_entry_year;
                     }
-                    if ($data['membership_type'] === null) {
-                        $data['membership_type'] = $model->membership_type;
-                    }
-
-                    $data['is_active'] = $resolveIsActive($data['membership_type'], (bool) $model->is_active);
 
                     $model->fill($data)->save();
                     $updated++;
@@ -618,4 +576,58 @@ class ProBowlerImportController extends Controller
             ->route('pro_bowlers.index')
             ->with('success', "CSV取り込み完了：新規 {$created} 件 / 更新 {$updated} 件 / スキップ {$skipped} 件");
     }
+
+    private function syncInstructorFromBowler(ProBowler $bowler): void
+    {
+        $grade = $this->resolveInstructorGradeFromBowler($bowler);
+
+        if (!$this->hasInstructorProfile($bowler, $grade)) {
+            return;
+        }
+
+        $existing = Instructor::query()
+            ->where('license_no', $bowler->license_no)
+            ->first();
+
+        $payload = [
+            'license_no'          => $bowler->license_no,
+            'name'                => $bowler->name_kanji,
+            'name_kana'           => $bowler->name_kana,
+            'sex'                 => ((int) ($bowler->sex ?? 0)) === 1,
+            'district_id'         => $bowler->district_id,
+            'instructor_type'     => 'pro',
+            'grade'               => $grade,
+            'is_active'           => (bool) $bowler->is_active,
+            'is_visible'          => $existing?->is_visible ?? true,
+            'coach_qualification' => ($bowler->school_license_status ?? null) === '有',
+            'pro_bowler_id'       => $bowler->id,
+        ];
+
+        Instructor::updateOrCreate(
+            ['license_no' => $bowler->license_no],
+            $payload
+        );
+    }
+
+    private function resolveInstructorGradeFromBowler(ProBowler $bowler): ?string
+    {
+        return match (true) {
+            ($bowler->a_class_status ?? null) === '有' => 'A級',
+            ($bowler->b_class_status ?? null) === '有' => 'B級',
+            ($bowler->c_class_status ?? null) === '有' => 'C級',
+            default => null,
+        };
+    }
+
+    private function hasInstructorProfile(ProBowler $bowler, ?string $grade): bool
+    {
+        return $grade !== null
+            || ($bowler->master_status ?? null) === '有'
+            || ($bowler->school_license_status ?? null) === '有'
+            || ($bowler->coach_4_status ?? null) === '有'
+            || ($bowler->coach_3_status ?? null) === '有'
+            || ($bowler->coach_1_status ?? null) === '有'
+            || ($bowler->kenkou_status ?? null) === '有';
+    }
+
 }

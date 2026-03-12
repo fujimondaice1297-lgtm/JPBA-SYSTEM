@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class AuthInstructorLegacy extends Model
 {
-    protected $connection = 'mysql_legacy'; // ←ここが超重要
+    protected $connection = 'mysql_legacy';
     protected $table = 'authinstructor';
     public $timestamps = false;
 }

@@ -377,12 +377,18 @@ JPBA公認ボールのマスタ。
 インストラクター認定情報を保持するテーブル。
 
 ### 主キー
-- id (bigint)
+- license_no (string)
 
 ### 主要カラム
-- pro_bowler_id（対象プロボウラー）
+- license_no（ライセンス番号）
+- pro_bowler_id（対象プロボウラー：nullable）
+- name / name_kana
+- sex
 - district_id（所属地区）
+- instructor_type（`pro` / `certified`）
 - grade（インストラクター区分：nullable）
+- is_active
+- is_visible
 - coach_qualification（スクール開講資格等の補助フラグ）
 
 ### grade の運用値
@@ -395,14 +401,15 @@ JPBA公認ボールのマスタ。
 - `1級`
 
 ### 注意（運用方針）
-- `grade` の正本は上記7値とする。
-- `master_status` は `pro_bowlers` 側の別資格として扱い、`instructors.grade` には含めない。
-- `pro_bowlers` の `a_class_status / b_class_status / c_class_status` は資格保持フラグであり、`instructors.grade` の単一値とは分けて扱う。
+- `instructor_type = 'pro'` のうち `pro_bowler_id` が入っている行は、`pro_bowlers` の資格フラグから同期する。
+- 同期対象判定には、`a_class_status / b_class_status / c_class_status / master_status / school_license_status / coach_4_status / coach_3_status / coach_1_status / kenkou_status` を使う。
+- `grade` は `A級 / B級 / C級` を優先して単一値に正規化する。
+- `master_status` は別資格であり、`grade` には含めない。
+- `certified` 系の行は別ソースで管理する。
 
 ### 外部キー（FK）
-- pro_bowler_id -> pro_bowlers.id
-- district_id -> districts.id
 - instructors.pro_bowler_id -> pro_bowlers.id（ON DELETE SET NULL）
+- instructors.district_id -> districts.id
 
 ---
 

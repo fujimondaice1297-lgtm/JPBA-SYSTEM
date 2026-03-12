@@ -33,14 +33,14 @@ class Instructor extends Model
         'coach_qualification' => 'boolean',
     ];
 
-    public function getTypeLabelAttribute()
+    public function getTypeLabelAttribute(): string
     {
         if ($this->instructor_type === 'certified') {
-            return '認定イントラ';
+            return '認定インストラクター';
         }
 
         if ($this->instructor_type === 'pro') {
-            return $this->pro_bowler_id ? 'プロボウラー' : 'プロイントラ';
+            return $this->pro_bowler_id ? 'プロボウラー' : 'プロインストラクター';
         }
 
         return '不明';
