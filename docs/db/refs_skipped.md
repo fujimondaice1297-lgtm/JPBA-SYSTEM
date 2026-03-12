@@ -24,3 +24,27 @@
 - 対応方針:
   - ProTestフェーズで参照先（マスタ or 列挙）を確定する
   - 確定後、FK追加（+ 必要なら正規化）を実施
+
+## 2026-03-12 instructors / authinstructor（legacy未接続のため保留）
+
+- 対象:
+  - `認定インストラクター` の投入元確認
+
+- 候補:
+  - `mysql_legacy.authinstructor`
+  - 根拠: `App\Models\Legacy\AuthInstructorLegacy` が `authinstructor` を参照する想定になっている
+
+- 現状:
+  - `pdo_mysql` / `mysqli` は有効化済み
+  - ただし `.env` に `DB_MYSQL_*` 設定が無い
+  - MySQL / MariaDB サービスが見つからない
+  - 3306 / 3307 に待受が無い
+  - `authinstructor` 相当の SQL / CSV / Excel も未発見
+
+- 判断:
+  - `authinstructor` の実カラム未確認のため、`cert_no` や `source_key` の決め打ちは行わない
+  - `認定インストラクター` の schema / import 設計は保留
+
+- 再開条件:
+  - legacy DB 接続情報の入手
+  - または `authinstructor` 相当データの入手

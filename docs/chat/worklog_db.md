@@ -62,6 +62,32 @@
   - `INSTRUCTOR` の「名簿表示に必要な項目が揃う」は完了扱いでよい。
   - なお、`プロインストラクター` / `認定インストラクター` が 0 件なのは検索不具合ではなく、現時点でその種別データが未投入であるため。これは別タスクとして扱う。
 
+## 2026-03-12 INSTRUCTOR 認定系投入元確認（blocker整理）
+
+- 目的:
+  - `プロインストラクター` / `認定インストラクター` の投入元を確定する。
+
+- 確認したこと:
+  - repo 上では `App\Models\Legacy\AuthInstructorLegacy` が存在し、`authinstructor` を参照する想定になっていた。
+  - 当初はモデル定義にコメント崩れがあり、`protected $table = 'authinstructor';` が実質無効になっていたため修正した。
+  - PHP CLI 側の `pdo_mysql` / `mysqli` は有効化できた。
+  - ただし `mysql_legacy` 接続は未到達だった。
+    - `.env` に `DB_MYSQL_HOST` / `DB_MYSQL_PORT` / `DB_MYSQL_DATABASE` / `DB_MYSQL_USERNAME` が未設定
+    - Windows 上で MySQL / MariaDB サービスが見つからない
+    - 3306 / 3307 に待受が無い
+  - repo / ローカル探索でも `authinstructor` の SQL ダンプや CSV は見つからなかった。
+  - このため、`認定インストラクター` の投入元候補は `mysql_legacy.authinstructor` だが、現時点では実体確認できない。
+
+- この時点の判断:
+  - `プロボウラー` 由来インストラクターは `pro_bowlers` から同期する方針で確定。
+  - `認定インストラクター` 由来は `authinstructor` 候補だが、legacy 未接続のため未確定。
+  - 根拠不十分のため、`cert_no` 追加や `license_no` nullable 化などの schema 変更は行わない。
+  - このタスクは blocker として保留し、legacy 接続情報または dump / CSV 入手後に再開する。
+
+- 再開条件:
+  - `mysql_legacy` に接続できる `.env` 設定
+  - または `authinstructor` 相当の SQL / CSV / Excel データ
+
 ## 2026-03-11 INSTRUCTOR 区分マスタ確認
 
 - 目的:
