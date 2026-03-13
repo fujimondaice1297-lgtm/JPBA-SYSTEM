@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Models\District;
 use App\Models\Instructor;
+use App\Models\InstructorRegistry;
 use App\Models\ProBowler;
 use Dompdf\Dompdf;
 use Dompdf\Options;
@@ -26,11 +27,10 @@ class InstructorController extends Controller
 
     public function index(Request $request)
     {
-        $query = Instructor::query()->with('district');
+        $query = InstructorRegistry::query()->with(['district', 'proBowler']);
         $query = $this->applyFilters($query, $request);
 
-        $instructors = $query
-            ->orderBy('license_no')
+        $instructors = $this->applyDefaultOrder($query)
             ->paginate(20)
             ->withQueryString();
 
@@ -83,6 +83,7 @@ class InstructorController extends Controller
         }
 
         $instructor->save();
+        $this->syncInstructorRegistryFromLegacy($instructor);
 
         return redirect()
             ->route('instructors.index')
@@ -131,6 +132,7 @@ class InstructorController extends Controller
         }
 
         $instructor->save();
+        $this->syncInstructorRegistryFromLegacy($instructor);
 
         return redirect()
             ->route('instructors.index')
@@ -139,12 +141,10 @@ class InstructorController extends Controller
 
     public function exportPdf(Request $request)
     {
-        $query = Instructor::query()->with('district');
+        $query = InstructorRegistry::query()->with(['district', 'proBowler']);
         $query = $this->applyFilters($query, $request);
 
-        $instructors = $query
-            ->orderBy('license_no')
-            ->get();
+        $instructors = $this->applyDefaultOrder($query)->get();
 
         $options = new Options();
         $options->set('defaultFont', 'ipaexg');
@@ -168,7 +168,14 @@ class InstructorController extends Controller
         }
 
         if ($request->filled('license_no')) {
-            $query->where('license_no', trim((string) $request->input('license_no')));
+            $keyword = trim((string) $request->input('license_no'));
+            $query->where(function ($q) use ($keyword) {
+                $like = '%' . $keyword . '%';
+
+                $q->where('license_no', 'like', $like)
+                    ->orWhere('legacy_instructor_license_no', 'like', $like)
+                    ->orWhere('cert_no', 'like', $like);
+            });
         }
 
         $districtId = $request->input('district_id');
@@ -183,13 +190,13 @@ class InstructorController extends Controller
 
         $sex = $request->input('sex');
         if ($sex !== null && $sex !== '' && in_array((string) $sex, ['0', '1'], true)) {
-            $query->where('sex', (int) $sex);
+            $query->where('sex', ((int) $sex) === 1);
         } elseif ($request->filled('gender')) {
             $gender = trim((string) $request->input('gender'));
             if ($gender === '男性') {
-                $query->where('sex', 1);
+                $query->where('sex', true);
             } elseif ($gender === '女性') {
-                $query->where('sex', 0);
+                $query->where('sex', false);
             }
         }
 
@@ -212,5 +219,62 @@ class InstructorController extends Controller
         }
 
         return $query;
+    }
+
+    private function applyDefaultOrder(Builder $query): Builder
+    {
+        return $query
+            ->orderByRaw("coalesce(license_no, cert_no, legacy_instructor_license_no, '') asc")
+            ->orderBy('name')
+            ->orderBy('id');
+    }
+
+    private function syncInstructorRegistryFromLegacy(Instructor $instructor): void
+    {
+        $registry = InstructorRegistry::query()
+            ->where('source_type', 'legacy_instructors')
+            ->where('source_key', $instructor->license_no)
+            ->first();
+
+        $payload = [
+            'legacy_instructor_license_no' => $instructor->license_no,
+            'pro_bowler_id'                => $instructor->pro_bowler_id,
+            'license_no'                   => $instructor->license_no,
+            'cert_no'                      => $registry?->cert_no,
+            'name'                         => $instructor->name,
+            'name_kana'                    => $instructor->name_kana,
+            'sex'                          => $instructor->sex,
+            'district_id'                  => $instructor->district_id,
+            'instructor_category'          => $this->resolveRegistryCategoryFromLegacy($instructor),
+            'grade'                        => $instructor->grade,
+            'coach_qualification'          => (bool) $instructor->coach_qualification,
+            'is_active'                    => (bool) $instructor->is_active,
+            'is_visible'                   => (bool) $instructor->is_visible,
+            'last_synced_at'               => now(),
+            'notes'                        => $registry?->notes ?: 'synced from legacy instructors form',
+        ];
+
+        if ($registry) {
+            $registry->fill($payload)->save();
+            return;
+        }
+
+        InstructorRegistry::create(array_merge([
+            'source_type' => 'legacy_instructors',
+            'source_key'  => $instructor->license_no,
+        ], $payload));
+    }
+
+    private function resolveRegistryCategoryFromLegacy(Instructor $instructor): string
+    {
+        if ($instructor->instructor_type === 'certified') {
+            return 'certified';
+        }
+
+        if (!empty($instructor->pro_bowler_id)) {
+            return 'pro_bowler';
+        }
+
+        return 'pro_instructor';
     }
 }

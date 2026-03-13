@@ -6,6 +6,38 @@
 
 作業履歴
 
+## 2026-03-13 instructor_registry 参照化（第2段階）
+
+- 目的:
+  - 第1段階で作成した `instructor_registry` を、実際の一覧画面 / PDF 出力 / CSV再取込同期で使う側へ寄せる。
+  - 旧 `instructors` 依存を段階的に薄め、新正本へ移行する。
+
+- 実施内容:
+  - `app/Http/Controllers/InstructorController.php`
+    - 一覧とPDFの検索元を `Instructor` から `InstructorRegistry` に変更。
+    - フィルタ条件は `name / license_no / district_id / sex / instructor_class / grade` を `instructor_registry` 基準で適用。
+    - 既存の create / store / edit / update は当面維持しつつ、保存時に `instructor_registry` も同期する構成へ変更。
+  - `app/Http/Controllers/ProBowlerImportController.php`
+    - `pro_bowlers` 再取込時に、旧 `instructors` だけでなく `instructor_registry` も同時同期する処理を追加。
+    - `A級 / B級 / C級` から `grade` を決定し、`instructor_category = pro_bowler` として登録するよう整理。
+  - `resources/views/instructors/index.blade.php`
+    - 一覧画面を `instructor_registry` 前提の項目表示へ変更。
+    - ライセンスNo. / 認定番号 / legacy license を吸収できる表示に変更。
+  - `resources/views/instructors/pdf.blade.php`
+    - PDF出力も `instructor_registry` の表示仕様へ合わせて修正。
+
+- 確認結果:
+  - `instructor_registry_total = 1345`
+  - `instructor_category = pro_bowler` が 1345件
+  - `/instructors` 画面で検索確認済み
+    - 例: 九州北 × 男性 × プロボウラー × C級 = 33件
+  - 一覧画面は `instructor_registry` 読みへ切替済み
+
+- 現時点の判断:
+  - 第2段階（読む側の registry 参照化）は完了扱いでよい。
+  - ただし `pro_instructor` / `certified` はまだデータ未投入のため、今後は投入元の確定が必要。
+  - 旧 `instructors` は当面互換維持とし、完全撤去は後続タスクに分離する。
+
 ## 2026-03-12 INSTRUCTOR 新正本 `instructor_registry` 追加準備
 
 - 目的:

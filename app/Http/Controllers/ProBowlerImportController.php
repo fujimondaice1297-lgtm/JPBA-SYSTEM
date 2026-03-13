@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\District;
 use App\Models\Instructor;
+use App\Models\InstructorRegistry;
 use App\Models\ProBowler;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -553,9 +554,11 @@ class ProBowlerImportController extends Controller
                     }
 
                     $model->fill($data)->save();
+                    $this->syncInstructorRecordsFromBowler($model);
                     $updated++;
                 } else {
-                    ProBowler::create($data);
+                    $createdBowler = ProBowler::create($data);
+                    $this->syncInstructorRecordsFromBowler($createdBowler);
                     $created++;
                 }
             }
@@ -577,7 +580,7 @@ class ProBowlerImportController extends Controller
             ->with('success', "CSV取り込み完了：新規 {$created} 件 / 更新 {$updated} 件 / スキップ {$skipped} 件");
     }
 
-    private function syncInstructorFromBowler(ProBowler $bowler): void
+    private function syncInstructorRecordsFromBowler(ProBowler $bowler): void
     {
         $grade = $this->resolveInstructorGradeFromBowler($bowler);
 
@@ -585,6 +588,12 @@ class ProBowlerImportController extends Controller
             return;
         }
 
+        $this->syncLegacyInstructorFromBowler($bowler, $grade);
+        $this->syncRegistryFromBowler($bowler, $grade);
+    }
+
+    private function syncLegacyInstructorFromBowler(ProBowler $bowler, ?string $grade): void
+    {
         $existing = Instructor::query()
             ->where('license_no', $bowler->license_no)
             ->first();
@@ -609,6 +618,50 @@ class ProBowlerImportController extends Controller
         );
     }
 
+    private function syncRegistryFromBowler(ProBowler $bowler, ?string $grade): void
+    {
+        $existing = InstructorRegistry::query()
+            ->where('pro_bowler_id', $bowler->id)
+            ->orWhere(function ($q) use ($bowler) {
+                $q->whereNotNull('license_no')
+                    ->where('license_no', $bowler->license_no);
+            })
+            ->orWhere(function ($q) use ($bowler) {
+                $q->whereNotNull('legacy_instructor_license_no')
+                    ->where('legacy_instructor_license_no', $bowler->license_no);
+            })
+            ->orderBy('id')
+            ->first();
+
+        $payload = [
+            'legacy_instructor_license_no' => $existing?->legacy_instructor_license_no ?? $bowler->license_no,
+            'pro_bowler_id'                => $bowler->id,
+            'license_no'                   => $bowler->license_no,
+            'cert_no'                      => $existing?->cert_no,
+            'name'                         => $bowler->name_kanji ?: ($existing?->name ?? $bowler->license_no),
+            'name_kana'                    => $bowler->name_kana,
+            'sex'                          => $this->normalizeRegistrySex($bowler),
+            'district_id'                  => $bowler->district_id,
+            'instructor_category'          => 'pro_bowler',
+            'grade'                        => $grade,
+            'coach_qualification'          => ($bowler->school_license_status ?? null) === '有',
+            'is_active'                    => (bool) $bowler->is_active,
+            'is_visible'                   => $existing?->is_visible ?? true,
+            'last_synced_at'               => now(),
+            'notes'                        => $existing?->notes ?: 'synced from pro_bowlers import',
+        ];
+
+        if ($existing) {
+            $existing->fill($payload)->save();
+            return;
+        }
+
+        InstructorRegistry::create(array_merge([
+            'source_type' => 'pro_bowler',
+            'source_key'  => $bowler->license_no,
+        ], $payload));
+    }
+
     private function resolveInstructorGradeFromBowler(ProBowler $bowler): ?string
     {
         return match (true) {
@@ -630,4 +683,12 @@ class ProBowlerImportController extends Controller
             || ($bowler->kenkou_status ?? null) === '有';
     }
 
+    private function normalizeRegistrySex(ProBowler $bowler): ?bool
+    {
+        return match ((int) ($bowler->sex ?? 0)) {
+            1       => true,
+            2       => false,
+            default => null,
+        };
+    }
 }

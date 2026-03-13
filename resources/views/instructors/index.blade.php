@@ -24,7 +24,7 @@
               type="text"
               name="license_no"
               class="form-control"
-              placeholder="ライセンスNo."
+              placeholder="ライセンスNo. / 認定番号"
               value="{{ request('license_no') }}"
             >
           </div>
@@ -103,26 +103,34 @@
           </thead>
           <tbody>
             @foreach ($instructors as $instructor)
+              @php
+                $displayCode = $instructor->license_no
+                  ?? $instructor->cert_no
+                  ?? $instructor->legacy_instructor_license_no
+                  ?? '-';
+
+                $sexLabel = $instructor->sex === null
+                  ? '—'
+                  : ($instructor->sex ? '男性' : '女性');
+              @endphp
               <tr>
                 <td>
-                  @if ($instructor->instructor_type === 'pro' && $instructor->pro_bowler_id)
+                  @if ($instructor->pro_bowler_id)
                     <a href="{{ route('pro_bowlers.edit', $instructor->pro_bowler_id) }}">
                       {{ $instructor->name }}
                     </a>
-                  @elseif ($instructor->instructor_type === 'certified')
-                    <a href="{{ route('certified_instructors.edit', $instructor->license_no) }}">
+                  @elseif ($instructor->legacy_instructor_license_no)
+                    <a href="{{ route('instructors.edit_by_license', ['license_no' => $instructor->legacy_instructor_license_no]) }}">
                       {{ $instructor->name }}
                     </a>
                   @else
-                    <a href="{{ route('instructors.edit', $instructor->license_no) }}">
-                      {{ $instructor->name }}
-                    </a>
+                    {{ $instructor->name }}
                   @endif
                 </td>
-                <td>{{ $instructor->license_no }}</td>
+                <td>{{ $displayCode }}</td>
                 <td>{{ $instructor->district->label ?? '-' }}</td>
-                <td>{{ $instructor->sex ? '男性' : '女性' }}</td>
-                <td>{{ $instructor->type_label ?? ($instructor->instructor_type === 'pro' ? 'プロ' : '認定') }}</td>
+                <td>{{ $sexLabel }}</td>
+                <td>{{ $instructor->type_label }}</td>
                 <td>{{ $instructor->grade ?? '-' }}</td>
                 <td>{{ $instructor->is_active ? '○' : '×' }}</td>
                 <td>{{ $instructor->is_visible ? '○' : '×' }}</td>

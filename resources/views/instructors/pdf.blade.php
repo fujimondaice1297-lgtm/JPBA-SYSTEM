@@ -40,12 +40,22 @@
         </thead>
         <tbody>
             @forelse ($instructors as $i)
+                @php
+                    $displayCode = $i->license_no
+                        ?? $i->cert_no
+                        ?? $i->legacy_instructor_license_no
+                        ?? '-';
+
+                    $sexLabel = $i->sex === null
+                        ? '—'
+                        : ($i->sex ? '男性' : '女性');
+                @endphp
                 <tr>
                     <td>{{ $i->name }}</td>
-                    <td>{{ $i->license_no }}</td>
+                    <td>{{ $displayCode }}</td>
                     <td>{{ $i->district->label ?? '-' }}</td>
-                    <td>{{ $i->sex ? '男性' : '女性' }}</td>
-                    <td>{{ $i->type_label ?? ($i->instructor_type === 'pro' ? 'プロ' : '認定') }}</td>
+                    <td>{{ $sexLabel }}</td>
+                    <td>{{ $i->type_label }}</td>
                     <td>{{ $i->grade ?? '-' }}</td>
                     <td>{{ $i->is_active ? '○' : '×' }}</td>
                     <td>{{ $i->is_visible ? '○' : '×' }}</td>
@@ -59,3 +69,4 @@
     </table>
 </body>
 </html>
+
