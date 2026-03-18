@@ -6,6 +6,35 @@
 
 作業履歴
 
+## 2026-03-18 INSTRUCTOR 手動登録した認定インストラクターの編集導線復旧
+
+- 目的:
+  - 認定インストラクターを手動登録したあと、一覧表示・氏名リンク・編集更新まで通る状態にする。
+
+- 背景:
+  - `instructor_registry` を読む一覧画面はすでに動いていたが、manual 登録した認定インストラクターは一覧上の氏名リンク条件から漏れ、編集画面へ入れなかった。
+  - create / edit / index の導線を、現行の互換レイヤ運用に合わせて整える必要があった。
+
+- 実施内容:
+  - `app/Http/Controllers/InstructorController.php`
+    - 既存の create / store / edit / update を維持しつつ、保存・更新後に `instructor_registry` 同期が走る前提で manual 登録導線を整理。
+  - `resources/views/instructors/create.blade.php`
+    - 認定インストラクター登録時の入力UIを調整。
+  - `resources/views/instructors/edit.blade.php`
+    - 認定インストラクター編集時の入力UIを調整。
+  - `resources/views/instructors/index.blade.php`
+    - manual 登録行でも氏名をリンク表示し、編集画面へ遷移できるよう修正。
+
+- 確認結果:
+  - 認定インストラクターを手動登録できることを確認。
+  - `/instructors` 一覧に認定インストラクターが表示されることを確認。
+  - 一覧の氏名リンクから編集画面へ遷移できることを確認。
+  - 編集更新後の変更が一覧へ反映されることを確認。
+
+- 現時点の判断:
+  - manual source の認定インストラクターについて、登録 → 一覧表示 → 編集更新 の基本導線は完了扱いでよい。
+  - ただし `authinstructor` 由来データの一括投入は未着手のため、投入元確定タスクは継続する。
+
 ## 2026-03-13 instructor_registry 参照化（第2段階）
 
 - 目的:

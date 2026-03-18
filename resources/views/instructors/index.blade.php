@@ -110,19 +110,25 @@
                   ?? '-';
 
                 $sexLabel = $instructor->sex === null
-                  ? '—'
+                  ? '-'
                   : ($instructor->sex ? '男性' : '女性');
+
+                $nameUrl = null;
+
+                if (($instructor->source_type ?? null) === 'manual') {
+                    $nameUrl = route('instructors.edit', ['instructor' => $instructor->id]);
+                } elseif (!empty($instructor->legacy_instructor_license_no)) {
+                    $nameUrl = route('instructors.edit_by_license', ['license_no' => $instructor->legacy_instructor_license_no]);
+                } elseif (!empty($instructor->cert_no)) {
+                    $nameUrl = route('instructors.edit', ['instructor' => $instructor->id]);
+                } elseif (!empty($instructor->pro_bowler_id)) {
+                    $nameUrl = route('pro_bowlers.edit', $instructor->pro_bowler_id);
+                }
               @endphp
               <tr>
                 <td>
-                  @if ($instructor->pro_bowler_id)
-                    <a href="{{ route('pro_bowlers.edit', $instructor->pro_bowler_id) }}">
-                      {{ $instructor->name }}
-                    </a>
-                  @elseif ($instructor->legacy_instructor_license_no)
-                    <a href="{{ route('instructors.edit_by_license', ['license_no' => $instructor->legacy_instructor_license_no]) }}">
-                      {{ $instructor->name }}
-                    </a>
+                  @if ($nameUrl)
+                    <a href="{{ $nameUrl }}">{{ $instructor->name }}</a>
                   @else
                     {{ $instructor->name }}
                   @endif

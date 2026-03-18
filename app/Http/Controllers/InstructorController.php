@@ -4,13 +4,13 @@ namespace App\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Models\District;
-use App\Models\Instructor;
 use App\Models\InstructorRegistry;
 use App\Models\ProBowler;
 use Dompdf\Dompdf;
 use Dompdf\Options;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 class InstructorController extends Controller
@@ -51,88 +51,55 @@ class InstructorController extends Controller
             ->orderBy('id')
             ->get(['id', 'label']);
 
-        return view('instructors.create', compact('districts'));
+        return view('instructors.create', [
+            'districts' => $districts,
+            'grades'    => self::GRADE_OPTIONS,
+        ]);
     }
 
     public function store(Request $request)
     {
-        $type = $request->input('instructor_type');
+        $validated = $this->validateRegistryInput($request);
 
-        $validated = $request->validate([
-            'license_no'      => [
-                'required',
-                'string',
-                Rule::unique('instructors', 'license_no')
-                    ->where(fn ($q) => $q->where('instructor_type', $type)),
-            ],
-            'name'            => 'required|string',
-            'name_kana'       => 'nullable|string',
-            'sex'             => 'required|boolean',
-            'district_id'     => 'nullable|integer|exists:districts,id',
-            'instructor_type' => 'required|in:pro,certified',
-            'grade'           => ['required', 'string', Rule::in(self::GRADE_OPTIONS)],
-        ]);
+        $registry = new InstructorRegistry(
+            array_merge(
+                [
+                    'source_type' => 'manual',
+                    'source_key'  => (string) Str::uuid(),
+                ],
+                $this->buildRegistryPayload($validated)
+            )
+        );
 
-        $instructor = new Instructor($validated);
-
-        if ($validated['instructor_type'] === 'pro') {
-            $pro = ProBowler::where('license_no', $validated['license_no'])->first();
-            if ($pro) {
-                $instructor->pro_bowler_id = $pro->id;
-            }
-        }
-
-        $instructor->save();
-        $this->syncInstructorRegistryFromLegacy($instructor);
+        $registry->save();
 
         return redirect()
             ->route('instructors.index')
             ->with('success', 'インストラクターを登録しました。');
     }
 
-    public function edit($licenseNo)
+    public function edit(string $instructorKey)
     {
-        $instructor = Instructor::where('license_no', $licenseNo)->firstOrFail();
+        $instructor = $this->findEditableRegistry($instructorKey);
 
         $districts = District::query()
             ->orderBy('id')
             ->get(['id', 'label']);
 
-        return view('instructors.edit', compact('instructor', 'districts'));
+        return view('instructors.edit', [
+            'instructor' => $instructor,
+            'districts'  => $districts,
+            'grades'     => self::GRADE_OPTIONS,
+        ]);
     }
 
-    public function update(Request $request, $licenseNo)
+    public function update(Request $request, string $instructorKey)
     {
-        $instructor = Instructor::where('license_no', $licenseNo)->firstOrFail();
-        $type = $request->input('instructor_type', $instructor->instructor_type);
+        $instructor = $this->findEditableRegistry($instructorKey);
+        $validated = $this->validateRegistryInput($request, $instructor);
 
-        $validated = $request->validate([
-            'license_no'      => [
-                'required',
-                'string',
-                Rule::unique('instructors', 'license_no')
-                    ->where(fn ($q) => $q->where('instructor_type', $type))
-                    ->ignore($instructor->license_no, 'license_no'),
-            ],
-            'name'            => 'required|string',
-            'name_kana'       => 'nullable|string',
-            'sex'             => 'required|boolean',
-            'district_id'     => 'nullable|integer|exists:districts,id',
-            'instructor_type' => 'required|in:pro,certified',
-            'grade'           => ['required', 'string', Rule::in(self::GRADE_OPTIONS)],
-        ]);
-
-        $instructor->fill($validated);
-
-        if ($validated['instructor_type'] === 'pro') {
-            $pro = ProBowler::where('license_no', $validated['license_no'])->first();
-            $instructor->pro_bowler_id = $pro?->id;
-        } else {
-            $instructor->pro_bowler_id = null;
-        }
-
+        $instructor->fill($this->buildRegistryPayload($validated, $instructor));
         $instructor->save();
-        $this->syncInstructorRegistryFromLegacy($instructor);
 
         return redirect()
             ->route('instructors.index')
@@ -229,52 +196,120 @@ class InstructorController extends Controller
             ->orderBy('id');
     }
 
-    private function syncInstructorRegistryFromLegacy(Instructor $instructor): void
+    private function findEditableRegistry(string $instructorKey): InstructorRegistry
     {
-        $registry = InstructorRegistry::query()
-            ->where('source_type', 'legacy_instructors')
-            ->where('source_key', $instructor->license_no)
-            ->first();
-
-        $payload = [
-            'legacy_instructor_license_no' => $instructor->license_no,
-            'pro_bowler_id'                => $instructor->pro_bowler_id,
-            'license_no'                   => $instructor->license_no,
-            'cert_no'                      => $registry?->cert_no,
-            'name'                         => $instructor->name,
-            'name_kana'                    => $instructor->name_kana,
-            'sex'                          => $instructor->sex,
-            'district_id'                  => $instructor->district_id,
-            'instructor_category'          => $this->resolveRegistryCategoryFromLegacy($instructor),
-            'grade'                        => $instructor->grade,
-            'coach_qualification'          => (bool) $instructor->coach_qualification,
-            'is_active'                    => (bool) $instructor->is_active,
-            'is_visible'                   => (bool) $instructor->is_visible,
-            'last_synced_at'               => now(),
-            'notes'                        => $registry?->notes ?: 'synced from legacy instructors form',
-        ];
-
-        if ($registry) {
-            $registry->fill($payload)->save();
-            return;
+        if (ctype_digit($instructorKey)) {
+            $byId = InstructorRegistry::query()->find((int) $instructorKey);
+            if ($byId) {
+                return $byId;
+            }
         }
 
-        InstructorRegistry::create(array_merge([
-            'source_type' => 'legacy_instructors',
-            'source_key'  => $instructor->license_no,
-        ], $payload));
+        return InstructorRegistry::query()
+            ->where('source_key', $instructorKey)
+            ->orWhere('legacy_instructor_license_no', $instructorKey)
+            ->orWhere('license_no', $instructorKey)
+            ->orWhere('cert_no', $instructorKey)
+            ->firstOrFail();
     }
 
-    private function resolveRegistryCategoryFromLegacy(Instructor $instructor): string
+    private function validateRegistryInput(Request $request, ?InstructorRegistry $existing = null): array
     {
-        if ($instructor->instructor_type === 'certified') {
-            return 'certified';
+        $type = (string) $request->input('instructor_type');
+        $ignoreId = $existing?->id;
+
+        $rules = [
+            'name'                => ['required', 'string', 'max:255'],
+            'name_kana'           => ['nullable', 'string', 'max:255'],
+            'sex'                 => ['required', 'boolean'],
+            'district_id'         => ['nullable', 'integer', 'exists:districts,id'],
+            'instructor_type'     => ['required', 'in:pro,certified'],
+            'grade'               => ['required', 'string', Rule::in(self::GRADE_OPTIONS)],
+            'is_active'           => ['nullable', 'boolean'],
+            'is_visible'          => ['nullable', 'boolean'],
+            'coach_qualification' => ['nullable', 'boolean'],
+        ];
+
+        if ($type === 'pro') {
+            $rules['license_no'] = [
+                'required',
+                'string',
+                'max:255',
+                Rule::unique('instructor_registry', 'license_no')->ignore($ignoreId),
+            ];
+            $rules['cert_no'] = ['nullable', 'string', 'max:255'];
+        } else {
+            $rules['cert_no'] = [
+                'required',
+                'string',
+                'max:255',
+                Rule::unique('instructor_registry', 'cert_no')->ignore($ignoreId),
+            ];
+            $rules['license_no'] = ['nullable', 'string', 'max:255'];
         }
 
-        if (!empty($instructor->pro_bowler_id)) {
-            return 'pro_bowler';
+        return $request->validate($rules);
+    }
+
+    private function buildRegistryPayload(array $validated, ?InstructorRegistry $existing = null): array
+    {
+        $isManual = $existing ? ($existing->source_type === 'manual') : true;
+
+        if ($existing && !$isManual) {
+            $licenseNo = $existing->license_no;
+            $certNo = $existing->cert_no;
+            $proBowlerId = $existing->pro_bowler_id;
+            $category = $existing->instructor_category;
+        } else {
+            $type = (string) $validated['instructor_type'];
+
+            $licenseNo = $type === 'pro'
+                ? $this->normalizeNullableString($validated['license_no'] ?? null)
+                : null;
+
+            $certNo = $type === 'certified'
+                ? $this->normalizeNullableString($validated['cert_no'] ?? null)
+                : null;
+
+            $matchedBowler = $licenseNo
+                ? ProBowler::query()->where('license_no', $licenseNo)->first()
+                : null;
+
+            $proBowlerId = $matchedBowler?->id;
+            $category = $type === 'certified'
+                ? 'certified'
+                : ($matchedBowler ? 'pro_bowler' : 'pro_instructor');
         }
 
-        return 'pro_instructor';
+        return [
+            'legacy_instructor_license_no' => $existing?->legacy_instructor_license_no,
+            'pro_bowler_id'                => $proBowlerId,
+            'license_no'                   => $licenseNo,
+            'cert_no'                      => $certNo,
+            'name'                         => trim((string) $validated['name']),
+            'name_kana'                    => $this->normalizeNullableString($validated['name_kana'] ?? null),
+            'sex'                          => ((int) $validated['sex']) === 1,
+            'district_id'                  => $validated['district_id'] !== null && $validated['district_id'] !== ''
+                ? (int) $validated['district_id']
+                : null,
+            'instructor_category'          => $category,
+            'grade'                        => $validated['grade'],
+            'coach_qualification'          => (bool) ($validated['coach_qualification'] ?? false),
+            'is_active'                    => (bool) ($validated['is_active'] ?? true),
+            'is_visible'                   => (bool) ($validated['is_visible'] ?? true),
+            'last_synced_at'               => now(),
+            'notes'                        => $existing?->notes ?: 'manual instructor entry',
+        ];
+    }
+
+    private function normalizeNullableString(?string $value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        $value = trim($value);
+
+        return $value === '' ? null : $value;
     }
 }
