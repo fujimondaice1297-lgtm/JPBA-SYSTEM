@@ -66,6 +66,10 @@
 - [ ] `ProBowlerController` / `ProBowlerImportController` の `instructors` 更新は互換レイヤとして当面維持する方針を整理
 - [✓] `authinstructor` 前提を外し、現存元データは `Pro_colum.csv` のみと整理
 - [ ] `pro_bowler` / `manual` / `legacy_instructors` の役割分担を docs 上で最終整理する
+#### 2026-04-03 メモ（ProBowlerController 同期整合）
+- [✓] `ProBowlerController` の保存時にも `instructor_registry` を同期する
+- [✓] `ProBowlerImportController` と `ProBowlerController` で、プロボウラー由来インストラクターの同期先を `instructors` + `instructor_registry` に揃える
+- [ ] 資格解除時に既存 `instructors` / `instructor_registry` 行をどう扱うかは後続で整理する
 
 
 ## Phase 2：大会（管理・公開の整合）

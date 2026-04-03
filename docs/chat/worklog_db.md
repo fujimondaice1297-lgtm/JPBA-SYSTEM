@@ -6,8 +6,15 @@
 
 作業履歴
 
-## 2026-04-03 INSTRUCTOR 投入元整理（authinstructor 仮説の解消）
+## 2026-04-03 INSTRUCTOR ProBowlerController の同期整合
+- `ProBowlerController` の `syncInstructor()` は、これまで `instructors` しか更新しておらず、画面からの管理者保存後に `instructor_registry` 正本が更新されないズレがあった。
+- 一方で `ProBowlerImportController` では、`syncLegacyInstructorFromBowler()` と `syncRegistryFromBowler()` の両方が走るため、CSV再取込時だけ `instructors` / `instructor_registry` の両方が同期される状態だった。
+- 今回、`ProBowlerController` にも `InstructorRegistry` 同期処理を追加し、管理画面保存時の同期先を importer と揃えた。
+- 同期条件も importer と揃え、A級 / B級 / C級、マスター、スクール開講資格、スポーツ協会認定コーチ、健康ボウリング指導士のいずれかがある場合のみ同期するよう整理した。
+- 互換レイヤ `instructors` は引き続き残しつつ、新正本 `instructor_registry` も同時に更新される状態にした。
+- 今回はアプリ実装の整合修正のみであり、DBスキーマ変更は発生していないため、`docs/db/data_dictionary.md` / `docs/db/ER.dbml` の更新は不要。
 
+## 2026-04-03 INSTRUCTOR 投入元整理（authinstructor 仮説の解消）
 - 目的:
   - `認定インストラクター` / `プロインストラクター` の投入元について、仮説ではなく現存データに合わせて整理し直す。
 

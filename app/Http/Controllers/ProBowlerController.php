@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\ProBowler;
 use App\Models\District;
 use App\Models\Instructor;
+use App\Models\InstructorRegistry;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Storage;
@@ -716,27 +717,114 @@ class ProBowlerController extends Controller
     ========================== */
     private function syncInstructor(Request $request, ProBowler $bowler): void
     {
-        $grade = match (true) {
-            $request->input('a_class_status') === '有' => 'A級',
-            $request->input('b_class_status') === '有' => 'B級',
-            $request->input('c_class_status') === '有' => 'C級',
-            default => null,
-        };
+        $grade = $this->resolveInstructorGradeFromRequest($request);
+
+        if (!$this->hasInstructorProfileFromRequest($request, $grade)) {
+            return;
+        }
+
+        $this->syncLegacyInstructor($request, $bowler, $grade);
+        $this->syncRegistryInstructor($request, $bowler, $grade);
+    }
+
+    private function syncLegacyInstructor(Request $request, ProBowler $bowler, ?string $grade): void
+    {
+        $existing = Instructor::query()
+            ->where('license_no', $bowler->license_no)
+            ->first();
 
         $payload = [
             'license_no'          => $bowler->license_no,
             'name'                => $bowler->name_kanji,
             'name_kana'           => $bowler->name_kana,
-            'sex'                 => ((int)$bowler->sex) === 1,
+            'sex'                 => ((int) ($bowler->sex ?? 0)) === 1,
             'district_id'         => $bowler->district_id,
             'instructor_type'     => 'pro',
-            'is_active'           => true,
-            'is_visible'          => true,
+            'grade'               => $grade,
+            'is_active'           => (bool) $bowler->is_active,
+            'is_visible'          => $existing?->is_visible ?? true,
             'coach_qualification' => ($bowler->school_license_status ?? $request->input('school_license_status')) === '有',
+            'pro_bowler_id'       => $bowler->id,
         ];
-        if ($grade !== null) $payload['grade'] = $grade;
 
-        Instructor::updateOrCreate(['pro_bowler_id' => $bowler->id], $payload);
+        Instructor::updateOrCreate(
+            ['license_no' => $bowler->license_no],
+            $payload
+        );
+    }
+
+    private function syncRegistryInstructor(Request $request, ProBowler $bowler, ?string $grade): void
+    {
+        $existing = InstructorRegistry::query()
+            ->where('pro_bowler_id', $bowler->id)
+            ->orWhere(function ($q) use ($bowler) {
+                $q->whereNotNull('license_no')
+                    ->where('license_no', $bowler->license_no);
+            })
+            ->orWhere(function ($q) use ($bowler) {
+                $q->whereNotNull('legacy_instructor_license_no')
+                    ->where('legacy_instructor_license_no', $bowler->license_no);
+            })
+            ->orderBy('id')
+            ->first();
+
+        $payload = [
+            'legacy_instructor_license_no' => $existing?->legacy_instructor_license_no ?? $bowler->license_no,
+            'pro_bowler_id'                => $bowler->id,
+            'license_no'                   => $bowler->license_no,
+            'cert_no'                      => $existing?->cert_no,
+            'name'                         => $bowler->name_kanji ?: ($existing?->name ?? $bowler->license_no),
+            'name_kana'                    => $bowler->name_kana,
+            'sex'                          => $this->normalizeRegistrySex($bowler),
+            'district_id'                  => $bowler->district_id,
+            'instructor_category'          => 'pro_bowler',
+            'grade'                        => $grade,
+            'coach_qualification'          => ($bowler->school_license_status ?? $request->input('school_license_status')) === '有',
+            'is_active'                    => (bool) $bowler->is_active,
+            'is_visible'                   => $existing?->is_visible ?? true,
+            'last_synced_at'               => now(),
+            'notes'                        => $existing?->notes ?: 'synced from pro_bowlers form',
+        ];
+
+        if ($existing) {
+            $existing->fill($payload)->save();
+            return;
+        }
+
+        InstructorRegistry::create(array_merge([
+            'source_type' => 'pro_bowler',
+            'source_key'  => $bowler->license_no,
+        ], $payload));
+    }
+
+    private function resolveInstructorGradeFromRequest(Request $request): ?string
+    {
+        return match (true) {
+            $request->input('a_class_status') === '有' => 'A級',
+            $request->input('b_class_status') === '有' => 'B級',
+            $request->input('c_class_status') === '有' => 'C級',
+            default => null,
+        };
+    }
+
+    private function hasInstructorProfileFromRequest(Request $request, ?string $grade): bool
+    {
+        return $grade !== null
+            || $request->input('master_status') === '有'
+            || $request->input('school_license_status') === '有'
+            || $request->input('coach_4_status') === '有'
+            || $request->input('coach_3_status') === '有'
+            || $request->input('coach_1_status') === '有'
+            || $request->input('kenkou_status') === '有';
+    }
+
+    private function normalizeRegistrySex(ProBowler $bowler): ?bool
+    {
+        return match ((int) ($bowler->sex ?? 0)) {
+            1       => true,
+            2       => false,
+            default => null,
+        };
     }
 
     /* =========================
