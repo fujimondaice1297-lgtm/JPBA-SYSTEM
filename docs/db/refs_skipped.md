@@ -35,26 +35,22 @@
   - ProTestフェーズで参照先（マスタ or 列挙）を確定する
   - 確定後、FK追加（+ 必要なら正規化）を実施
 
-## 2026-03-12 instructors / authinstructor（legacy未接続のため保留）
+## 2026-04-03 instructors / certified input source（現存データ整理）
 
 - 対象:
-  - `認定インストラクター` の投入元確認
+  - `認定インストラクター` の投入元整理
 
-- 候補:
-  - `mysql_legacy.authinstructor`
-  - 根拠: `App\Models\Legacy\AuthInstructorLegacy` が `authinstructor` を参照する想定になっている
+- 確認結果:
+  - `OLD_JPBA/csv` 配下の現存CSVは `Pro_colum.csv` のみ
+  - `Pro_colum.csv` はプロボウラー正本CSVであり、認定インストラクター専用の元表ではない
+  - `OLD_JPBA` 配下で `authinstructor` / `AuthInstructor` の参照は確認できなかった
+  - したがって、認定インストラクター専用の legacy 取込元は現存確認できていない
 
-- 現状:
-  - `pdo_mysql` / `mysqli` は有効化済み
-  - ただし `.env` に `DB_MYSQL_*` 設定が無い
-  - MySQL / MariaDB サービスが見つからない
-  - 3306 / 3307 に待受が無い
-  - `authinstructor` 相当の SQL / CSV / Excel も未発見
+- 決定:
+  - `authinstructor` を前提にした保留は解消する
+  - 現存する投入元データは `Pro_colum.csv` のみとする
+  - 認定インストラクターは現時点では `manual` 登録を正規の投入経路とする
 
-- 判断:
-  - `authinstructor` の実カラム未確認のため、`cert_no` や `source_key` の決め打ちは行わない
-  - `認定インストラクター` の schema / import 設計は保留
-
-- 再開条件:
-  - legacy DB 接続情報の入手
-  - または `authinstructor` 相当データの入手
+- 対応方針:
+  - `instructor_registry` の source は当面 `legacy_instructors` / `pro_bowler` / `manual` の3系統で運用する
+  - 認定インストラクター専用の外部データが将来見つかった場合のみ、新しい source_type を追加検討する

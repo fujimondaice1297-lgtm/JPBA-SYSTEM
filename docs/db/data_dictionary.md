@@ -418,7 +418,9 @@ JPBA公認ボールのマスタ。
 - 既存 `instructors` は既存画面・既存Controller互換のため当面維持する。
 - 初回 backfill は既存 `instructors` から `source_type = legacy_instructors` として投入する。
 - `license_no` / `cert_no` はどちらか片方だけでも保持できる設計にする。
-- 旧 `authinstructor` 由来の認定インストラクターは、legacy 接続または dump / CSV が再取得でき次第、別ソースとして投入する。
+- 現存する元データは `Pro_colum.csv` のみであり、`source_type = pro_bowler` はこのCSVを `pro_bowlers` に取り込んだ後の同期結果を表す。
+- 認定インストラクター専用の元表は存在しないため、現時点で `source_type = certified` 相当の独立一括投入元は無い。
+- 認定インストラクターは現状 `source_type = manual` を前提に登録・運用する。
 - `legacy_instructor_license_no` は互換移行用の退避列であり、FKは張らない。
 
 ### 外部キー（FK）

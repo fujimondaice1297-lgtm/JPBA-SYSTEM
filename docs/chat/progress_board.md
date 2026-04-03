@@ -46,25 +46,26 @@
 - [✓] 区分マスタ（A/B/C等）が確定
 - [✓] 名簿表示に必要な項目が揃う
 - [ ] 講習/資格/更新履歴の持ち方が決まる
-- [ ] プロインストラクター / 認定インストラクターの投入元を確定（`authinstructor` 候補だが legacy 未接続のため保留）
+- [✓] 現存する投入元データが `Pro_colum.csv` のみであることを確認
 - [✓] `license_no` 非依存で認定系も保持できる新正本 `instructor_registry` の方針を確定
 - [ ] 既存 `instructors` / 画面 / Controller を `instructor_registry` ベースへ段階移行
 - [✓] instructor_registry を新正本として導入
 - [✓] /instructors 一覧・PDF を instructor_registry 読みへ切替
 - [✓] pro_bowlers CSV再取込時に instructor_registry も同期する構成へ変更
-- [ ] 認定インストラクター / プロインストラクターの投入経路を確定する
+- [ ] 認定インストラクター / プロインストラクターの投入経路を整理する
+  - 現状の投入経路は `pro_bowler`（CSV由来）と `manual` の2系統
 #### 2026-03-18 メモ（認定インストラクター手動登録導線）
 - [✓] 認定インストラクターを手動登録できる
 - [✓] 手動登録した認定インストラクターが `/instructors` 一覧に表示される
 - [✓] 一覧の氏名リンクから編集画面へ遷移できる
 - [✓] 編集更新後の変更が一覧へ反映される
-- [ ] legacy `authinstructor` 由来データの投入元確定は継続
+- [✓] 認定インストラクター専用の元表は存在せず、現状は manual 登録が投入経路であることを確認
 #### 2026-04-03 メモ（instructor_registry 正本化の棚卸し）
 - [✓] `/instructors` 画面本体が `InstructorRegistry` 正本で動作していることを確認
 - [✓] `GroupRuleEngine` の `instructor_grade` 判定を `instructor_registry` 基準へ寄せる
 - [ ] `ProBowlerController` / `ProBowlerImportController` の `instructors` 更新は互換レイヤとして当面維持する方針を整理
-- [ ] legacy `authinstructor` の実表確認（`mysql_legacy` 接続復旧 または dump / CSV / Excel 入手）
-- [ ] `authinstructor` 由来データの投入元確定は継続
+- [✓] `authinstructor` 前提を外し、現存元データは `Pro_colum.csv` のみと整理
+- [ ] `pro_bowler` / `manual` / `legacy_instructors` の役割分担を docs 上で最終整理する
 
 
 ## Phase 2：大会（管理・公開の整合）

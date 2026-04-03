@@ -6,7 +6,37 @@
 
 作業履歴
 
+## 2026-04-03 INSTRUCTOR 投入元整理（authinstructor 仮説の解消）
 
+- 目的:
+  - `認定インストラクター` / `プロインストラクター` の投入元について、仮説ではなく現存データに合わせて整理し直す。
+
+- 確認したこと:
+  - `OLD_JPBA/csv` 配下には `Pro_colum.csv` しか存在しない。
+  - `Pro_colum.csv` はプロボウラー正本CSVであり、A級 / B級 / C級 / マスター / スポーツ協会認定コーチ / USBCコーチ / スクール開講資格など、プロボウラー由来の資格情報を含む。
+  - 一方で、認定インストラクター専用の元表は存在しない。
+  - `OLD_JPBA` 配下を `authinstructor` / `AuthInstructor` で検索しても参照は見つからなかった。
+  - 以前 repo 上に `App\Models\Legacy\AuthInstructorLegacy` が存在したため `authinstructor` を候補視していたが、現存データ根拠は確認できなかった。
+
+- この時点の判断:
+  - 現存する投入元データは `Pro_colum.csv` のみとする。
+  - `プロボウラー` 由来インストラクターは `Pro_colum.csv` → `pro_bowlers` → `instructor_registry` 同期で扱う。
+  - `認定インストラクター` は現時点では manual 登録が唯一の投入経路。
+  - `authinstructor` を前提にした import 設計・legacy 接続待ちは打ち切り、docs 上の記述も現状に合わせて修正する。
+  - 既存の `legacy_instructors` は、すでに `instructors` から bootstrap した履歴ソースとしてのみ残す。
+
+- ドキュメント更新方針:
+  - `docs/chat/progress_board.md`
+    - `authinstructor` 候補/保留の表現を外し、現存元データは `Pro_colum.csv` のみと明記する。
+  - `docs/db/data_dictionary.md`
+    - `instructor_registry` の注意書きから `authinstructor` 仮説を削除し、実ソースを `legacy_instructors` / `pro_bowler` / `manual` に整理する。
+  - `docs/db/refs_skipped.md`
+    - `authinstructor` 保留セクションを削除し、「認定インストラクター専用の元表は未存在、現状は manual 登録運用」とする注記へ差し替える。
+
+- 補足:
+  - 今回はスキーマ変更ではないため migration 変更は不要。
+  - `data_dictionary.md` 更新後はルールどおり `php tools/generate_er_from_dictionary.php` を実行して `docs/db/ER.dbml` を再生成する。
+  - ただし今回の変更は説明文のみのため、`ER.dbml` は無差分の可能性が高い。
 
 ## 2026-04-03 INSTRUCTOR instructor_registry 正本化の棚卸し
 - `InstructorController` / `/instructors` 一覧・作成・編集・PDF が `InstructorRegistry` を参照していることを確認した。
