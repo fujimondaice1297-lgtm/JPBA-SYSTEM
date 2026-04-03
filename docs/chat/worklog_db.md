@@ -6,6 +6,19 @@
 
 作業履歴
 
+
+
+## 2026-04-03 INSTRUCTOR instructor_registry 正本化の棚卸し
+- `InstructorController` / `/instructors` 一覧・作成・編集・PDF が `InstructorRegistry` を参照していることを確認した。
+- 一方で `Instructor` 直参照は `GroupRuleEngine` / `ProBowlerController` / `ProBowlerImportController` に残っていた。
+- `ProBowlerImportController` は `syncLegacyInstructorFromBowler()` と `syncRegistryFromBowler()` の二重同期になっており、互換レイヤ `instructors` 維持の実装と判断した。
+- `ProBowlerController` にも `Instructor::updateOrCreate()` が残っており、こちらも互換同期側の処理と整理した。
+- `GroupRuleEngine` の `instructor_grade` 判定は旧 `instructors` を参照していたため、`InstructorRegistry` + `instructor_category = pro_bowler` 基準へ修正した。
+- あわせて、ルール入力値 `A` / `B` / `C` と、DB保存値 `A級` / `B級` / `C級` の差を吸収するため、級表記の正規化を追加した。
+- `mysql_legacy` 接続は `DB_MYSQL_*` 環境変数を見る設定だったが、`.env` に該当設定が無く、既定値 `forge` にフォールバックしていた。
+- `authinstructor` は接続拒否で実表確認ができず、投入元確定は継続保留とした。
+- この棚卸し段階ではスキーマ変更は発生していないため、`docs/db/data_dictionary.md` / `docs/db/ER.dbml` の更新は不要。
+
 ## 2026-03-18 INSTRUCTOR 手動登録した認定インストラクターの編集導線復旧
 
 - 目的:

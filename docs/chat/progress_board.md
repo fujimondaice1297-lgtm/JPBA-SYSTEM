@@ -59,6 +59,13 @@
 - [✓] 一覧の氏名リンクから編集画面へ遷移できる
 - [✓] 編集更新後の変更が一覧へ反映される
 - [ ] legacy `authinstructor` 由来データの投入元確定は継続
+#### 2026-04-03 メモ（instructor_registry 正本化の棚卸し）
+- [✓] `/instructors` 画面本体が `InstructorRegistry` 正本で動作していることを確認
+- [✓] `GroupRuleEngine` の `instructor_grade` 判定を `instructor_registry` 基準へ寄せる
+- [ ] `ProBowlerController` / `ProBowlerImportController` の `instructors` 更新は互換レイヤとして当面維持する方針を整理
+- [ ] legacy `authinstructor` の実表確認（`mysql_legacy` 接続復旧 または dump / CSV / Excel 入手）
+- [ ] `authinstructor` 由来データの投入元確定は継続
+
 
 ## Phase 2：大会（管理・公開の整合）
 - [ ] tournaments 周辺の最終スキーマが辞書に確定
