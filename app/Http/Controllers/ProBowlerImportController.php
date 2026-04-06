@@ -605,11 +605,14 @@ class ProBowlerImportController extends Controller
         $category = $this->resolveInstructorCategoryFromBowler($bowler);
 
         if (!$this->hasInstructorRegistryTarget($bowler, $grade, $category)) {
+            $this->deactivateInstructorRecordsFromBowler($bowler);
+            $this->reactivateCertifiedCurrentRowForBowler($bowler);
             return;
         }
 
         $this->syncLegacyInstructorFromBowler($bowler, $grade, $category);
         $this->syncRegistryFromBowler($bowler, $grade, $category);
+        $this->supersedeCompetingCurrentRegistryRowsForBowler($bowler, $category);
     }
 
     private function syncLegacyInstructorFromBowler(ProBowler $bowler, ?string $grade, string $category): void
@@ -640,16 +643,7 @@ class ProBowlerImportController extends Controller
 
     private function syncRegistryFromBowler(ProBowler $bowler, ?string $grade, string $category): void
     {
-        $existing = InstructorRegistry::query()
-            ->where('pro_bowler_id', $bowler->id)
-            ->orWhere(function ($q) use ($bowler) {
-                $q->whereNotNull('license_no')
-                    ->where('license_no', $bowler->license_no);
-            })
-            ->orWhere(function ($q) use ($bowler) {
-                $q->whereNotNull('legacy_instructor_license_no')
-                    ->where('legacy_instructor_license_no', $bowler->license_no);
-            })
+        $existing = $this->proSideRegistryQueryForBowler($bowler)
             ->orderByDesc('is_current')
             ->orderBy('id')
             ->first();
@@ -674,6 +668,11 @@ class ProBowlerImportController extends Controller
             'is_current'                    => true,
             'superseded_at'                 => null,
             'supersede_reason'              => null,
+            'renewal_year'                  => $existing?->renewal_year ?? $this->currentRenewalYear(),
+            'renewal_due_on'                => $existing?->renewal_due_on?->format('Y-m-d') ?? $this->currentRenewalDueDate(),
+            'renewal_status'                => $existing?->renewal_status ?? 'pending',
+            'renewed_at'                    => $existing?->renewed_at?->format('Y-m-d'),
+            'renewal_note'                  => $existing?->renewal_note,
             'last_synced_at'                => now(),
             'notes'                         => $existing?->notes ?: 'synced from pro_bowlers import',
         ];
@@ -685,6 +684,144 @@ class ProBowlerImportController extends Controller
         }
 
         InstructorRegistry::create($payload);
+    }
+
+    private function deactivateInstructorRecordsFromBowler(ProBowler $bowler): void
+    {
+        $this->deactivateLegacyInstructorFromBowler($bowler);
+        $this->deactivateRegistryFromBowler($bowler);
+    }
+
+    private function deactivateLegacyInstructorFromBowler(ProBowler $bowler): void
+    {
+        $existing = Instructor::query()
+            ->where('license_no', $bowler->license_no)
+            ->first();
+
+        if (!$existing) {
+            return;
+        }
+
+        if (!$existing->is_active) {
+            return;
+        }
+
+        $existing->is_active = false;
+        $existing->save();
+    }
+
+    private function deactivateRegistryFromBowler(ProBowler $bowler): void
+    {
+        $rows = $this->proSideRegistryQueryForBowler($bowler)
+            ->where('is_current', true)
+            ->get();
+
+        if ($rows->isEmpty()) {
+            return;
+        }
+
+        $now = now();
+
+        foreach ($rows as $row) {
+            $row->is_current = false;
+            $row->is_active = false;
+            $row->superseded_at = $row->superseded_at ?: $now;
+            $row->supersede_reason = $row->supersede_reason ?: 'qualification_removed';
+            $row->last_synced_at = $now;
+            $row->save();
+        }
+    }
+
+    private function reactivateCertifiedCurrentRowForBowler(ProBowler $bowler): void
+    {
+        $certified = $this->allRegistryQueryForBowler($bowler)
+            ->where('instructor_category', 'certified')
+            ->orderByDesc('is_current')
+            ->orderByDesc('last_synced_at')
+            ->orderBy('id')
+            ->first();
+
+        if (!$certified) {
+            return;
+        }
+
+        $certified->is_current = true;
+        $certified->is_active = true;
+        $certified->superseded_at = null;
+        $certified->supersede_reason = null;
+        $certified->renewal_year = $certified->renewal_year ?? $this->currentRenewalYear();
+        $certified->renewal_due_on = $certified->renewal_due_on ?? $this->currentRenewalDueDate();
+        $certified->renewal_status = $certified->renewal_status ?? 'pending';
+        $certified->last_synced_at = now();
+        $certified->save();
+    }
+
+    private function supersedeCompetingCurrentRegistryRowsForBowler(ProBowler $bowler, string $targetCategory): void
+    {
+        $rows = $this->allRegistryQueryForBowler($bowler)
+            ->where('is_current', true)
+            ->where('instructor_category', '!=', $targetCategory)
+            ->get();
+
+        if ($rows->isEmpty()) {
+            return;
+        }
+
+        $now = now();
+
+        foreach ($rows as $row) {
+            $row->is_current = false;
+            $row->is_active = false;
+            $row->superseded_at = $now;
+            $row->supersede_reason = $this->resolveSupersedeReason($row->instructor_category, $targetCategory);
+            $row->last_synced_at = $now;
+            $row->save();
+        }
+    }
+
+    private function proSideRegistryQueryForBowler(ProBowler $bowler)
+    {
+        return $this->allRegistryQueryForBowler($bowler)
+            ->whereIn('instructor_category', ['pro_bowler', 'pro_instructor']);
+    }
+
+    private function allRegistryQueryForBowler(ProBowler $bowler)
+    {
+        return InstructorRegistry::query()
+            ->where(function ($query) use ($bowler) {
+                $query->where(function ($q) use ($bowler) {
+                    $q->whereNotNull('pro_bowler_id')
+                        ->where('pro_bowler_id', $bowler->id);
+                })->orWhere(function ($q) use ($bowler) {
+                    $q->whereNotNull('license_no')
+                        ->where('license_no', $bowler->license_no);
+                })->orWhere(function ($q) use ($bowler) {
+                    $q->whereNotNull('legacy_instructor_license_no')
+                        ->where('legacy_instructor_license_no', $bowler->license_no);
+                });
+            });
+    }
+
+    private function resolveSupersedeReason(string $fromCategory, string $toCategory): string
+    {
+        return match (true) {
+            $fromCategory === 'certified' && $toCategory === 'pro_instructor' => 'promoted_to_pro_instructor',
+            $fromCategory === 'certified' && $toCategory === 'pro_bowler'     => 'promoted_to_pro_bowler',
+            $fromCategory === 'pro_instructor' && $toCategory === 'pro_bowler' => 'promoted_to_pro_bowler',
+            $fromCategory === 'pro_bowler' && $toCategory === 'certified'     => 'downgraded_to_certified',
+            $fromCategory === 'pro_instructor' && $toCategory === 'certified' => 'downgraded_to_certified',
+            default                                                           => 'category_changed',
+        };
+    }
+
+    private function currentRenewalYear(): int
+    {
+        return (int) now()->format('Y');
+    }
+
+    private function currentRenewalDueDate(): string
+    {
+        return sprintf('%04d-12-31', $this->currentRenewalYear());
     }
 
     private function resolveInstructorGradeFromBowler(ProBowler $bowler): ?string

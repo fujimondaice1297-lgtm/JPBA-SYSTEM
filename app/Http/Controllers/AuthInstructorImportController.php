@@ -83,16 +83,16 @@ class AuthInstructorImportController extends Controller
         };
 
         $C = (object) [
-            'id'         => $col(['#ID', 'ID']),
-            'license'    => $col(['ライセンスNo', 'ライセンスNO', 'ライセンスＮｏ']),
-            'grade'      => $col(['認定級']),
-            'name'       => $col(['名前', '氏名']),
-            'kana'       => $col(['名前（フリガナ）', 'フリガナ']),
-            'sex'        => $col(['性別']),
-            'district'   => $col(['地区']),
-            'visible'    => $col(['表示フラグ']),
-            'active'     => $col(['有効フラグ']),
-            'coach'      => $col(['コーチ資格']),
+            'id'       => $col(['#ID', 'ID']),
+            'license'  => $col(['ライセンスNo', 'ライセンスNO', 'ライセンスＮｏ']),
+            'grade'    => $col(['認定級']),
+            'name'     => $col(['名前', '氏名']),
+            'kana'     => $col(['名前（フリガナ）', 'フリガナ']),
+            'sex'      => $col(['性別']),
+            'district' => $col(['地区']),
+            'visible'  => $col(['表示フラグ']),
+            'active'   => $col(['有効フラグ']),
+            'coach'    => $col(['コーチ資格']),
         ];
 
         if ($C->id === null || $C->grade === null || $C->name === null) {
@@ -138,7 +138,7 @@ class AuthInstructorImportController extends Controller
             return $value === '' ? null : $value;
         };
 
-        $normalizeGrade = function ($value) {
+        $normalizeGrade = function ($value): ?string {
             $v = trim((string) $value);
 
             return in_array($v, ['1級', '2級'], true) ? $v : null;
@@ -194,6 +194,7 @@ class AuthInstructorImportController extends Controller
         $created = 0;
         $updated = 0;
         $skipped = 0;
+        $seenSourceKeys = [];
 
         DB::beginTransaction();
 
@@ -215,8 +216,11 @@ class AuthInstructorImportController extends Controller
                     continue;
                 }
 
+                $seenSourceKeys[] = $sourceKey;
+
                 $coachRaw = $normalizeNullable($val($row, $C->coach));
                 $licenseNo = $normalizeNullable($val($row, $C->license));
+                $sourceActive = $normalizeFlag($val($row, $C->active));
 
                 $payload = [
                     'legacy_instructor_license_no' => null,
@@ -231,10 +235,6 @@ class AuthInstructorImportController extends Controller
                     'grade'                        => $normalizeGrade($val($row, $C->grade)),
                     'coach_qualification'          => $coachRaw !== null && $coachRaw !== '',
                     'source_registered_at'         => null,
-                    'is_current'                   => true,
-                    'superseded_at'                => null,
-                    'supersede_reason'             => null,
-                    'is_active'                    => $normalizeFlag($val($row, $C->active)),
                     'is_visible'                   => $normalizeFlag($val($row, $C->visible)),
                     'last_synced_at'               => now(),
                     'notes'                        => $coachRaw
@@ -247,17 +247,24 @@ class AuthInstructorImportController extends Controller
                     'source_key'  => $sourceKey,
                 ]);
 
+                $wasNew = !$registry->exists;
+
                 $registry->fill($payload);
                 $registry->source_type = 'auth_instructor_csv';
                 $registry->source_key = $sourceKey;
+
+                $this->applyCertifiedCurrentState($registry, $sourceActive);
+
                 $registry->save();
 
-                if ($registry->wasRecentlyCreated) {
+                if ($wasNew) {
                     $created++;
                 } else {
                     $updated++;
                 }
             }
+
+            $this->retireMissingAuthInstructorRows($seenSourceKeys);
 
             DB::commit();
         } catch (\Throwable $e) {
@@ -274,5 +281,116 @@ class AuthInstructorImportController extends Controller
         return redirect()
             ->route('instructors.index')
             ->with('success', "認定インストラクターCSV取り込み完了：新規 {$created} 件 / 更新 {$updated} 件 / スキップ {$skipped} 件");
+    }
+
+    private function applyCertifiedCurrentState(InstructorRegistry $registry, bool $sourceActive): void
+    {
+        $now = now();
+        $currentYear = (int) $now->format('Y');
+        $currentDueOn = sprintf('%04d-12-31', $currentYear);
+
+        $registry->renewal_year = $currentYear;
+        $registry->renewal_due_on = $currentDueOn;
+
+        if (!$sourceActive) {
+            $registry->is_current = false;
+            $registry->is_active = false;
+            $registry->superseded_at = $now;
+            $registry->supersede_reason = 'inactive_in_source';
+            $registry->renewal_status = 'expired';
+            $registry->renewed_at = null;
+            $registry->renewal_note = 'AuthInstructor.csv 取込時に有効フラグなし';
+            $registry->last_synced_at = $now;
+
+            return;
+        }
+
+        $currentProTarget = $this->findCurrentProTargetByLicense($registry->license_no);
+
+        if ($currentProTarget) {
+            $registry->is_current = false;
+            $registry->is_active = false;
+            $registry->superseded_at = $now;
+            $registry->supersede_reason = $this->resolveCertifiedSupersedeReasonFromProTarget($currentProTarget->instructor_category);
+            $registry->renewal_status = 'renewed';
+            $registry->renewed_at = $now->toDateString();
+            $registry->renewal_note = 'AuthInstructor.csv 年次更新取込済み（現行資格は ' . $currentProTarget->instructor_category . '）';
+            $registry->last_synced_at = $now;
+
+            return;
+        }
+
+        $registry->is_current = true;
+        $registry->is_active = true;
+        $registry->superseded_at = null;
+        $registry->supersede_reason = null;
+        $registry->renewal_status = 'renewed';
+        $registry->renewed_at = $now->toDateString();
+        $registry->renewal_note = 'AuthInstructor.csv 年次更新取込済み';
+        $registry->last_synced_at = $now;
+    }
+
+    private function retireMissingAuthInstructorRows(array $seenSourceKeys): void
+    {
+        $seenSourceKeys = array_values(array_unique($seenSourceKeys));
+
+        $query = InstructorRegistry::query()
+            ->where('source_type', 'auth_instructor_csv')
+            ->where('is_current', true);
+
+        if (!empty($seenSourceKeys)) {
+            $query->whereNotIn('source_key', $seenSourceKeys);
+        }
+
+        $rows = $query->get();
+        if ($rows->isEmpty()) {
+            return;
+        }
+
+        $now = now();
+        $currentYear = (int) $now->format('Y');
+        $currentDueOn = sprintf('%04d-12-31', $currentYear);
+
+        foreach ($rows as $row) {
+            $row->is_current = false;
+            $row->is_active = false;
+            $row->superseded_at = $now;
+            $row->supersede_reason = 'certified_not_renewed';
+            $row->renewal_year = $currentYear;
+            $row->renewal_due_on = $currentDueOn;
+            $row->renewal_status = 'expired';
+            $row->renewed_at = null;
+            $row->renewal_note = '当年の AuthInstructor.csv に未掲載';
+            $row->last_synced_at = $now;
+            $row->save();
+        }
+    }
+
+    private function findCurrentProTargetByLicense(?string $licenseNo): ?InstructorRegistry
+    {
+        if ($licenseNo === null || trim($licenseNo) === '') {
+            return null;
+        }
+
+        return InstructorRegistry::query()
+            ->whereIn('instructor_category', ['pro_bowler', 'pro_instructor'])
+            ->where('is_current', true)
+            ->where('is_active', true)
+            ->where(function ($query) use ($licenseNo) {
+                $query->where('license_no', $licenseNo)
+                    ->orWhere('legacy_instructor_license_no', $licenseNo);
+            })
+            ->orderByDesc('last_synced_at')
+            ->orderBy('id')
+            ->first();
+    }
+
+    private function resolveCertifiedSupersedeReasonFromProTarget(string $targetCategory): string
+    {
+        return match ($targetCategory) {
+            'pro_bowler'     => 'promoted_to_pro_bowler',
+            'pro_instructor' => 'promoted_to_pro_instructor',
+            default          => 'category_changed',
+        };
     }
 }

@@ -25,11 +25,21 @@ class InstructorController extends Controller
         '1級',
     ];
 
+    private const RENEWAL_STATUS_OPTIONS = [
+        'pending' => '未更新',
+        'renewed' => '更新済み',
+        'expired' => '期限切れ',
+    ];
+
     public function index(Request $request)
     {
         $query = InstructorRegistry::query()->with(['district', 'proBowler']);
 
-        if (!$request->boolean('include_history')) {
+        $includeHistory = $request->boolean('include_history')
+            || $request->input('instructor_class') === 'retired'
+            || $request->input('renewal_status') === 'expired';
+
+        if (!$includeHistory) {
             $query->where('is_current', true);
         }
 
@@ -44,9 +54,10 @@ class InstructorController extends Controller
             ->get(['id', 'label']);
 
         return view('instructors.index', [
-            'instructors' => $instructors,
-            'districts'   => $districts,
-            'grades'      => self::GRADE_OPTIONS,
+            'instructors'      => $instructors,
+            'districts'        => $districts,
+            'grades'           => self::GRADE_OPTIONS,
+            'renewalStatuses'  => self::RENEWAL_STATUS_OPTIONS,
         ]);
     }
 
@@ -57,8 +68,9 @@ class InstructorController extends Controller
             ->get(['id', 'label']);
 
         return view('instructors.create', [
-            'districts' => $districts,
-            'grades'    => self::GRADE_OPTIONS,
+            'districts'       => $districts,
+            'grades'          => self::GRADE_OPTIONS,
+            'renewalStatuses' => self::RENEWAL_STATUS_OPTIONS,
         ]);
     }
 
@@ -77,6 +89,7 @@ class InstructorController extends Controller
         );
 
         $registry->save();
+        $this->applyCurrentTransitions($registry);
 
         return redirect()
             ->route('instructors.index')
@@ -92,9 +105,10 @@ class InstructorController extends Controller
             ->get(['id', 'label']);
 
         return view('instructors.edit', [
-            'instructor' => $instructor,
-            'districts'  => $districts,
-            'grades'     => self::GRADE_OPTIONS,
+            'instructor'       => $instructor,
+            'districts'        => $districts,
+            'grades'           => self::GRADE_OPTIONS,
+            'renewalStatuses'  => self::RENEWAL_STATUS_OPTIONS,
         ]);
     }
 
@@ -105,6 +119,7 @@ class InstructorController extends Controller
 
         $instructor->fill($this->buildRegistryPayload($validated, $instructor));
         $instructor->save();
+        $this->applyCurrentTransitions($instructor);
 
         return redirect()
             ->route('instructors.index')
@@ -115,7 +130,11 @@ class InstructorController extends Controller
     {
         $query = InstructorRegistry::query()->with(['district', 'proBowler']);
 
-        if (!$request->boolean('include_history')) {
+        $includeHistory = $request->boolean('include_history')
+            || $request->input('instructor_class') === 'retired'
+            || $request->input('renewal_status') === 'expired';
+
+        if (!$includeHistory) {
             $query->where('is_current', true);
         }
 
@@ -189,11 +208,25 @@ class InstructorController extends Controller
                 case 'certified_instructor':
                     $query->certifiedInstructor();
                     break;
+                case 'retired':
+                    $query->retired();
+                    break;
             }
         }
 
         if ($request->filled('grade')) {
             $query->where('grade', trim((string) $request->input('grade')));
+        }
+
+        if ($request->filled('renewal_year') && ctype_digit((string) $request->input('renewal_year'))) {
+            $query->where('renewal_year', (int) $request->input('renewal_year'));
+        }
+
+        if ($request->filled('renewal_status')) {
+            $renewalStatus = trim((string) $request->input('renewal_status'));
+            if (array_key_exists($renewalStatus, self::RENEWAL_STATUS_OPTIONS)) {
+                $query->where('renewal_status', $renewalStatus);
+            }
         }
 
         return $query;
@@ -203,6 +236,7 @@ class InstructorController extends Controller
     {
         return $query
             ->orderByDesc('is_current')
+            ->orderByRaw('renewal_year desc nulls last')
             ->orderByRaw("coalesce(license_no, cert_no, legacy_instructor_license_no, '') asc")
             ->orderBy('name')
             ->orderBy('id');
@@ -241,6 +275,11 @@ class InstructorController extends Controller
             'is_active'           => ['nullable', 'boolean'],
             'is_visible'          => ['nullable', 'boolean'],
             'coach_qualification' => ['nullable', 'boolean'],
+            'renewal_year'        => ['nullable', 'integer', 'min:2000', 'max:2099'],
+            'renewal_due_on'      => ['nullable', 'date'],
+            'renewal_status'      => ['nullable', 'string', Rule::in(array_keys(self::RENEWAL_STATUS_OPTIONS))],
+            'renewed_at'          => ['nullable', 'date'],
+            'renewal_note'        => ['nullable', 'string', 'max:2000'],
         ];
 
         if ($type === 'pro_instructor') {
@@ -248,7 +287,9 @@ class InstructorController extends Controller
                 'required',
                 'string',
                 'max:255',
-                Rule::unique('instructor_registry', 'license_no')->ignore($ignoreId),
+                Rule::unique('instructor_registry', 'license_no')
+                    ->where(fn ($query) => $query->where('is_current', true))
+                    ->ignore($ignoreId),
             ];
             $rules['cert_no'] = ['nullable', 'string', 'max:255'];
         } else {
@@ -256,7 +297,9 @@ class InstructorController extends Controller
                 'required',
                 'string',
                 'max:255',
-                Rule::unique('instructor_registry', 'cert_no')->ignore($ignoreId),
+                Rule::unique('instructor_registry', 'cert_no')
+                    ->where(fn ($query) => $query->where('is_current', true))
+                    ->ignore($ignoreId),
             ];
             $rules['license_no'] = ['nullable', 'string', 'max:255'];
         }
@@ -304,6 +347,18 @@ class InstructorController extends Controller
             $supersedeReason = null;
         }
 
+        $renewalYear = $validated['renewal_year'] ?? $existing?->renewal_year;
+        $renewalDueOn = $validated['renewal_due_on'] ?? ($renewalYear ? sprintf('%04d-12-31', (int) $renewalYear) : $existing?->renewal_due_on?->format('Y-m-d'));
+        $renewalStatus = $validated['renewal_status'] ?? $existing?->renewal_status;
+        $renewedAt = $validated['renewed_at'] ?? $existing?->renewed_at?->format('Y-m-d');
+
+        if ($renewalStatus === 'renewed' && empty($renewedAt)) {
+            $renewedAt = now()->toDateString();
+        }
+        if ($renewalStatus !== 'renewed') {
+            $renewedAt = null;
+        }
+
         return [
             'legacy_instructor_license_no' => $existing?->legacy_instructor_license_no,
             'pro_bowler_id'                => $proBowlerId,
@@ -324,9 +379,88 @@ class InstructorController extends Controller
             'is_current'                   => $isCurrent,
             'superseded_at'                => $supersededAt,
             'supersede_reason'             => $supersedeReason,
+            'renewal_year'                 => $renewalYear !== null && $renewalYear !== '' ? (int) $renewalYear : null,
+            'renewal_due_on'               => $renewalDueOn,
+            'renewal_status'               => $renewalStatus,
+            'renewed_at'                   => $renewedAt,
+            'renewal_note'                 => $this->normalizeNullableString($validated['renewal_note'] ?? null),
             'last_synced_at'               => now(),
             'notes'                        => $existing?->notes ?: 'manual instructor entry',
         ];
+    }
+
+    private function applyCurrentTransitions(InstructorRegistry $registry): void
+    {
+        if (!$registry->is_current) {
+            return;
+        }
+
+        $rows = $this->relatedCurrentRowsForRegistry($registry)->get();
+        if ($rows->isEmpty()) {
+            return;
+        }
+
+        $now = now();
+
+        foreach ($rows as $row) {
+            $row->is_current = false;
+            $row->is_active = false;
+            $row->superseded_at = $now;
+            $row->supersede_reason = $this->resolveTransitionReason(
+                $row->instructor_category,
+                $registry->instructor_category
+            );
+            $row->last_synced_at = $now;
+            $row->save();
+        }
+    }
+
+    private function relatedCurrentRowsForRegistry(InstructorRegistry $registry): Builder
+    {
+        return InstructorRegistry::query()
+            ->where('id', '!=', $registry->id)
+            ->where('is_current', true)
+            ->where(function ($query) use ($registry) {
+                $hasCondition = false;
+
+                if ($registry->pro_bowler_id !== null) {
+                    $query->orWhere('pro_bowler_id', $registry->pro_bowler_id);
+                    $hasCondition = true;
+                }
+
+                if ($registry->license_no !== null) {
+                    $query->orWhere('license_no', $registry->license_no)
+                        ->orWhere('legacy_instructor_license_no', $registry->license_no);
+                    $hasCondition = true;
+                }
+
+                if ($registry->legacy_instructor_license_no !== null) {
+                    $query->orWhere('license_no', $registry->legacy_instructor_license_no)
+                        ->orWhere('legacy_instructor_license_no', $registry->legacy_instructor_license_no);
+                    $hasCondition = true;
+                }
+
+                if ($registry->cert_no !== null) {
+                    $query->orWhere('cert_no', $registry->cert_no);
+                    $hasCondition = true;
+                }
+
+                if (!$hasCondition) {
+                    $query->whereRaw('1 = 0');
+                }
+            });
+    }
+
+    private function resolveTransitionReason(string $fromCategory, string $toCategory): string
+    {
+        return match (true) {
+            $fromCategory === 'certified' && $toCategory === 'pro_instructor' => 'promoted_to_pro_instructor',
+            $fromCategory === 'certified' && $toCategory === 'pro_bowler'     => 'promoted_to_pro_bowler',
+            $fromCategory === 'pro_instructor' && $toCategory === 'pro_bowler' => 'promoted_to_pro_bowler',
+            $fromCategory === 'pro_bowler' && $toCategory === 'certified'     => 'downgraded_to_certified',
+            $fromCategory === 'pro_instructor' && $toCategory === 'certified' => 'downgraded_to_certified',
+            default                                                           => 'replaced_by_manual_entry',
+        };
     }
 
     private function normalizeNullableString(?string $value): ?string

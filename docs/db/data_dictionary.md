@@ -400,6 +400,11 @@ JPBA公認ボールのマスタ。
 - supersede_reason（置換理由：nullable）
 - is_active
 - is_visible
+- renewal_year（更新対象年度：nullable）
+- renewal_due_on（更新期限：nullable。原則 12/31）
+- renewal_status（更新状態：nullable。`pending` / `renewed` / `expired`）
+- renewed_at（更新完了日：nullable）
+- renewal_note（更新備考：nullable）
 - last_synced_at（最終同期日時：nullable）
 - notes（備考：nullable）
 
@@ -407,6 +412,7 @@ JPBA公認ボールのマスタ。
 - `(source_type, source_key)` 一意
 - `instructor_category` は `pro_bowler / pro_instructor / certified`
 - `grade` は `instructors.grade` と同じ許容値
+- `renewal_status` は `pending / renewed / expired` または NULL
 
 ### grade の運用値
 - `C級`
@@ -416,6 +422,11 @@ JPBA公認ボールのマスタ。
 - `A級`
 - `2級`
 - `1級`
+
+### renewal_status の運用値
+- `pending`（更新対象・未更新）
+- `renewed`（更新済み）
+- `expired`（期限切れ / 年次更新失効）
 
 ### 注意（運用方針）
 - 新規正本は `instructor_registry` とする。
@@ -430,12 +441,14 @@ JPBA公認ボールのマスタ。
 - 一覧・検索の既定は `is_current = true` を対象にする。
 - `pro_instructor` の件数比較や検索条件は、`license_no` の文字列検索ではなく `instructor_category = 'pro_instructor'` かつ `is_current = true` を正本条件とする。
 - `legacy_instructor_license_no` は互換移行用の退避列であり、FKは張らない.
+- 年次更新管理は `renewal_year` / `renewal_due_on` / `renewal_status` / `renewed_at` / `renewal_note` を正本とする。
+- 毎年の更新期限は原則 `12/31` とし、更新専用一覧では `renewal_year` と `renewal_status` を主な絞り込み軸にする。
+- `AuthInstructor.csv` の年次取込では、当年CSVに存在する current `certified` 行を `renewed`、当年CSVに存在しない current `auth_instructor_csv` 行を `expired` として扱う。
+- `pro_bowler_csv` / manual 由来のプロ系 current 行は、年次更新対象として `renewal_status = pending` から管理できるようにする。
 
 ### 外部キー（FK）
 - instructor_registry.pro_bowler_id -> pro_bowlers.id（ON DELETE SET NULL）
 - instructor_registry.district_id -> districts.id（ON DELETE SET NULL）
-
----
 
 ## instructors
 

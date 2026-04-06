@@ -6,6 +6,7 @@
 
   @php
     $gradeOptions = $grades ?? ["C級", "準B級", "B級", "準A級", "A級", "2級", "1級"];
+    $renewalStatusOptions = $renewalStatuses ?? ['pending' => '未更新', 'renewed' => '更新済み', 'expired' => '期限切れ'];
     $oldType = old('instructor_type', 'pro');
   @endphp
 
@@ -37,24 +38,12 @@
 
       <div class="col-md-6" id="license_no_group">
         <label class="form-label">ライセンスNo<span class="text-danger">*</span></label>
-        <input
-          type="text"
-          name="license_no"
-          id="license_no"
-          class="form-control"
-          value="{{ old('license_no') }}"
-        >
+        <input type="text" name="license_no" id="license_no" class="form-control" value="{{ old('license_no') }}">
       </div>
 
       <div class="col-md-6 d-none" id="cert_no_group">
         <label class="form-label">認定番号<span class="text-danger">*</span></label>
-        <input
-          type="text"
-          name="cert_no"
-          id="cert_no"
-          class="form-control"
-          value="{{ old('cert_no') }}"
-        >
+        <input type="text" name="cert_no" id="cert_no" class="form-control" value="{{ old('cert_no') }}">
       </div>
 
       <div class="col-md-6">
@@ -104,14 +93,7 @@
         <label class="form-label d-block">有効</label>
         <input type="hidden" name="is_active" value="0">
         <div class="form-check mt-2">
-          <input
-            class="form-check-input"
-            type="checkbox"
-            name="is_active"
-            id="is_active"
-            value="1"
-            {{ old('is_active', '1') == '1' ? 'checked' : '' }}
-          >
+          <input class="form-check-input" type="checkbox" name="is_active" id="is_active" value="1" {{ old('is_active', '1') == '1' ? 'checked' : '' }}>
           <label class="form-check-label" for="is_active">有効にする</label>
         </div>
       </div>
@@ -120,14 +102,7 @@
         <label class="form-label d-block">表示</label>
         <input type="hidden" name="is_visible" value="0">
         <div class="form-check mt-2">
-          <input
-            class="form-check-input"
-            type="checkbox"
-            name="is_visible"
-            id="is_visible"
-            value="1"
-            {{ old('is_visible', '1') == '1' ? 'checked' : '' }}
-          >
+          <input class="form-check-input" type="checkbox" name="is_visible" id="is_visible" value="1" {{ old('is_visible', '1') == '1' ? 'checked' : '' }}>
           <label class="form-check-label" for="is_visible">表示する</label>
         </div>
       </div>
@@ -136,16 +111,41 @@
         <label class="form-label d-block">補助資格</label>
         <input type="hidden" name="coach_qualification" value="0">
         <div class="form-check mt-2">
-          <input
-            class="form-check-input"
-            type="checkbox"
-            name="coach_qualification"
-            id="coach_qualification"
-            value="1"
-            {{ old('coach_qualification') == '1' ? 'checked' : '' }}
-          >
+          <input class="form-check-input" type="checkbox" name="coach_qualification" id="coach_qualification" value="1" {{ old('coach_qualification') == '1' ? 'checked' : '' }}>
           <label class="form-check-label" for="coach_qualification">スクール開講資格等あり</label>
         </div>
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label">更新年度</label>
+        <input type="number" name="renewal_year" class="form-control" value="{{ old('renewal_year', now()->year) }}">
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label">更新期限</label>
+        <input type="date" name="renewal_due_on" class="form-control" value="{{ old('renewal_due_on', now()->year . '-12-31') }}">
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label">更新状態</label>
+        <select name="renewal_status" class="form-select">
+          <option value="">選択してください</option>
+          @foreach ($renewalStatusOptions as $statusKey => $statusLabel)
+            <option value="{{ $statusKey }}" {{ old('renewal_status', 'pending') === $statusKey ? 'selected' : '' }}>
+              {{ $statusLabel }}
+            </option>
+          @endforeach
+        </select>
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label">更新日</label>
+        <input type="date" name="renewed_at" class="form-control" value="{{ old('renewed_at') }}">
+      </div>
+
+      <div class="col-12">
+        <label class="form-label">更新備考</label>
+        <textarea name="renewal_note" class="form-control" rows="3">{{ old('renewal_note') }}</textarea>
       </div>
     </div>
 
