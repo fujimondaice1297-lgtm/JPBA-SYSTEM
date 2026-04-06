@@ -91,6 +91,13 @@
 - [✓] `pro_bowlers.member_class = pro_instructor` と `instructor_registry.instructor_category = pro_instructor` の件数が 23 / 23 で一致することを確認
 - [ ] alias/旧ライセンス表記を current/history へどう寄せるかは後続で整理する
 
+#### 2026-04-06 メモ（instructor docs整理）
+- [✓] `ProBowlerController` / `ProBowlerImportController` の `instructors` 更新は互換レイヤとして当面維持する方針を整理
+- [✓] source_type（`legacy_instructors` / `pro_bowler_csv` / `auth_instructor_csv` / `manual`）の役割分担を docs 上で整理
+- [✓] 資格解除時に既存 `instructors` / `instructor_registry` 行をどう扱うかを docs 上で整理
+- [✓] alias / 旧ライセンス表記を current/history へどう寄せるかを docs 上で整理
+- [ ] 講習 / 資格 / 更新履歴の持ち方は別タスクで継続
+
 
 ## Phase 2：大会（管理・公開の整合）
 - [ ] tournaments 周辺の最終スキーマが辞書に確定

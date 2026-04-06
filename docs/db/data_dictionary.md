@@ -422,14 +422,19 @@ JPBA公認ボールのマスタ。
 - 既存 `instructors` は既存画面・既存Controller互換のため当面維持する。
 - 初回 backfill は既存 `instructors` から `source_type = legacy_instructors` として投入する。
 - `license_no` / `cert_no` はどちらか片方だけでも保持できる設計にする。
-- `source_type = pro_bowler_csv` は `Pro_colum.csv` を `pro_bowlers` に取り込んだ後の同期結果を表す。
-- `source_type = auth_instructor_csv` は `AuthInstructor.csv` を独立投入した認定インストラクター行を表す。
+- `source_type = legacy_instructors` は、旧 `instructors` からの bootstrap / 互換移行用スナップショットを表す。新規機能の件数確認・検索・履歴判定の正本には使わない。
+- `source_type = pro_bowler_csv` は、`Pro_colum.csv` を `pro_bowlers` に取り込んだ後の同期結果を表す。`instructor_category` は `pro_bowler` または `pro_instructor` を取る。
+- `source_type = auth_instructor_csv` は、`AuthInstructor.csv` を独立投入した認定インストラクター行を表す。`instructor_category = certified` を取る。
+- `source_type = manual` は、CSV元データを持たない行、または review 後に手動管理する行を表す。
 - `AuthInstructor.csv` は専用の認定番号列を持たないため、当面は `#ID` を `source_key` および `cert_no` に使って一意管理する。
 - `AuthInstructor.csv` は名前一致だけで `pro_bowlers` に自動結線しない。
 - 同一人物が別資格へ遷移する可能性があるため、旧行は物理削除せず `is_current = false` と `superseded_at` / `supersede_reason` で履歴化できる設計にする。
-- 一覧・検索の既定は `is_current = true` を対象にする。
+- 一覧・検索・件数比較の既定は `is_current = true` を対象にする。
 - `pro_instructor` の件数比較や検索条件は、`license_no` の文字列検索ではなく `instructor_category = 'pro_instructor'` かつ `is_current = true` を正本条件とする。
-- `legacy_instructor_license_no` は互換移行用の退避列であり、FKは張らない.
+- `legacy_instructor_license_no` は互換移行用の退避列であり、FKは張らない。
+- `pro_bowlers` 由来の資格が解除された場合でも、`instructor_registry` 側の行は物理削除しない。現行行を `is_current = false` にし、`superseded_at` / `supersede_reason` で閉じる。
+- alias / 旧ライセンス表記は元行のスナップショットとして残す。`pro_bowler_id` が一致して同一人物と確認できる場合のみ、旧表記行を履歴化して新表記行を current とする。
+- `pro_bowler_id` を持たない行は、source_key を跨いで自動統合しない。別途 review 導線で確認する。
 
 ### 外部キー（FK）
 - instructor_registry.pro_bowler_id -> pro_bowlers.id（ON DELETE SET NULL）
@@ -469,9 +474,12 @@ JPBA公認ボールのマスタ。
 
 ### 注意（運用方針）
 - 新規正本は `instructor_registry` とする。
-- `instructors` は既存画面・既存Controller互換のため当面維持する互換テーブルであり、新規機能の参照正本にはしない.
+- `instructors` は既存画面・既存Controller互換のため当面維持する互換テーブルであり、新規機能の参照正本にはしない。
 - `instructor_type = 'pro'` の行には、`pro_bowler` / `pro_instructor` の両方が混在し得る。正式な種別判定は `instructor_registry.instructor_category` を正とする。
 - manual 由来の認定系・プロインストラクター系データの正本管理は `instructor_registry` 側で行う。
+- `instructors` は current/history を持たないため、資格遷移・資格解除・alias統合・件数比較の正本判断には使わない。
+- `ProBowlerController` / `ProBowlerImportController` など既存互換の保存処理では、当面 `instructors` 更新を残す。
+- ただし、検索・一覧・PDF・件数比較・今後の新規機能は `instructor_registry` を参照正本とする。
 - `master_status` は別資格であり、`grade` には含めない。
 
 ### 外部キー（FK）

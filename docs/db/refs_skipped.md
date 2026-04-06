@@ -105,3 +105,34 @@
   - importer / 保存処理で `member_class = 'pro_instructor'` と `can_enter_official_tournament = false` を維持する
   - `instructor_registry` は `member_class` を見て `pro_bowler` / `pro_instructor` を同期する
   - 旧データに対しては backfill で `instructor_registry.instructor_category = 'pro_instructor'` を補正する
+
+## 2026-04-06 instructor source-role / compatibility policy（source役割分担と互換レイヤ整理）
+
+- 対象:
+  - `legacy_instructors` / `pro_bowler_csv` / `auth_instructor_csv` / `manual` の役割分担
+  - `instructors` をどこまで互換レイヤとして残すか
+  - 資格解除時の扱い
+  - alias / 旧ライセンス表記の current/history への寄せ方
+
+- 決定:
+  - `legacy_instructors` は旧 `instructors` からの bootstrap / 互換移行用スナップショットとする
+  - `pro_bowler_csv` は `Pro_colum.csv` → `pro_bowlers` 同期由来の `pro_bowler` / `pro_instructor` の正本ソースとする
+  - `auth_instructor_csv` は `AuthInstructor.csv` 由来の `certified` の正本ソースとする
+  - `manual` は CSV元データを持たない行、または review 後の手動管理行のソースとする
+  - 一覧・検索・PDF・件数比較・履歴判定は `instructor_registry` を正とし、`instructors` を正本判断に使わない
+  - `instructors` は既存画面・既存Controller互換のため当面残すが、current/history の正本にはしない
+
+- 資格解除時の扱い:
+  - `pro_bowlers` 由来でインストラクター条件を満たさなくなった場合でも、`instructor_registry` 行は物理削除しない
+  - 現行行を `is_current = false` にし、`superseded_at` / `supersede_reason` で閉じる
+  - 履歴管理は `instructor_registry` 側で行い、`instructors` 側では行わない
+
+- alias / 旧ライセンス表記の扱い:
+  - 旧表記行はスナップショットとして残す
+  - `pro_bowler_id` が一致して同一人物と確認できる場合のみ、旧表記行を履歴化して新表記行を current とする
+  - `pro_bowler_id` を持たない行は source_key を跨いで自動統合しない
+  - `legacy_instructor_license_no` は互換移行用の退避列であり、同一人物判定の唯一キーには使わない
+
+- 対応方針:
+  - docs 上の役割分担はここで固定し、後続の controller / service 整理はこの方針に従う
+  - `講習 / 資格 / 更新履歴` のテーブル設計は別タスクとして切り分ける

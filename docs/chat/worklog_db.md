@@ -6,6 +6,34 @@
 
 作業履歴
 
+## 2026-04-06 INSTRUCTOR docs整理（互換レイヤ / source役割 / current-history運用）
+
+- 目的:
+  - `instructor_registry` 正本化は実装済みだが、docs 上で未整理だった
+    - `instructors` をどこまで互換レイヤとして残すか
+    - `legacy_instructors` / `pro_bowler_csv` / `auth_instructor_csv` / `manual` の役割分担
+    - 資格解除時の扱い
+    - alias / 旧ライセンス表記の current/history への寄せ方
+    を明文化する。
+
+- 実施内容:
+  - `docs/db/data_dictionary.md`
+    - `instructor_registry` の運用方針を整理。
+    - `source_type` ごとの役割を明記。
+    - 資格解除時は物理削除せず `is_current = false` で閉じる方針を明記。
+    - alias / 旧ライセンス表記は、`pro_bowler_id` が一致して同一人物と確認できる場合のみ履歴化して current を切替える方針を明記。
+  - `docs/db/data_dictionary.md`
+    - `instructors` は current/history を持たない互換テーブルであり、検索・件数比較・履歴判定の正本には使わない方針を明記。
+  - `docs/db/refs_skipped.md`
+    - 上記の運用判断を curated な決定事項として追記。
+  - `docs/chat/progress_board.md`
+    - docs 未整理の残タスクを完了扱いへ更新。
+    - ただし `講習 / 資格 / 更新履歴` の持ち方は未着手のため継続タスクとする。
+
+- 今回の判断:
+  - 今回は docs 整理のみであり、DBスキーマ変更は発生しない。
+  - migration の追加は不要。
+  - `docs/db/ER.dbml` は `generate_er_from_dictionary.php` で再生成するが、説明文変更のみのため通常は無差分想定。
 
 ## 2026-04-05 INSTRUCTOR AuthInstructor.csv 取込導線とプロインストラクター整合
 
