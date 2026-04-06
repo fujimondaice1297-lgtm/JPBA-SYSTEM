@@ -41,16 +41,67 @@
   - `認定インストラクター` の投入元整理
 
 - 確認結果:
-  - `OLD_JPBA/csv` 配下の現存CSVは `Pro_colum.csv` のみ
-  - `Pro_colum.csv` はプロボウラー正本CSVであり、認定インストラクター専用の元表ではない
-  - `OLD_JPBA` 配下で `authinstructor` / `AuthInstructor` の参照は確認できなかった
-  - したがって、認定インストラクター専用の legacy 取込元は現存確認できていない
+  - `Pro_colum.csv` はプロボウラー正本CSVであり、`pro_bowler` / `pro_instructor` 同期の投入元として使う
+  - `AuthInstructor.csv` は認定インストラクター専用CSVであり、`certified` 同期の投入元として使う
+  - `AuthInstructor.csv` には専用の認定番号列や登録年月日列が無く、`#ID` が安定した一意キーになる
+  - `AuthInstructor.csv` はライセンス番号を原則持たないため、名前一致だけで `pro_bowlers` に自動結線しない
 
 - 決定:
   - `authinstructor` を前提にした保留は解消する
-  - 現存する投入元データは `Pro_colum.csv` のみとする
-  - 認定インストラクターは現時点では `manual` 登録を正規の投入経路とする
+  - 現存する投入元データは `Pro_colum.csv` と `AuthInstructor.csv` の2系統とする
+  - `instructor_registry` の source は当面 `legacy_instructors` / `pro_bowler_csv` / `auth_instructor_csv` / `manual` の4系統で運用する
+  - `AuthInstructor.csv` 由来の認定インストラクターは `source_type = auth_instructor_csv` / `instructor_category = certified` で投入する
+  - `AuthInstructor.csv` では `#ID` を `source_key` とし、当面は同じ値を `cert_no` に入れて一意管理する
 
 - 対応方針:
-  - `instructor_registry` の source は当面 `legacy_instructors` / `pro_bowler` / `manual` の3系統で運用する
-  - 認定インストラクター専用の外部データが将来見つかった場合のみ、新しい source_type を追加検討する
+  - `Pro_colum.csv` 由来の `pro_bowler` / `pro_instructor` は `license_issue_date` を `source_registered_at` に使う
+  - `AuthInstructor.csv` 由来の `certified` は `source_registered_at = null` とし、current/history の自動切替は行わない
+  - `AuthInstructor.csv` と `pro_bowlers` の同一人物判定は、別途 review 導線で手動確認する
+
+## 2026-04-04 instructor current/history policy（資格遷移の扱い）
+
+- 対象:
+  - `pro_bowler` / `pro_instructor` / `certified` 間の遷移
+  - 認定インストラクター→プロボウラー兼インストラクター
+  - 認定インストラクター→プロインストラクター
+  - プロボウラー兼インストラクター→認定インストラクター
+
+- 決定:
+  - 同一人物の旧資格行は物理削除しない
+  - `instructor_registry.is_current = false` と `superseded_at` / `supersede_reason` で履歴化する
+  - 一覧・検索の既定は `is_current = true`
+  - current 行だけ partial unique index で重複を防ぐ
+
+- 日付優先ルール:
+  - 原則は `source_registered_at` が新しい行を current とする
+  - 同日または日付欠落時は自動昇格・自動降格を行わず、要確認扱いにする
+  - `AuthInstructor.csv` は登録年月日を持たないため、名前一致だけで `pro_bowlers` と自動結線しない
+
+- 対応方針:
+  - `Pro_colum.csv` 由来の `pro_bowler` / `pro_instructor` は `license_issue_date` を `source_registered_at` に入れる
+  - `AuthInstructor.csv` 由来の `certified` は独立投入し、別途 review 導線で同一人物確認を行う
+
+
+## 2026-04-05 teaching-pro classification / list-count policy（プロインストラクター判定方針）
+
+- 対象:
+  - `Pro_colum.csv` 由来のティーチングプロ判定
+  - `/pro_bowlers` と `/instructors` の件数比較条件
+
+- 決定:
+  - 教示系ライセンスの正式判定は `license_no like '%T%'` のような文字列検索ではなく、`pro_bowlers.member_class = 'pro_instructor'` を正とする
+  - `instructor_registry` 側の正式判定は `instructor_category = 'pro_instructor'` かつ `is_current = true` を正とする
+  - 比較対象を揃えるため、プロインストラクター件数の確認は
+    - `pro_bowlers.member_class = 'pro_instructor'`
+    - `instructor_registry.instructor_category = 'pro_instructor' AND is_current = true`
+    で行う
+
+- 判定対象の例:
+  - `T015`
+  - `M0000T015`
+  - `F0000T004`
+
+- 対応方針:
+  - importer / 保存処理で `member_class = 'pro_instructor'` と `can_enter_official_tournament = false` を維持する
+  - `instructor_registry` は `member_class` を見て `pro_bowler` / `pro_instructor` を同期する
+  - 旧データに対しては backfill で `instructor_registry.instructor_category = 'pro_instructor'` を補正する

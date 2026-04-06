@@ -46,14 +46,22 @@
 - [✓] 区分マスタ（A/B/C等）が確定
 - [✓] 名簿表示に必要な項目が揃う
 - [ ] 講習/資格/更新履歴の持ち方が決まる
-- [✓] 現存する投入元データが `Pro_colum.csv` のみであることを確認
+- [✓] 現存する投入元データを確認
+  - `Pro_colum.csv`：`pro_bowler` / `pro_instructor`
+  - `AuthInstructor.csv`：`certified`
+  - `manual`：画面からの手動登録・手動編集
 - [✓] `license_no` 非依存で認定系も保持できる新正本 `instructor_registry` の方針を確定
 - [ ] 既存 `instructors` / 画面 / Controller を `instructor_registry` ベースへ段階移行
 - [✓] instructor_registry を新正本として導入
 - [✓] /instructors 一覧・PDF を instructor_registry 読みへ切替
 - [✓] pro_bowlers CSV再取込時に instructor_registry も同期する構成へ変更
-- [ ] 認定インストラクター / プロインストラクターの投入経路を整理する
-  - 現状の投入経路は `pro_bowler`（CSV由来）と `manual` の2系統
+- [✓] 認定インストラクター / プロインストラクターの投入経路を整理した
+  - `pro_bowler_csv`：`Pro_colum.csv` 由来の `pro_bowler` / `pro_instructor`
+  - `auth_instructor_csv`：`AuthInstructor.csv` 由来の `certified`
+  - `manual`：画面からの手動登録・手動編集
+  - `legacy_instructors`：旧 `instructors` bootstrap
+- [✓] `pro_bowlers.member_class` / `can_enter_official_tournament` を導入し、競技者判定を文字列検索ではなく業務判定列へ寄せた
+- [✓] `instructor_registry.is_current` / `source_registered_at` / `superseded_at` / `supersede_reason` を導入し、資格遷移の current/history を扱えるようにした
 #### 2026-03-18 メモ（認定インストラクター手動登録導線）
 - [✓] 認定インストラクターを手動登録できる
 - [✓] 手動登録した認定インストラクターが `/instructors` 一覧に表示される
@@ -70,6 +78,18 @@
 - [✓] `ProBowlerController` の保存時にも `instructor_registry` を同期する
 - [✓] `ProBowlerImportController` と `ProBowlerController` で、プロボウラー由来インストラクターの同期先を `instructors` + `instructor_registry` に揃える
 - [ ] 資格解除時に既存 `instructors` / `instructor_registry` 行をどう扱うかは後続で整理する
+
+#### 2026-04-05 メモ（AuthInstructor.csv 取込導線 + プロインストラクター整合）
+- [✓] `AuthInstructor.csv` を `instructor_registry` へ取り込む導線（controller / route / view）を追加
+- [✓] `source_type = auth_instructor_csv` / `instructor_category = certified` で認定インストラクターを投入できることを確認
+- [✓] `Pro_colum.csv` 由来のティーチングプロ判定を `member_class = pro_instructor` 基準へ修正
+  - `T015`
+  - `M0000T015`
+  - `F0000T004`
+  のような教示系ライセンスを `pro_instructor` として扱う
+- [✓] `/pro_bowlers` 側の件数確認を `license_no like '%T%'` ではなく `member_class = pro_instructor` 基準へ寄せた
+- [✓] `pro_bowlers.member_class = pro_instructor` と `instructor_registry.instructor_category = pro_instructor` の件数が 23 / 23 で一致することを確認
+- [ ] alias/旧ライセンス表記を current/history へどう寄せるかは後続で整理する
 
 
 ## Phase 2：大会（管理・公開の整合）

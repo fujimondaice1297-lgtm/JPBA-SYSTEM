@@ -6,6 +6,63 @@
 
 作業履歴
 
+
+## 2026-04-05 INSTRUCTOR AuthInstructor.csv 取込導線とプロインストラクター整合
+
+- 目的:
+  - 認定インストラクターの一括投入元 `AuthInstructor.csv` を正式導線にし、`pro_bowler` / `pro_instructor` / `certified` の3分類を current 正本 `instructor_registry` で扱える状態にする。
+  - あわせて、ティーチングプロの判定を `license_no like '%T%'` ではなく `member_class` / `instructor_category` 基準へ揃える。
+
+- 実施内容:
+  - `database/migrations/2025_09_02_000207_add_member_class_and_entry_flag_to_pro_bowlers_table.php`
+    - `pro_bowlers` に `member_class` / `can_enter_official_tournament` を追加。
+  - `database/migrations/2025_09_02_000208_add_current_tracking_to_instructor_registry_table.php`
+    - `instructor_registry` に `source_registered_at` / `is_current` / `superseded_at` / `supersede_reason` を追加。
+  - `app/Http/Controllers/AuthInstructorImportController.php`
+    - `AuthInstructor.csv` 取込処理を追加。
+    - `source_type = auth_instructor_csv` / `source_key = #ID` / `cert_no = #ID` / `instructor_category = certified` で投入。
+  - `app/Models/InstructorRegistry.php`
+    - current/history 用カラムの `fillable` / `casts` を追加。
+  - `routes/web.php`
+    - `instructors/import/auth` の GET / POST ルートを追加。
+  - `resources/views/instructors/import_auth.blade.php`
+    - `AuthInstructor.csv` 取込画面を追加。
+  - `app/Http/Controllers/ProBowlerImportController.php`
+  - `app/Http/Controllers/ProBowlerController.php`
+    - ティーチングプロ判定を `resolveMemberClass()` へ寄せ、`T015` / `M0000T015` / `F0000T004` のような教示系ライセンスを `pro_instructor` として扱うよう修正。
+    - `member_class` / `can_enter_official_tournament` を `pro_bowlers` へ保存し、その値から `instructor_registry.instructor_category` を `pro_bowler` / `pro_instructor` に振り分けるよう整理。
+  - `app/Models/ProBowler.php`
+    - `member_class` / `can_enter_official_tournament` を `fillable` / `casts` に追加。
+  - `app/Http/Controllers/InstructorController.php`
+    - current 正本 `instructor_registry` 基準の一覧・検索・PDF を維持しつつ、認定インストラクター / プロインストラクター / プロボウラー兼インストラクターの検索条件を整理。
+  - `docs/db/data_dictionary.md`
+    - `instructor_registry` に current/history と `auth_instructor_csv` / `pro_bowler_csv` を反映。
+    - `pro_bowlers` に `member_class` / `can_enter_official_tournament` の運用方針を反映。
+  - `docs/db/refs_skipped.md`
+    - `AuthInstructor.csv` を正式投入元として整理し、`current/history` ポリシーを追記。
+  - `docs/db/ER.dbml`
+    - 辞書から再生成。
+
+- 確認結果:
+  - `AuthInstructor.csv` 取込 route:
+    - `GET instructors/import/auth`
+    - `POST instructors/import/auth`
+    が有効。
+  - `AuthInstructor.csv` を取り込み後、`/instructors` 一覧で認定インストラクター検索が動作することを確認。
+  - `pro_bowlers.member_class = pro_instructor` 件数: 23
+  - `instructor_registry.instructor_category = pro_instructor AND is_current = true` 件数: 23
+  - `M0000T015` は最終的に
+    - `pro_bowlers.member_class = pro_instructor`
+    - `pro_bowlers.can_enter_official_tournament = false`
+    - `instructor_registry.instructor_category = pro_instructor`
+    で整合することを確認。
+
+- 現時点の判断:
+  - `認定インストラクター / プロインストラクターの投入経路整理` は完了扱いでよい。
+  - ただし、同一人物の alias / 旧ライセンス表記をどのタイミングで `is_current = false` に落とすかは後続で整理する。
+  - `/pro_bowlers` 側のプロインストラクター確認は、今後 `license_no` 文字列検索ではなく `member_class = pro_instructor` を正本条件とする。
+
+
 ## 2026-04-03 INSTRUCTOR ProBowlerController の同期整合
 - `ProBowlerController` の `syncInstructor()` は、これまで `instructors` しか更新しておらず、画面からの管理者保存後に `instructor_registry` 正本が更新されないズレがあった。
 - 一方で `ProBowlerImportController` では、`syncLegacyInstructorFromBowler()` と `syncRegistryFromBowler()` の両方が走るため、CSV再取込時だけ `instructors` / `instructor_registry` の両方が同期される状態だった。

@@ -28,6 +28,11 @@ class InstructorController extends Controller
     public function index(Request $request)
     {
         $query = InstructorRegistry::query()->with(['district', 'proBowler']);
+
+        if (!$request->boolean('include_history')) {
+            $query->where('is_current', true);
+        }
+
         $query = $this->applyFilters($query, $request);
 
         $instructors = $this->applyDefaultOrder($query)
@@ -109,6 +114,11 @@ class InstructorController extends Controller
     public function exportPdf(Request $request)
     {
         $query = InstructorRegistry::query()->with(['district', 'proBowler']);
+
+        if (!$request->boolean('include_history')) {
+            $query->where('is_current', true);
+        }
+
         $query = $this->applyFilters($query, $request);
 
         $instructors = $this->applyDefaultOrder($query)->get();
@@ -175,6 +185,7 @@ class InstructorController extends Controller
                 case 'pro_instructor':
                     $query->proInstructor();
                     break;
+                case 'certified':
                 case 'certified_instructor':
                     $query->certifiedInstructor();
                     break;
@@ -191,6 +202,7 @@ class InstructorController extends Controller
     private function applyDefaultOrder(Builder $query): Builder
     {
         return $query
+            ->orderByDesc('is_current')
             ->orderByRaw("coalesce(license_no, cert_no, legacy_instructor_license_no, '') asc")
             ->orderBy('name')
             ->orderBy('id');
@@ -215,7 +227,8 @@ class InstructorController extends Controller
 
     private function validateRegistryInput(Request $request, ?InstructorRegistry $existing = null): array
     {
-        $type = (string) $request->input('instructor_type');
+        $rawType = (string) $request->input('instructor_type');
+        $type = in_array($rawType, ['pro', 'pro_instructor'], true) ? 'pro_instructor' : $rawType;
         $ignoreId = $existing?->id;
 
         $rules = [
@@ -223,14 +236,14 @@ class InstructorController extends Controller
             'name_kana'           => ['nullable', 'string', 'max:255'],
             'sex'                 => ['required', 'boolean'],
             'district_id'         => ['nullable', 'integer', 'exists:districts,id'],
-            'instructor_type'     => ['required', 'in:pro,certified'],
-            'grade'               => ['required', 'string', Rule::in(self::GRADE_OPTIONS)],
+            'instructor_type'     => ['required', 'in:pro,pro_instructor,certified'],
+            'grade'               => ['nullable', 'string', Rule::in(self::GRADE_OPTIONS)],
             'is_active'           => ['nullable', 'boolean'],
             'is_visible'          => ['nullable', 'boolean'],
             'coach_qualification' => ['nullable', 'boolean'],
         ];
 
-        if ($type === 'pro') {
+        if ($type === 'pro_instructor') {
             $rules['license_no'] = [
                 'required',
                 'string',
@@ -260,10 +273,15 @@ class InstructorController extends Controller
             $certNo = $existing->cert_no;
             $proBowlerId = $existing->pro_bowler_id;
             $category = $existing->instructor_category;
+            $sourceRegisteredAt = $existing->source_registered_at;
+            $isCurrent = $existing->is_current;
+            $supersededAt = $existing->superseded_at;
+            $supersedeReason = $existing->supersede_reason;
         } else {
-            $type = (string) $validated['instructor_type'];
+            $rawType = (string) $validated['instructor_type'];
+            $type = in_array($rawType, ['pro', 'pro_instructor'], true) ? 'pro_instructor' : $rawType;
 
-            $licenseNo = $type === 'pro'
+            $licenseNo = $type === 'pro_instructor'
                 ? $this->normalizeNullableString($validated['license_no'] ?? null)
                 : null;
 
@@ -279,6 +297,11 @@ class InstructorController extends Controller
             $category = $type === 'certified'
                 ? 'certified'
                 : ($matchedBowler ? 'pro_bowler' : 'pro_instructor');
+
+            $sourceRegisteredAt = $existing?->source_registered_at;
+            $isCurrent = true;
+            $supersededAt = null;
+            $supersedeReason = null;
         }
 
         return [
@@ -293,10 +316,14 @@ class InstructorController extends Controller
                 ? (int) $validated['district_id']
                 : null,
             'instructor_category'          => $category,
-            'grade'                        => $validated['grade'],
+            'grade'                        => $validated['grade'] ?? null,
             'coach_qualification'          => (bool) ($validated['coach_qualification'] ?? false),
             'is_active'                    => (bool) ($validated['is_active'] ?? true),
             'is_visible'                   => (bool) ($validated['is_visible'] ?? true),
+            'source_registered_at'         => $sourceRegisteredAt,
+            'is_current'                   => $isCurrent,
+            'superseded_at'                => $supersededAt,
+            'supersede_reason'             => $supersedeReason,
             'last_synced_at'               => now(),
             'notes'                        => $existing?->notes ?: 'manual instructor entry',
         ];

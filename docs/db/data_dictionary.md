@@ -382,7 +382,7 @@ JPBA公認ボールのマスタ。
 - id (bigint)
 
 ### 主要カラム
-- source_type（取込元種別。例: `legacy_instructors` / `pro_bowler` / `manual`）
+- source_type（取込元種別。例: `legacy_instructors` / `pro_bowler_csv` / `auth_instructor_csv` / `manual`）
 - source_key（source_type 内で一意なキー）
 - legacy_instructor_license_no（旧 `instructors.license_no` の退避：nullable）
 - pro_bowler_id（対象プロボウラー：nullable）
@@ -394,6 +394,10 @@ JPBA公認ボールのマスタ。
 - instructor_category（`pro_bowler` / `pro_instructor` / `certified`）
 - grade（インストラクター区分：nullable）
 - coach_qualification（スクール開講資格等の補助フラグ）
+- source_registered_at（元データ上の登録日・交付日・開始日：nullable）
+- is_current（現在有効な所属状態か）
+- superseded_at（後続状態に置き換わった日時：nullable）
+- supersede_reason（置換理由：nullable）
 - is_active
 - is_visible
 - last_synced_at（最終同期日時：nullable）
@@ -418,10 +422,14 @@ JPBA公認ボールのマスタ。
 - 既存 `instructors` は既存画面・既存Controller互換のため当面維持する。
 - 初回 backfill は既存 `instructors` から `source_type = legacy_instructors` として投入する。
 - `license_no` / `cert_no` はどちらか片方だけでも保持できる設計にする。
-- 現存する元データは `Pro_colum.csv` のみであり、`source_type = pro_bowler` はこのCSVを `pro_bowlers` に取り込んだ後の同期結果を表す。
-- 認定インストラクター専用の元表は存在しないため、現時点で `source_type = certified` 相当の独立一括投入元は無い。
-- 認定インストラクターは現状 `source_type = manual` を前提に登録・運用する。
-- `legacy_instructor_license_no` は互換移行用の退避列であり、FKは張らない。
+- `source_type = pro_bowler_csv` は `Pro_colum.csv` を `pro_bowlers` に取り込んだ後の同期結果を表す。
+- `source_type = auth_instructor_csv` は `AuthInstructor.csv` を独立投入した認定インストラクター行を表す。
+- `AuthInstructor.csv` は専用の認定番号列を持たないため、当面は `#ID` を `source_key` および `cert_no` に使って一意管理する。
+- `AuthInstructor.csv` は名前一致だけで `pro_bowlers` に自動結線しない。
+- 同一人物が別資格へ遷移する可能性があるため、旧行は物理削除せず `is_current = false` と `superseded_at` / `supersede_reason` で履歴化できる設計にする。
+- 一覧・検索の既定は `is_current = true` を対象にする。
+- `pro_instructor` の件数比較や検索条件は、`license_no` の文字列検索ではなく `instructor_category = 'pro_instructor'` かつ `is_current = true` を正本条件とする。
+- `legacy_instructor_license_no` は互換移行用の退避列であり、FKは張らない.
 
 ### 外部キー（FK）
 - instructor_registry.pro_bowler_id -> pro_bowlers.id（ON DELETE SET NULL）
@@ -461,9 +469,9 @@ JPBA公認ボールのマスタ。
 
 ### 注意（運用方針）
 - 新規正本は `instructor_registry` とする。
-- `instructors` は既存画面互換のため当面維持する。
-- `instructor_type = 'pro'` のうち `pro_bowler_id` が入っている行は、既存のプロ資格同期で使う互換データとして扱う。
-- `certified` 系の行は、将来的には `instructor_registry` 側へ寄せる。
+- `instructors` は既存画面・既存Controller互換のため当面維持する互換テーブルであり、新規機能の参照正本にはしない.
+- `instructor_type = 'pro'` の行には、`pro_bowler` / `pro_instructor` の両方が混在し得る。正式な種別判定は `instructor_registry.instructor_category` を正とする。
+- manual 由来の認定系・プロインストラクター系データの正本管理は `instructor_registry` 側で行う。
 - `master_status` は別資格であり、`grade` には含めない。
 
 ### 外部キー（FK）
@@ -577,7 +585,7 @@ JPBA公認ボールのマスタ。
 ## pro_bowlers
 
 ### 役割
-プロボウラーの基本情報（ハブ）を保持するテーブル。
+プロボウラーの基本情報（競技者ハブ）を保持するテーブル。
 
 ### 主キー
 - id (bigint)
@@ -588,14 +596,32 @@ JPBA公認ボールのマスタ。
 - sex（sexes.id 参照）
 - district_id（所属地区：nullable）
 - membership_type（会員種別：`kaiin_status.name` 参照）
+- member_class（業務判定用の所属区分）
+  - `player`
+  - `pro_instructor`
+  - `honorary_or_overseas`
+  - `other`
+- can_enter_official_tournament（公式戦出場可否）
 - is_active（有効フラグ。運用上は `membership_type` と `kaiin_status.is_retired` に整合させる）
 - is_visible
 - login_id（参照先未確定のためFKなし：ADR参照）
 - （他、多数）
 
 ### 注意（運用方針）
+- `pro_bowlers` は **競技者ハブ** として扱う。
+- `membership_type` は元データの会員種別名を保持する生値とする。
+- `member_class` は業務判定用の派生区分であり、競技導線・画面条件分岐は原則こちらを使う。
+- `can_enter_official_tournament` は公式戦の出場可否を示す補助フラグであり、一覧・大会系導線は原則こちらを使う。
 - 現役/退会等の正本は `membership_type` と `kaiin_status.is_retired` とする。
 - `is_active` は公開・検索などで使う補助フラグであり、`membership_type` と不整合にならないよう importer / migration で維持する。
+- `member_class = 'player'` かつ `is_active = true` の行を、競技系では「現在の公式戦対象者」として扱う。
+- `member_class = 'pro_instructor'` の行は `pro_bowlers` に保持されていても、競技系では `can_enter_official_tournament = false` として扱う。
+- ティーチングプロ判定は `license_no like '%T%'` のような文字列検索を正とせず、`member_class = 'pro_instructor'` を正本条件とする。
+- 代表例:
+  - `T015`
+  - `M0000T015`
+  - `F0000T004`
+  のような教示系ライセンスは、importer / 保存処理で `member_class = 'pro_instructor'` へ正規化して扱う。
 
 ### 外部キー（自動反映：refs_missing.md）
 - pro_bowlers.district_id -> districts.id

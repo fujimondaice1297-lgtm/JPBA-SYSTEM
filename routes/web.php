@@ -25,7 +25,7 @@ use App\Http\Controllers\{
     ProBowlerTrainingController, BulkTrainingController, TrainingReportController,
     CalendarController, CalendarEventController, ProBowlerTitleController, TitleSyncController,
     MemberDashboardController, InformationController, TournamentEntryBallController,
-    TournamentEntryController, DrawController, ProBowlerImportController, HofController, HofManageController,
+    TournamentEntryController, DrawController, ProBowlerImportController, AuthInstructorImportController, HofController, HofManageController,
     AuthController, ScoreController, EligibilityController, PublicProfileController, FlashNewsController,
     FlashNewsPublicController
 };
@@ -383,6 +383,10 @@ Route::middleware(['auth','role:editor,admin'])->group(function () {
     // プロボウラー取り込み
     Route::get('/pro_bowlers/import', [ProBowlerImportController::class, 'form'])->name('pro_bowlers.import_form');
     Route::post('/pro_bowlers/import', [ProBowlerImportController::class, 'import'])->name('pro_bowlers.import');
+
+    // 認定インストラクター取り込み
+    Route::get('/instructors/import/auth', [AuthInstructorImportController::class, 'form'])->name('instructors.import_auth_form');
+    Route::post('/instructors/import/auth', [AuthInstructorImportController::class, 'import'])->name('instructors.import_auth');
 
     // プログループ管理
     Route::resource('pro_groups', \App\Http\Controllers\ProGroupController::class)

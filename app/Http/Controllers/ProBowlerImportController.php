@@ -42,6 +42,7 @@ class ProBowlerImportController extends Controller
             $s = preg_replace('/[\x{00A0}\x{3000}\s]+/u', '', $s);
             $s = mb_convert_kana($s, 'asKV', 'UTF-8');
             $s = mb_strtolower($s, 'UTF-8');
+
             return $s;
         };
 
@@ -50,14 +51,17 @@ class ProBowlerImportController extends Controller
             if ($s === '') {
                 return '';
             }
+
             $s = str_replace(["\r", "\n", "\t"], '', $s);
             $s = preg_replace('/[\x{00A0}\x{3000}\s]+/u', '', $s);
             $s = mb_convert_kana($s, 'asKV', 'UTF-8');
+
             return $s;
         };
 
         $normalizeDistrictKey = function ($value) use ($normalizeCompact): string {
             $s = $normalizeCompact($value);
+
             return str_replace(['・', '･', '·', '•', '‧'], '', $s);
         };
 
@@ -76,6 +80,7 @@ class ProBowlerImportController extends Controller
                     return $headerMap[$key];
                 }
             }
+
             return null;
         };
 
@@ -201,6 +206,7 @@ class ProBowlerImportController extends Controller
             }
 
             $v = trim((string) $v);
+
             return $v === '' ? null : $v;
         };
 
@@ -231,6 +237,7 @@ class ProBowlerImportController extends Controller
             if ($s === null) {
                 return null;
             }
+
             return mb_convert_kana((string) $s, 'CKV', 'UTF-8');
         };
 
@@ -270,6 +277,7 @@ class ProBowlerImportController extends Controller
             }
 
             $k = $normalizeDistrictKey($s);
+
             return $districtMap[$k] ?? null;
         };
 
@@ -367,6 +375,7 @@ class ProBowlerImportController extends Controller
 
         $chgStatus = function ($v) {
             $s = trim((string) $v);
+
             return $s === '2' ? 2 : ($s === '1' ? 1 : ($s === '0' ? 0 : 2));
         };
 
@@ -376,6 +385,7 @@ class ProBowlerImportController extends Controller
             }
 
             $digits = preg_replace('/\D/u', '', (string) $v);
+
             return $digits === '' ? null : (int) $digits;
         };
 
@@ -386,6 +396,7 @@ class ProBowlerImportController extends Controller
 
             $s = trim(mb_convert_kana((string) $v, 'n', 'UTF-8'));
             $s = preg_replace('/[^\d\+]/u', '', $s);
+
             return $s ?: null;
         };
 
@@ -396,6 +407,7 @@ class ProBowlerImportController extends Controller
 
             $s = mb_convert_kana(trim((string) $v), 'as', 'UTF-8');
             $s = preg_replace('/[^0-9\-]/u', '', $s);
+
             return $s === '' ? null : $s;
         };
 
@@ -430,7 +442,7 @@ class ProBowlerImportController extends Controller
 
         try {
             while (($row = fgetcsv($fh)) !== false) {
-                if (!array_filter($row, fn($v) => $v !== null && $v !== '')) {
+                if (!array_filter($row, fn ($v) => $v !== null && $v !== '')) {
                     continue;
                 }
 
@@ -444,7 +456,11 @@ class ProBowlerImportController extends Controller
                     continue;
                 }
 
-                $isTeachingPro = preg_match('/^T/i', $licenseNo) === 1;
+                $membershipType = $val($row, $C->membership);
+                $derivedIsActive = $this->resolveIsActiveFromMembershipType($membershipType);
+                $memberClass = $this->resolveMemberClass($membershipType, $licenseNo);
+
+                $isTeachingPro = $memberClass === 'pro_instructor';
 
                 [$proYear, $kibetsuFromPro] = $parseProEntry($val($row, $C->pro));
                 $kibetsu = $kibetsuFromPro;
@@ -462,82 +478,85 @@ class ProBowlerImportController extends Controller
                 $phone = $mobile ?: $home;
 
                 $data = [
-                    'license_no'             => $licenseNo,
-                    'name_kanji'             => $val($row, $C->name),
-                    'name_kana'              => $kana($val($row, $C->kana)),
-                    'sex'                    => $sex($val($row, $C->sex)),
-                    'district_id'            => $district($val($row, $C->district)),
-                    'kibetsu'                => $kibetsu,
-                    'membership_type'        => $val($row, $C->membership),
-                    'license_issue_date'     => $date($val($row, $C->issue)),
-                    'birthdate'              => $date($val($row, $C->birth)),
-                    'birthplace'             => $val($row, $C->birthplace),
-                    'pro_entry_year'         => $proYear ?? $year4($val($row, $C->pro)),
-                    'coach'                  => $val($row, $C->coach),
-                    'mailing_preference'     => $mailPref($val($row, $C->mailpref)),
-                    'phone_home'             => $normalizePhone($phone),
-                    'email'                  => $val($row, $C->email),
-                    'organization_name'      => $val($row, $C->org_name),
-                    'organization_zip'       => $normalizeZip($val($row, $C->org_zip)),
-                    'organization_addr1'     => $val($row, $C->org_addr1),
-                    'organization_addr2'     => $val($row, $C->org_addr2),
-                    'organization_url'       => $val($row, $C->org_url),
-                    'memo'                   => $val($row, $C->memo),
-                    'qr_code_path'           => $val($row, $C->qr),
-                    'public_image_path'      => $val($row, $C->public_img),
-                    'password_change_status' => $chgStatus($val($row, $C->chg)),
-                    'height_cm'              => $int($val($row, $C->height)),
-                    'weight_kg'              => $int($val($row, $C->weight)),
-                    'blood_type'             => $val($row, $C->blood),
-                    'public_zip'             => $normalizeZip($val($row, $C->pub_zip)),
-                    'public_addr1'           => $val($row, $C->pub_addr1),
-                    'public_addr2'           => $val($row, $C->pub_addr2),
-                    'mailing_zip'            => $normalizeZip($val($row, $C->send_zip)),
-                    'mailing_addr1'          => $val($row, $C->send_addr1),
-                    'mailing_addr2'          => $val($row, $C->send_addr2),
-                    'association_role'       => $val($row, $C->role),
-                    'dominant_arm'           => $normalizeDominantArm($val($row, $C->arm)),
-                    'motto'                  => $val($row, $C->motto),
-                    'jbc_driller_cert'       => $yesno($val($row, $C->jbc)),
-                    'usbc_coach'             => $val($row, $C->usbc),
-                    'a_class_status'         => $yesno($val($row, $C->a_s)),
-                    'a_class_year'           => $year4($val($row, $C->a_y)),
-                    'b_class_status'         => $yesno($val($row, $C->b_s)),
-                    'b_class_year'           => $year4($val($row, $C->b_y)),
-                    'c_class_status'         => $yesno($val($row, $C->c_s)),
-                    'c_class_year'           => $year4($val($row, $C->c_y)),
-                    'master_status'          => $yesno($val($row, $C->m_s)),
-                    'master_year'            => $year4($val($row, $C->m_y)),
-                    'coach_4_status'         => $yesno($val($row, $C->c4_s)),
-                    'coach_4_year'           => $year4($val($row, $C->c4_y)),
-                    'coach_3_status'         => $yesno($val($row, $C->c3_s)),
-                    'coach_3_year'           => $year4($val($row, $C->c3_y)),
-                    'coach_1_status'         => $yesno($val($row, $C->c1_s)),
-                    'coach_1_year'           => $year4($val($row, $C->c1_y)),
-                    'kenkou_status'          => $yesno($val($row, $C->ken_s)),
-                    'kenkou_year'            => $year4($val($row, $C->ken_y)),
-                    'school_license_status'  => $yesno($val($row, $C->sch_s)),
-                    'school_license_year'    => $year4($val($row, $C->sch_y)),
-                    'hobby'                  => $val($row, $C->hobby),
-                    'bowling_history'        => $val($row, $C->bowl_hist),
-                    'other_sports_history'   => $val($row, $C->other_s),
-                    'facebook'               => $val($row, $C->fb),
-                    'twitter'                => $val($row, $C->tw),
-                    'instagram'              => $val($row, $C->ig),
-                    'rankseeker'             => $val($row, $C->rank),
-                    'selling_point'          => $val($row, $C->sell),
-                    'free_comment'           => $val($row, $C->free),
-                    'permanent_seed_date'    => $date($val($row, $C->perm), true),
-                    'a_license_number'       => $int($val($row, $C->a_num)),
-                    'sponsor_a'              => $val($row, $C->s_a),
-                    'sponsor_a_url'          => $val($row, $C->s_a_url),
-                    'sponsor_b'              => $val($row, $C->s_b),
-                    'sponsor_b_url'          => $val($row, $C->s_b_url),
-                    'sponsor_c'              => $val($row, $C->s_c),
-                    'sponsor_c_url'          => $val($row, $C->s_c_url),
-                    'login_id'               => $val($row, $C->login),
-                    'equipment_contract'     => $val($row, $C->equip),
-                    'coaching_history'       => $val($row, $C->coach_hist),
+                    'license_no'                    => $licenseNo,
+                    'name_kanji'                    => $val($row, $C->name),
+                    'name_kana'                     => $kana($val($row, $C->kana)),
+                    'sex'                           => $sex($val($row, $C->sex)),
+                    'district_id'                   => $district($val($row, $C->district)),
+                    'kibetsu'                       => $kibetsu,
+                    'membership_type'               => $membershipType,
+                    'license_issue_date'            => $date($val($row, $C->issue)),
+                    'birthdate'                     => $date($val($row, $C->birth)),
+                    'birthplace'                    => $val($row, $C->birthplace),
+                    'pro_entry_year'                => $proYear ?? $year4($val($row, $C->pro)),
+                    'coach'                         => $val($row, $C->coach),
+                    'mailing_preference'            => $mailPref($val($row, $C->mailpref)),
+                    'phone_home'                    => $normalizePhone($phone),
+                    'email'                         => $val($row, $C->email),
+                    'organization_name'             => $val($row, $C->org_name),
+                    'organization_zip'              => $normalizeZip($val($row, $C->org_zip)),
+                    'organization_addr1'            => $val($row, $C->org_addr1),
+                    'organization_addr2'            => $val($row, $C->org_addr2),
+                    'organization_url'              => $val($row, $C->org_url),
+                    'memo'                          => $val($row, $C->memo),
+                    'qr_code_path'                  => $val($row, $C->qr),
+                    'public_image_path'             => $val($row, $C->public_img),
+                    'password_change_status'        => $chgStatus($val($row, $C->chg)),
+                    'height_cm'                     => $int($val($row, $C->height)),
+                    'weight_kg'                     => $int($val($row, $C->weight)),
+                    'blood_type'                    => $val($row, $C->blood),
+                    'public_zip'                    => $normalizeZip($val($row, $C->pub_zip)),
+                    'public_addr1'                  => $val($row, $C->pub_addr1),
+                    'public_addr2'                  => $val($row, $C->pub_addr2),
+                    'mailing_zip'                   => $normalizeZip($val($row, $C->send_zip)),
+                    'mailing_addr1'                 => $val($row, $C->send_addr1),
+                    'mailing_addr2'                 => $val($row, $C->send_addr2),
+                    'association_role'              => $val($row, $C->role),
+                    'dominant_arm'                  => $normalizeDominantArm($val($row, $C->arm)),
+                    'motto'                         => $val($row, $C->motto),
+                    'jbc_driller_cert'              => $yesno($val($row, $C->jbc)),
+                    'usbc_coach'                    => $val($row, $C->usbc),
+                    'a_class_status'                => $yesno($val($row, $C->a_s)),
+                    'a_class_year'                  => $year4($val($row, $C->a_y)),
+                    'b_class_status'                => $yesno($val($row, $C->b_s)),
+                    'b_class_year'                  => $year4($val($row, $C->b_y)),
+                    'c_class_status'                => $yesno($val($row, $C->c_s)),
+                    'c_class_year'                  => $year4($val($row, $C->c_y)),
+                    'master_status'                 => $yesno($val($row, $C->m_s)),
+                    'master_year'                   => $year4($val($row, $C->m_y)),
+                    'coach_4_status'                => $yesno($val($row, $C->c4_s)),
+                    'coach_4_year'                  => $year4($val($row, $C->c4_y)),
+                    'coach_3_status'                => $yesno($val($row, $C->c3_s)),
+                    'coach_3_year'                  => $year4($val($row, $C->c3_y)),
+                    'coach_1_status'                => $yesno($val($row, $C->c1_s)),
+                    'coach_1_year'                  => $year4($val($row, $C->c1_y)),
+                    'kenkou_status'                 => $yesno($val($row, $C->ken_s)),
+                    'kenkou_year'                   => $year4($val($row, $C->ken_y)),
+                    'school_license_status'         => $yesno($val($row, $C->sch_s)),
+                    'school_license_year'           => $year4($val($row, $C->sch_y)),
+                    'hobby'                         => $val($row, $C->hobby),
+                    'bowling_history'               => $val($row, $C->bowl_hist),
+                    'other_sports_history'          => $val($row, $C->other_s),
+                    'facebook'                      => $val($row, $C->fb),
+                    'twitter'                       => $val($row, $C->tw),
+                    'instagram'                     => $val($row, $C->ig),
+                    'rankseeker'                    => $val($row, $C->rank),
+                    'selling_point'                 => $val($row, $C->sell),
+                    'free_comment'                  => $val($row, $C->free),
+                    'permanent_seed_date'           => $date($val($row, $C->perm), true),
+                    'a_license_number'              => $int($val($row, $C->a_num)),
+                    'sponsor_a'                     => $val($row, $C->s_a),
+                    'sponsor_a_url'                 => $val($row, $C->s_a_url),
+                    'sponsor_b'                     => $val($row, $C->s_b),
+                    'sponsor_b_url'                 => $val($row, $C->s_b_url),
+                    'sponsor_c'                     => $val($row, $C->s_c),
+                    'sponsor_c_url'                 => $val($row, $C->s_c_url),
+                    'login_id'                      => $val($row, $C->login),
+                    'equipment_contract'            => $val($row, $C->equip),
+                    'coaching_history'              => $val($row, $C->coach_hist),
+                    'is_active'                     => $derivedIsActive,
+                    'member_class'                  => $memberClass,
+                    'can_enter_official_tournament' => $memberClass === 'player' && $derivedIsActive,
                 ];
 
                 $model = ProBowler::where('license_no', $licenseNo)->first();
@@ -583,16 +602,17 @@ class ProBowlerImportController extends Controller
     private function syncInstructorRecordsFromBowler(ProBowler $bowler): void
     {
         $grade = $this->resolveInstructorGradeFromBowler($bowler);
+        $category = $this->resolveInstructorCategoryFromBowler($bowler);
 
-        if (!$this->hasInstructorProfile($bowler, $grade)) {
+        if (!$this->hasInstructorRegistryTarget($bowler, $grade, $category)) {
             return;
         }
 
-        $this->syncLegacyInstructorFromBowler($bowler, $grade);
-        $this->syncRegistryFromBowler($bowler, $grade);
+        $this->syncLegacyInstructorFromBowler($bowler, $grade, $category);
+        $this->syncRegistryFromBowler($bowler, $grade, $category);
     }
 
-    private function syncLegacyInstructorFromBowler(ProBowler $bowler, ?string $grade): void
+    private function syncLegacyInstructorFromBowler(ProBowler $bowler, ?string $grade, string $category): void
     {
         $existing = Instructor::query()
             ->where('license_no', $bowler->license_no)
@@ -609,7 +629,7 @@ class ProBowlerImportController extends Controller
             'is_active'           => (bool) $bowler->is_active,
             'is_visible'          => $existing?->is_visible ?? true,
             'coach_qualification' => ($bowler->school_license_status ?? null) === '有',
-            'pro_bowler_id'       => $bowler->id,
+            'pro_bowler_id'       => $category === 'pro_bowler' ? $bowler->id : null,
         ];
 
         Instructor::updateOrCreate(
@@ -618,7 +638,7 @@ class ProBowlerImportController extends Controller
         );
     }
 
-    private function syncRegistryFromBowler(ProBowler $bowler, ?string $grade): void
+    private function syncRegistryFromBowler(ProBowler $bowler, ?string $grade, string $category): void
     {
         $existing = InstructorRegistry::query()
             ->where('pro_bowler_id', $bowler->id)
@@ -630,36 +650,41 @@ class ProBowlerImportController extends Controller
                 $q->whereNotNull('legacy_instructor_license_no')
                     ->where('legacy_instructor_license_no', $bowler->license_no);
             })
+            ->orderByDesc('is_current')
             ->orderBy('id')
             ->first();
 
         $payload = [
-            'legacy_instructor_license_no' => $existing?->legacy_instructor_license_no ?? $bowler->license_no,
-            'pro_bowler_id'                => $bowler->id,
-            'license_no'                   => $bowler->license_no,
-            'cert_no'                      => $existing?->cert_no,
-            'name'                         => $bowler->name_kanji ?: ($existing?->name ?? $bowler->license_no),
-            'name_kana'                    => $bowler->name_kana,
-            'sex'                          => $this->normalizeRegistrySex($bowler),
-            'district_id'                  => $bowler->district_id,
-            'instructor_category'          => 'pro_bowler',
-            'grade'                        => $grade,
-            'coach_qualification'          => ($bowler->school_license_status ?? null) === '有',
-            'is_active'                    => (bool) $bowler->is_active,
-            'is_visible'                   => $existing?->is_visible ?? true,
-            'last_synced_at'               => now(),
-            'notes'                        => $existing?->notes ?: 'synced from pro_bowlers import',
+            'source_type'                   => $existing?->source_type ?: 'pro_bowler_csv',
+            'source_key'                    => $existing?->source_key ?: $bowler->license_no,
+            'legacy_instructor_license_no'  => $existing?->legacy_instructor_license_no ?? $bowler->license_no,
+            'pro_bowler_id'                 => $category === 'pro_bowler' ? $bowler->id : null,
+            'license_no'                    => $bowler->license_no,
+            'cert_no'                       => $existing?->cert_no,
+            'name'                          => $bowler->name_kanji ?: ($existing?->name ?? $bowler->license_no),
+            'name_kana'                     => $bowler->name_kana,
+            'sex'                           => $this->normalizeRegistrySex($bowler),
+            'district_id'                   => $bowler->district_id,
+            'instructor_category'           => $category,
+            'grade'                         => $grade,
+            'coach_qualification'           => ($bowler->school_license_status ?? null) === '有',
+            'is_active'                     => (bool) $bowler->is_active,
+            'is_visible'                    => $existing?->is_visible ?? true,
+            'source_registered_at'          => $bowler->license_issue_date ?: ($existing?->source_registered_at?->format('Y-m-d H:i:s') ?? null),
+            'is_current'                    => true,
+            'superseded_at'                 => null,
+            'supersede_reason'              => null,
+            'last_synced_at'                => now(),
+            'notes'                         => $existing?->notes ?: 'synced from pro_bowlers import',
         ];
 
         if ($existing) {
             $existing->fill($payload)->save();
+
             return;
         }
 
-        InstructorRegistry::create(array_merge([
-            'source_type' => 'pro_bowler',
-            'source_key'  => $bowler->license_no,
-        ], $payload));
+        InstructorRegistry::create($payload);
     }
 
     private function resolveInstructorGradeFromBowler(ProBowler $bowler): ?string
@@ -672,8 +697,12 @@ class ProBowlerImportController extends Controller
         };
     }
 
-    private function hasInstructorProfile(ProBowler $bowler, ?string $grade): bool
+    private function hasInstructorRegistryTarget(ProBowler $bowler, ?string $grade, string $category): bool
     {
+        if ($category === 'pro_instructor') {
+            return true;
+        }
+
         return $grade !== null
             || ($bowler->master_status ?? null) === '有'
             || ($bowler->school_license_status ?? null) === '有'
@@ -681,6 +710,43 @@ class ProBowlerImportController extends Controller
             || ($bowler->coach_3_status ?? null) === '有'
             || ($bowler->coach_1_status ?? null) === '有'
             || ($bowler->kenkou_status ?? null) === '有';
+    }
+
+    private function resolveInstructorCategoryFromBowler(ProBowler $bowler): string
+    {
+        return ($bowler->member_class ?? null) === 'pro_instructor'
+            ? 'pro_instructor'
+            : 'pro_bowler';
+    }
+
+    private function resolveIsActiveFromMembershipType(?string $membershipType): bool
+    {
+        $value = trim((string) $membershipType);
+
+        return !in_array($value, ['死亡', '除名', '退会届'], true);
+    }
+
+    private function resolveMemberClass(?string $membershipType, string $licenseNo): string
+    {
+        $value = trim((string) $membershipType);
+
+        if (in_array($value, ['プロインストラクター', '認定プロインストラクター'], true) || $this->isTeachingProLicense($licenseNo)) {
+            return 'pro_instructor';
+        }
+
+        if (in_array($value, ['その他', '海外'], true)) {
+            return 'honorary_or_overseas';
+        }
+
+        return 'player';
+    }
+
+    private function isTeachingProLicense(string $licenseNo): bool
+    {
+        $normalized = strtoupper(trim($licenseNo));
+
+        return preg_match('/^T\d+$/', $normalized) === 1
+            || preg_match('/^[A-Z]\d{4}T\d{3,4}$/', $normalized) === 1;
     }
 
     private function normalizeRegistrySex(ProBowler $bowler): ?bool

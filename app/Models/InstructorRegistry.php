@@ -23,6 +23,10 @@ class InstructorRegistry extends Model
         'instructor_category',
         'grade',
         'coach_qualification',
+        'source_registered_at',
+        'is_current',
+        'superseded_at',
+        'supersede_reason',
         'is_active',
         'is_visible',
         'last_synced_at',
@@ -30,11 +34,14 @@ class InstructorRegistry extends Model
     ];
 
     protected $casts = [
-        'sex'                 => 'boolean',
-        'coach_qualification' => 'boolean',
-        'is_active'           => 'boolean',
-        'is_visible'          => 'boolean',
-        'last_synced_at'      => 'datetime',
+        'sex'                  => 'boolean',
+        'coach_qualification'  => 'boolean',
+        'source_registered_at' => 'datetime',
+        'is_current'           => 'boolean',
+        'superseded_at'        => 'datetime',
+        'is_active'            => 'boolean',
+        'is_visible'           => 'boolean',
+        'last_synced_at'       => 'datetime',
     ];
 
     public function district(): BelongsTo
@@ -55,6 +62,11 @@ class InstructorRegistry extends Model
             'certified'      => '認定インストラクター',
             default          => '不明',
         };
+    }
+
+    public function scopeCurrent($query)
+    {
+        return $query->where('is_current', true);
     }
 
     public function scopeProBowler($query)
