@@ -121,7 +121,7 @@
           <thead>
             <tr>
               <th>氏名</th>
-              <th>ライセンスNo.</th>
+              <th>識別番号</th>
               <th>地区</th>
               <th>性別</th>
               <th>種別</th>
@@ -146,25 +146,11 @@
                   ? '-'
                   : ($instructor->sex ? '男性' : '女性');
 
-                $nameUrl = null;
-
-                if (($instructor->source_type ?? null) === 'manual') {
-                    $nameUrl = route('instructors.edit', ['instructor' => $instructor->id]);
-                } elseif (!empty($instructor->legacy_instructor_license_no)) {
-                    $nameUrl = route('instructors.edit_by_license', ['license_no' => $instructor->legacy_instructor_license_no]);
-                } elseif (!empty($instructor->cert_no)) {
-                    $nameUrl = route('instructors.edit', ['instructor' => $instructor->id]);
-                } elseif (!empty($instructor->pro_bowler_id)) {
-                    $nameUrl = route('pro_bowlers.edit', $instructor->pro_bowler_id);
-                }
+                $nameUrl = route('instructors.edit', ['instructor' => $instructor->id]);
               @endphp
               <tr>
                 <td>
-                  @if ($nameUrl)
-                    <a href="{{ $nameUrl }}">{{ $instructor->name }}</a>
-                  @else
-                    {{ $instructor->name }}
-                  @endif
+                  <a href="{{ $nameUrl }}">{{ $instructor->name }}</a>
                 </td>
                 <td>{{ $displayCode }}</td>
                 <td>{{ $instructor->district->label ?? '-' }}</td>

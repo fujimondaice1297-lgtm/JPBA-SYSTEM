@@ -78,8 +78,8 @@
       </div>
 
       <div class="col-md-6">
-        <label class="form-label">資格等級<span class="text-danger">*</span></label>
-        <select name="grade" class="form-select" required>
+        <label class="form-label">資格等級</label>
+        <select name="grade" class="form-select">
           <option value="">選択してください</option>
           @foreach ($gradeOptions as $grade)
             <option value="{{ $grade }}" {{ old('grade') === $grade ? 'selected' : '' }}>

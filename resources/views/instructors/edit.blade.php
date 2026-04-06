@@ -7,7 +7,13 @@
   @php
     $gradeOptions = $grades ?? ["C級", "準B級", "B級", "準A級", "A級", "2級", "1級"];
     $renewalStatusOptions = $renewalStatuses ?? ['pending' => '未更新', 'renewed' => '更新済み', 'expired' => '期限切れ'];
-    $formType = old('instructor_type', $instructor->instructor_category === 'certified' ? 'certified' : 'pro');
+    $submitType = old('instructor_type', $instructor->instructor_category === 'certified' ? 'certified' : 'pro');
+    $displayTypeLabel = match ($instructor->instructor_category) {
+        'pro_bowler' => 'プロボウラー',
+        'pro_instructor' => 'プロインストラクター',
+        'certified' => '認定インストラクター',
+        default => 'プロインストラクター',
+    };
     $isManual = ($instructor->source_type ?? null) === 'manual';
   @endphp
 
@@ -38,16 +44,16 @@
 
         @if ($isManual)
           <select name="instructor_type" id="instructor_type" class="form-select" required>
-            <option value="pro" {{ $formType === 'pro' ? 'selected' : '' }}>プロインストラクター</option>
-            <option value="certified" {{ $formType === 'certified' ? 'selected' : '' }}>認定インストラクター</option>
+            <option value="pro" {{ $submitType === 'pro' ? 'selected' : '' }}>プロインストラクター</option>
+            <option value="certified" {{ $submitType === 'certified' ? 'selected' : '' }}>認定インストラクター</option>
           </select>
         @else
-          <input type="hidden" name="instructor_type" value="{{ $formType }}">
-          <input type="text" class="form-control" value="{{ $formType === 'certified' ? '認定インストラクター' : 'プロインストラクター' }}" readonly>
+          <input type="hidden" name="instructor_type" value="{{ $submitType }}">
+          <input type="text" class="form-control" value="{{ $displayTypeLabel }}" readonly>
         @endif
       </div>
 
-      <div class="col-md-6 {{ $formType === 'certified' ? 'd-none' : '' }}" id="license_no_group">
+      <div class="col-md-6 {{ $submitType === 'certified' ? 'd-none' : '' }}" id="license_no_group">
         <label class="form-label">ライセンスNo<span class="text-danger">*</span></label>
 
         @if ($isManual)
@@ -58,7 +64,7 @@
         @endif
       </div>
 
-      <div class="col-md-6 {{ $formType === 'certified' ? '' : 'd-none' }}" id="cert_no_group">
+      <div class="col-md-6 {{ $submitType === 'certified' ? '' : 'd-none' }}" id="cert_no_group">
         <label class="form-label">認定番号<span class="text-danger">*</span></label>
 
         @if ($isManual)
@@ -101,8 +107,8 @@
       </div>
 
       <div class="col-md-6">
-        <label class="form-label">資格等級<span class="text-danger">*</span></label>
-        <select name="grade" class="form-select" required>
+        <label class="form-label">資格等級</label>
+        <select name="grade" class="form-select">
           <option value="">選択してください</option>
           @foreach ($gradeOptions as $grade)
             <option value="{{ $grade }}" {{ old('grade', $instructor->grade) === $grade ? 'selected' : '' }}>
