@@ -11,6 +11,8 @@ use Illuminate\Support\Facades\DB;
 
 class ProBowlerImportController extends Controller
 {
+    private const PRO_IMPORT_SOURCE_TYPE = 'pro_bowler_csv';
+
     public function form()
     {
         return view('pro_bowlers.import');
@@ -611,8 +613,8 @@ class ProBowlerImportController extends Controller
         }
 
         $this->syncLegacyInstructorFromBowler($bowler, $grade, $category);
-        $this->syncRegistryFromBowler($bowler, $grade, $category);
-        $this->supersedeCompetingCurrentRegistryRowsForBowler($bowler, $category);
+        $targetRegistry = $this->syncRegistryFromBowler($bowler, $grade, $category);
+        $this->supersedeCompetingCurrentRegistryRowsForBowler($bowler, $targetRegistry);
     }
 
     private function syncLegacyInstructorFromBowler(ProBowler $bowler, ?string $grade, string $category): void
@@ -632,7 +634,7 @@ class ProBowlerImportController extends Controller
             'is_active'           => (bool) $bowler->is_active,
             'is_visible'          => $existing?->is_visible ?? true,
             'coach_qualification' => ($bowler->school_license_status ?? null) === '有',
-            'pro_bowler_id'       => $category === 'pro_bowler' ? $bowler->id : null,
+            'pro_bowler_id'       => $bowler->id,
         ];
 
         Instructor::updateOrCreate(
@@ -641,49 +643,51 @@ class ProBowlerImportController extends Controller
         );
     }
 
-    private function syncRegistryFromBowler(ProBowler $bowler, ?string $grade, string $category): void
+    private function syncRegistryFromBowler(ProBowler $bowler, ?string $grade, string $category): InstructorRegistry
     {
-        $existing = $this->proSideRegistryQueryForBowler($bowler)
+        $existing = $this->importedRegistryQueryForBowlerAndCategory($bowler, $category)
             ->orderByDesc('is_current')
+            ->orderByDesc('last_synced_at')
             ->orderBy('id')
             ->first();
 
         $payload = [
-            'source_type'                   => $existing?->source_type ?: 'pro_bowler_csv',
-            'source_key'                    => $existing?->source_key ?: $bowler->license_no,
-            'legacy_instructor_license_no'  => $existing?->legacy_instructor_license_no ?? $bowler->license_no,
-            'pro_bowler_id'                 => $category === 'pro_bowler' ? $bowler->id : null,
-            'license_no'                    => $bowler->license_no,
-            'cert_no'                       => $existing?->cert_no,
-            'name'                          => $bowler->name_kanji ?: ($existing?->name ?? $bowler->license_no),
-            'name_kana'                     => $bowler->name_kana,
-            'sex'                           => $this->normalizeRegistrySex($bowler),
-            'district_id'                   => $bowler->district_id,
-            'instructor_category'           => $category,
-            'grade'                         => $grade,
-            'coach_qualification'           => ($bowler->school_license_status ?? null) === '有',
-            'is_active'                     => (bool) $bowler->is_active,
-            'is_visible'                    => $existing?->is_visible ?? true,
-            'source_registered_at'          => $bowler->license_issue_date ?: ($existing?->source_registered_at?->format('Y-m-d H:i:s') ?? null),
-            'is_current'                    => true,
-            'superseded_at'                 => null,
-            'supersede_reason'              => null,
-            'renewal_year'                  => $existing?->renewal_year ?? $this->currentRenewalYear(),
-            'renewal_due_on'                => $existing?->renewal_due_on?->format('Y-m-d') ?? $this->currentRenewalDueDate(),
-            'renewal_status'                => $existing?->renewal_status ?? 'pending',
-            'renewed_at'                    => $existing?->renewed_at?->format('Y-m-d'),
-            'renewal_note'                  => $existing?->renewal_note,
-            'last_synced_at'                => now(),
-            'notes'                         => $existing?->notes ?: 'synced from pro_bowlers import',
+            'source_type'                  => self::PRO_IMPORT_SOURCE_TYPE,
+            'source_key'                   => $existing?->source_key ?: $this->buildProRegistrySourceKey($bowler->license_no, $category),
+            'legacy_instructor_license_no' => $existing?->legacy_instructor_license_no ?? $bowler->license_no,
+            'pro_bowler_id'                => $bowler->id,
+            'license_no'                   => $bowler->license_no,
+            'cert_no'                      => $existing?->cert_no,
+            'name'                         => $bowler->name_kanji ?: ($existing?->name ?? $bowler->license_no),
+            'name_kana'                    => $bowler->name_kana,
+            'sex'                          => $this->normalizeRegistrySex($bowler),
+            'district_id'                  => $bowler->district_id,
+            'instructor_category'          => $category,
+            'grade'                        => $grade,
+            'coach_qualification'          => ($bowler->school_license_status ?? null) === '有',
+            'is_active'                    => (bool) $bowler->is_active,
+            'is_visible'                   => $existing?->is_visible ?? true,
+            'source_registered_at'         => $bowler->license_issue_date ?: ($existing?->source_registered_at?->format('Y-m-d H:i:s') ?? null),
+            'is_current'                   => true,
+            'superseded_at'                => null,
+            'supersede_reason'             => null,
+            'renewal_year'                 => $existing?->renewal_year ?? $this->currentRenewalYear(),
+            'renewal_due_on'               => $existing?->renewal_due_on?->format('Y-m-d') ?? $this->currentRenewalDueDate(),
+            'renewal_status'               => $existing?->renewal_status ?? 'pending',
+            'renewed_at'                   => $existing?->renewed_at?->format('Y-m-d'),
+            'renewal_note'                 => $existing?->renewal_note,
+            'last_synced_at'               => now(),
+            'notes'                        => $existing?->notes ?: 'synced from pro_bowlers import',
         ];
 
         if ($existing) {
-            $existing->fill($payload)->save();
+            $existing->fill($payload);
+            $existing->save();
 
-            return;
+            return $existing;
         }
 
-        InstructorRegistry::create($payload);
+        return InstructorRegistry::create($payload);
     }
 
     private function deactivateInstructorRecordsFromBowler(ProBowler $bowler): void
@@ -736,6 +740,10 @@ class ProBowlerImportController extends Controller
     {
         $certified = $this->allRegistryQueryForBowler($bowler)
             ->where('instructor_category', 'certified')
+            ->where(function ($query) {
+                $query->whereNull('renewal_status')
+                    ->orWhere('renewal_status', '!=', 'expired');
+            })
             ->orderByDesc('is_current')
             ->orderByDesc('last_synced_at')
             ->orderBy('id')
@@ -756,11 +764,11 @@ class ProBowlerImportController extends Controller
         $certified->save();
     }
 
-    private function supersedeCompetingCurrentRegistryRowsForBowler(ProBowler $bowler, string $targetCategory): void
+    private function supersedeCompetingCurrentRegistryRowsForBowler(ProBowler $bowler, InstructorRegistry $targetRegistry): void
     {
         $rows = $this->allRegistryQueryForBowler($bowler)
             ->where('is_current', true)
-            ->where('instructor_category', '!=', $targetCategory)
+            ->where('id', '!=', $targetRegistry->id)
             ->get();
 
         if ($rows->isEmpty()) {
@@ -773,10 +781,17 @@ class ProBowlerImportController extends Controller
             $row->is_current = false;
             $row->is_active = false;
             $row->superseded_at = $now;
-            $row->supersede_reason = $this->resolveSupersedeReason($row->instructor_category, $targetCategory);
+            $row->supersede_reason = $this->resolveSupersedeReason($row->instructor_category, $targetRegistry->instructor_category);
             $row->last_synced_at = $now;
             $row->save();
         }
+    }
+
+    private function importedRegistryQueryForBowlerAndCategory(ProBowler $bowler, string $category)
+    {
+        return $this->allRegistryQueryForBowler($bowler)
+            ->where('source_type', self::PRO_IMPORT_SOURCE_TYPE)
+            ->where('instructor_category', $category);
     }
 
     private function proSideRegistryQueryForBowler(ProBowler $bowler)
@@ -802,6 +817,11 @@ class ProBowlerImportController extends Controller
             });
     }
 
+    private function buildProRegistrySourceKey(string $licenseNo, string $category): string
+    {
+        return $licenseNo . ':' . $category;
+    }
+
     private function resolveSupersedeReason(string $fromCategory, string $toCategory): string
     {
         return match (true) {
@@ -810,7 +830,8 @@ class ProBowlerImportController extends Controller
             $fromCategory === 'pro_instructor' && $toCategory === 'pro_bowler' => 'promoted_to_pro_bowler',
             $fromCategory === 'pro_bowler' && $toCategory === 'certified'     => 'downgraded_to_certified',
             $fromCategory === 'pro_instructor' && $toCategory === 'certified' => 'downgraded_to_certified',
-            default                                                           => 'category_changed',
+            $fromCategory === $toCategory                                      => 'replaced_by_pro_bowler_import',
+            default                                                            => 'category_changed',
         };
     }
 
