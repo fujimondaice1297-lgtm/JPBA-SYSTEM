@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\District;
 use App\Models\InstructorRegistry;
+use App\Models\ProBowler;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -138,6 +139,21 @@ class AuthInstructorImportController extends Controller
             return $value === '' ? null : $value;
         };
 
+        $normalizeKana = function ($value): ?string {
+            if ($value === null) {
+                return null;
+            }
+
+            $value = trim((string) $value);
+            if ($value === '') {
+                return null;
+            }
+
+            $value = mb_convert_kana($value, 'CKV', 'UTF-8');
+
+            return $value === '' ? null : $value;
+        };
+
         $normalizeGrade = function ($value): ?string {
             $v = trim((string) $value);
 
@@ -218,28 +234,54 @@ class AuthInstructorImportController extends Controller
 
                 $seenSourceKeys[] = $sourceKey;
 
+                $rawDistrict = $val($row, $C->district);
+                $nameKana = $normalizeKana($val($row, $C->kana));
+                $sex = $normalizeSex($val($row, $C->sex));
+                $districtId = $normalizeDistrict($rawDistrict);
+                $districtIdForMatch = $rawDistrict === null ? null : $districtId;
+
+                if ($districtIdForMatch !== null && $notApplicableDistrictId !== null && $districtIdForMatch === (int) $notApplicableDistrictId) {
+                    $districtIdForMatch = null;
+                }
+
                 $coachRaw = $normalizeNullable($val($row, $C->coach));
                 $licenseNo = $normalizeNullable($val($row, $C->license));
                 $sourceActive = $normalizeFlag($val($row, $C->active));
 
+                $matchedBowler = $this->resolveMatchingProBowler(
+                    $licenseNo,
+                    $name,
+                    $nameKana,
+                    $sex,
+                    $districtIdForMatch
+                );
+
+                $resolvedLicenseNo = $licenseNo ?: $matchedBowler?->license_no;
+
+                $notes = $coachRaw
+                    ? 'imported from AuthInstructor.csv / coach=' . $coachRaw
+                    : 'imported from AuthInstructor.csv';
+
+                if ($matchedBowler && $licenseNo === null) {
+                    $notes .= ' / matched_pro_bowler=' . $matchedBowler->license_no;
+                }
+
                 $payload = [
                     'legacy_instructor_license_no' => null,
-                    'pro_bowler_id'                => null,
-                    'license_no'                   => $licenseNo,
+                    'pro_bowler_id'                => $matchedBowler?->id,
+                    'license_no'                   => $resolvedLicenseNo,
                     'cert_no'                      => $sourceKey,
                     'name'                         => $name,
-                    'name_kana'                    => $normalizeNullable($val($row, $C->kana)),
-                    'sex'                          => $normalizeSex($val($row, $C->sex)),
-                    'district_id'                  => $normalizeDistrict($val($row, $C->district)),
+                    'name_kana'                    => $nameKana,
+                    'sex'                          => $sex,
+                    'district_id'                  => $districtId,
                     'instructor_category'          => 'certified',
                     'grade'                        => $normalizeGrade($val($row, $C->grade)),
                     'coach_qualification'          => $coachRaw !== null && $coachRaw !== '',
                     'source_registered_at'         => null,
                     'is_visible'                   => $normalizeFlag($val($row, $C->visible)),
                     'last_synced_at'               => now(),
-                    'notes'                        => $coachRaw
-                        ? 'imported from AuthInstructor.csv / coach=' . $coachRaw
-                        : 'imported from AuthInstructor.csv',
+                    'notes'                        => $notes,
                 ];
 
                 $registry = InstructorRegistry::query()->firstOrNew([
@@ -305,7 +347,7 @@ class AuthInstructorImportController extends Controller
             return;
         }
 
-        $currentProTarget = $this->findCurrentProTargetByLicense($registry->license_no);
+        $currentProTarget = $this->findCurrentProTarget($registry);
 
         if ($currentProTarget) {
             $registry->is_current = false;
@@ -366,19 +408,123 @@ class AuthInstructorImportController extends Controller
         }
     }
 
-    private function findCurrentProTargetByLicense(?string $licenseNo): ?InstructorRegistry
+    private function resolveMatchingProBowler(
+        ?string $licenseNo,
+        string $name,
+        ?string $nameKana,
+        ?bool $sex,
+        ?int $districtId
+    ): ?ProBowler {
+        if ($licenseNo !== null && trim($licenseNo) !== '') {
+            $byLicense = ProBowler::query()
+                ->where('license_no', $licenseNo)
+                ->first();
+
+            if ($byLicense) {
+                return $byLicense;
+            }
+        }
+
+        $candidates = [
+            [
+                'name_kanji'  => $name,
+                'name_kana'   => $nameKana,
+                'sex'         => $sex,
+                'district_id' => $districtId,
+            ],
+            [
+                'name_kanji' => $name,
+                'name_kana'  => $nameKana,
+                'sex'        => $sex,
+            ],
+            [
+                'name_kanji'  => $name,
+                'name_kana'   => $nameKana,
+                'district_id' => $districtId,
+            ],
+            [
+                'name_kanji' => $name,
+                'name_kana'  => $nameKana,
+            ],
+            [
+                'name_kanji'  => $name,
+                'sex'         => $sex,
+                'district_id' => $districtId,
+            ],
+            [
+                'name_kanji' => $name,
+                'sex'        => $sex,
+            ],
+            [
+                'name_kanji'  => $name,
+                'district_id' => $districtId,
+            ],
+        ];
+
+        foreach ($candidates as $conditions) {
+            $matched = $this->findUniqueProBowlerByConditions($conditions);
+            if ($matched) {
+                return $matched;
+            }
+        }
+
+        return null;
+    }
+
+    private function findUniqueProBowlerByConditions(array $conditions): ?ProBowler
     {
-        if ($licenseNo === null || trim($licenseNo) === '') {
+        $activeConditions = array_filter(
+            $conditions,
+            fn ($value) => $value !== null && $value !== ''
+        );
+
+        $hasNameCondition = array_key_exists('name_kanji', $activeConditions) || array_key_exists('name_kana', $activeConditions);
+
+        if (!$hasNameCondition || count($activeConditions) < 2) {
             return null;
         }
 
+        $query = ProBowler::query();
+
+        foreach ($activeConditions as $column => $value) {
+            $query->where($column, $value);
+        }
+
+        $rows = $query
+            ->orderBy('id')
+            ->limit(2)
+            ->get();
+
+        if ($rows->count() !== 1) {
+            return null;
+        }
+
+        return $rows->first();
+    }
+
+    private function findCurrentProTarget(InstructorRegistry $registry): ?InstructorRegistry
+    {
         return InstructorRegistry::query()
             ->whereIn('instructor_category', ['pro_bowler', 'pro_instructor'])
             ->where('is_current', true)
             ->where('is_active', true)
-            ->where(function ($query) use ($licenseNo) {
-                $query->where('license_no', $licenseNo)
-                    ->orWhere('legacy_instructor_license_no', $licenseNo);
+            ->where(function ($query) use ($registry) {
+                $hasCondition = false;
+
+                if ($registry->pro_bowler_id !== null) {
+                    $query->orWhere('pro_bowler_id', $registry->pro_bowler_id);
+                    $hasCondition = true;
+                }
+
+                if ($registry->license_no !== null && trim($registry->license_no) !== '') {
+                    $query->orWhere('license_no', $registry->license_no)
+                        ->orWhere('legacy_instructor_license_no', $registry->license_no);
+                    $hasCondition = true;
+                }
+
+                if (!$hasCondition) {
+                    $query->whereRaw('1 = 0');
+                }
             })
             ->orderByDesc('last_synced_at')
             ->orderBy('id')
