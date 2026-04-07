@@ -428,23 +428,39 @@ JPBA公認ボールのマスタ。
 - `renewed`（更新済み）
 - `expired`（期限切れ / 年次更新失効）
 
+### supersede_reason の代表値
+- `promoted_to_pro_instructor`（認定インストラクター → プロインストラクターへ昇格）
+- `promoted_to_pro_bowler`（認定インストラクター / プロインストラクター → プロボウラーへ昇格）
+- `downgraded_to_certified`（プロボウラー / プロインストラクター → 認定インストラクターへ降格）
+- `certified_not_renewed`（認定インストラクターが当年更新されず失効）
+- `inactive_in_source`（取込元CSV上で無効）
+- `qualification_removed`（プロ系資格が取込結果上で消滅し、復帰先の有効認定資格も無い）
+- `replaced_by_pro_bowler_import`（同一カテゴリ行を `pro_bowler_csv` 再取込で置換）
+- `category_changed`（上記以外のカテゴリ変更）
+
 ### 注意（運用方針）
 - 新規正本は `instructor_registry` とする。
 - 既存 `instructors` は既存画面・既存Controller互換のため当面維持する。
 - 初回 backfill は既存 `instructors` から `source_type = legacy_instructors` として投入する。
 - `license_no` / `cert_no` はどちらか片方だけでも保持できる設計にする。
 - `source_type = pro_bowler_csv` は `Pro_colum.csv` を `pro_bowlers` に取り込んだ後の同期結果を表す。
+- `source_type = pro_bowler_csv` のプロ系 row は、`license_no + instructor_category` 単位で current / history を持つ。`source_key` は原則 `{license_no}:{instructor_category}` を使う。
 - `source_type = auth_instructor_csv` は `AuthInstructor.csv` を独立投入した認定インストラクター行を表す。
 - `AuthInstructor.csv` は専用の認定番号列を持たないため、当面は `#ID` を `source_key` および `cert_no` に使って一意管理する。
-- `AuthInstructor.csv` は名前一致だけで `pro_bowlers` に自動結線しない。
+- `AuthInstructor.csv` は `license_no` 一致を最優先に `pro_bowlers` へ自動結線する。
+- `AuthInstructor.csv` で `license_no` が空、または `license_no` で結線できない場合は、`name_kanji` を含む複数条件（例: `name_kana` / `sex` / `district_id`）で **一意に特定できた場合のみ** `pro_bowlers` に自動結線する。
+- 名前だけ、または名前を含まない曖昧条件では `pro_bowlers` に自動結線しない。
 - 同一人物が別資格へ遷移する可能性があるため、旧行は物理削除せず `is_current = false` と `superseded_at` / `supersede_reason` で履歴化できる設計にする。
 - 一覧・検索の既定は `is_current = true` を対象にする。
 - `pro_instructor` の件数比較や検索条件は、`license_no` の文字列検索ではなく `instructor_category = 'pro_instructor'` かつ `is_current = true` を正本条件とする。
-- `legacy_instructor_license_no` は互換移行用の退避列であり、FKは張らない.
+- `legacy_instructor_license_no` は互換移行用の退避列であり、FKは張らない。
 - 年次更新管理は `renewal_year` / `renewal_due_on` / `renewal_status` / `renewed_at` / `renewal_note` を正本とする。
 - 毎年の更新期限は原則 `12/31` とし、更新専用一覧では `renewal_year` と `renewal_status` を主な絞り込み軸にする。
 - `AuthInstructor.csv` の年次取込では、当年CSVに存在する current `certified` 行を `renewed`、当年CSVに存在しない current `auth_instructor_csv` 行を `expired` として扱う。
+- `AuthInstructor.csv` 取込時に、current な `pro_bowler` / `pro_instructor` 行が見つかった認定行は、`promoted_to_pro_bowler` または `promoted_to_pro_instructor` で履歴化する。
 - `pro_bowler_csv` / manual 由来のプロ系 current 行は、年次更新対象として `renewal_status = pending` から管理できるようにする。
+- `Pro_colum.csv` 取込時にプロ系資格対象外になった行は、対応する有効な `certified` 行があればその認定行を current に戻し、旧プロ系行は `downgraded_to_certified` として履歴化する。
+- `Pro_colum.csv` 取込時にプロ系資格対象外になり、復帰先の有効な `certified` 行も無い場合は、旧プロ系行を `qualification_removed` として履歴化する。
 
 ### 外部キー（FK）
 - instructor_registry.pro_bowler_id -> pro_bowlers.id（ON DELETE SET NULL）

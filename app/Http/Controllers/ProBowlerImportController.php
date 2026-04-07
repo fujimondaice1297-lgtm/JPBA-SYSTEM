@@ -607,8 +607,13 @@ class ProBowlerImportController extends Controller
         $category = $this->resolveInstructorCategoryFromBowler($bowler);
 
         if (!$this->hasInstructorRegistryTarget($bowler, $grade, $category)) {
-            $this->deactivateInstructorRecordsFromBowler($bowler);
-            $this->reactivateCertifiedCurrentRowForBowler($bowler);
+            $reactivatedCertified = $this->reactivateCertifiedCurrentRowForBowler($bowler);
+
+            $this->deactivateInstructorRecordsFromBowler(
+                $bowler,
+                $reactivatedCertified ? 'downgraded_to_certified' : 'qualification_removed'
+            );
+
             return;
         }
 
@@ -690,10 +695,10 @@ class ProBowlerImportController extends Controller
         return InstructorRegistry::create($payload);
     }
 
-    private function deactivateInstructorRecordsFromBowler(ProBowler $bowler): void
+    private function deactivateInstructorRecordsFromBowler(ProBowler $bowler, string $supersedeReason): void
     {
         $this->deactivateLegacyInstructorFromBowler($bowler);
-        $this->deactivateRegistryFromBowler($bowler);
+        $this->deactivateRegistryFromBowler($bowler, $supersedeReason);
     }
 
     private function deactivateLegacyInstructorFromBowler(ProBowler $bowler): void
@@ -714,7 +719,7 @@ class ProBowlerImportController extends Controller
         $existing->save();
     }
 
-    private function deactivateRegistryFromBowler(ProBowler $bowler): void
+    private function deactivateRegistryFromBowler(ProBowler $bowler, string $supersedeReason): void
     {
         $rows = $this->proSideRegistryQueryForBowler($bowler)
             ->where('is_current', true)
@@ -730,13 +735,13 @@ class ProBowlerImportController extends Controller
             $row->is_current = false;
             $row->is_active = false;
             $row->superseded_at = $row->superseded_at ?: $now;
-            $row->supersede_reason = $row->supersede_reason ?: 'qualification_removed';
+            $row->supersede_reason = $supersedeReason;
             $row->last_synced_at = $now;
             $row->save();
         }
     }
 
-    private function reactivateCertifiedCurrentRowForBowler(ProBowler $bowler): void
+    private function reactivateCertifiedCurrentRowForBowler(ProBowler $bowler): bool
     {
         $certified = $this->allRegistryQueryForBowler($bowler)
             ->where('instructor_category', 'certified')
@@ -750,7 +755,7 @@ class ProBowlerImportController extends Controller
             ->first();
 
         if (!$certified) {
-            return;
+            return false;
         }
 
         $certified->is_current = true;
@@ -762,6 +767,8 @@ class ProBowlerImportController extends Controller
         $certified->renewal_status = $certified->renewal_status ?? 'pending';
         $certified->last_synced_at = now();
         $certified->save();
+
+        return true;
     }
 
     private function supersedeCompetingCurrentRegistryRowsForBowler(ProBowler $bowler, InstructorRegistry $targetRegistry): void
