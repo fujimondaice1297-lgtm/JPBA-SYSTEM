@@ -15,6 +15,8 @@
         default => 'プロインストラクター',
     };
     $isManual = ($instructor->source_type ?? null) === 'manual';
+    $isLinkableSyncedCertified = ($instructor->source_type ?? null) === 'auth_instructor_csv' && $instructor->instructor_category === 'certified';
+    $candidateBowlers = $linkableProBowlers ?? collect();
   @endphp
 
   @if ($errors->any())
@@ -105,6 +107,28 @@
           @endforeach
         </select>
       </div>
+
+      @if ($isLinkableSyncedCertified)
+        <div class="col-12">
+          <div class="border rounded p-3 bg-light">
+            <div class="fw-bold mb-2">プロボウラー結線</div>
+
+            <label class="form-label">結線先候補</label>
+            <select name="linked_pro_bowler_id" class="form-select">
+              <option value="">未結線のまま</option>
+              @foreach ($candidateBowlers as $bowler)
+                <option value="{{ $bowler->id }}" {{ (string) old('linked_pro_bowler_id', $instructor->pro_bowler_id) === (string) $bowler->id ? 'selected' : '' }}>
+                  {{ $bowler->license_no }} / {{ $bowler->name_kanji }}{{ $bowler->name_kana ? ' / ' . $bowler->name_kana : '' }}{{ optional($bowler->district)->label ? ' / ' . $bowler->district->label : '' }}
+                </option>
+              @endforeach
+            </select>
+
+            <div class="form-text mt-2">
+              ライセンス番号一致・氏名一致などから候補を表示しています。誤結線防止のため、候補が無い場合は未結線のままにしてください。
+            </div>
+          </div>
+        </div>
+      @endif
 
       <div class="col-md-6">
         <label class="form-label">資格等級</label>

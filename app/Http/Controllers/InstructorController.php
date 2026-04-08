@@ -105,10 +105,11 @@ class InstructorController extends Controller
             ->get(['id', 'label']);
 
         return view('instructors.edit', [
-            'instructor'       => $instructor,
-            'districts'        => $districts,
-            'grades'           => self::GRADE_OPTIONS,
-            'renewalStatuses'  => self::RENEWAL_STATUS_OPTIONS,
+            'instructor'        => $instructor,
+            'districts'         => $districts,
+            'grades'            => self::GRADE_OPTIONS,
+            'renewalStatuses'   => self::RENEWAL_STATUS_OPTIONS,
+            'linkableProBowlers'=> $this->buildLinkableProBowlerCandidates($instructor),
         ]);
     }
 
@@ -119,7 +120,12 @@ class InstructorController extends Controller
 
         $instructor->fill($this->buildRegistryPayload($validated, $instructor));
         $instructor->save();
-        $this->applyCurrentTransitions($instructor);
+
+        if ($this->canManuallyLinkSyncedCertified($instructor)) {
+            $this->applySyncedCertifiedLinkState($instructor);
+        } else {
+            $this->applyCurrentTransitions($instructor);
+        }
 
         return redirect()
             ->route('instructors.index')
@@ -286,6 +292,7 @@ class InstructorController extends Controller
             'renewal_status'      => ['nullable', 'string', Rule::in(array_keys(self::RENEWAL_STATUS_OPTIONS))],
             'renewed_at'          => ['nullable', 'date'],
             'renewal_note'        => ['nullable', 'string', 'max:2000'],
+            'linked_pro_bowler_id'=> ['nullable', 'integer', 'exists:pro_bowlers,id'],
         ];
 
         if ($type === 'pro_instructor') {
@@ -326,6 +333,21 @@ class InstructorController extends Controller
             $isCurrent = $existing->is_current;
             $supersededAt = $existing->superseded_at;
             $supersedeReason = $existing->supersede_reason;
+
+            if ($this->canManuallyLinkSyncedCertified($existing) && array_key_exists('linked_pro_bowler_id', $validated)) {
+                $linkedProBowlerId = $validated['linked_pro_bowler_id'];
+
+                if ($linkedProBowlerId === null) {
+                    $proBowlerId = null;
+                } else {
+                    $linkedBowler = ProBowler::query()->find((int) $linkedProBowlerId);
+                    $proBowlerId = $linkedBowler?->id;
+
+                    if ($licenseNo === null && $linkedBowler) {
+                        $licenseNo = $linkedBowler->license_no;
+                    }
+                }
+            }
         } else {
             $rawType = (string) $validated['instructor_type'];
             $type = in_array($rawType, ['pro', 'pro_instructor'], true) ? 'pro_instructor' : $rawType;
@@ -421,6 +443,27 @@ class InstructorController extends Controller
         }
     }
 
+    private function applySyncedCertifiedLinkState(InstructorRegistry $registry): void
+    {
+        $currentProTarget = $this->findCurrentProTargetForRegistry($registry);
+
+        if ($currentProTarget) {
+            $registry->is_current = false;
+            $registry->is_active = false;
+            $registry->superseded_at = now();
+            $registry->supersede_reason = $this->resolveTransitionReason(
+                'certified',
+                $currentProTarget->instructor_category
+            );
+            $registry->last_synced_at = now();
+            $registry->save();
+
+            return;
+        }
+
+        $this->applyCurrentTransitions($registry);
+    }
+
     private function relatedCurrentRowsForRegistry(InstructorRegistry $registry): Builder
     {
         return InstructorRegistry::query()
@@ -455,6 +498,104 @@ class InstructorController extends Controller
                     $query->whereRaw('1 = 0');
                 }
             });
+    }
+
+    private function findCurrentProTargetForRegistry(InstructorRegistry $registry): ?InstructorRegistry
+    {
+        return InstructorRegistry::query()
+            ->whereIn('instructor_category', ['pro_bowler', 'pro_instructor'])
+            ->where('is_current', true)
+            ->where('is_active', true)
+            ->where(function ($query) use ($registry) {
+                $hasCondition = false;
+
+                if ($registry->pro_bowler_id !== null) {
+                    $query->orWhere('pro_bowler_id', $registry->pro_bowler_id);
+                    $hasCondition = true;
+                }
+
+                if ($registry->license_no !== null) {
+                    $query->orWhere('license_no', $registry->license_no)
+                        ->orWhere('legacy_instructor_license_no', $registry->license_no);
+                    $hasCondition = true;
+                }
+
+                if (!$hasCondition) {
+                    $query->whereRaw('1 = 0');
+                }
+            })
+            ->orderByDesc('last_synced_at')
+            ->orderBy('id')
+            ->first();
+    }
+
+    private function buildLinkableProBowlerCandidates(InstructorRegistry $registry)
+    {
+        if (!$this->canManuallyLinkSyncedCertified($registry)) {
+            return collect();
+        }
+
+        $candidates = collect();
+
+        if ($registry->pro_bowler_id !== null) {
+            $current = ProBowler::query()
+                ->with('district')
+                ->find($registry->pro_bowler_id);
+
+            if ($current) {
+                $candidates->push($current);
+            }
+        }
+
+        $query = ProBowler::query()->with('district');
+
+        $query->where(function ($q) use ($registry) {
+            $hasCondition = false;
+
+            if ($registry->license_no !== null && $registry->license_no !== '') {
+                $q->orWhere('license_no', $registry->license_no);
+                $hasCondition = true;
+            }
+
+            if ($registry->name !== null && $registry->name !== '') {
+                $q->orWhere('name_kanji', $registry->name);
+                $hasCondition = true;
+            }
+
+            if ($registry->name_kana !== null && $registry->name_kana !== '') {
+                $q->orWhere('name_kana', $registry->name_kana);
+                $hasCondition = true;
+            }
+
+            if (!$hasCondition) {
+                $q->whereRaw('1 = 0');
+            }
+        });
+
+        $rows = $query
+            ->orderBy('license_no')
+            ->limit(20)
+            ->get();
+
+        $candidates = $candidates
+            ->concat($rows)
+            ->unique('id')
+            ->sortBy([
+                fn ($row) => ($registry->license_no !== null && $row->license_no === $registry->license_no) ? 0 : 1,
+                fn ($row) => ($registry->name !== null && $row->name_kanji === $registry->name) ? 0 : 1,
+                fn ($row) => ($registry->name_kana !== null && $row->name_kana === $registry->name_kana) ? 0 : 1,
+                fn ($row) => ($registry->district_id !== null && $row->district_id === $registry->district_id) ? 0 : 1,
+                'license_no',
+            ])
+            ->values();
+
+        return $candidates;
+    }
+
+    private function canManuallyLinkSyncedCertified(InstructorRegistry $registry): bool
+    {
+        return $registry->source_type === 'auth_instructor_csv'
+            && $registry->instructor_category === 'certified';
     }
 
     private function resolveTransitionReason(string $fromCategory, string $toCategory): string
