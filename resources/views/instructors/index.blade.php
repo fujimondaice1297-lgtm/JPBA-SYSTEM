@@ -72,6 +72,20 @@
             </select>
           </div>
 
+          <div class="col-md-3">
+            <div class="form-check mt-2 pt-4">
+              <input
+                class="form-check-input"
+                type="checkbox"
+                name="unlinked_certified"
+                value="1"
+                id="unlinked_certified"
+                {{ request()->boolean('unlinked_certified') ? 'checked' : '' }}
+              >
+              <label class="form-check-label" for="unlinked_certified">未結線認定のみ</label>
+            </div>
+          </div>
+
           <div class="col-12">
             <div class="d-flex align-items-center gap-2 flex-wrap">
               <button type="submit" class="btn btn-primary">検索</button>
@@ -101,6 +115,7 @@
                 <a href="{{ route('instructors.index', ['renewal_year' => now()->year, 'renewal_status' => 'pending']) }}" class="btn btn-outline-primary btn-sm">今年の更新対象</a>
                 <a href="{{ route('instructors.index', ['renewal_year' => now()->year, 'renewal_status' => 'renewed']) }}" class="btn btn-outline-success btn-sm">今年の更新済み</a>
                 <a href="{{ route('instructors.index', ['renewal_year' => now()->year, 'renewal_status' => 'expired', 'include_history' => 1]) }}" class="btn btn-outline-danger btn-sm">今年の期限切れ</a>
+                <a href="{{ route('instructors.index', ['instructor_class' => 'certified_instructor', 'unlinked_certified' => 1]) }}" class="btn btn-outline-warning btn-sm">未結線認定</a>
               </div>
             </div>
           </div>

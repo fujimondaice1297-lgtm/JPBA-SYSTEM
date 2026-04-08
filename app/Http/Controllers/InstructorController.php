@@ -229,6 +229,12 @@ class InstructorController extends Controller
             }
         }
 
+        if ($request->boolean('unlinked_certified')) {
+            $query->where('source_type', 'auth_instructor_csv')
+                ->where('instructor_category', 'certified')
+                ->whereNull('pro_bowler_id');
+        }
+
         return $query;
     }
 
