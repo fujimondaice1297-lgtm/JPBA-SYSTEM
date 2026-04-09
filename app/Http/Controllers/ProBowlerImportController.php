@@ -13,6 +13,8 @@ class ProBowlerImportController extends Controller
 {
     private const PRO_IMPORT_SOURCE_TYPE = 'pro_bowler_csv';
 
+    private array $importSummary = [];
+
     public function form()
     {
         return view('pro_bowlers.import');
@@ -23,6 +25,8 @@ class ProBowlerImportController extends Controller
         $request->validate([
             'csv' => ['required', 'file', 'mimes:csv,txt'],
         ]);
+
+        $this->resetImportSummary();
 
         $fh = fopen($request->file('csv')->getRealPath(), 'r');
         if (!$fh) {
@@ -455,12 +459,19 @@ class ProBowlerImportController extends Controller
 
                 if ($licenseNo === null) {
                     $skipped++;
+                    $this->incrementImportSummary('skipped');
                     continue;
                 }
 
                 $membershipType = $val($row, $C->membership);
                 $derivedIsActive = $this->resolveIsActiveFromMembershipType($membershipType);
                 $memberClass = $this->resolveMemberClass($membershipType, $licenseNo);
+
+                $this->incrementImportSummary('rows_total');
+                $this->incrementImportSummary('member_class_' . $memberClass);
+                if (!$derivedIsActive) {
+                    $this->incrementImportSummary('inactive_membership');
+                }
 
                 $isTeachingPro = $memberClass === 'pro_instructor';
 
@@ -596,9 +607,30 @@ class ProBowlerImportController extends Controller
 
         fclose($fh);
 
+        $summaryPayload = [
+            'created' => $created,
+            'updated' => $updated,
+            'skipped' => $skipped,
+            'rows_total' => $this->importSummary['rows_total'] ?? 0,
+            'member_class_player' => $this->importSummary['member_class_player'] ?? 0,
+            'member_class_pro_instructor' => $this->importSummary['member_class_pro_instructor'] ?? 0,
+            'member_class_honorary_or_overseas' => $this->importSummary['member_class_honorary_or_overseas'] ?? 0,
+            'member_class_other' => $this->importSummary['member_class_other'] ?? 0,
+            'inactive_membership' => $this->importSummary['inactive_membership'] ?? 0,
+            'current_pro_bowler' => $this->importSummary['current_pro_bowler'] ?? 0,
+            'current_pro_instructor' => $this->importSummary['current_pro_instructor'] ?? 0,
+            'reactivated_certified' => $this->importSummary['reactivated_certified'] ?? 0,
+            'qualification_removed' => $this->importSummary['qualification_removed'] ?? 0,
+            'promoted_to_pro_bowler' => $this->importSummary['promoted_to_pro_bowler'] ?? 0,
+            'promoted_to_pro_instructor' => $this->importSummary['promoted_to_pro_instructor'] ?? 0,
+            'downgraded_to_certified' => $this->importSummary['downgraded_to_certified'] ?? 0,
+            'replaced_by_pro_bowler_import' => $this->importSummary['replaced_by_pro_bowler_import'] ?? 0,
+        ];
+
         return redirect()
             ->route('pro_bowlers.index')
-            ->with('success', "CSV取り込み完了：新規 {$created} 件 / 更新 {$updated} 件 / スキップ {$skipped} 件");
+            ->with('success', "CSV取り込み完了：新規 {$created} 件 / 更新 {$updated} 件 / スキップ {$skipped} 件")
+            ->with('pro_bowler_import_summary', $summaryPayload);
     }
 
     private function syncInstructorRecordsFromBowler(ProBowler $bowler): void
@@ -614,12 +646,25 @@ class ProBowlerImportController extends Controller
                 $reactivatedCertified ? 'downgraded_to_certified' : 'qualification_removed'
             );
 
+            if ($reactivatedCertified) {
+                $this->incrementImportSummary('reactivated_certified');
+                $this->incrementImportSummary('downgraded_to_certified');
+            } else {
+                $this->incrementImportSummary('qualification_removed');
+            }
+
             return;
         }
 
         $this->syncLegacyInstructorFromBowler($bowler, $grade, $category);
         $targetRegistry = $this->syncRegistryFromBowler($bowler, $grade, $category);
         $this->supersedeCompetingCurrentRegistryRowsForBowler($bowler, $targetRegistry);
+
+        if ($targetRegistry->instructor_category === 'pro_instructor') {
+            $this->incrementImportSummary('current_pro_instructor');
+        } else {
+            $this->incrementImportSummary('current_pro_bowler');
+        }
     }
 
     private function syncLegacyInstructorFromBowler(ProBowler $bowler, ?string $grade, string $category): void
@@ -785,12 +830,16 @@ class ProBowlerImportController extends Controller
         $now = now();
 
         foreach ($rows as $row) {
+            $reason = $this->resolveSupersedeReason($row->instructor_category, $targetRegistry->instructor_category);
+
             $row->is_current = false;
             $row->is_active = false;
             $row->superseded_at = $now;
-            $row->supersede_reason = $this->resolveSupersedeReason($row->instructor_category, $targetRegistry->instructor_category);
+            $row->supersede_reason = $reason;
             $row->last_synced_at = $now;
             $row->save();
+
+            $this->incrementImportSummary($reason);
         }
     }
 
@@ -850,6 +899,37 @@ class ProBowlerImportController extends Controller
     private function currentRenewalDueDate(): string
     {
         return sprintf('%04d-12-31', $this->currentRenewalYear());
+    }
+
+    private function resetImportSummary(): void
+    {
+        $this->importSummary = [
+            'rows_total' => 0,
+            'skipped' => 0,
+            'member_class_player' => 0,
+            'member_class_pro_instructor' => 0,
+            'member_class_honorary_or_overseas' => 0,
+            'member_class_other' => 0,
+            'inactive_membership' => 0,
+            'current_pro_bowler' => 0,
+            'current_pro_instructor' => 0,
+            'reactivated_certified' => 0,
+            'qualification_removed' => 0,
+            'promoted_to_pro_bowler' => 0,
+            'promoted_to_pro_instructor' => 0,
+            'downgraded_to_certified' => 0,
+            'replaced_by_pro_bowler_import' => 0,
+            'category_changed' => 0,
+        ];
+    }
+
+    private function incrementImportSummary(string $key, int $by = 1): void
+    {
+        if (!array_key_exists($key, $this->importSummary)) {
+            $this->importSummary[$key] = 0;
+        }
+
+        $this->importSummary[$key] += $by;
     }
 
     private function resolveInstructorGradeFromBowler(ProBowler $bowler): ?string

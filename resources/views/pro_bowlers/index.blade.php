@@ -41,6 +41,74 @@
 
         <h3 class="fw-bold mb-4">選手データ</h3>
 
+        @if (session('success'))
+            <div class="alert alert-success">
+                {{ session('success') }}
+            </div>
+        @endif
+
+        @php
+            $importSummary = session('pro_bowler_import_summary');
+        @endphp
+
+        @if (is_array($importSummary))
+            <div class="mb-4">
+                <div class="border rounded bg-light p-3">
+                    <div class="fw-bold mb-2">直近のプロCSV取込サマリ</div>
+
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <div class="border rounded bg-white p-3 h-100">
+                                <div class="text-muted small">新規 / 更新 / スキップ</div>
+                                <div class="fw-bold">
+                                    {{ $importSummary['created'] ?? 0 }} /
+                                    {{ $importSummary['updated'] ?? 0 }} /
+                                    {{ $importSummary['skipped'] ?? 0 }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-3">
+                            <div class="border rounded bg-white p-3 h-100">
+                                <div class="text-muted small">会員区分</div>
+                                <div class="small">
+                                    player: {{ $importSummary['member_class_player'] ?? 0 }}<br>
+                                    pro_instructor: {{ $importSummary['member_class_pro_instructor'] ?? 0 }}<br>
+                                    honorary/overseas: {{ $importSummary['member_class_honorary_or_overseas'] ?? 0 }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-3">
+                            <div class="border rounded bg-white p-3 h-100">
+                                <div class="text-muted small">registry current</div>
+                                <div class="small">
+                                    pro_bowler: {{ $importSummary['current_pro_bowler'] ?? 0 }}<br>
+                                    pro_instructor: {{ $importSummary['current_pro_instructor'] ?? 0 }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-3">
+                            <div class="border rounded bg-white p-3 h-100">
+                                <div class="text-muted small">資格遷移</div>
+                                <div class="small">
+                                    認定復帰: {{ $importSummary['reactivated_certified'] ?? 0 }}<br>
+                                    資格対象外: {{ $importSummary['qualification_removed'] ?? 0 }}<br>
+                                    昇格: {{ ($importSummary['promoted_to_pro_bowler'] ?? 0) + ($importSummary['promoted_to_pro_instructor'] ?? 0) }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-3 d-flex gap-2 flex-wrap">
+                        <a href="{{ route('pro_bowlers.list') }}" class="btn btn-outline-primary btn-sm">全プロデータへ</a>
+                        <a href="{{ route('instructors.index', ['source_type' => 'pro_bowler_csv']) }}" class="btn btn-outline-dark btn-sm">インストラクター一覧（プロCSV）へ</a>
+                    </div>
+                </div>
+            </div>
+        @endif
+
         {{-- 検索フォーム --}}
         <div class="mb-4">
             <div class="bg-secondary text-white px-3 py-2 fw-bold">検索条件（HPに表示）</div>
@@ -79,10 +147,12 @@
                         </div>
 
                         {{-- ボタン群 --}}
-                        <div class="col-md-6 d-flex align-items-center gap-2">
+                        <div class="col-md-6 d-flex align-items-center gap-2 flex-wrap">
                             <button type="submit" class="btn btn-primary">検索</button>
                             <a href="{{ route('pro_bowlers.index') }}" class="btn btn-warning">リセット</a>
                             <a href="{{ route('pro_bowlers.create') }}" class="btn btn-success">新規登録</a>
+                            <a href="{{ route('pro_bowlers.import_form') }}" class="btn btn-dark">プロCSV取込</a>
+                            <a href="{{ route('instructors.import_auth_form') }}" class="btn btn-outline-dark">認定CSV取込</a>
                             <a href="{{ route('athlete.index') }}" class="btn btn-secondary">インデックスへ戻る</a>
                         </div>
                     </div>
@@ -96,13 +166,12 @@
             <table class="table table-bordered">
             <thead>
                 <tr>
-                {{-- IDは表示しない。必要なら<tr data-id>で保持 --}}
                 <th>ライセンスNo.</th>
                 <th>氏名</th>
                 <th>地区</th>
                 <th>性別</th>
                 <th>期別</th>
-                <th>スポーツコーチ</th> {{-- ★追加 --}}
+                <th>スポーツコーチ</th>
                 </tr>
             </thead>
             <tbody>
@@ -138,7 +207,7 @@
                     </td>
                     <td>
                     <a href="{{ route('pro_bowlers.edit', $bowler->id) }}" class="text-decoration-none text-dark">
-                        {{ $bowler->sports_coach_label }} {{-- ★ここがミソ（4/3/1の最大だけ） --}}
+                        {{ $bowler->sports_coach_label }}
                     </a>
                     </td>
                 </tr>
@@ -153,7 +222,6 @@
             <p>該当する選手データが見つかりませんでした。</p>
         @endif
         </div>
-
 
     </main>
 </div>
