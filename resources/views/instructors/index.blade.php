@@ -137,9 +137,12 @@
             <tr>
               <th>氏名</th>
               <th>識別番号</th>
+              <th>種別</th>
+              <th>結線先プロ</th>
+              <th>取込元</th>
+              <th>履歴理由</th>
               <th>地区</th>
               <th>性別</th>
-              <th>種別</th>
               <th>区分</th>
               <th>更新年度</th>
               <th>更新期限</th>
@@ -162,15 +165,48 @@
                   : ($instructor->sex ? '男性' : '女性');
 
                 $nameUrl = route('instructors.edit', ['instructor' => $instructor->id]);
+
+                $sourceTypeLabel = match ($instructor->source_type) {
+                  'auth_instructor_csv' => '認定CSV',
+                  'pro_bowler_csv' => 'プロCSV',
+                  'legacy_instructors' => '旧instructors',
+                  'manual' => '手動登録',
+                  default => $instructor->source_type ?? '-',
+                };
+
+                $supersedeReasonLabel = match ($instructor->supersede_reason) {
+                  null, '' => '-',
+                  'promoted_to_pro_instructor' => '認定→プロインストラクター昇格',
+                  'promoted_to_pro_bowler' => '昇格→プロボウラー',
+                  'downgraded_to_certified' => '認定へ降格',
+                  'certified_not_renewed' => '認定未更新',
+                  'inactive_in_source' => '取込元で無効',
+                  'qualification_removed' => '資格対象外',
+                  'replaced_by_pro_bowler_import' => 'プロCSV再取込',
+                  'category_changed' => '区分変更',
+                  'replaced_by_manual_entry' => '手動更新で置換',
+                  default => $instructor->supersede_reason,
+                };
+
+                if ($instructor->proBowler) {
+                  $linkedProLabel = ($instructor->proBowler->license_no ?? '-') . ' / ' . ($instructor->proBowler->name_kanji ?? '-');
+                } elseif ($instructor->pro_bowler_id) {
+                  $linkedProLabel = 'ID:' . $instructor->pro_bowler_id . ' / 未取得';
+                } else {
+                  $linkedProLabel = '-';
+                }
               @endphp
               <tr>
                 <td>
                   <a href="{{ $nameUrl }}">{{ $instructor->name }}</a>
                 </td>
                 <td>{{ $displayCode }}</td>
+                <td>{{ $instructor->type_label }}</td>
+                <td>{{ $linkedProLabel }}</td>
+                <td>{{ $sourceTypeLabel }}</td>
+                <td>{{ $supersedeReasonLabel }}</td>
                 <td>{{ $instructor->district->label ?? '-' }}</td>
                 <td>{{ $sexLabel }}</td>
-                <td>{{ $instructor->type_label }}</td>
                 <td>{{ $instructor->grade ?? '-' }}</td>
                 <td>{{ $instructor->renewal_year ?? '-' }}</td>
                 <td>{{ optional($instructor->renewal_due_on)->format('Y-m-d') ?? '-' }}</td>
