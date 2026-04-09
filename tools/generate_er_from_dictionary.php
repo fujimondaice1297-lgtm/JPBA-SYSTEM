@@ -42,8 +42,10 @@ if (preg_match_all('/^##\s+([a-zA-Z0-9_]+)\s*$/m', $md, $m)) {
 }
 
 // Helper: ensure table exists in $tables
-$ensureTable = function(string $t) use (&$tables): void {
-    if ($t === '') return;
+$ensureTable = function (string $t) use (&$tables): void {
+    if ($t === '') {
+        return;
+    }
     if (!isset($tables[$t])) {
         $tables[$t] = ['refs' => []]; // auto-add (even if no section exists)
     }
@@ -53,14 +55,23 @@ $ensureTable = function(string $t) use (&$tables): void {
 // 2) Parse references from ANY section lines like:
 //    A) "- col -> table.col"
 //    B) "- table.col -> table.col"
+//
+// NOTE:
+// data_dictionary.md では末尾に
+//   （ON DELETE SET NULL）
+//   （ON DELETE CASCADE）
+// などの注記が付くことがあるため、
+// 「行末まで完全一致」ではなく「先頭の Ref 部分が一致したら採用」する。
 // -------------------------
 $refs = [];
 
-// Split by headings "## " to keep context (not strictly required)
+// Split by headings "## " to keep context
 $sections = preg_split('/^##\s+/m', $md);
 foreach ($sections as $sec) {
     $sec = trim($sec);
-    if ($sec === '') continue;
+    if ($sec === '') {
+        continue;
+    }
 
     // Determine section table name (first line until newline)
     $lines = preg_split("/\r\n|\n|\r/", $sec);
@@ -71,13 +82,19 @@ foreach ($sections as $sec) {
         $line = trim($line);
 
         // Only lines beginning with "-" are considered
-        if (!preg_match('/^\-\s+/', $line)) continue;
+        if (!preg_match('/^\-\s+/', $line)) {
+            continue;
+        }
 
         // Remove leading "- "
         $body = preg_replace('/^\-\s+/', '', $line);
+        if ($body === null) {
+            continue;
+        }
 
         // Format B: fromTable.fromCol -> toTable.toCol
-        if (preg_match('/^([a-zA-Z0-9_]+)\.([a-zA-Z0-9_]+)\s*->\s*([a-zA-Z0-9_]+)\.([a-zA-Z0-9_]+)\s*$/', $body, $rm)) {
+        // Allow trailing notes like "（ON DELETE SET NULL）"
+        if (preg_match('/^([a-zA-Z0-9_]+)\.([a-zA-Z0-9_]+)\s*->\s*([a-zA-Z0-9_]+)\.([a-zA-Z0-9_]+)/', $body, $rm)) {
             $fromTable = $rm[1];
             $fromCol   = $rm[2];
             $toTable   = $rm[3];
@@ -92,7 +109,8 @@ foreach ($sections as $sec) {
         }
 
         // Format A: fromCol -> toTable.toCol
-        if (preg_match('/^([a-zA-Z0-9_]+)\s*->\s*([a-zA-Z0-9_]+)\.([a-zA-Z0-9_]+)\s*$/', $body, $rm)) {
+        // Allow trailing notes like "（ON DELETE CASCADE）"
+        if (preg_match('/^([a-zA-Z0-9_]+)\s*->\s*([a-zA-Z0-9_]+)\.([a-zA-Z0-9_]+)/', $body, $rm)) {
             $fromCol = $rm[1];
             $toTable = $rm[2];
             $toCol   = $rm[3];
