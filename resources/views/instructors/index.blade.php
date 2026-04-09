@@ -4,6 +4,29 @@
 <main class="flex-fill px-4 py-4">
   <h3 class="fw-bold mb-4">インストラクター一覧データ</h3>
 
+  @php
+    $importSummary = session('auth_instructor_import_summary');
+  @endphp
+
+  @if ($importSummary)
+    <div class="alert alert-info border mb-4">
+      <div class="fw-bold mb-2">認定インストラクターCSV取込サマリ（{{ $importSummary['target_year'] ?? '-' }}年）</div>
+      <div class="row g-2 small">
+        <div class="col-md-3">新規: <strong>{{ $importSummary['created'] ?? 0 }}</strong></div>
+        <div class="col-md-3">更新: <strong>{{ $importSummary['updated'] ?? 0 }}</strong></div>
+        <div class="col-md-3">スキップ: <strong>{{ $importSummary['skipped'] ?? 0 }}</strong></div>
+        <div class="col-md-3">CSV未掲載で期限切れ化: <strong>{{ $importSummary['expired_missing'] ?? 0 }}</strong></div>
+        <div class="col-md-3">license一致結線: <strong>{{ $importSummary['linked_by_license'] ?? 0 }}</strong></div>
+        <div class="col-md-3">複合条件結線: <strong>{{ $importSummary['linked_by_composite'] ?? 0 }}</strong></div>
+        <div class="col-md-3">未結線: <strong>{{ $importSummary['unlinked'] ?? 0 }}</strong></div>
+        <div class="col-md-3">current更新済み認定: <strong>{{ $importSummary['renewed_current'] ?? 0 }}</strong></div>
+        <div class="col-md-3">認定→プロボウラー履歴化: <strong>{{ $importSummary['promoted_to_pro_bowler'] ?? 0 }}</strong></div>
+        <div class="col-md-3">認定→プロインストラクター履歴化: <strong>{{ $importSummary['promoted_to_pro_instructor'] ?? 0 }}</strong></div>
+        <div class="col-md-3">取込元で無効: <strong>{{ $importSummary['inactive_in_source'] ?? 0 }}</strong></div>
+      </div>
+    </div>
+  @endif
+
   <div class="mb-4">
     <div class="bg-secondary text-white px-3 py-2 fw-bold">検索条件</div>
     <div class="border px-4 py-4 bg-white">
@@ -113,6 +136,7 @@
               <button type="submit" class="btn btn-primary">検索</button>
               <a href="{{ route('instructors.index') }}" class="btn btn-warning">リセット</a>
               <a href="{{ route('instructors.create') }}" class="btn btn-success">新規登録</a>
+              <a href="{{ route('instructors.import_auth_form') }}" class="btn btn-outline-primary">認定CSV取込</a>
               <a href="{{ route('athlete.index') }}" class="btn btn-secondary">インデックスへ戻る</a>
               <a href="{{ route('instructors.exportPdf', request()->query()) }}" class="btn btn-dark">PDF出力</a>
 

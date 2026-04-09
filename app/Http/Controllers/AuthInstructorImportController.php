@@ -12,14 +12,20 @@ class AuthInstructorImportController extends Controller
 {
     public function form()
     {
-        return view('instructors.import_auth');
+        return view('instructors.import_auth', [
+            'defaultRenewalYear' => (int) now()->format('Y'),
+        ]);
     }
 
     public function import(Request $request)
     {
         $request->validate([
             'csv' => ['required', 'file', 'mimes:csv,txt'],
+            'renewal_year' => ['nullable', 'integer', 'min:2000', 'max:2099'],
         ]);
+
+        $targetYear = (int) ($request->input('renewal_year') ?: now()->format('Y'));
+        $targetDueOn = sprintf('%04d-12-31', $targetYear);
 
         $fh = fopen($request->file('csv')->getRealPath(), 'r');
         if (!$fh) {
@@ -211,6 +217,20 @@ class AuthInstructorImportController extends Controller
         $updated = 0;
         $skipped = 0;
         $seenSourceKeys = [];
+        $stats = [
+            'target_year' => $targetYear,
+            'created' => 0,
+            'updated' => 0,
+            'skipped' => 0,
+            'linked_by_license' => 0,
+            'linked_by_composite' => 0,
+            'unlinked' => 0,
+            'renewed_current' => 0,
+            'promoted_to_pro_bowler' => 0,
+            'promoted_to_pro_instructor' => 0,
+            'inactive_in_source' => 0,
+            'expired_missing' => 0,
+        ];
 
         DB::beginTransaction();
 
@@ -223,12 +243,14 @@ class AuthInstructorImportController extends Controller
                 $sourceKey = $normalizeNullable($val($row, $C->id));
                 if ($sourceKey === null) {
                     $skipped++;
+                    $stats['skipped']++;
                     continue;
                 }
 
                 $name = $normalizeNullable($val($row, $C->name));
                 if ($name === null) {
                     $skipped++;
+                    $stats['skipped']++;
                     continue;
                 }
 
@@ -248,7 +270,7 @@ class AuthInstructorImportController extends Controller
                 $licenseNo = $normalizeNullable($val($row, $C->license));
                 $sourceActive = $normalizeFlag($val($row, $C->active));
 
-                $matchedBowler = $this->resolveMatchingProBowler(
+                $match = $this->resolveMatchingProBowler(
                     $licenseNo,
                     $name,
                     $nameKana,
@@ -256,14 +278,30 @@ class AuthInstructorImportController extends Controller
                     $districtIdForMatch
                 );
 
-                $resolvedLicenseNo = $licenseNo ?: $matchedBowler?->license_no;
+                $matchedBowler = $match['bowler'];
+                $matchedBy = $match['matched_by'];
+
+                if ($matchedBy === 'license') {
+                    $stats['linked_by_license']++;
+                } elseif ($matchedBy === 'composite') {
+                    $stats['linked_by_composite']++;
+                } else {
+                    $stats['unlinked']++;
+                }
+
+                $resolvedLicenseNo = $matchedBowler?->license_no ?: $licenseNo;
 
                 $notes = $coachRaw
                     ? 'imported from AuthInstructor.csv / coach=' . $coachRaw
                     : 'imported from AuthInstructor.csv';
 
-                if ($matchedBowler && $licenseNo === null) {
-                    $notes .= ' / matched_pro_bowler=' . $matchedBowler->license_no;
+                if ($matchedBy === 'license' && $matchedBowler) {
+                    $notes .= ' / linked_by=license';
+                } elseif ($matchedBy === 'composite' && $matchedBowler) {
+                    $notes .= ' / linked_by=composite / matched_pro_bowler=' . $matchedBowler->license_no;
+                    if ($licenseNo !== null && $licenseNo !== '' && $licenseNo !== $matchedBowler->license_no) {
+                        $notes .= ' / source_license=' . $licenseNo;
+                    }
                 }
 
                 $payload = [
@@ -295,18 +333,25 @@ class AuthInstructorImportController extends Controller
                 $registry->source_type = 'auth_instructor_csv';
                 $registry->source_key = $sourceKey;
 
-                $this->applyCertifiedCurrentState($registry, $sourceActive);
+                $resultState = $this->applyCertifiedCurrentState($registry, $sourceActive, $targetYear, $targetDueOn);
+
+                if (isset($stats[$resultState])) {
+                    $stats[$resultState]++;
+                }
 
                 $registry->save();
 
                 if ($wasNew) {
                     $created++;
+                    $stats['created']++;
                 } else {
                     $updated++;
+                    $stats['updated']++;
                 }
             }
 
-            $this->retireMissingAuthInstructorRows($seenSourceKeys);
+            $expiredMissing = $this->retireMissingAuthInstructorRows($seenSourceKeys, $targetYear, $targetDueOn);
+            $stats['expired_missing'] = $expiredMissing;
 
             DB::commit();
         } catch (\Throwable $e) {
@@ -321,18 +366,20 @@ class AuthInstructorImportController extends Controller
         fclose($fh);
 
         return redirect()
-            ->route('instructors.index')
-            ->with('success', "認定インストラクターCSV取り込み完了：新規 {$created} 件 / 更新 {$updated} 件 / スキップ {$skipped} 件");
+            ->route('instructors.index', [
+                'source_type' => 'auth_instructor_csv',
+                'renewal_year' => $targetYear,
+            ])
+            ->with('success', "認定インストラクターCSV取り込み完了：新規 {$created} 件 / 更新 {$updated} 件 / スキップ {$skipped} 件")
+            ->with('auth_instructor_import_summary', $stats);
     }
 
-    private function applyCertifiedCurrentState(InstructorRegistry $registry, bool $sourceActive): void
+    private function applyCertifiedCurrentState(InstructorRegistry $registry, bool $sourceActive, int $targetYear, string $targetDueOn): string
     {
         $now = now();
-        $currentYear = (int) $now->format('Y');
-        $currentDueOn = sprintf('%04d-12-31', $currentYear);
 
-        $registry->renewal_year = $currentYear;
-        $registry->renewal_due_on = $currentDueOn;
+        $registry->renewal_year = $targetYear;
+        $registry->renewal_due_on = $targetDueOn;
 
         if (!$sourceActive) {
             $registry->is_current = false;
@@ -344,22 +391,24 @@ class AuthInstructorImportController extends Controller
             $registry->renewal_note = 'AuthInstructor.csv 取込時に有効フラグなし';
             $registry->last_synced_at = $now;
 
-            return;
+            return 'inactive_in_source';
         }
 
         $currentProTarget = $this->findCurrentProTarget($registry);
 
         if ($currentProTarget) {
+            $reason = $this->resolveCertifiedSupersedeReasonFromProTarget($currentProTarget->instructor_category);
+
             $registry->is_current = false;
             $registry->is_active = false;
             $registry->superseded_at = $now;
-            $registry->supersede_reason = $this->resolveCertifiedSupersedeReasonFromProTarget($currentProTarget->instructor_category);
+            $registry->supersede_reason = $reason;
             $registry->renewal_status = 'renewed';
             $registry->renewed_at = $now->toDateString();
             $registry->renewal_note = 'AuthInstructor.csv 年次更新取込済み（現行資格は ' . $currentProTarget->instructor_category . '）';
             $registry->last_synced_at = $now;
 
-            return;
+            return $reason;
         }
 
         $registry->is_current = true;
@@ -370,9 +419,11 @@ class AuthInstructorImportController extends Controller
         $registry->renewed_at = $now->toDateString();
         $registry->renewal_note = 'AuthInstructor.csv 年次更新取込済み';
         $registry->last_synced_at = $now;
+
+        return 'renewed_current';
     }
 
-    private function retireMissingAuthInstructorRows(array $seenSourceKeys): void
+    private function retireMissingAuthInstructorRows(array $seenSourceKeys, int $targetYear, string $targetDueOn): int
     {
         $seenSourceKeys = array_values(array_unique($seenSourceKeys));
 
@@ -386,26 +437,26 @@ class AuthInstructorImportController extends Controller
 
         $rows = $query->get();
         if ($rows->isEmpty()) {
-            return;
+            return 0;
         }
 
         $now = now();
-        $currentYear = (int) $now->format('Y');
-        $currentDueOn = sprintf('%04d-12-31', $currentYear);
 
         foreach ($rows as $row) {
             $row->is_current = false;
             $row->is_active = false;
             $row->superseded_at = $now;
             $row->supersede_reason = 'certified_not_renewed';
-            $row->renewal_year = $currentYear;
-            $row->renewal_due_on = $currentDueOn;
+            $row->renewal_year = $targetYear;
+            $row->renewal_due_on = $targetDueOn;
             $row->renewal_status = 'expired';
             $row->renewed_at = null;
             $row->renewal_note = '当年の AuthInstructor.csv に未掲載';
             $row->last_synced_at = $now;
             $row->save();
         }
+
+        return $rows->count();
     }
 
     private function resolveMatchingProBowler(
@@ -414,14 +465,17 @@ class AuthInstructorImportController extends Controller
         ?string $nameKana,
         ?bool $sex,
         ?int $districtId
-    ): ?ProBowler {
+    ): array {
         if ($licenseNo !== null && trim($licenseNo) !== '') {
             $byLicense = ProBowler::query()
                 ->where('license_no', $licenseNo)
                 ->first();
 
             if ($byLicense) {
-                return $byLicense;
+                return [
+                    'bowler' => $byLicense,
+                    'matched_by' => 'license',
+                ];
             }
         }
 
@@ -464,11 +518,17 @@ class AuthInstructorImportController extends Controller
         foreach ($candidates as $conditions) {
             $matched = $this->findUniqueProBowlerByConditions($conditions);
             if ($matched) {
-                return $matched;
+                return [
+                    'bowler' => $matched,
+                    'matched_by' => 'composite',
+                ];
             }
         }
 
-        return null;
+        return [
+            'bowler' => null,
+            'matched_by' => null,
+        ];
     }
 
     private function findUniqueProBowlerByConditions(array $conditions): ?ProBowler
