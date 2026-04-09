@@ -5,7 +5,7 @@
     <style>
         body {
             font-family: ipaexg, ipag, sans-serif;
-            font-size: 10px;
+            font-size: 9px;
         }
         h3 {
             margin-bottom: 12px;
@@ -35,9 +35,12 @@
             <tr>
                 <th>氏名</th>
                 <th>識別番号</th>
+                <th>種別</th>
+                <th>取込元</th>
+                <th>状態</th>
+                <th>履歴理由</th>
                 <th>地区</th>
                 <th>性別</th>
-                <th>種別</th>
                 <th>区分</th>
                 <th>更新年度</th>
                 <th>更新期限</th>
@@ -60,9 +63,12 @@
                 <tr>
                     <td class="text-left">{{ $i->name }}</td>
                     <td>{{ $displayCode }}</td>
+                    <td>{{ $i->type_label }}</td>
+                    <td>{{ $i->source_type_label }}</td>
+                    <td>{{ $i->current_state_label }}</td>
+                    <td>{{ $i->supersede_reason_label }}</td>
                     <td>{{ $i->district->label ?? '-' }}</td>
                     <td>{{ $sexLabel }}</td>
-                    <td>{{ $i->type_label }}</td>
                     <td>{{ $i->grade ?? '-' }}</td>
                     <td>{{ $i->renewal_year ?? '-' }}</td>
                     <td>{{ optional($i->renewal_due_on)->format('Y-m-d') ?? '-' }}</td>
@@ -71,7 +77,7 @@
                 </tr>
             @empty
                 <tr>
-                    <td colspan="10">該当データなし</td>
+                    <td colspan="13">該当データなし</td>
                 </tr>
             @endforelse
         </tbody>

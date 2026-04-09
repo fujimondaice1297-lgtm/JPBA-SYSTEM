@@ -73,6 +73,28 @@
           </div>
 
           <div class="col-md-3">
+            <select name="source_type" class="form-select">
+              <option value="">取込元を選択</option>
+              @foreach ($sourceTypes as $sourceTypeKey => $sourceTypeLabel)
+                <option value="{{ $sourceTypeKey }}" {{ request('source_type') === $sourceTypeKey ? 'selected' : '' }}>
+                  {{ $sourceTypeLabel }}
+                </option>
+              @endforeach
+            </select>
+          </div>
+
+          <div class="col-md-3">
+            <select name="supersede_reason" class="form-select">
+              <option value="">履歴理由を選択</option>
+              @foreach ($supersedeReasons as $reasonKey => $reasonLabel)
+                <option value="{{ $reasonKey }}" {{ request('supersede_reason') === $reasonKey ? 'selected' : '' }}>
+                  {{ $reasonLabel }}
+                </option>
+              @endforeach
+            </select>
+          </div>
+
+          <div class="col-md-3">
             <div class="form-check mt-2 pt-4">
               <input
                 class="form-check-input"
@@ -116,6 +138,8 @@
                 <a href="{{ route('instructors.index', ['renewal_year' => now()->year, 'renewal_status' => 'renewed']) }}" class="btn btn-outline-success btn-sm">今年の更新済み</a>
                 <a href="{{ route('instructors.index', ['renewal_year' => now()->year, 'renewal_status' => 'expired', 'include_history' => 1]) }}" class="btn btn-outline-danger btn-sm">今年の期限切れ</a>
                 <a href="{{ route('instructors.index', ['instructor_class' => 'certified_instructor', 'unlinked_certified' => 1]) }}" class="btn btn-outline-warning btn-sm">未結線認定</a>
+                <a href="{{ route('instructors.index', ['source_type' => 'auth_instructor_csv']) }}" class="btn btn-outline-secondary btn-sm">認定CSV</a>
+                <a href="{{ route('instructors.index', ['source_type' => 'pro_bowler_csv']) }}" class="btn btn-outline-secondary btn-sm">プロCSV</a>
               </div>
             </div>
           </div>
@@ -140,6 +164,7 @@
               <th>種別</th>
               <th>結線先プロ</th>
               <th>取込元</th>
+              <th>状態</th>
               <th>履歴理由</th>
               <th>地区</th>
               <th>性別</th>
@@ -166,27 +191,12 @@
 
                 $nameUrl = route('instructors.edit', ['instructor' => $instructor->id]);
 
-                $sourceTypeLabel = match ($instructor->source_type) {
-                  'auth_instructor_csv' => '認定CSV',
-                  'pro_bowler_csv' => 'プロCSV',
-                  'legacy_instructors' => '旧instructors',
-                  'manual' => '手動登録',
-                  default => $instructor->source_type ?? '-',
-                };
+                $sourceTypeLabel = $sourceTypes[$instructor->source_type] ?? ($instructor->source_type ?? '-');
 
-                $supersedeReasonLabel = match ($instructor->supersede_reason) {
-                  null, '' => '-',
-                  'promoted_to_pro_instructor' => '認定→プロインストラクター昇格',
-                  'promoted_to_pro_bowler' => '昇格→プロボウラー',
-                  'downgraded_to_certified' => '認定へ降格',
-                  'certified_not_renewed' => '認定未更新',
-                  'inactive_in_source' => '取込元で無効',
-                  'qualification_removed' => '資格対象外',
-                  'replaced_by_pro_bowler_import' => 'プロCSV再取込',
-                  'category_changed' => '区分変更',
-                  'replaced_by_manual_entry' => '手動更新で置換',
-                  default => $instructor->supersede_reason,
-                };
+                $supersedeReasonLabel = $supersedeReasons[$instructor->supersede_reason] ?? ($instructor->supersede_reason ?: '-');
+
+                $rowStateLabel = $instructor->is_current ? 'current' : 'history';
+                $rowStateBadgeClass = $instructor->is_current ? 'bg-success' : 'bg-secondary';
 
                 if ($instructor->proBowler) {
                   $linkedProLabel = ($instructor->proBowler->license_no ?? '-') . ' / ' . ($instructor->proBowler->name_kanji ?? '-');
@@ -204,6 +214,7 @@
                 <td>{{ $instructor->type_label }}</td>
                 <td>{{ $linkedProLabel }}</td>
                 <td>{{ $sourceTypeLabel }}</td>
+                <td><span class="badge {{ $rowStateBadgeClass }}">{{ $rowStateLabel }}</span></td>
                 <td>{{ $supersedeReasonLabel }}</td>
                 <td>{{ $instructor->district->label ?? '-' }}</td>
                 <td>{{ $sexLabel }}</td>

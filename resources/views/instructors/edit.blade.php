@@ -12,7 +12,7 @@
         'pro_bowler' => 'プロボウラー',
         'pro_instructor' => 'プロインストラクター',
         'certified' => '認定インストラクター',
-        default => 'プロインストラクター',
+        default => 'プロ系',
     };
     $isManual = ($instructor->source_type ?? null) === 'manual';
     $isLinkableSyncedCertified = ($instructor->source_type ?? null) === 'auth_instructor_csv' && $instructor->instructor_category === 'certified';
@@ -36,6 +36,27 @@
     </div>
   @endunless
 
+  <div class="border rounded p-3 bg-light mb-4">
+    <div class="row g-3">
+      <div class="col-md-3">
+        <div class="text-muted small">取込元</div>
+        <div class="fw-bold">{{ $instructor->source_type_label }}</div>
+      </div>
+      <div class="col-md-3">
+        <div class="text-muted small">状態</div>
+        <div class="fw-bold">{{ $instructor->current_state_label }}</div>
+      </div>
+      <div class="col-md-3">
+        <div class="text-muted small">現在の種別</div>
+        <div class="fw-bold">{{ $instructor->type_label }}</div>
+      </div>
+      <div class="col-md-3">
+        <div class="text-muted small">履歴理由</div>
+        <div class="fw-bold">{{ $instructor->supersede_reason_label }}</div>
+      </div>
+    </div>
+  </div>
+
   <form method="POST" action="{{ route('instructors.update', $instructor->id) }}">
     @csrf
     @method('PUT')
@@ -46,9 +67,15 @@
 
         @if ($isManual)
           <select name="instructor_type" id="instructor_type" class="form-select" required>
-            <option value="pro" {{ $submitType === 'pro' ? 'selected' : '' }}>プロインストラクター</option>
+            <option value="pro" {{ $submitType === 'pro' ? 'selected' : '' }}>プロ系（自動判定）</option>
             <option value="certified" {{ $submitType === 'certified' ? 'selected' : '' }}>認定インストラクター</option>
           </select>
+          <div class="form-text">
+            プロ系は、入力したライセンスNo が既存の pro_bowlers に一致した場合、
+            <strong>member_class</strong> を見て
+            <strong>プロボウラー / プロインストラクター</strong>
+            を自動判定します。
+          </div>
         @else
           <input type="hidden" name="instructor_type" value="{{ $submitType }}">
           <input type="text" class="form-control" value="{{ $displayTypeLabel }}" readonly>

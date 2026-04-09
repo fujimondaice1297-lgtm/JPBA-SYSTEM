@@ -31,6 +31,25 @@ class InstructorController extends Controller
         'expired' => '期限切れ',
     ];
 
+    private const SOURCE_TYPE_OPTIONS = [
+        'auth_instructor_csv' => '認定CSV',
+        'pro_bowler_csv' => 'プロCSV',
+        'legacy_instructors' => '旧instructors',
+        'manual' => '手動登録',
+    ];
+
+    private const SUPERSEDE_REASON_OPTIONS = [
+        'promoted_to_pro_instructor' => '認定→プロインストラクター昇格',
+        'promoted_to_pro_bowler' => '昇格→プロボウラー',
+        'downgraded_to_certified' => '認定へ降格',
+        'certified_not_renewed' => '認定未更新',
+        'inactive_in_source' => '取込元で無効',
+        'qualification_removed' => '資格対象外',
+        'replaced_by_pro_bowler_import' => 'プロCSV再取込',
+        'category_changed' => '区分変更',
+        'replaced_by_manual_entry' => '手動更新で置換',
+    ];
+
     public function index(Request $request)
     {
         $query = InstructorRegistry::query()->with(['district', 'proBowler']);
@@ -54,10 +73,12 @@ class InstructorController extends Controller
             ->get(['id', 'label']);
 
         return view('instructors.index', [
-            'instructors'      => $instructors,
-            'districts'        => $districts,
-            'grades'           => self::GRADE_OPTIONS,
-            'renewalStatuses'  => self::RENEWAL_STATUS_OPTIONS,
+            'instructors'       => $instructors,
+            'districts'         => $districts,
+            'grades'            => self::GRADE_OPTIONS,
+            'renewalStatuses'   => self::RENEWAL_STATUS_OPTIONS,
+            'sourceTypes'       => self::SOURCE_TYPE_OPTIONS,
+            'supersedeReasons'  => self::SUPERSEDE_REASON_OPTIONS,
         ]);
     }
 
@@ -235,6 +256,20 @@ class InstructorController extends Controller
             }
         }
 
+        if ($request->filled('source_type')) {
+            $sourceType = trim((string) $request->input('source_type'));
+            if (array_key_exists($sourceType, self::SOURCE_TYPE_OPTIONS)) {
+                $query->where('source_type', $sourceType);
+            }
+        }
+
+        if ($request->filled('supersede_reason')) {
+            $supersedeReason = trim((string) $request->input('supersede_reason'));
+            if (array_key_exists($supersedeReason, self::SUPERSEDE_REASON_OPTIONS)) {
+                $query->where('supersede_reason', $supersedeReason);
+            }
+        }
+
         if ($request->boolean('unlinked_certified')) {
             $query->where('source_type', 'auth_instructor_csv')
                 ->where('instructor_category', 'certified')
@@ -365,9 +400,7 @@ class InstructorController extends Controller
                 : null;
 
             $proBowlerId = $matchedBowler?->id;
-            $category = $type === 'certified'
-                ? 'certified'
-                : ($matchedBowler ? 'pro_bowler' : 'pro_instructor');
+            $category = $this->resolveManualInstructorCategory($type, $matchedBowler);
 
             $sourceRegisteredAt = $existing?->source_registered_at;
             $isCurrent = true;
@@ -608,6 +641,21 @@ class InstructorController extends Controller
             $fromCategory === 'pro_instructor' && $toCategory === 'certified' => 'downgraded_to_certified',
             default                                                           => 'replaced_by_manual_entry',
         };
+    }
+
+    private function resolveManualInstructorCategory(string $type, ?ProBowler $matchedBowler): string
+    {
+        if ($type === 'certified') {
+            return 'certified';
+        }
+
+        if (!$matchedBowler) {
+            return 'pro_instructor';
+        }
+
+        return ($matchedBowler->member_class ?? null) === 'pro_instructor'
+            ? 'pro_instructor'
+            : 'pro_bowler';
     }
 
     private function normalizeNullableString(?string $value): ?string

@@ -28,11 +28,14 @@
       <div class="col-md-6">
         <label class="form-label">インストラクター種別<span class="text-danger">*</span></label>
         <select name="instructor_type" id="instructor_type" class="form-select" required>
-          <option value="pro" {{ $oldType === 'pro' ? 'selected' : '' }}>プロインストラクター</option>
+          <option value="pro" {{ $oldType === 'pro' ? 'selected' : '' }}>プロ系（自動判定）</option>
           <option value="certified" {{ $oldType === 'certified' ? 'selected' : '' }}>認定インストラクター</option>
         </select>
         <div class="form-text">
-          プロでライセンスNoが既存の pro_bowlers に存在する場合、一覧上は「プロボウラー」として扱われます。
+          プロ系は、入力したライセンスNo が既存の pro_bowlers に一致した場合、
+          <strong>member_class</strong> を見て
+          <strong>プロボウラー / プロインストラクター</strong>
+          を自動判定します。
         </div>
       </div>
 

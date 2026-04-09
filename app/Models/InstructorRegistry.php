@@ -86,6 +86,39 @@ class InstructorRegistry extends Model
         };
     }
 
+    public function getSourceTypeLabelAttribute(): string
+    {
+        return match ($this->source_type) {
+            'auth_instructor_csv' => '認定CSV',
+            'pro_bowler_csv'      => 'プロCSV',
+            'legacy_instructors'  => '旧instructors',
+            'manual'              => '手動登録',
+            default               => $this->source_type ?? '-',
+        };
+    }
+
+    public function getSupersedeReasonLabelAttribute(): string
+    {
+        return match ($this->supersede_reason) {
+            null, ''                         => '-',
+            'promoted_to_pro_instructor'    => '認定→プロインストラクター昇格',
+            'promoted_to_pro_bowler'        => '昇格→プロボウラー',
+            'downgraded_to_certified'       => '認定へ降格',
+            'certified_not_renewed'         => '認定未更新',
+            'inactive_in_source'            => '取込元で無効',
+            'qualification_removed'         => '資格対象外',
+            'replaced_by_pro_bowler_import' => 'プロCSV再取込',
+            'category_changed'              => '区分変更',
+            'replaced_by_manual_entry'      => '手動更新で置換',
+            default                         => $this->supersede_reason,
+        };
+    }
+
+    public function getCurrentStateLabelAttribute(): string
+    {
+        return $this->is_current ? 'current' : 'history';
+    }
+
     public function isRetiredStatus(): bool
     {
         return !$this->is_current
