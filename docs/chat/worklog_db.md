@@ -6,7 +6,68 @@
 
 作業履歴
 
+## 2026-04-09 INSTRUCTOR 資格遷移の先回り検証と import/current-history 補強
 
+- 目的:
+  - 認定インストラクター / プロインストラクター / プロボウラー間の資格遷移について、
+    将来発生し得るケースを先回りで検証し、`instructor_registry` の current/history 運用を実装どおりに固める。
+  - 併せて、`AuthInstructor.csv` と `Pro_colum.csv` の取込後に未結線認定を人手で処理できる運用導線を整える。
+
+- 対象ケース:
+  - ① 認定インストラクター → プロインストラクター / プロボウラーへの昇格
+  - ② 認定インストラクター未更新者の失効（退会済み扱い）
+  - ③ プロインストラクター → プロボウラーへの昇格
+  - ④ プロボウラー / プロインストラクター → 認定インストラクターへの降格
+
+- 実施内容:
+  - `resources/views/instructors/pdf.blade.php`
+    - 一覧と同じ表示方針へ寄せ、`識別番号` / `更新年度` / `更新期限` / `更新状態` / `更新日` をPDFにも表示するよう修正。
+  - `app/Http/Controllers/ProBowlerImportController.php`
+    - `license_no + instructor_category` 単位で `pro_bowler_csv` row を current/history 管理するよう整理。
+    - 資格カテゴリ変更時に既存 current row を上書きせず、旧行を `supersede_reason` 付きで履歴化し、新資格 row を別 current row として立てるよう修正。
+    - プロ系資格対象外になった場合、
+      - 有効な `certified` 行があるときは `downgraded_to_certified`
+      - 復帰先の有効な `certified` 行が無いときは `qualification_removed`
+      で履歴化するよう整理。
+  - `app/Http/Controllers/AuthInstructorImportController.php`
+    - `AuthInstructor.csv` 取込時、`license_no` 一致を最優先に `pro_bowlers` と自動結線するよう修正。
+    - `license_no` が空、または一致しない場合は、`name_kanji` を含む複数条件（例: `name_kana` / `sex` / `district_id`）で一意に特定できた場合のみ `pro_bowlers` に自動結線するよう修正。
+    - 自動結線できた認定行は `pro_bowler_id` と補完 `license_no` を保持できるよう整理。
+  - 検証用CSV（repo管理外）
+    - `pro_bowlers_test_step1/2.csv`
+    - `auth_instructors_test_step1/2.csv`
+    を作成し、資格遷移の4パターンを意図的に再現できるようにした。
+  - `app/Http/Controllers/InstructorController.php`
+  - `resources/views/instructors/index.blade.php`
+    - `/instructors` に `unlinked_certified` フィルタを追加。
+    - `source_type = auth_instructor_csv` / `instructor_category = certified` / `pro_bowler_id is null` の current 行を抽出できるようにした。
+  - `app/Http/Controllers/InstructorController.php`
+  - `resources/views/instructors/edit.blade.php`
+    - `auth_instructor_csv` 由来の `certified` 行について、編集画面から手動で `pro_bowlers` に結線できるよう修正。
+  - `resources/views/instructors/index.blade.php`
+    - 一覧に `結線先プロ` / `取込元` / `履歴理由` を追加し、未結線・昇格・降格・失効の状態を画面で判別しやすくした。
+  - `docs/db/data_dictionary.md`
+    - `instructor_registry` の運用方針に、上記の自動結線・昇格・降格・失効ポリシーを反映済み。
+  - `docs/db/refs_skipped.md`
+    - 過去の review 前提メモが残っていたため、現行運用に合わせて追補が必要。
+
+- 検証結果:
+  - ① 認定 → プロインストラクター：確認済み
+  - ② 認定未更新 → 失効（`certified_not_renewed` + `expired`）：確認済み
+  - ③ プロインストラクター → プロボウラー：確認済み
+  - ④ プロ側 → 認定降格：
+    - 認定側 current 復帰は確認済み
+    - 当初は旧プロ側 row の `supersede_reason` が `qualification_removed` になっていたため、`downgraded_to_certified` を記録するよう importer を追加修正して解消
+
+- 現時点の判断:
+  - `instructor_registry` の資格遷移（昇格 / 降格 / 未更新失効）の current/history 管理は、先回り検証まで含めて運用可能な状態になった。
+  - 残課題は「自動結線できなかった認定行をどう見つけて運用するか」だったが、
+    - 一覧の `未結線認定` フィルタ
+    - 編集画面の手動結線
+    - 一覧の `結線先プロ` / `取込元` / `履歴理由`
+    まで入り、実務運用可能な導線が揃った。
+  - 今回はアプリ実装と履歴整理のみであり、DBスキーマ変更は発生していないため migration 変更は無し。
+  
 ## 2026-04-05 INSTRUCTOR AuthInstructor.csv 取込導線とプロインストラクター整合
 
 - 目的:

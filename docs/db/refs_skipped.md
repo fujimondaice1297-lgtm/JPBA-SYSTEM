@@ -105,3 +105,35 @@
   - importer / 保存処理で `member_class = 'pro_instructor'` と `can_enter_official_tournament = false` を維持する
   - `instructor_registry` は `member_class` を見て `pro_bowler` / `pro_instructor` を同期する
   - 旧データに対しては backfill で `instructor_registry.instructor_category = 'pro_instructor'` を補正する
+
+## 2026-04-09 instructors / certified linking policy update（2026-04-03 / 2026-04-04 メモの追補）
+
+- 対象:
+  - `AuthInstructor.csv` と `pro_bowlers` の同一人物結線方針
+  - `certified` / `pro_instructor` / `pro_bowler` 間の資格遷移
+  - 自動結線できなかった認定インストラクターの運用導線
+
+- 決定:
+  - `AuthInstructor.csv` は `license_no` 一致を最優先に `pro_bowlers` へ自動結線する。
+  - `license_no` が空、または `license_no` で結線できない場合は、`name_kanji` を含む複数条件（例: `name_kana` / `sex` / `district_id`）で **一意に特定できた場合のみ** `pro_bowlers` へ自動結線する。
+  - 名前だけ、または名前を含まない曖昧条件では `pro_bowlers` に自動結線しない。
+  - `auth_instructor_csv` 由来の `certified` 行に current な `pro_bowler` / `pro_instructor` 行が見つかった場合は、
+    - `promoted_to_pro_bowler`
+    - `promoted_to_pro_instructor`
+    のいずれかで履歴化する。
+  - `Pro_colum.csv` 取込時にプロ系資格対象外になった行は、
+    - 対応する有効な `certified` 行がある場合は `downgraded_to_certified`
+    - 復帰先の有効な `certified` 行が無い場合は `qualification_removed`
+    で履歴化する。
+  - 自動結線できなかった認定行は、`/instructors` の `未結線認定` フィルタで洗い出し、編集画面から手動結線する。
+
+- 補足:
+  - 2026-04-03 / 2026-04-04 時点の
+    - 「名前一致だけで `pro_bowlers` に自動結線しない」
+    - 「review 導線で手動確認する」
+    という方針メモは、**現在はそのままの運用ではない**。
+  - 現行実装は
+    - `license_no` 優先
+    - `name_kanji` を含む複数条件での一意一致のみ許容
+    - 未結線は一覧フィルタ + 手動結線
+    という形で運用する。

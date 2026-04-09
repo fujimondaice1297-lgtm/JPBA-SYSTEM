@@ -101,3 +101,20 @@
 - [ ] 要件整理
 - [ ] スキーマ確定
 - [ ] インポート/運用導線の設計
+
+#### 2026-04-09 メモ（資格遷移検証 + 未結線認定の運用導線）
+- [✓] 資格遷移の先回り検証用CSVを作成し、4パターンの動作確認を実施
+  - ① 認定 → プロインストラクター / プロボウラー
+  - ② 認定未更新 → `certified_not_renewed` + `expired`
+  - ③ プロインストラクター → プロボウラー
+  - ④ プロボウラー / プロインストラクター → 認定インストラクター
+- [✓] `AuthInstructor.csv` は `license_no` 一致を最優先に `pro_bowlers` へ自動結線する
+- [✓] `AuthInstructor.csv` で `license_no` が空、または一致しない場合は、`name_kanji` を含む複数条件で一意に特定できた場合のみ自動結線する
+- [✓] `Pro_colum.csv` 取込時、プロ系資格対象外になった行は
+  - 有効な `certified` 行があれば `downgraded_to_certified`
+  - 復帰先が無ければ `qualification_removed`
+  で履歴化する
+- [✓] `/instructors` 一覧に `未結線認定` フィルタを追加
+- [✓] `auth_instructor_csv` 由来の `certified` 行を編集画面から手動で `pro_bowlers` に結線できる
+- [✓] `/instructors` 一覧で `結線先プロ` / `取込元` / `履歴理由` を確認できる
+- [ ] 既存 `instructors` 互換レイヤの撤去可否は後続で整理する
