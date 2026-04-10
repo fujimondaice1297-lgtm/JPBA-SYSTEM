@@ -166,6 +166,18 @@ class ProBowler extends Model
         return $this->belongsTo(District::class, 'district_id');
     }
 
+    public function instructorRegistries()
+    {
+        return $this->hasMany(InstructorRegistry::class, 'pro_bowler_id');
+    }
+
+    public function currentInstructorRegistry()
+    {
+        return $this->hasOne(InstructorRegistry::class, 'pro_bowler_id')
+            ->where('is_current', true)
+            ->latestOfMany();
+    }
+
     public function titles()
     {
         return $this->hasMany(ProBowlerTitle::class, 'pro_bowler_id')
@@ -283,6 +295,72 @@ class ProBowler extends Model
         }
 
         return '-';
+    }
+
+    public function getMemberClassLabelAttribute(): string
+    {
+        return match ($this->member_class) {
+            'pro_instructor'      => 'プロインストラクター',
+            'player'              => 'プロボウラー',
+            'honorary_or_overseas'=> '名誉プロ・海外',
+            default               => '-',
+        };
+    }
+
+    public function getOfficialTournamentEligibilityLabelAttribute(): string
+    {
+        return $this->can_enter_official_tournament ? '出場可' : '対象外';
+    }
+
+    public function getCurrentInstructorSyncStateLabelAttribute(): string
+    {
+        $registry = $this->relationLoaded('currentInstructorRegistry')
+            ? $this->getRelation('currentInstructorRegistry')
+            : $this->currentInstructorRegistry()->first();
+
+        if ($registry) {
+            return 'currentあり';
+        }
+
+        $hasHistory = $this->relationLoaded('instructorRegistries')
+            ? $this->getRelation('instructorRegistries')->isNotEmpty()
+            : $this->instructorRegistries()->exists();
+
+        return $hasHistory ? 'historyのみ' : '未同期';
+    }
+
+    public function getCurrentInstructorTypeLabelAttribute(): string
+    {
+        $registry = $this->relationLoaded('currentInstructorRegistry')
+            ? $this->getRelation('currentInstructorRegistry')
+            : $this->currentInstructorRegistry()->first();
+
+        return $registry?->type_label ?? '-';
+    }
+
+    public function getCurrentInstructorSourceLabelAttribute(): string
+    {
+        $registry = $this->relationLoaded('currentInstructorRegistry')
+            ? $this->getRelation('currentInstructorRegistry')
+            : $this->currentInstructorRegistry()->first();
+
+        return match ($registry?->source_type) {
+            'auth_instructor_csv' => '認定CSV',
+            'pro_bowler_csv'      => 'プロCSV',
+            'legacy_instructors'  => '旧instructors',
+            'manual'              => '手動登録',
+            null                  => '-',
+            default               => (string) $registry->source_type,
+        };
+    }
+
+    public function getCurrentInstructorRenewalStatusLabelAttribute(): string
+    {
+        $registry = $this->relationLoaded('currentInstructorRegistry')
+            ? $this->getRelation('currentInstructorRegistry')
+            : $this->currentInstructorRegistry()->first();
+
+        return $registry?->renewal_status_label ?? '-';
     }
 
     public function getBirthdatePublicForDisplayAttribute(): ?string

@@ -10,11 +10,6 @@
 @endphp
 
 @section('content')
-{{-- debug --}}<div class="text-muted small">
-user.pro_bowler_id={{ auth()->user()?->pro_bowler_id }},
-editing_id={{ $bowler->id ?? 'new' }}
-</div>
-
 <h2>選手データ登録</h2>
 
 {{-- 管理者のみ表示する補助ウィジェット --}}
@@ -33,6 +28,33 @@ editing_id={{ $bowler->id ?? 'new' }}
 
 @if (session('success'))
   <div class="alert alert-success">{{ session('success') }}</div>
+@endif
+
+@if($isAdmin && isset($bowler))
+  @php
+    $currentRegistry = $bowler->currentInstructorRegistry;
+  @endphp
+  <div class="alert alert-secondary">
+    <div class="fw-bold mb-2">現在の自動判定・同期状況</div>
+    <div class="row g-2 small">
+      <div class="col-md-3"><strong>会員種別名:</strong> {{ $bowler->membership_type ?? '-' }}</div>
+      <div class="col-md-3"><strong>会員区分:</strong> {{ $bowler->member_class_label }}</div>
+      <div class="col-md-3"><strong>公式戦:</strong> {{ $bowler->official_tournament_eligibility_label }}</div>
+      <div class="col-md-3"><strong>有効状態:</strong> {{ $bowler->is_active ? '有効' : '無効' }}</div>
+      <div class="col-md-3"><strong>同期状態:</strong> {{ $bowler->current_instructor_sync_state_label }}</div>
+      <div class="col-md-3"><strong>現在資格:</strong> {{ $bowler->current_instructor_type_label }}</div>
+      <div class="col-md-3"><strong>取込元:</strong> {{ $bowler->current_instructor_source_label }}</div>
+      <div class="col-md-3"><strong>更新状態:</strong> {{ $bowler->current_instructor_renewal_status_label }}</div>
+      @if($currentRegistry)
+        <div class="col-md-3"><strong>資格等級:</strong> {{ $currentRegistry->grade ?? '-' }}</div>
+        <div class="col-md-3"><strong>履歴理由:</strong> {{ $currentRegistry->supersede_reason ?? '-' }}</div>
+        <div class="col-md-3"><strong>最終同期:</strong> {{ optional($currentRegistry->last_synced_at)->format('Y-m-d H:i') ?? '-' }}</div>
+      @endif
+    </div>
+    <div class="mt-2 small text-muted">
+      保存時に <code>membership_type</code> と <code>license_no</code> から <code>member_class</code> / 公式戦可否 / instructor_registry 同期内容を再計算します。
+    </div>
+  </div>
 @endif
 
 <form id="bowler-update-form" method="POST"
@@ -155,6 +177,7 @@ editing_id={{ $bowler->id ?? 'new' }}
             <option value="{{ $type }}" {{ old('membership_type', $bowler->membership_type ?? '') == $type ? 'selected' : '' }}>{{ $type }}</option>
           @endforeach
         </select>
+        <small class="form-text text-muted">保存時に会員種別名とライセンスNoから、会員区分（プロボウラー / プロインストラクター / 名誉プロ・海外）と公式戦可否を自動判定します。</small>
         @error('membership_type')<div class="invalid-feedback">{{ $message }}</div>@enderror
       </div>
 

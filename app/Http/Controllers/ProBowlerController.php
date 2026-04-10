@@ -14,8 +14,6 @@ use Illuminate\Support\Facades\Artisan;
 
 class ProBowlerController extends Controller
 {
-    private const PRO_REGISTRY_SOURCE_TYPE = 'pro_bowler_csv';
-
     /* =========================
        一覧（従来どおり）
     ========================== */
@@ -26,7 +24,7 @@ class ProBowlerController extends Controller
         $titleTo   = $request->integer('title_year_to');
 
         $query = ProBowler::query()
-            ->with('district')
+            ->with(['district', 'currentInstructorRegistry'])
             ->withCount('titles')
             ->withCount([
                 'records as perfect_count'       => fn ($q) => $q->where('record_type', 'perfect'),
@@ -164,6 +162,7 @@ class ProBowlerController extends Controller
     {
         $bowler = ProBowler::with([
             'titles' => fn ($q) => $q->orderByDesc('won_date')->orderByDesc('year'),
+            'currentInstructorRegistry',
         ])->withCount('titles')->findOrFail($id);
 
         $order = ['北海道', '東北', '北関東', '埼玉', '千葉', '城東', '城南', '城西', '三多摩', '神奈川・東', '神奈川・西', '静岡', '甲信越', '東海', '北陸', '関西・東', '関西・西', '関西・南', '中国四国', '九州・北', '九州･南／沖縄', '海外'];
@@ -278,6 +277,7 @@ class ProBowlerController extends Controller
             'coach_name',
             'membership_type',
             'member_class',
+            'official_tournament_eligible',
             'include_inactive',
             'per_page',
             'sort', 'dir',
@@ -298,7 +298,7 @@ class ProBowlerController extends Controller
             ->groupBy('pro_bowler_id');
 
         $query = ProBowler::query()
-            ->with('district')
+            ->with(['district', 'currentInstructorRegistry'])
             ->leftJoinSub($titlesAgg, 'titles_agg', function ($join) {
                 $join->on('pro_bowlers.id', '=', 'titles_agg.pro_bowler_id');
             })
@@ -342,6 +342,13 @@ class ProBowlerController extends Controller
         $memberClassFilter = trim((string) ($filters['member_class'] ?? ''));
         if ($memberClassFilter !== '') {
             $query->where('member_class', $memberClassFilter);
+        }
+
+        $officialTournamentEligible = trim((string) ($filters['official_tournament_eligible'] ?? ''));
+        if ($officialTournamentEligible === '1') {
+            $query->where('can_enter_official_tournament', true);
+        } elseif ($officialTournamentEligible === '0') {
+            $query->where('can_enter_official_tournament', false);
         }
 
         if (!empty($filters['license_no'])) {
@@ -753,19 +760,14 @@ class ProBowlerController extends Controller
         $category = $this->resolveInstructorCategoryFromBowler($bowler);
 
         if (!$this->hasInstructorProfileFromRequest($request, $grade, $category)) {
-            $reactivatedCertified = $this->reactivateCertifiedCurrentRowForBowler($bowler);
-
-            $this->deactivateInstructorRecords(
-                $bowler,
-                $reactivatedCertified ? 'downgraded_to_certified' : 'qualification_removed'
-            );
-
+            $this->deactivateInstructorRecords($bowler);
+            $this->reactivateCertifiedCurrentRowForBowler($bowler);
             return;
         }
 
         $this->syncLegacyInstructor($request, $bowler, $grade, $category);
-        $targetRegistry = $this->syncRegistryInstructor($request, $bowler, $grade, $category);
-        $this->supersedeCompetingCurrentRegistryRowsForBowler($bowler, $targetRegistry);
+        $this->syncRegistryInstructor($request, $bowler, $grade, $category);
+        $this->supersedeCompetingCurrentRegistryRowsForBowler($bowler, $category);
     }
 
     private function syncLegacyInstructor(Request $request, ProBowler $bowler, ?string $grade, string $category): void
@@ -785,7 +787,7 @@ class ProBowlerController extends Controller
             'is_active'           => (bool) $bowler->is_active,
             'is_visible'          => $existing?->is_visible ?? true,
             'coach_qualification' => ($bowler->school_license_status ?? $request->input('school_license_status')) === '有',
-            'pro_bowler_id'       => $bowler->id,
+            'pro_bowler_id'       => $category === 'pro_bowler' ? $bowler->id : null,
         ];
 
         Instructor::updateOrCreate(
@@ -794,19 +796,18 @@ class ProBowlerController extends Controller
         );
     }
 
-    private function syncRegistryInstructor(Request $request, ProBowler $bowler, ?string $grade, string $category): InstructorRegistry
+    private function syncRegistryInstructor(Request $request, ProBowler $bowler, ?string $grade, string $category): void
     {
-        $existing = $this->importedRegistryQueryForBowlerAndCategory($bowler, $category)
+        $existing = $this->proSideRegistryQueryForBowler($bowler)
             ->orderByDesc('is_current')
-            ->orderByDesc('last_synced_at')
             ->orderBy('id')
             ->first();
 
         $payload = [
-            'source_type'                   => $existing?->source_type ?: self::PRO_REGISTRY_SOURCE_TYPE,
-            'source_key'                    => $existing?->source_key ?: $this->buildProRegistrySourceKey($bowler->license_no, $category),
+            'source_type'                   => $existing?->source_type ?: 'pro_bowler_csv',
+            'source_key'                    => $existing?->source_key ?: $bowler->license_no,
             'legacy_instructor_license_no'  => $existing?->legacy_instructor_license_no ?? $bowler->license_no,
-            'pro_bowler_id'                 => $bowler->id,
+            'pro_bowler_id'                 => $category === 'pro_bowler' ? $bowler->id : null,
             'license_no'                    => $bowler->license_no,
             'cert_no'                       => $existing?->cert_no,
             'name'                          => $bowler->name_kanji ?: ($existing?->name ?? $bowler->license_no),
@@ -832,19 +833,18 @@ class ProBowlerController extends Controller
         ];
 
         if ($existing) {
-            $existing->fill($payload);
-            $existing->save();
+            $existing->fill($payload)->save();
 
-            return $existing;
+            return;
         }
 
-        return InstructorRegistry::create($payload);
+        InstructorRegistry::create($payload);
     }
 
-    private function deactivateInstructorRecords(ProBowler $bowler, string $supersedeReason): void
+    private function deactivateInstructorRecords(ProBowler $bowler): void
     {
         $this->deactivateLegacyInstructor($bowler);
-        $this->deactivateRegistryInstructor($bowler, $supersedeReason);
+        $this->deactivateRegistryInstructor($bowler);
     }
 
     private function deactivateLegacyInstructor(ProBowler $bowler): void
@@ -865,7 +865,7 @@ class ProBowlerController extends Controller
         $existing->save();
     }
 
-    private function deactivateRegistryInstructor(ProBowler $bowler, string $supersedeReason): void
+    private function deactivateRegistryInstructor(ProBowler $bowler): void
     {
         $rows = $this->proSideRegistryQueryForBowler($bowler)
             ->where('is_current', true)
@@ -881,27 +881,23 @@ class ProBowlerController extends Controller
             $row->is_current = false;
             $row->is_active = false;
             $row->superseded_at = $row->superseded_at ?: $now;
-            $row->supersede_reason = $supersedeReason;
+            $row->supersede_reason = $row->supersede_reason ?: 'qualification_removed';
             $row->last_synced_at = $now;
             $row->save();
         }
     }
 
-    private function reactivateCertifiedCurrentRowForBowler(ProBowler $bowler): bool
+    private function reactivateCertifiedCurrentRowForBowler(ProBowler $bowler): void
     {
         $certified = $this->allRegistryQueryForBowler($bowler)
             ->where('instructor_category', 'certified')
-            ->where(function ($query) {
-                $query->whereNull('renewal_status')
-                    ->orWhere('renewal_status', '!=', 'expired');
-            })
             ->orderByDesc('is_current')
             ->orderByDesc('last_synced_at')
             ->orderBy('id')
             ->first();
 
         if (!$certified) {
-            return false;
+            return;
         }
 
         $certified->is_current = true;
@@ -913,15 +909,13 @@ class ProBowlerController extends Controller
         $certified->renewal_status = $certified->renewal_status ?? 'pending';
         $certified->last_synced_at = now();
         $certified->save();
-
-        return true;
     }
 
-    private function supersedeCompetingCurrentRegistryRowsForBowler(ProBowler $bowler, InstructorRegistry $targetRegistry): void
+    private function supersedeCompetingCurrentRegistryRowsForBowler(ProBowler $bowler, string $targetCategory): void
     {
         $rows = $this->allRegistryQueryForBowler($bowler)
             ->where('is_current', true)
-            ->where('id', '!=', $targetRegistry->id)
+            ->where('instructor_category', '!=', $targetCategory)
             ->get();
 
         if ($rows->isEmpty()) {
@@ -934,28 +928,16 @@ class ProBowlerController extends Controller
             $row->is_current = false;
             $row->is_active = false;
             $row->superseded_at = $now;
-            $row->supersede_reason = $this->resolveSupersedeReason($row->instructor_category, $targetRegistry->instructor_category);
+            $row->supersede_reason = $this->resolveSupersedeReason($row->instructor_category, $targetCategory);
             $row->last_synced_at = $now;
             $row->save();
         }
-    }
-
-    private function importedRegistryQueryForBowlerAndCategory(ProBowler $bowler, string $category)
-    {
-        return $this->allRegistryQueryForBowler($bowler)
-            ->where('source_type', self::PRO_REGISTRY_SOURCE_TYPE)
-            ->where('instructor_category', $category);
     }
 
     private function proSideRegistryQueryForBowler(ProBowler $bowler)
     {
         return $this->allRegistryQueryForBowler($bowler)
             ->whereIn('instructor_category', ['pro_bowler', 'pro_instructor']);
-    }
-
-    private function buildProRegistrySourceKey(string $licenseNo, string $category): string
-    {
-        return $licenseNo . ':' . $category;
     }
 
     private function allRegistryQueryForBowler(ProBowler $bowler)
@@ -983,7 +965,6 @@ class ProBowlerController extends Controller
             $fromCategory === 'pro_instructor' && $toCategory === 'pro_bowler' => 'promoted_to_pro_bowler',
             $fromCategory === 'pro_bowler' && $toCategory === 'certified'     => 'downgraded_to_certified',
             $fromCategory === 'pro_instructor' && $toCategory === 'certified' => 'downgraded_to_certified',
-            $fromCategory === $toCategory                                     => 'replaced_by_pro_bowler_import',
             default                                                           => 'category_changed',
         };
     }

@@ -62,6 +62,8 @@
       $currentSort = (string)request('sort', 'license_no');
       $currentDir  = strtolower((string)request('dir', 'asc')) === 'desc' ? 'desc' : 'asc';
       $perPage     = (int)request('per_page', 50);
+      $memberClassSelected = (string)request('member_class', '');
+      $officialEligibleSelected = (string)request('official_tournament_eligible', '');
 
       $sortIcon = function(string $col) use ($currentSort, $currentDir) {
           if ($currentSort !== $col) return '';
@@ -157,6 +159,23 @@
                             {{ $st->name }}@if(!empty($st->is_retired))（退会）@endif
                         </option>
                     @endforeach
+                </select>
+            </div>
+
+            <div class="col-md-2">
+                <select name="member_class" class="form-select">
+                    <option value="">会員区分（全て）</option>
+                    <option value="player" {{ $memberClassSelected === 'player' ? 'selected' : '' }}>プロボウラー</option>
+                    <option value="pro_instructor" {{ $memberClassSelected === 'pro_instructor' ? 'selected' : '' }}>プロインストラクター</option>
+                    <option value="honorary_or_overseas" {{ $memberClassSelected === 'honorary_or_overseas' ? 'selected' : '' }}>名誉プロ・海外</option>
+                </select>
+            </div>
+
+            <div class="col-md-2">
+                <select name="official_tournament_eligible" class="form-select">
+                    <option value="">公式戦対象（全て）</option>
+                    <option value="1" {{ $officialEligibleSelected === '1' ? 'selected' : '' }}>出場可</option>
+                    <option value="0" {{ $officialEligibleSelected === '0' ? 'selected' : '' }}>対象外</option>
                 </select>
             </div>
 
@@ -265,6 +284,9 @@
                             タイトル{{ $sortIcon('titles') }}
                         </a>
                     </th>
+                    <th>会員区分</th>
+                    <th>公式戦</th>
+                    <th>インストラクター同期</th>
                     <th>褒章</th>
                     <th>地区長</th>
                     <th>インストラクター級</th>
@@ -321,6 +343,30 @@
                             </a>
                         </td>
 
+                        {{-- 会員区分 --}}
+                        <td>
+                            <a href="{{ $editUrl }}" class="text-decoration-none text-dark">
+                                {{ $bowler->member_class_label }}
+                            </a>
+                        </td>
+
+                        {{-- 公式戦 --}}
+                        <td>
+                            <a href="{{ $editUrl }}" class="text-decoration-none text-dark">
+                                {{ $bowler->official_tournament_eligibility_label }}
+                            </a>
+                        </td>
+
+                        {{-- インストラクター同期 --}}
+                        <td>
+                            <a href="{{ $editUrl }}" class="text-decoration-none text-dark">
+                                <div>{{ $bowler->current_instructor_sync_state_label }}</div>
+                                <small class="text-muted">
+                                    {{ $bowler->current_instructor_type_label }} / {{ $bowler->current_instructor_source_label }}
+                                </small>
+                            </a>
+                        </td>
+
                         {{-- 褒章 --}}
                         <td>
                             <span class="badge bg-primary me-1">P: {{ $bowler->perfect_count ?? 0 }}</span>
@@ -354,7 +400,7 @@
                         </td>
                     </tr>
                 @empty
-                    <tr><td colspan="10" class="text-center">データがありません。</td></tr>
+                    <tr><td colspan="13" class="text-center">データがありません。</td></tr>
                 @endforelse
             </tbody>
         </table>

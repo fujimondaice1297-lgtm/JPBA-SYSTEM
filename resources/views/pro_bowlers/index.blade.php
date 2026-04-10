@@ -115,7 +115,6 @@
             <div class="border px-4 py-4 bg-white">
                 <form method="GET" action="{{ route('pro_bowlers.index') }}" class="mb-4">
                     <div class="row g-3">
-                        {{-- 1列目 --}}
                         <div class="col-md-3">
                             <input type="text" name="name" class="form-control" placeholder="例：山田 太郎" value="{{ request('name') }}">
                         </div>
@@ -138,7 +137,6 @@
                             </select>
                         </div>
 
-                        {{-- 2列目 --}}
                         <div class="col-md-3">
                             <input type="number" name="term_from" class="form-control" placeholder="期別（開始）" value="{{ request('term_from') }}">
                         </div>
@@ -146,7 +144,6 @@
                             <input type="number" name="term_to" class="form-control" placeholder="期別（終了）" value="{{ request('term_to') }}">
                         </div>
 
-                        {{-- ボタン群 --}}
                         <div class="col-md-6 d-flex align-items-center gap-2 flex-wrap">
                             <button type="submit" class="btn btn-primary">検索</button>
                             <a href="{{ route('pro_bowlers.index') }}" class="btn btn-warning">リセット</a>
@@ -163,7 +160,7 @@
         {{-- 検索結果一覧 --}}
         <div class="bg-white border p-4">
         @if ($bowlers->count())
-            <table class="table table-bordered">
+            <table class="table table-bordered align-middle">
             <thead>
                 <tr>
                 <th>ライセンスNo.</th>
@@ -171,6 +168,12 @@
                 <th>地区</th>
                 <th>性別</th>
                 <th>期別</th>
+                <th>会員区分</th>
+                <th>公式戦</th>
+                <th>インストラクター同期</th>
+                <th>同期種別</th>
+                <th>同期元</th>
+                <th>更新状態</th>
                 <th>スポーツコーチ</th>
                 </tr>
             </thead>
@@ -194,15 +197,42 @@
                     </td>
                     <td>
                     <a href="{{ route('pro_bowlers.edit', $bowler->id) }}" class="text-decoration-none text-dark">
-                        @if ($bowler->sex === 1) 男性
-                        @elseif ($bowler->sex === 2) 女性
-                        @else -
-                        @endif
+                        {{ $bowler->gender }}
                     </a>
                     </td>
                     <td>
                     <a href="{{ route('pro_bowlers.edit', $bowler->id) }}" class="text-decoration-none text-dark">
                         {{ $bowler->kibetsu ? $bowler->kibetsu.'期' : '-' }}
+                    </a>
+                    </td>
+                    <td>
+                    <a href="{{ route('pro_bowlers.edit', $bowler->id) }}" class="text-decoration-none text-dark">
+                        {{ $bowler->member_class_label }}
+                    </a>
+                    </td>
+                    <td>
+                    <a href="{{ route('pro_bowlers.edit', $bowler->id) }}" class="text-decoration-none text-dark">
+                        {{ $bowler->official_tournament_eligibility_label }}
+                    </a>
+                    </td>
+                    <td>
+                    <a href="{{ route('pro_bowlers.edit', $bowler->id) }}" class="text-decoration-none text-dark">
+                        {{ $bowler->current_instructor_sync_state_label }}
+                    </a>
+                    </td>
+                    <td>
+                    <a href="{{ route('pro_bowlers.edit', $bowler->id) }}" class="text-decoration-none text-dark">
+                        {{ $bowler->current_instructor_type_label }}
+                    </a>
+                    </td>
+                    <td>
+                    <a href="{{ route('pro_bowlers.edit', $bowler->id) }}" class="text-decoration-none text-dark">
+                        {{ $bowler->current_instructor_source_label }}
+                    </a>
+                    </td>
+                    <td>
+                    <a href="{{ route('pro_bowlers.edit', $bowler->id) }}" class="text-decoration-none text-dark">
+                        {{ $bowler->current_instructor_renewal_status_label }}
                     </a>
                     </td>
                     <td>
