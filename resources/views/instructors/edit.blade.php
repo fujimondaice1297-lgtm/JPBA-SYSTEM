@@ -17,7 +17,20 @@
     $isManual = ($instructor->source_type ?? null) === 'manual';
     $isLinkableSyncedCertified = ($instructor->source_type ?? null) === 'auth_instructor_csv' && $instructor->instructor_category === 'certified';
     $candidateBowlers = $linkableProBowlers ?? collect();
+    $isAdmin = auth()->check() && auth()->user()->isAdmin();
   @endphp
+
+  @if (session('success'))
+    <div class="alert alert-success">
+      {{ session('success') }}
+    </div>
+  @endif
+
+  @if (session('error'))
+    <div class="alert alert-danger">
+      {{ session('error') }}
+    </div>
+  @endif
 
   @if ($errors->any())
     <div class="alert alert-danger">
@@ -56,6 +69,26 @@
       </div>
     </div>
   </div>
+
+  @if ($isManual && $isAdmin)
+    <div class="border rounded p-3 bg-light mb-4">
+      <div class="fw-bold mb-2">退会処理</div>
+
+      @if ($instructor->is_current)
+        <p class="text-muted mb-3">
+          この操作は物理削除ではありません。対象レコードを <strong>退会済み / history</strong> に変更します。
+        </p>
+
+        <form method="POST" action="{{ route('admin.instructors.destroy', $instructor->id) }}" onsubmit="return confirm('このインストラクターを退会済みにします。物理削除はされません。よろしいですか？');">
+          @csrf
+          @method('DELETE')
+          <button type="submit" class="btn btn-outline-danger">退会済みにする</button>
+        </form>
+      @else
+        <p class="mb-0 text-muted">このレコードはすでに履歴化されています。</p>
+      @endif
+    </div>
+  @endif
 
   <form method="POST" action="{{ route('instructors.update', $instructor->id) }}">
     @csrf

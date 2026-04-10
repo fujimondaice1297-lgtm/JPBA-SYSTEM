@@ -6,7 +6,20 @@
 
   @php
     $importSummary = session('auth_instructor_import_summary');
+    $isAdmin = auth()->check() && auth()->user()->isAdmin();
   @endphp
+
+  @if (session('success'))
+    <div class="alert alert-success border mb-4">
+      {{ session('success') }}
+    </div>
+  @endif
+
+  @if (session('error'))
+    <div class="alert alert-danger border mb-4">
+      {{ session('error') }}
+    </div>
+  @endif
 
   @if ($importSummary)
     <div class="alert alert-info border mb-4">
@@ -199,6 +212,7 @@
               <th>更新日</th>
               <th>有効</th>
               <th>表示</th>
+              <th>操作</th>
             </tr>
           </thead>
           <tbody>
@@ -229,6 +243,10 @@
                 } else {
                   $linkedProLabel = '-';
                 }
+
+                $canRetire = $isAdmin
+                  && ($instructor->source_type ?? null) === 'manual'
+                  && (bool) $instructor->is_current;
               @endphp
               <tr>
                 <td>
@@ -249,6 +267,19 @@
                 <td>{{ optional($instructor->renewed_at)->format('Y-m-d') ?? '-' }}</td>
                 <td>{{ $instructor->is_active ? '○' : '×' }}</td>
                 <td>{{ $instructor->is_visible ? '○' : '×' }}</td>
+                <td>
+                  @if ($canRetire)
+                    <form method="POST" action="{{ route('admin.instructors.destroy', $instructor->id) }}" onsubmit="return confirm('このインストラクターを退会済みにします。物理削除はされません。よろしいですか？');">
+                      @csrf
+                      @method('DELETE')
+                      <button type="submit" class="btn btn-sm btn-outline-danger">退会</button>
+                    </form>
+                  @elseif (($instructor->source_type ?? null) !== 'manual')
+                    <span class="text-muted small">同期元管理</span>
+                  @else
+                    <span class="text-muted small">履歴</span>
+                  @endif
+                </td>
               </tr>
             @endforeach
           </tbody>

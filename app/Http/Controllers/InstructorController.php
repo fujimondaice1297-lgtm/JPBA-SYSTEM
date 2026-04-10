@@ -126,11 +126,11 @@ class InstructorController extends Controller
             ->get(['id', 'label']);
 
         return view('instructors.edit', [
-            'instructor'        => $instructor,
-            'districts'         => $districts,
-            'grades'            => self::GRADE_OPTIONS,
-            'renewalStatuses'   => self::RENEWAL_STATUS_OPTIONS,
-            'linkableProBowlers'=> $this->buildLinkableProBowlerCandidates($instructor),
+            'instructor'         => $instructor,
+            'districts'          => $districts,
+            'grades'             => self::GRADE_OPTIONS,
+            'renewalStatuses'    => self::RENEWAL_STATUS_OPTIONS,
+            'linkableProBowlers' => $this->buildLinkableProBowlerCandidates($instructor),
         ]);
     }
 
@@ -151,6 +151,51 @@ class InstructorController extends Controller
         return redirect()
             ->route('instructors.index')
             ->with('success', 'インストラクターを更新しました。');
+    }
+
+    public function destroy(string $instructorKey)
+    {
+        abort_unless(auth()->check() && auth()->user()->isAdmin(), 403, '管理者のみ実行できます。');
+
+        $instructor = $this->findEditableRegistry($instructorKey);
+
+        if (($instructor->source_type ?? null) !== 'manual') {
+            return redirect()
+                ->route('instructors.index')
+                ->with('error', '同期元データは退会処理できません。元データ側を更新してください。');
+        }
+
+        if (!$instructor->is_current && !$instructor->is_active) {
+            return redirect()
+                ->route('instructors.index')
+                ->with('success', '対象レコードはすでに履歴化されています。');
+        }
+
+        $now = now();
+
+        $notes = array_filter([
+            $instructor->renewal_note,
+            '手動で退会済みに変更: ' . $now->format('Y-m-d H:i:s'),
+        ]);
+
+        $instructor->is_current = false;
+        $instructor->is_active = false;
+        $instructor->is_visible = false;
+        $instructor->superseded_at = $now;
+        $instructor->supersede_reason = 'qualification_removed';
+        $instructor->last_synced_at = $now;
+        $instructor->renewal_note = !empty($notes) ? implode("\n", $notes) : null;
+
+        if ($instructor->renewal_year !== null || $instructor->instructor_category === 'certified') {
+            $instructor->renewal_status = 'expired';
+            $instructor->renewed_at = null;
+        }
+
+        $instructor->save();
+
+        return redirect()
+            ->route('instructors.index')
+            ->with('success', 'インストラクターを退会済みにしました。');
     }
 
     public function exportPdf(Request $request)
@@ -313,21 +358,21 @@ class InstructorController extends Controller
         $ignoreId = $existing?->id;
 
         $rules = [
-            'name'                => ['required', 'string', 'max:255'],
-            'name_kana'           => ['nullable', 'string', 'max:255'],
-            'sex'                 => ['required', 'boolean'],
-            'district_id'         => ['nullable', 'integer', 'exists:districts,id'],
-            'instructor_type'     => ['required', 'in:pro,pro_instructor,certified'],
-            'grade'               => ['nullable', 'string', Rule::in(self::GRADE_OPTIONS)],
-            'is_active'           => ['nullable', 'boolean'],
-            'is_visible'          => ['nullable', 'boolean'],
-            'coach_qualification' => ['nullable', 'boolean'],
-            'renewal_year'        => ['nullable', 'integer', 'min:2000', 'max:2099'],
-            'renewal_due_on'      => ['nullable', 'date'],
-            'renewal_status'      => ['nullable', 'string', Rule::in(array_keys(self::RENEWAL_STATUS_OPTIONS))],
-            'renewed_at'          => ['nullable', 'date'],
-            'renewal_note'        => ['nullable', 'string', 'max:2000'],
-            'linked_pro_bowler_id'=> ['nullable', 'integer', 'exists:pro_bowlers,id'],
+            'name'                 => ['required', 'string', 'max:255'],
+            'name_kana'            => ['nullable', 'string', 'max:255'],
+            'sex'                  => ['required', 'boolean'],
+            'district_id'          => ['nullable', 'integer', 'exists:districts,id'],
+            'instructor_type'      => ['required', 'in:pro,pro_instructor,certified'],
+            'grade'                => ['nullable', 'string', Rule::in(self::GRADE_OPTIONS)],
+            'is_active'            => ['nullable', 'boolean'],
+            'is_visible'           => ['nullable', 'boolean'],
+            'coach_qualification'  => ['nullable', 'boolean'],
+            'renewal_year'         => ['nullable', 'integer', 'min:2000', 'max:2099'],
+            'renewal_due_on'       => ['nullable', 'date'],
+            'renewal_status'       => ['nullable', 'string', Rule::in(array_keys(self::RENEWAL_STATUS_OPTIONS))],
+            'renewed_at'           => ['nullable', 'date'],
+            'renewal_note'         => ['nullable', 'string', 'max:2000'],
+            'linked_pro_bowler_id' => ['nullable', 'integer', 'exists:pro_bowlers,id'],
         ];
 
         if ($type === 'pro_instructor') {
