@@ -13,7 +13,7 @@ class UsedBallController extends Controller
     public function index(Request $request)
     {
         $user = $request->user();
-        $isPrivileged = $this->isPrivilegedUser($user);
+        $isStaff = $this->canManageAllBalls($user);
 
         $query = UsedBall::with(['approvedBall', 'proBowler']);
 
@@ -23,32 +23,53 @@ class UsedBallController extends Controller
             $query->where(function ($q) use ($keyword) {
                 $q->where('serial_number', 'like', "%{$keyword}%")
                     ->orWhere('inspection_number', 'like', "%{$keyword}%")
+                    ->orWhereHas('proBowler', function ($qq) use ($keyword) {
+                        $qq->where('license_no', 'like', "%{$keyword}%")
+                            ->orWhere('name_kanji', 'like', "%{$keyword}%");
+                    })
                     ->orWhereHas('approvedBall', function ($qq) use ($keyword) {
                         $qq->where('name', 'like', "%{$keyword}%")
-                            ->orWhere('model_name', 'like', "%{$keyword}%")
-                            ->orWhere('manufacturer', 'like', "%{$keyword}%")
-                            ->orWhere('brand', 'like', "%{$keyword}%");
-                    })
-                    ->orWhereHas('proBowler', function ($qq) use ($keyword) {
-                        $qq->where('id', 'like', "%{$keyword}%")
-                            ->orWhere('name_kanji', 'like', "%{$keyword}%")
-                            ->orWhere('license_no', 'like', "%{$keyword}%");
+                            ->orWhere('manufacturer', 'like', "%{$keyword}%");
                     });
             });
         }
 
-        if (!$isPrivileged) {
-            $userProBowlerId = (int) ($user->pro_bowler_id ?? 0);
-            if ($userProBowlerId <= 0) {
-                abort(403, 'プロ情報が未結線のため、使用ボール一覧を利用できません。');
-            }
-            $query->where('pro_bowler_id', $userProBowlerId);
+        if (!$isStaff) {
+            $query->where('pro_bowler_id', $user->pro_bowler_id);
         }
 
-        $status = (string) $request->input('status', '');
-        $this->applyStatusFilter($query, $status);
+        $status = (string) $request->input('status');
+        switch ($status) {
+            case 'temporary':
+                $query->whereNull('inspection_number');
+                break;
 
-        $usedBalls = $query->orderByDesc('registered_at')->paginate(10)->withQueryString();
+            case 'active':
+                $query->whereNotNull('inspection_number')
+                    ->whereNotNull('expires_at')
+                    ->whereDate('expires_at', '>=', today());
+                break;
+
+            case 'expiring':
+                $query->whereNotNull('inspection_number')
+                    ->whereNotNull('expires_at')
+                    ->whereDate('expires_at', '>=', today())
+                    ->whereDate('expires_at', '<=', today()->copy()->addDays(30));
+                break;
+
+            case 'expired':
+                $query->whereNotNull('inspection_number')
+                    ->whereNotNull('expires_at')
+                    ->whereDate('expires_at', '<', today());
+                break;
+        }
+
+        $usedBalls = $query
+            ->orderByRaw("case when inspection_number is null then 0 else 1 end asc")
+            ->orderByDesc('registered_at')
+            ->orderByDesc('id')
+            ->paginate(10)
+            ->appends($request->query());
 
         return view('used_balls.index', compact('usedBalls'));
     }
@@ -62,174 +83,151 @@ class UsedBallController extends Controller
             $query->where('manufacturer', $manufacturer);
         }
 
-        $balls = $query->get();
-        $manufacturers = ApprovedBall::distinct()->pluck('manufacturer');
-        $fixedLicenseNo = null;
+        $balls = $query
+            ->orderBy('manufacturer')
+            ->orderBy('name')
+            ->get();
 
-        if (!$this->isPrivilegedUser($request->user())) {
-            $fixedLicenseNo = $this->resolveCurrentUserLicenseNo($request->user());
-            if (!$fixedLicenseNo) {
-                abort(403, 'プロ情報が未結線のため、使用ボールを登録できません。');
-            }
-        }
+        $manufacturers = ApprovedBall::query()
+            ->whereNotNull('manufacturer')
+            ->distinct()
+            ->orderBy('manufacturer')
+            ->pluck('manufacturer');
 
-        return view('used_balls.create', compact('balls', 'manufacturers', 'fixedLicenseNo'));
+        return view('used_balls.create', compact('balls', 'manufacturers'));
     }
 
     public function store(Request $request)
     {
         $user = $request->user();
-        $isPrivileged = $this->isPrivilegedUser($user);
-        $licenseNo = $isPrivileged ? $request->input('license_no') : $this->resolveCurrentUserLicenseNo($user);
+        $isStaff = $this->canManageAllBalls($user);
 
-        if (!$licenseNo) {
-            abort(403, 'プロ情報が未結線のため、使用ボールを登録できません。');
-        }
-
-        $validated = $request->validate([
-            'license_no'        => 'nullable|string|exists:pro_bowlers,license_no',
+        $rules = [
             'approved_ball_id'  => 'required|integer|exists:approved_balls,id',
             'serial_number'     => 'required|string|unique:used_balls,serial_number',
             'inspection_number' => 'nullable|string|unique:used_balls,inspection_number',
             'registered_at'     => 'required|date',
-        ]);
+        ];
 
-        $proBowler = ProBowler::where('license_no', $licenseNo)->first();
-        if (!$proBowler) {
-            return back()->withErrors(['license_no' => 'ライセンス番号に一致するプロボウラーがいません'])->withInput();
+        if ($isStaff) {
+            $rules['license_no'] = 'required|string|exists:pro_bowlers,license_no';
+        }
+
+        $validated = $request->validate($rules);
+
+        if ($isStaff) {
+            $proBowler = ProBowler::where('license_no', $validated['license_no'])->first();
+            if (!$proBowler) {
+                return back()
+                    ->withErrors(['license_no' => 'ライセンス番号に一致するプロボウラーがいません'])
+                    ->withInput();
+            }
+        } else {
+            $proBowler = ProBowler::find($user->pro_bowler_id);
+            if (!$proBowler || empty($proBowler->license_no)) {
+                return back()
+                    ->withErrors(['license_no' => '自分のプロ情報が見つからないため登録できません。'])
+                    ->withInput();
+            }
         }
 
         $inspectionNumber = trim((string) ($validated['inspection_number'] ?? ''));
-        if ($inspectionNumber === '') {
-            $inspectionNumber = null;
-        }
+        $registeredAt = Carbon::parse($validated['registered_at']);
 
-        $payload = [
+        UsedBall::create([
             'pro_bowler_id'     => $proBowler->id,
             'approved_ball_id'  => $validated['approved_ball_id'],
             'serial_number'     => $validated['serial_number'],
-            'inspection_number' => $inspectionNumber,
-            'registered_at'     => $validated['registered_at'],
-            'expires_at'        => $inspectionNumber
-                ? Carbon::parse($validated['registered_at'])->addYear()->subDay()
-                : null,
-        ];
+            'inspection_number' => $inspectionNumber === '' ? null : $inspectionNumber,
+            'registered_at'     => $registeredAt,
+            'expires_at'        => $inspectionNumber === ''
+                ? null
+                : $registeredAt->copy()->addYear()->subDay(),
+        ]);
 
-        UsedBall::create($payload);
+        return redirect()
+            ->route('used_balls.index')
+            ->with('success', '使用ボールを登録しました。');
+    }
 
-        return redirect()->route('used_balls.index')->with('success', '使用ボールを登録しました。');
+    public function edit(UsedBall $usedBall)
+    {
+        $this->authorizeBallOwnerOrStaff($usedBall);
+
+        return view('used_balls.edit', compact('usedBall'));
     }
 
     public function update(Request $request, UsedBall $usedBall)
     {
-        $this->authorizeUsedBallAccess($request->user(), $usedBall);
+        $this->authorizeBallOwnerOrStaff($usedBall);
 
         $validated = $request->validate([
             'inspection_number' => 'nullable|string|unique:used_balls,inspection_number,' . $usedBall->id,
         ]);
 
         $inspectionNumber = trim((string) ($validated['inspection_number'] ?? ''));
+
         if ($inspectionNumber === '') {
-            $inspectionNumber = null;
+            $usedBall->update([
+                'inspection_number' => null,
+                'expires_at'        => null,
+            ]);
+
+            return back()->with('success', '仮登録状態に更新しました。');
         }
 
-        $payload = [
+        $now = now();
+
+        $usedBall->update([
             'inspection_number' => $inspectionNumber,
-        ];
+            'registered_at'     => $now,
+            'expires_at'        => $now->copy()->addYear()->subDay(),
+        ]);
 
-        if ($inspectionNumber) {
-            $payload['registered_at'] = now();
-            $payload['expires_at'] = now()->addYear()->subDay();
-        } else {
-            $payload['expires_at'] = null;
-        }
-
-        $usedBall->update($payload);
-
-        return back()->with('success', 'ボール情報を更新しました');
+        return back()->with('success', 'ボール情報を更新しました。');
     }
 
     public function destroy(UsedBall $usedBall)
     {
-        if (!auth()->user()->isAdmin()) {
-            abort(403, 'この操作は許可されていません。');
-        }
+        $this->authorizeAdminUser();
 
         $usedBall->delete();
 
         return back()->with('success', '削除しました');
     }
 
-    private function applyStatusFilter($query, string $status): void
-    {
-        $today = today();
-        $soon = today()->copy()->addDays(30);
-
-        switch ($status) {
-            case 'provisional':
-                $query->where(function ($q) {
-                    $q->whereNull('inspection_number')
-                        ->orWhereNull('expires_at');
-                });
-                break;
-
-            case 'valid':
-                $query->whereNotNull('inspection_number')
-                    ->whereNotNull('expires_at')
-                    ->whereDate('expires_at', '>', $soon);
-                break;
-
-            case 'expiring_soon':
-                $query->whereNotNull('inspection_number')
-                    ->whereNotNull('expires_at')
-                    ->whereDate('expires_at', '>=', $today)
-                    ->whereDate('expires_at', '<=', $soon);
-                break;
-
-            case 'expired':
-                $query->whereNotNull('inspection_number')
-                    ->whereNotNull('expires_at')
-                    ->whereDate('expires_at', '<', $today);
-                break;
-        }
-    }
-
-    private function authorizeUsedBallAccess($user, UsedBall $usedBall): void
-    {
-        if ($this->isPrivilegedUser($user)) {
-            return;
-        }
-
-        if ((int) ($user?->pro_bowler_id ?? 0) !== (int) $usedBall->pro_bowler_id) {
-            abort(403, 'この使用ボールは操作できません。');
-        }
-    }
-
-    private function resolveCurrentUserLicenseNo($user): ?string
-    {
-        if (!$user) {
-            return null;
-        }
-
-        $licenseNo = trim((string) ($user->pro_bowler_license_no ?? ''));
-        if ($licenseNo !== '') {
-            return $licenseNo;
-        }
-
-        $proBowlerId = (int) ($user->pro_bowler_id ?? 0);
-        if ($proBowlerId > 0) {
-            return ProBowler::query()->whereKey($proBowlerId)->value('license_no');
-        }
-
-        return null;
-    }
-
-    private function isPrivilegedUser($user): bool
+    private function canManageAllBalls($user): bool
     {
         if (!$user) {
             return false;
         }
 
-        return $user->isAdmin() || $user->isEditor();
+        $isAdmin = method_exists($user, 'isAdmin') ? $user->isAdmin() : (bool) ($user->is_admin ?? false);
+        $isEditor = method_exists($user, 'isEditor') ? $user->isEditor() : (bool) ($user->is_editor ?? false);
+
+        return $isAdmin || $isEditor;
+    }
+
+    private function authorizeBallOwnerOrStaff(UsedBall $usedBall): void
+    {
+        $user = auth()->user();
+
+        if ($this->canManageAllBalls($user)) {
+            return;
+        }
+
+        if ((int) ($user?->pro_bowler_id ?? 0) !== (int) $usedBall->pro_bowler_id) {
+            abort(403, 'このボールは編集できません。');
+        }
+    }
+
+    private function authorizeAdminUser(): void
+    {
+        $user = auth()->user();
+        $isAdmin = $user && (method_exists($user, 'isAdmin') ? $user->isAdmin() : (bool) ($user->is_admin ?? false));
+
+        if (!$isAdmin) {
+            abort(403, 'この操作は許可されていません。');
+        }
     }
 }
