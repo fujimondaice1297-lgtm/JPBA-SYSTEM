@@ -1,128 +1,181 @@
-{{-- resources/views/member/entry_balls_edit.blade.php --}}
 @extends('layouts.app')
 
 @section('content')
 <div class="container">
-  <h2>大会使用ボール登録</h2>
+  <h2 class="mb-3">大会使用ボール登録</h2>
 
-  @if(session('success'))
+  @if (session('success'))
     <div class="alert alert-success">{{ session('success') }}</div>
   @endif
-  @if($errors->any())
+
+  @if (session('error'))
+    <div class="alert alert-danger">{{ session('error') }}</div>
+  @endif
+
+  @if ($errors->any())
     <div class="alert alert-danger">
-      <ul class="mb-0">@foreach($errors->all() as $e)<li>{{ $e }}</li>@endforeach</ul>
+      <strong>入力内容に誤りがあります：</strong>
+      <ul class="mb-0 mt-2">
+        @foreach ($errors->all() as $error)
+          <li>{{ $error }}</li>
+        @endforeach
+      </ul>
     </div>
   @endif
 
-  <div class="mb-3 d-flex gap-2">
-    <a href="{{ route('tournament.entry.select') }}" class="btn btn-secondary">大会エントリー選択へ戻る</a>
-    <a href="{{ route('tournaments.index') }}" class="btn btn-outline-secondary">大会一覧へ</a>
-  </div>
+  <div class="card mb-4">
+    <div class="card-header fw-bold">対象大会 / 登録状況</div>
+    <div class="card-body">
+      <div class="row g-3">
+        <div class="col-md-4">
+          <div class="text-muted small">大会名</div>
+          <div class="fw-bold">{{ $entry->tournament->name ?? '-' }}</div>
+        </div>
+        <div class="col-md-3">
+          <div class="text-muted small">現在登録数</div>
+          <div class="fw-bold">{{ $existingCount }} / 12</div>
+        </div>
+        <div class="col-md-3">
+          <div class="text-muted small">追加可能数</div>
+          <div class="fw-bold">{{ $remaining }}</div>
+        </div>
+        <div class="col-md-2">
+          <div class="text-muted small">検量証必須</div>
+          <div class="fw-bold">{{ $inspectionRequired ? '必須' : '任意' }}</div>
+        </div>
+      </div>
 
-  <div class="mb-3">
-    <div><strong>大会名：</strong>{{ $entry->tournament->name }}</div>
-    <div><strong>エントリー状況：</strong>{{ $entry->status === 'entry' ? 'エントリー済み' : $entry->status }}</div>
-    <div>
-      <strong>登録状況：</strong> 登録済 {{ $existingCount }} 個 / 残り {{ max(0, 12 - $existingCount) }} 個
-      @if($inspectionRequired)
-        <span class="badge bg-warning text-dark ms-2">検量証必須</span>
-        <small class="text-muted d-block">
-          ※ 検量証未入力のボールは <strong>仮登録</strong> として受け付けます（検量証番号を後で入力すると本登録扱い）
-        </small>
+      <div class="mt-3 small text-muted">
+        この画面では <strong>追加のみ</strong> 行います。すでに登録済みのボールは解除しません。<br>
+        表示前に、登録ボールから大会使用ボールへの同期が自動で実行されます。
+      </div>
+
+      @if ($inspectionRequired)
+        <div class="alert alert-warning mt-3 mb-0">
+          この大会は検量証必須です。<br>
+          <strong>「仮登録 / 検量証待ち」</strong> のボールは表示されますが、運用上は検量証番号の確認が必要です。
+        </div>
       @endif
     </div>
   </div>
 
-  <form method="POST" action="{{ route('member.entries.balls.store', $entry->id) }}">
-    @csrf
+  <div class="d-flex gap-2 flex-wrap mb-3">
+    <a href="{{ route('tournament.entry.select') }}" class="btn btn-secondary">大会エントリー一覧へ戻る</a>
+    <a href="{{ route('registered_balls.index') }}" class="btn btn-outline-secondary">登録ボール管理</a>
+    <a href="{{ route('used_balls.index') }}" class="btn btn-outline-secondary">使用ボール管理</a>
+  </div>
 
-    <div class="card">
-      <div class="card-header">自分の使用ボール（有効期限内のみ）</div>
-      <div class="card-body">
-        @if($remaining <= 0)
-          <div class="alert alert-info">すでに 12 個登録済みです。これ以上は追加できません。</div>
-        @endif
+  @if ($usedBalls->isEmpty())
+    <div class="alert alert-info">
+      使用可能なボールがありません。<br>
+      先に <strong>登録ボール管理</strong> または <strong>使用ボール管理</strong> でボールを登録してください。
+    </div>
+  @else
+    <form method="POST" action="{{ route('member.entries.balls.store', $entry->id) }}">
+      @csrf
 
-        @forelse($usedBalls as $ball)
-          @php
-            $isLinked = in_array($ball->id, $linkedIds, true);
-            $label = ($ball->approvedBall?->manufacturer ? $ball->approvedBall->manufacturer.' - ' : '')
-                    .($ball->approvedBall?->name ?? '不明').' / SN: '.$ball->serial_number;
-          @endphp
+      <div class="table-responsive">
+        <table class="table table-bordered align-middle">
+          <thead>
+            <tr>
+              <th style="width: 70px;">選択</th>
+              <th>承認ボール</th>
+              <th>シリアルNo</th>
+              <th>検量証番号</th>
+              <th>登録日</th>
+              <th>有効期限</th>
+              <th>状態</th>
+            </tr>
+          </thead>
+          <tbody>
+            @foreach ($usedBalls as $usedBall)
+              @php
+                $approvedBallName =
+                    data_get($usedBall, 'approvedBall.name_ja')
+                    ?? data_get($usedBall, 'approvedBall.name')
+                    ?? data_get($usedBall, 'approvedBall.model_name')
+                    ?? data_get($usedBall, 'approvedBall.ball_name')
+                    ?? ('承認ボールID: ' . ($usedBall->approved_ball_id ?? '-'));
 
-          <div class="form-check mb-2">
-            <input class="form-check-input used-ball-checkbox"
-                   type="checkbox"
-                   name="used_ball_ids[]"
-                   value="{{ $ball->id }}"
-                   id="ball{{ $ball->id }}"
-                   {{ $isLinked ? 'checked disabled' : '' }}
-                   {{ $remaining <= 0 ? 'disabled' : '' }}>
-            <label class="form-check-label" for="ball{{ $ball->id }}">
-              {{ $label }}
+                $isLinked = in_array($usedBall->id, $linkedIds ?? [], true);
+                $isTemporary = is_null($usedBall->expires_at);
+                $isExpired = !is_null($usedBall->expires_at) && $usedBall->expires_at->lt(now()->startOfDay());
+                $disableNewSelect = (!$isLinked && $remaining <= 0);
+              @endphp
+              <tr>
+                <td class="text-center">
+                  @if ($isLinked)
+                    <input type="checkbox" class="form-check-input" checked disabled>
+                  @elseif ($disableNewSelect)
+                    <input type="checkbox" class="form-check-input" disabled>
+                  @else
+                    <input
+                      type="checkbox"
+                      name="used_ball_ids[]"
+                      value="{{ $usedBall->id }}"
+                      class="form-check-input"
+                      {{ in_array($usedBall->id, old('used_ball_ids', [])) ? 'checked' : '' }}
+                    >
+                  @endif
+                </td>
 
-              @if($isLinked)
-                <span class="badge bg-secondary">登録済</span>
-              @endif
+                <td>
+                  <div class="fw-bold">{{ $approvedBallName }}</div>
+                  @if (data_get($usedBall, 'approvedBall.manufacturer'))
+                    <div class="small text-muted">{{ data_get($usedBall, 'approvedBall.manufacturer') }}</div>
+                  @endif
+                </td>
 
-              @if (!empty($ball->inspection_number))
-                <span class="badge bg-info">検量証OK</span>
-              @else
-                <span class="badge bg-warning text-dark">仮登録</span>
-              @endif
+                <td>{{ $usedBall->serial_number ?? '-' }}</td>
 
-              @if (!empty($ball->expires_at))
-                <span class="text-muted ms-2">(有効期限: {{ optional($ball->expires_at)->format('Y-m-d') }})</span>
-              @endif
-            </label>
-          </div>
-        @empty
-          <div class="text-muted">使用ボールがありません。</div>
-        @endforelse
+                <td>
+                  @if (!empty($usedBall->inspection_number))
+                    {{ $usedBall->inspection_number }}
+                  @else
+                    <span class="text-muted">未登録</span>
+                  @endif
+                </td>
+
+                <td>{{ optional($usedBall->registered_at)->format('Y-m-d') ?? '-' }}</td>
+
+                <td>
+                  @if ($isTemporary)
+                    <span class="text-muted">未設定</span>
+                  @else
+                    {{ optional($usedBall->expires_at)->format('Y-m-d') ?? '-' }}
+                  @endif
+                </td>
+
+                <td>
+                  @if ($isLinked)
+                    <span class="badge bg-success">登録済み</span>
+                  @elseif ($isExpired)
+                    <span class="badge bg-danger">期限切れ</span>
+                  @elseif ($isTemporary)
+                    <span class="badge bg-warning text-dark">仮登録 / 検量証待ち</span>
+                  @else
+                    <span class="badge bg-secondary">使用可能</span>
+                  @endif
+                </td>
+              </tr>
+            @endforeach
+          </tbody>
+        </table>
       </div>
-    </div>
 
-    <div class="mt-3 d-flex gap-2">
-      <button class="btn btn-primary" {{ $remaining <= 0 ? 'disabled' : '' }}>登録する</button>
+      <div class="mt-3 d-flex gap-2 flex-wrap">
+        <button type="submit" class="btn btn-primary" {{ $remaining <= 0 ? 'disabled' : '' }}>
+          選択したボールを追加登録
+        </button>
+        <a href="{{ route('tournament.entry.select') }}" class="btn btn-secondary">戻る</a>
+      </div>
 
-      {{-- 検量証なしの仮登録もできる「ボール登録」画面へショートカット --}}
-      <a class="btn btn-outline-success"
-         href="{{ route('used_balls.create', ['license_no' => auth()->user()->proBowler?->license_no]) }}">
-        ＋ ボール登録（仮登録可）
-      </a>
-
-      <a href="{{ route('tournament.entry.select') }}" class="btn btn-secondary">エントリー選択へ戻る</a>
-    </div>
-  </form>
+      @if ($remaining <= 0)
+        <div class="alert alert-secondary mt-3 mb-0">
+          すでに 12 個登録済みのため、これ以上追加できません。
+        </div>
+      @endif
+    </form>
+  @endif
 </div>
-
-@push('scripts')
-<script>
-  // 合計12個の上限をフロント側でも保護
-  document.addEventListener('DOMContentLoaded', () => {
-    const MAX = 12;
-    const already = {{ $existingCount }};
-    const remain = Math.max(0, MAX - already);
-    if (remain <= 0) return;
-
-    let currentNew = 0;
-    const boxes = Array.from(document.querySelectorAll('.used-ball-checkbox:not(:disabled):not(:checked)'));
-
-    boxes.forEach(b => {
-      b.addEventListener('change', (e) => {
-        if (e.target.checked) {
-          currentNew++;
-          if (currentNew > remain) {
-            e.target.checked = false;
-            currentNew--;
-            alert('1大会で登録できるのは最大12個までです。');
-          }
-        } else {
-          currentNew--;
-        }
-      });
-    });
-  });
-</script>
-@endpush
 @endsection
