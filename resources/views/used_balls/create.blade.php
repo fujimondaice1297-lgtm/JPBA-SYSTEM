@@ -2,11 +2,13 @@
 
 @section('content')
 @php
-    $viewer = auth()->user();
-    $isStaff = $viewer?->isAdmin() || $viewer?->isEditor();
-    $defaultLicenseNo = old('license_no', $isStaff ? request('license_no') : ($viewer?->pro_bowler_license_no ?? request('license_no')));
+    $selectedLicenseNo = $fixedLicenseNo ?? old('license_no', $prefillLicenseNo ?? request('license_no'));
+    $selectedManufacturer = old('manufacturer', $manufacturer ?? request('manufacturer'));
+    $selectedApprovedBallId = (string) old('approved_ball_id');
     $selectedInspectionNumber = old('inspection_number', '');
     $selectedRegisteredAt = old('registered_at', now()->toDateString());
+    $returnTo = old('return_to', request('return_to'));
+    $entryId = old('entry_id', request('entry_id'));
 @endphp
 
 <div class="container">
@@ -32,7 +34,7 @@
         <div class="card-body small">
             <div>・検量証番号を入力すると、<strong>使用可能</strong> として扱います。</div>
             <div>・検量証番号が空欄なら、<strong>仮登録 / 検量証待ち</strong> として扱います。</div>
-            <div>・会員画面では、自分のライセンス番号での登録だけを想定しています。</div>
+            <div>・大会使用ボール画面から来た場合は、ライセンス番号が事前に入ります。</div>
         </div>
     </div>
 
@@ -40,27 +42,40 @@
         <a href="{{ route('used_balls.index') }}" class="btn btn-secondary">使用ボール一覧へ</a>
         <a href="{{ route('registered_balls.index') }}" class="btn btn-outline-secondary">登録ボール一覧へ</a>
         <a href="{{ route('tournament.entry.select') }}" class="btn btn-outline-secondary">大会エントリー選択へ</a>
+        <a href="{{ route('approved_balls.index') }}" class="btn btn-outline-secondary">承認ボール一覧へ</a>
     </div>
 
     <form method="POST" action="{{ route('used_balls.store') }}">
         @csrf
+        <input type="hidden" name="return_to" value="{{ $returnTo }}">
+        <input type="hidden" name="entry_id" value="{{ $entryId }}">
 
         <div class="row g-3">
             <div class="col-md-6">
                 <label for="license_no" class="form-label">プロライセンス番号 <span class="text-danger">*</span></label>
-                <input
-                    type="text"
-                    name="license_no"
-                    id="license_no"
-                    class="form-control"
-                    value="{{ $defaultLicenseNo }}"
-                    placeholder="例：M00001297"
-                    {{ $isStaff ? '' : 'readonly' }}
-                    required
-                >
-                @unless($isStaff)
-                    <div class="form-text">会員は自分のライセンス番号で登録します。</div>
-                @endunless
+
+                @if(!empty($fixedLicenseNo))
+                    <input
+                        type="text"
+                        name="license_no"
+                        id="license_no"
+                        class="form-control"
+                        value="{{ $fixedLicenseNo }}"
+                        readonly
+                        required
+                    >
+                    <div class="form-text">会員画面では自分のライセンス番号で固定されます。</div>
+                @else
+                    <input
+                        type="text"
+                        name="license_no"
+                        id="license_no"
+                        class="form-control"
+                        value="{{ $selectedLicenseNo }}"
+                        placeholder="例：M00001297"
+                        required
+                    >
+                @endif
             </div>
 
             <div class="col-md-6">
@@ -69,12 +84,12 @@
                     name="manufacturer"
                     id="manufacturer"
                     class="form-select"
-                    onchange="location.href='{{ route('used_balls.create') }}?manufacturer=' + encodeURIComponent(this.value)"
+                    onchange="location.href='{{ route('used_balls.create') }}?manufacturer=' + encodeURIComponent(this.value) + '&license_no=' + encodeURIComponent(document.getElementById('license_no').value) + '&return_to=' + encodeURIComponent('{{ $returnTo }}') + '&entry_id=' + encodeURIComponent('{{ $entryId }}')"
                 >
                     <option value="">選択してください</option>
-                    @foreach($manufacturers as $manufacturer)
-                        <option value="{{ $manufacturer }}" {{ request('manufacturer') == $manufacturer ? 'selected' : '' }}>
-                            {{ $manufacturer }}
+                    @foreach($manufacturers as $manufacturerOption)
+                        <option value="{{ $manufacturerOption }}" {{ (string) $selectedManufacturer === (string) $manufacturerOption ? 'selected' : '' }}>
+                            {{ $manufacturerOption }}
                         </option>
                     @endforeach
                 </select>
@@ -85,7 +100,7 @@
                 <select name="approved_ball_id" id="approved_ball_id" class="form-select" required>
                     <option value="">選択してください</option>
                     @foreach($balls as $ball)
-                        <option value="{{ $ball->id }}" {{ (string) old('approved_ball_id') === (string) $ball->id ? 'selected' : '' }}>
+                        <option value="{{ $ball->id }}" {{ $selectedApprovedBallId === (string) $ball->id ? 'selected' : '' }}>
                             {{ $ball->manufacturer }} - {{ $ball->name }}
                         </option>
                     @endforeach

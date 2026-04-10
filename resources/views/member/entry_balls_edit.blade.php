@@ -27,33 +27,45 @@
     <div class="card-header fw-bold">対象大会 / 登録状況</div>
     <div class="card-body">
       <div class="row g-3">
-        <div class="col-md-4">
+        <div class="col-md-3">
           <div class="text-muted small">大会名</div>
           <div class="fw-bold">{{ $entry->tournament->name ?? '-' }}</div>
         </div>
-        <div class="col-md-3">
+        <div class="col-md-2">
           <div class="text-muted small">現在登録数</div>
           <div class="fw-bold">{{ $existingCount }} / 12</div>
         </div>
-        <div class="col-md-3">
+        <div class="col-md-2">
           <div class="text-muted small">追加可能数</div>
           <div class="fw-bold">{{ $remaining }}</div>
         </div>
         <div class="col-md-2">
+          <div class="text-muted small">候補数</div>
+          <div class="fw-bold">{{ $summary['total'] ?? 0 }}</div>
+        </div>
+        <div class="col-md-3">
           <div class="text-muted small">検量証必須</div>
           <div class="fw-bold">{{ $inspectionRequired ? '必須' : '任意' }}</div>
         </div>
       </div>
 
+      <div class="row g-2 mt-3 small">
+        <div class="col-md-3">登録済み: <strong>{{ $summary['linked'] ?? 0 }}</strong></div>
+        <div class="col-md-3">未登録候補: <strong>{{ $summary['available'] ?? 0 }}</strong></div>
+        <div class="col-md-3">仮登録 / 検量証待ち: <strong>{{ $summary['provisional'] ?? 0 }}</strong></div>
+        <div class="col-md-3">検量証あり: <strong>{{ $summary['valid'] ?? 0 }}</strong></div>
+      </div>
+
       <div class="mt-3 small text-muted">
         この画面では <strong>追加のみ</strong> 行います。すでに登録済みのボールは解除しません。<br>
-        表示前に、登録ボールから大会使用ボールへの同期が自動で実行されます。
+        表示前に、登録ボールから大会使用ボールへの同期が自動で実行されます。<br>
+        <strong>本登録側で検量証番号や有効期限を直した場合は、この画面を開き直すと同期内容が反映されます。</strong>
       </div>
 
       @if ($inspectionRequired)
         <div class="alert alert-warning mt-3 mb-0">
           この大会は検量証必須です。<br>
-          <strong>「仮登録 / 検量証待ち」</strong> のボールは表示されますが、運用上は検量証番号の確認が必要です。
+          <strong>「仮登録 / 検量証待ち」</strong> のボールも表示されますが、運用上は検量証番号の確認が必要です。
         </div>
       @endif
     </div>
@@ -63,6 +75,8 @@
     <a href="{{ route('tournament.entry.select') }}" class="btn btn-secondary">大会エントリー一覧へ戻る</a>
     <a href="{{ route('registered_balls.index') }}" class="btn btn-outline-secondary">登録ボール管理</a>
     <a href="{{ route('used_balls.index') }}" class="btn btn-outline-secondary">使用ボール管理</a>
+    <a href="{{ route('registered_balls.create', ['license_no' => $entryLicenseNo, 'return_to' => 'entry_balls', 'entry_id' => $entry->id]) }}" class="btn btn-outline-primary">本登録を追加</a>
+    <a href="{{ route('used_balls.create', ['license_no' => $entryLicenseNo, 'return_to' => 'entry_balls', 'entry_id' => $entry->id]) }}" class="btn btn-outline-primary">仮登録を追加</a>
   </div>
 
   @if ($usedBalls->isEmpty())
@@ -85,6 +99,7 @@
               <th>登録日</th>
               <th>有効期限</th>
               <th>状態</th>
+              <th style="min-width: 220px;">修正導線</th>
             </tr>
           </thead>
           <tbody>
@@ -98,9 +113,18 @@
                     ?? ('承認ボールID: ' . ($usedBall->approved_ball_id ?? '-'));
 
                 $isLinked = in_array($usedBall->id, $linkedIds ?? [], true);
-                $isTemporary = is_null($usedBall->expires_at);
+                $isTemporary = blank($usedBall->inspection_number) || is_null($usedBall->expires_at);
                 $isExpired = !is_null($usedBall->expires_at) && $usedBall->expires_at->lt(now()->startOfDay());
                 $disableNewSelect = (!$isLinked && $remaining <= 0);
+
+                $registeredPrefill = [
+                    'license_no' => $entryLicenseNo,
+                    'approved_ball_id' => optional($usedBall->approvedBall)->id,
+                    'serial_number' => $usedBall->serial_number,
+                    'registered_at' => optional($usedBall->registered_at)->format('Y-m-d'),
+                    'return_to' => 'entry_balls',
+                    'entry_id' => $entry->id,
+                ];
               @endphp
               <tr>
                 <td class="text-center">
@@ -156,6 +180,20 @@
                   @else
                     <span class="badge bg-secondary">使用可能</span>
                   @endif
+                </td>
+
+                <td>
+                  <div class="d-flex gap-2 flex-wrap">
+                    @if ($isTemporary)
+                      <a href="{{ route('used_balls.edit', ['used_ball' => $usedBall->id, 'return_to' => 'entry_balls', 'entry_id' => $entry->id]) }}" class="btn btn-sm btn-outline-primary">検量証登録</a>
+                      <a href="{{ route('registered_balls.create', $registeredPrefill) }}" class="btn btn-sm btn-primary">本登録へ</a>
+                    @elseif ($isExpired)
+                      <a href="{{ route('used_balls.edit', ['used_ball' => $usedBall->id, 'return_to' => 'entry_balls', 'entry_id' => $entry->id]) }}" class="btn btn-sm btn-outline-danger">再検量更新</a>
+                      <a href="{{ route('registered_balls.create', $registeredPrefill) }}" class="btn btn-sm btn-outline-primary">本登録を作り直す</a>
+                    @else
+                      <a href="{{ route('used_balls.edit', ['used_ball' => $usedBall->id, 'return_to' => 'entry_balls', 'entry_id' => $entry->id]) }}" class="btn btn-sm btn-outline-secondary">状態確認</a>
+                    @endif
+                  </div>
                 </td>
               </tr>
             @endforeach

@@ -8,6 +8,10 @@
     $currentInspection = old('inspection_number', $registeredBall->inspection_number);
     $isTemporary = blank($currentInspection);
     $isExpired = !blank($registeredBall->expires_at) && optional($registeredBall->expires_at)->lt(now()->startOfDay());
+    $displayLicenseNo = $fixedLicenseNo ?? old('license_no', $registeredBall->license_no);
+    $selectedBowler = collect($proBowlers ?? [])->firstWhere('license_no', $displayLicenseNo);
+    $returnTo = old('return_to', request('return_to'));
+    $entryId = old('entry_id', request('entry_id'));
 @endphp
 
 <div class="container">
@@ -62,24 +66,45 @@
     <form method="POST" action="{{ route('registered_balls.update', $registeredBall->id) }}">
         @csrf
         @method('PUT')
+        <input type="hidden" name="return_to" value="{{ $returnTo }}">
+        <input type="hidden" name="entry_id" value="{{ $entryId }}">
 
         <div class="row g-3">
             <div class="col-md-6">
                 <label for="license_no" class="form-label">プロライセンス番号 <span class="text-danger">*</span></label>
-                <input
-                    type="text"
-                    name="license_no"
-                    id="license_no"
-                    class="form-control"
-                    value="{{ old('license_no', $registeredBall->license_no) }}"
-                    list="registered-ball-license-options"
-                    required
-                >
-                <datalist id="registered-ball-license-options">
-                    @foreach($proBowlers as $bowler)
-                        <option value="{{ $bowler->license_no }}">{{ $bowler->name_kanji }}</option>
-                    @endforeach
-                </datalist>
+
+                @if(!empty($fixedLicenseNo))
+                    <input
+                        type="text"
+                        name="license_no"
+                        id="license_no"
+                        class="form-control"
+                        value="{{ $fixedLicenseNo }}"
+                        readonly
+                        required
+                    >
+                    <div class="form-text">
+                        会員画面では自分のライセンス番号で固定されます。
+                        @if($selectedBowler)
+                            （{{ $selectedBowler->name_kanji }}）
+                        @endif
+                    </div>
+                @else
+                    <input
+                        type="text"
+                        name="license_no"
+                        id="license_no"
+                        class="form-control"
+                        value="{{ $displayLicenseNo }}"
+                        list="registered-ball-license-options"
+                        required
+                    >
+                    <datalist id="registered-ball-license-options">
+                        @foreach($proBowlers as $bowler)
+                            <option value="{{ $bowler->license_no }}">{{ $bowler->name_kanji }}</option>
+                        @endforeach
+                    </datalist>
+                @endif
             </div>
 
             <div class="col-md-6">

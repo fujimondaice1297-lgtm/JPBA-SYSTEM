@@ -30,14 +30,25 @@ class TournamentEntryBallController extends Controller
                 $q->whereNull('expires_at')
                     ->orWhereDate('expires_at', '>=', now()->toDateString());
             })
+            ->orderByRaw("case when inspection_number is null then 0 else 1 end asc")
             ->orderByDesc('registered_at')
+            ->orderByDesc('id')
             ->get();
 
         $linkedIds = $entry->balls()->pluck('used_balls.id')->all();
         $existingCount = count($linkedIds);
         $remaining = max(0, 12 - $existingCount);
-
         $inspectionRequired = (bool) ($entry->tournament->inspection_required ?? false);
+
+        $summary = [
+            'total'       => $usedBalls->count(),
+            'linked'      => collect($usedBalls)->whereIn('id', $linkedIds)->count(),
+            'available'   => collect($usedBalls)->reject(fn ($ball) => in_array($ball->id, $linkedIds, true))->count(),
+            'provisional' => collect($usedBalls)->filter(fn ($ball) => $this->isProvisionalBall($ball))->count(),
+            'valid'       => collect($usedBalls)->filter(fn ($ball) => !$this->isProvisionalBall($ball))->count(),
+        ];
+
+        $entryLicenseNo = $this->resolveEntryLicenseNo($entry);
 
         return view('member.entry_balls_edit', compact(
             'entry',
@@ -45,7 +56,9 @@ class TournamentEntryBallController extends Controller
             'linkedIds',
             'existingCount',
             'remaining',
-            'inspectionRequired'
+            'inspectionRequired',
+            'summary',
+            'entryLicenseNo'
         ));
     }
 
@@ -237,11 +250,33 @@ class TournamentEntryBallController extends Controller
         };
     }
 
+    private function isProvisionalBall(UsedBall $ball): bool
+    {
+        return blank($ball->inspection_number) || is_null($ball->expires_at);
+    }
+
+    private function resolveEntryLicenseNo(TournamentEntry $entry): ?string
+    {
+        $licenseNo = trim((string) (optional($entry->bowler)->license_no ?? ''));
+        if ($licenseNo !== '') {
+            return $licenseNo;
+        }
+
+        $userLicenseNo = trim((string) (Auth::user()?->pro_bowler_license_no ?? ''));
+        if ($userLicenseNo !== '') {
+            return $userLicenseNo;
+        }
+
+        return ProBowler::query()
+            ->whereKey($entry->pro_bowler_id)
+            ->value('license_no');
+    }
+
     /**
      * registered_balls -> used_balls 同期
      * - RegisteredBall は license_no ベース
      * - UsedBall は pro_bowler_id を要求するので、対応する ProBowler を解決して保存
-     * - serial_number が既に used にあればスキップ（大文字小文字は無視）
+     * - serial_number が同じものは「スキップ」ではなく更新して、本登録側の修正を反映する
      * - expires_at は RegisteredBall 側のロジックに従う（NULL=仮登録OK）
      */
     private function syncFromRegisteredBalls(int $proBowlerId): void
@@ -256,27 +291,44 @@ class TournamentEntryBallController extends Controller
             return;
         }
 
-        $existingSerials = UsedBall::where('pro_bowler_id', $pro->id)
-            ->pluck('serial_number')
-            ->map(fn ($v) => mb_strtoupper((string) $v))
-            ->all();
+        $existingUsedBalls = UsedBall::where('pro_bowler_id', $pro->id)
+            ->get()
+            ->keyBy(fn ($ball) => mb_strtoupper((string) $ball->serial_number));
 
         foreach ($registered as $rb) {
-            $sn = mb_strtoupper((string) $rb->serial_number);
-            if (in_array($sn, $existingSerials, true)) {
-                continue;
-            }
+            $serialKey = mb_strtoupper((string) $rb->serial_number);
 
-            UsedBall::create([
-                'pro_bowler_id'     => $pro->id,
+            $payload = [
                 'approved_ball_id'  => $rb->approved_ball_id,
                 'serial_number'     => $rb->serial_number,
                 'inspection_number' => $rb->inspection_number,
                 'registered_at'     => $rb->registered_at,
                 'expires_at'        => $rb->expires_at,
-            ]);
+            ];
 
-            $existingSerials[] = $sn;
+            if ($existingUsedBalls->has($serialKey)) {
+                /** @var \App\Models\UsedBall $existing */
+                $existing = $existingUsedBalls->get($serialKey);
+
+                $needsUpdate =
+                    (int) $existing->approved_ball_id !== (int) $rb->approved_ball_id ||
+                    (string) ($existing->inspection_number ?? '') !== (string) ($rb->inspection_number ?? '') ||
+                    optional($existing->registered_at)->format('Y-m-d') !== optional($rb->registered_at)->format('Y-m-d') ||
+                    optional($existing->expires_at)->format('Y-m-d') !== optional($rb->expires_at)->format('Y-m-d');
+
+                if ($needsUpdate) {
+                    $existing->update($payload);
+                }
+
+                continue;
+            }
+
+            $created = UsedBall::create(array_merge(
+                ['pro_bowler_id' => $pro->id],
+                $payload
+            ));
+
+            $existingUsedBalls->put($serialKey, $created);
         }
     }
 }

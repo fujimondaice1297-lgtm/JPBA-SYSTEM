@@ -1,4 +1,3 @@
-
 {{-- resources/views/used_balls/index.blade.php --}}
 @extends('layouts.app')
 
@@ -19,6 +18,14 @@
     @if (session('error'))
         <div class="alert alert-danger">{{ session('error') }}</div>
     @endif
+
+    <div class="alert alert-light border">
+        <div class="small">
+            この一覧は <strong>大会使用ボールの候補</strong> です。<br>
+            仮登録のボールは、ここで検量証番号を入れるか、<strong>本登録へ</strong> 進めて整備してください。<br>
+            本登録側を更新した場合は、大会使用ボール画面を開き直すと同期内容が反映されます。
+        </div>
+    </div>
 
     <div class="mb-3 d-flex gap-2 flex-wrap">
         <a href="{{ route('registered_balls.index') }}" class="btn btn-outline-secondary">登録ボール一覧へ</a>
@@ -70,8 +77,8 @@
                 <th style="min-width:110px;">登録日</th>
                 <th style="min-width:120px;">有効期限</th>
                 <th style="min-width:150px;">状態</th>
-                <th style="min-width:180px;">修正導線</th>
-                <th style="min-width:140px;">操作</th>
+                <th style="min-width:220px;">修正導線</th>
+                <th style="min-width:200px;">操作</th>
             </tr>
         </thead>
         <tbody>
@@ -84,6 +91,13 @@
                     $statusLabel = $isProvisional ? '仮登録 / 検量証待ち' : ($isExpired ? '期限切れ' : ($isExpiringSoon ? '期限間近' : '有効'));
                     $statusClass = $isProvisional ? 'warning text-dark' : ($isExpired ? 'danger' : ($isExpiringSoon ? 'warning text-dark' : 'success'));
                     $actionLabel = $isProvisional ? '検量証登録' : ($isExpired ? '再検量更新' : '更新');
+
+                    $registeredPrefill = [
+                        'license_no' => $ball->proBowler?->license_no,
+                        'approved_ball_id' => $ball->approved_ball_id,
+                        'serial_number' => $ball->serial_number,
+                        'registered_at' => optional($ball->registered_at)->format('Y-m-d'),
+                    ];
                 @endphp
                 <tr>
                     <td>{{ $ball->proBowler?->license_no ?? '未登録' }}</td>
@@ -125,7 +139,7 @@
 
                     <td>
                         @if($isProvisional)
-                            <span class="text-muted">検量証番号を登録してください</span>
+                            <span class="text-muted">検量証番号を登録するか、本登録へ進めてください</span>
                         @elseif($isExpired)
                             <span class="text-muted">再検量後に更新してください</span>
                         @elseif($isExpiringSoon)
@@ -137,6 +151,10 @@
 
                     <td class="d-flex gap-1 flex-wrap">
                         <a href="{{ route('used_balls.edit', $ball->id) }}" class="btn btn-success btn-sm">{{ $actionLabel }}</a>
+
+                        @if($isProvisional || $isExpired)
+                            <a href="{{ route('registered_balls.create', $registeredPrefill) }}" class="btn btn-sm btn-outline-primary">本登録へ</a>
+                        @endif
 
                         @if(auth()->user()?->isAdmin())
                             <form action="{{ route('admin.used_balls.destroy', $ball->id) }}"

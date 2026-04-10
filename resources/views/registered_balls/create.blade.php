@@ -2,7 +2,7 @@
 
 @section('content')
 @php
-    $selectedLicenseNo = old('license_no', request('license_no'));
+    $selectedLicenseNo = $fixedLicenseNo ?? old('license_no', request('license_no'));
     $selectedApprovedBallId = (string) old('approved_ball_id', request('approved_ball_id'));
     $selectedSerialNumber = old('serial_number', request('serial_number'));
     $selectedRegisteredAt = old('registered_at', request('registered_at', now()->format('Y-m-d')));
@@ -10,6 +10,9 @@
     $selectedBall = collect($approvedBalls ?? [])->firstWhere('id', (int) $selectedApprovedBallId);
     $selectedManufacturer = old('manufacturer_filter', $selectedBall->manufacturer ?? '');
     $selectedReleaseYear = old('release_year_filter', $selectedBall->release_year ?? '');
+    $selectedBowler = collect($proBowlers ?? [])->firstWhere('license_no', $selectedLicenseNo);
+    $returnTo = old('return_to', request('return_to'));
+    $entryId = old('entry_id', request('entry_id'));
 @endphp
 
 <div class="container">
@@ -37,26 +40,47 @@
 
     <form method="POST" action="{{ route('registered_balls.store') }}">
         @csrf
+        <input type="hidden" name="return_to" value="{{ $returnTo }}">
+        <input type="hidden" name="entry_id" value="{{ $entryId }}">
 
         <div class="row g-3">
             <div class="col-md-6">
                 <label for="license_no" class="form-label">プロライセンス番号 <span class="text-danger">*</span></label>
-                <input
-                    type="text"
-                    name="license_no"
-                    id="license_no"
-                    class="form-control"
-                    value="{{ $selectedLicenseNo }}"
-                    list="registered-ball-license-options"
-                    placeholder="例：M00001234"
-                    required
-                >
-                <datalist id="registered-ball-license-options">
-                    @foreach($proBowlers as $bowler)
-                        <option value="{{ $bowler->license_no }}">{{ $bowler->name_kanji }}</option>
-                    @endforeach
-                </datalist>
-                <div class="form-text">ライセンス番号を直接入力できます。候補一覧からも選べます。</div>
+
+                @if(!empty($fixedLicenseNo))
+                    <input
+                        type="text"
+                        name="license_no"
+                        id="license_no"
+                        class="form-control"
+                        value="{{ $fixedLicenseNo }}"
+                        readonly
+                        required
+                    >
+                    <div class="form-text">
+                        会員画面では自分のライセンス番号で固定されます。
+                        @if($selectedBowler)
+                            （{{ $selectedBowler->name_kanji }}）
+                        @endif
+                    </div>
+                @else
+                    <input
+                        type="text"
+                        name="license_no"
+                        id="license_no"
+                        class="form-control"
+                        value="{{ $selectedLicenseNo }}"
+                        list="registered-ball-license-options"
+                        placeholder="例：M00001234"
+                        required
+                    >
+                    <datalist id="registered-ball-license-options">
+                        @foreach($proBowlers as $bowler)
+                            <option value="{{ $bowler->license_no }}">{{ $bowler->name_kanji }}</option>
+                        @endforeach
+                    </datalist>
+                    <div class="form-text">ライセンス番号を直接入力できます。候補一覧からも選べます。</div>
+                @endif
             </div>
 
             <div class="col-md-6">

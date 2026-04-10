@@ -214,6 +214,8 @@ class RegisteredBallController extends Controller
             'registered_at'      => ['required', 'date'],
             'inspection_number'  => ['nullable', 'string', 'max:255'],
             'certificate_number' => ['nullable', 'string', 'max:255'],
+            'return_to'          => ['nullable', 'string', 'max:50'],
+            'entry_id'           => ['nullable', 'integer'],
         ]);
 
         $inspection = trim((string) ($request->input('inspection_number')
@@ -232,9 +234,11 @@ class RegisteredBallController extends Controller
             ? Carbon::parse($data['registered_at'])->addYear()->subDay()->toDateString()
             : null;
 
-        RegisteredBall::create($data);
+        $registeredBall = RegisteredBall::create($data);
 
-        return redirect()->route('registered_balls.index')->with('success', '登録完了');
+        $this->syncRegisteredBallToUsedBall($registeredBall);
+
+        return $this->redirectAfterSave($request, 'registered_balls.index', '登録完了');
     }
 
     public function edit(Request $request, RegisteredBall $registeredBall)
@@ -278,6 +282,8 @@ class RegisteredBallController extends Controller
             'registered_at'      => ['required', 'date'],
             'inspection_number'  => ['nullable', 'string', 'max:255'],
             'certificate_number' => ['nullable', 'string', 'max:255'],
+            'return_to'          => ['nullable', 'string', 'max:50'],
+            'entry_id'           => ['nullable', 'integer'],
         ]);
 
         $inspection = trim((string) ($request->input('inspection_number')
@@ -298,7 +304,9 @@ class RegisteredBallController extends Controller
 
         $registeredBall->update($data);
 
-        return redirect()->route('registered_balls.index')->with('success', '更新完了');
+        $this->syncRegisteredBallToUsedBall($registeredBall->fresh());
+
+        return $this->redirectAfterSave($request, 'registered_balls.index', '更新完了');
     }
 
     public function destroy(Request $request, RegisteredBall $registeredBall)
@@ -425,5 +433,60 @@ class RegisteredBallController extends Controller
         }
 
         return $user->isAdmin() || $user->isEditor();
+    }
+
+    private function syncRegisteredBallToUsedBall(RegisteredBall $registeredBall): void
+    {
+        $licenseNo = trim((string) ($registeredBall->license_no ?? ''));
+        if ($licenseNo === '') {
+            return;
+        }
+
+        $proBowler = ProBowler::query()
+            ->where('license_no', $licenseNo)
+            ->first();
+
+        if (!$proBowler) {
+            return;
+        }
+
+        $payload = [
+            'approved_ball_id'  => $registeredBall->approved_ball_id,
+            'serial_number'     => $registeredBall->serial_number,
+            'inspection_number' => $registeredBall->inspection_number,
+            'registered_at'     => $registeredBall->registered_at,
+            'expires_at'        => $registeredBall->expires_at,
+        ];
+
+        $existing = UsedBall::query()
+            ->where('pro_bowler_id', $proBowler->id)
+            ->whereRaw('upper(serial_number) = ?', [mb_strtoupper((string) $registeredBall->serial_number)])
+            ->first();
+
+        if ($existing) {
+            $existing->update($payload);
+            return;
+        }
+
+        UsedBall::create(array_merge(
+            ['pro_bowler_id' => $proBowler->id],
+            $payload
+        ));
+    }
+
+    private function redirectAfterSave(Request $request, string $defaultRoute, string $message)
+    {
+        $returnTo = (string) $request->input('return_to', '');
+        $entryId = (int) $request->input('entry_id', 0);
+
+        if ($returnTo === 'entry_balls' && $entryId > 0) {
+            return redirect()
+                ->route('member.entries.balls.edit', $entryId)
+                ->with('success', $message);
+        }
+
+        return redirect()
+            ->route($defaultRoute)
+            ->with('success', $message);
     }
 }

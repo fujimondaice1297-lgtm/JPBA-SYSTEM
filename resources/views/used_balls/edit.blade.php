@@ -4,6 +4,8 @@
 @php
     $isTemporary = blank(old('inspection_number', $usedBall->inspection_number));
     $isExpired = !blank($usedBall->expires_at) && optional($usedBall->expires_at)->lt(now()->startOfDay());
+    $returnTo = old('return_to', request('return_to'));
+    $entryId = old('entry_id', request('entry_id'));
 @endphp
 
 <div class="container">
@@ -81,6 +83,8 @@
     <form method="POST" action="{{ route('used_balls.update', $usedBall->id) }}">
         @csrf
         @method('PATCH')
+        <input type="hidden" name="return_to" value="{{ $returnTo }}">
+        <input type="hidden" name="entry_id" value="{{ $entryId }}">
 
         <div class="row g-3">
             <div class="col-md-6">
