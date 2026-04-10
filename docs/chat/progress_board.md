@@ -118,3 +118,15 @@
 - [✓] `auth_instructor_csv` 由来の `certified` 行を編集画面から手動で `pro_bowlers` に結線できる
 - [✓] `/instructors` 一覧で `結線先プロ` / `取込元` / `履歴理由` を確認できる
 - [ ] 既存 `instructors` 互換レイヤの撤去可否は後続で整理する
+
+#### 2026-04-10 メモ（取込導線・会員区分表示・大会エントリー運用の整備）
+- [✓] `AuthInstructor.csv` 取込画面で、対象年度指定・取込結果サマリ・一覧導線を追加
+- [✓] `Pro_colum.csv` 取込画面でも、取込結果サマリと `instructor_registry` 反映結果を一覧側で確認できるようにした
+- [✓] `/pro_bowlers` 管理画面で `member_class` / `can_enter_official_tournament` / `current instructor sync` を表示できるようにした
+- [✓] manual 由来インストラクターは物理削除せず、`retired/history` として履歴化する運用を追加した
+- [✓] 会員向け大会エントリー画面を `member_class` / `can_enter_official_tournament` / `is_active` 基準で制御するようにした
+- [✓] シフト抽選 / レーン抽選 / 大会使用ボール登録でも、本人確認 + エントリー有効 + 会員区分判定のサーバー側ガードを追加した
+- [✓] 大会使用ボール登録画面を本実装し、`registered_balls -> used_balls` 同期・最大12個・仮登録表示に対応した
+- [✓] `registered_balls` / `used_balls` の一覧・create/edit を、検量証番号 / 仮登録 / 有効期限運用に合わせて整備した
+- [ ] `TournamentEntry` 後続（チェックイン / 当日運用 / 抽選結果公開）までは未着手
+- [ ] `registered_balls` と `used_balls` の役割分担最終整理（統合可否を含む）は後続で整理する

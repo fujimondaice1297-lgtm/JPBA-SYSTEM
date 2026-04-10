@@ -2672,3 +2672,106 @@ User::where('email','domaine-d@i.softbank.jp')->exists(); // true
   - push手順：`git add -A` → `git commit -m ...` → `git push origin main`
 
 （以上）
+
+## 2026-04-10 INSTRUCTOR / tournament entry / ball workflow の運用導線仕上げ
+
+- 目的:
+  - 2026-04-09 までに整えた `instructor_registry` の資格遷移/current-history 運用を、日常運用の画面導線まで落とし込む。
+  - あわせて、`pro_bowlers.member_class` / `can_enter_official_tournament` を大会エントリー実処理へ反映し、使用ボール登録まで含めて会員導線を閉じる。
+  - さらに、`registered_balls` / `used_balls` の検量証番号・仮登録・有効期限の扱いを、一覧だけでなく入力画面/Controller まで一貫させる。
+
+- 実施内容（INSTRUCTOR）:
+  - `app/Http/Controllers/AuthInstructorImportController.php`
+  - `resources/views/instructors/import_auth.blade.php`
+  - `resources/views/instructors/index.blade.php`
+    - `AuthInstructor.csv` 取込で対象年度を指定できるようにし、
+      - 新規 / 更新 / スキップ
+      - `license_no` 一致結線
+      - 複合条件一致結線
+      - 未結線
+      - `renewed_current`
+      - `promoted_to_pro_bowler`
+      - `promoted_to_pro_instructor`
+      - `inactive_in_source`
+      などのサマリをセッション経由で一覧に表示できるようにした。
+    - 一覧に「認定CSV取込」導線を追加し、年次更新運用を取込画面 → 一覧確認までつなげた。
+  - `app/Http/Controllers/ProBowlerImportController.php`
+  - `resources/views/pro_bowlers/import.blade.php`
+  - `resources/views/pro_bowlers/index.blade.php`
+    - `Pro_colum.csv` 取込でも、
+      - 新規 / 更新 / スキップ
+      - `member_class` 内訳
+      - current の `pro_bowler` / `pro_instructor` 件数
+      - `reactivated_certified` / `qualification_removed` / `promoted_*`
+      を可視化するサマリを追加した。
+    - `instructor_registry` 反映結果を import 後に画面で確認しやすいようにした。
+  - `app/Models/ProBowler.php`
+  - `app/Http/Controllers/ProBowlerController.php`
+  - `resources/views/pro_bowlers/list.blade.php`
+  - `resources/views/pro_bowlers/index.blade.php`
+  - `resources/views/pro_bowlers/athlete_form.blade.php`
+    - `/pro_bowlers` の一覧・管理画面で
+      - `member_class`
+      - `can_enter_official_tournament`
+      - `currentInstructorRegistry`
+      を表示できるようにし、競技対象者 / プロインストラクター / 名誉・海外などの判定結果を管理画面から確認できるようにした。
+  - `app/Http/Controllers/InstructorController.php`
+  - `resources/views/instructors/index.blade.php`
+  - `resources/views/instructors/edit.blade.php`
+    - 既存 `DELETE /admin/instructors/{instructor}` ルートに対応する `destroy()` を実装。
+    - manual 由来行は物理削除せず、`is_current = false` / `is_active = false` / `supersede_reason = qualification_removed` / `renewal_status = expired` として `retired/history` 化するよう整理した。
+    - 一覧・編集画面に「退会済みにする」導線を追加した。
+
+- 実施内容（大会エントリー / 会員導線）:
+  - `app/Http/Controllers/TournamentEntryController.php`
+  - `resources/views/member/entry_select.blade.php`
+    - 会員向け大会エントリー画面に、現在の判定（ライセンスNo / 氏名 / 会員区分 / 有効状態 / 公式戦出場可否）を表示するパネルを追加。
+    - `pro_bowler_id` 未結線、`member_class != player`、`can_enter_official_tournament = false`、`is_active = false` の場合は大会エントリー自体を選択できないようにした。
+  - `app/Http/Controllers/DrawController.php`
+  - `app/Http/Controllers/TournamentEntryBallController.php`
+    - シフト抽選 / レーン抽選 / 大会使用ボール登録の各 controller に、
+      - 本人以外の entry 遮断
+      - `status = entry` 以外の遮断
+      - `member_class` / `can_enter_official_tournament` / `is_active` によるサーバー側ガード
+      を追加した。
+    - `TournamentEntryBallController` では `registered_balls -> used_balls` 同期を `edit()` 表示前に実行するようにした。
+  - `resources/views/member/entry_balls_edit.blade.php`
+    - 大会使用ボール登録画面をプレースホルダから本実装へ置換。
+    - 対象大会 / 現在登録数 / 追加可能数 / 検量証必須フラグを表示。
+    - 使用可能ボール一覧に対して、
+      - すでに登録済み
+      - 仮登録 / 検量証待ち
+      - 期限切れ
+      - 使用可能
+      の状態を表示しつつ、追加のみ・最大12個までの運用を画面から扱えるようにした。
+
+- 実施内容（registered_balls / used_balls の検量証運用整備）:
+  - `app/Http/Controllers/RegisteredBallController.php`
+  - `resources/views/registered_balls/index.blade.php`
+    - 本登録 + 仮登録（`used_balls` 由来）を統合表示する一覧に、状態 / 表示元 / 修正導線を追加した。
+  - `app/Http/Controllers/UsedBallController.php`
+  - `resources/views/used_balls/index.blade.php`
+    - `used_balls` 一覧に、仮登録 / 使用可能 / 期限間近 / 期限切れ の状態フィルタと表示を追加した。
+    - 会員は自分のボールのみ参照・編集できるようにし、管理者/編集者のみ全件閲覧できるよう整理した。
+    - `edit()` を追加し、controller 側で create/edit/update の ownership check を完結させた。
+    - `inspection_number` を空に戻した場合、`expires_at = null` として仮登録に戻すよう整理した。
+  - `resources/views/registered_balls/create.blade.php`
+  - `resources/views/registered_balls/edit.blade.php`
+  - `resources/views/used_balls/create.blade.php`
+  - `resources/views/used_balls/edit.blade.php`
+    - create/edit 画面で、検量証番号の有無に応じて
+      - 本登録 / 仮登録
+      - 有効期限の自動表示
+      - 会員向けの誤操作防止
+      をわかりやすく表示するUIに整理した。
+
+- 現時点の判断:
+  - `instructor_registry` を正本にした current/history 運用は、取込 → 一覧確認 → 手動結線 → 退会/履歴化 まで、業務導線として一通り回せる状態になった。
+  - `member_class` / `can_enter_official_tournament` は「表示用」ではなく、大会エントリー・抽選・大会使用ボール登録まで含めた実処理条件として使う状態になった。
+  - `registered_balls` / `used_balls` は、検量証番号の有無による仮登録 / 本登録 / 有効期限の扱いが、一覧・入力画面・controller で一貫した状態になった。
+
+- 今回の扱い:
+  - アプリ実装・画面導線の整備のみであり、DBスキーマ変更は発生していない。
+  - そのため migration / `docs/db/data_dictionary.md` / `docs/db/ER.dbml` / `docs/db/refs_missing.md` の更新は不要。
+  - `docs/db/refs_skipped.md` についても、新しい参照保留や例外ルールの追加は無かったため更新不要。
+
