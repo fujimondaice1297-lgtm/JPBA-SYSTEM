@@ -13,6 +13,16 @@ class TournamentEntry extends Model
         'is_paid',
         'shift_drawn',
         'lane_drawn',
+        'shift',
+        'lane',
+        'checked_in_at',
+    ];
+
+    protected $casts = [
+        'is_paid' => 'boolean',
+        'shift_drawn' => 'boolean',
+        'lane_drawn' => 'boolean',
+        'checked_in_at' => 'datetime',
     ];
 
     public function tournament()

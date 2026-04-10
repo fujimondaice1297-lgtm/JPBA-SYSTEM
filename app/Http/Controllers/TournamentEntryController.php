@@ -84,6 +84,61 @@ class TournamentEntryController extends Controller
             ->with('success', 'エントリー状況を更新しました。');
     }
 
+    public function checkIn(TournamentEntry $entry)
+    {
+        $user = Auth::user();
+        $userProBowlerId = (int) ($user?->pro_bowler_id ?? 0);
+
+        if ($userProBowlerId <= 0 || $userProBowlerId !== (int) $entry->pro_bowler_id) {
+            abort(403, '自分のエントリー以外は操作できません。');
+        }
+
+        $bowler = ProBowler::query()->find($entry->pro_bowler_id);
+        $eligibility = $this->resolveEntryEligibility($bowler);
+
+        if (!$eligibility['allowed']) {
+            return redirect()
+                ->route('tournament.entry.select')
+                ->with('error', $eligibility['message']);
+        }
+
+        if ($entry->status !== 'entry') {
+            return redirect()
+                ->route('tournament.entry.select')
+                ->with('error', 'エントリー有効時のみチェックインできます。');
+        }
+
+        $tournament = $entry->tournament()->first();
+        $requiresShift = filled(trim((string) ($tournament?->shift_codes ?? '')));
+        $requiresLane = !is_null($tournament?->lane_from) && !is_null($tournament?->lane_to);
+
+        if ($requiresShift && blank($entry->shift)) {
+            return redirect()
+                ->route('tournament.entry.select')
+                ->with('error', '先にシフト抽選を完了してください。');
+        }
+
+        if ($requiresLane && blank($entry->lane)) {
+            return redirect()
+                ->route('tournament.entry.select')
+                ->with('error', '先にレーン抽選を完了してください。');
+        }
+
+        if (!is_null($entry->checked_in_at)) {
+            return redirect()
+                ->route('tournament.entry.select')
+                ->with('success', 'すでにチェックイン済みです。');
+        }
+
+        $entry->update([
+            'checked_in_at' => now(),
+        ]);
+
+        return redirect()
+            ->route('tournament.entry.select')
+            ->with('success', 'チェックインを受け付けました。');
+    }
+
     private function resolveEntryEligibility(?ProBowler $bowler): array
     {
         if (!$bowler) {

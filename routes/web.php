@@ -200,6 +200,7 @@ Route::middleware(['auth','role:member,editor,admin'])->group(function () {
     Route::post('/member/entries/{entry}/balls', [TournamentEntryBallController::class, 'bulkStore'])->name('member.entries.balls.store');
     Route::post('/member/entries/{entry}/shift-draw', [DrawController::class, 'shift'])->name('member.entries.shift.draw');
     Route::post('/member/entries/{entry}/lane-draw', [DrawController::class, 'lane'])->name('member.entries.lane.draw');
+    Route::post('/member/entries/{entry}/check-in', [TournamentEntryController::class, 'checkIn'])->name('member.entries.check_in');
 
     // 使用ボール / 登録ボール（※ Controller 側で member は自分の分だけに絞り込み済み）
     Route::resource('used_balls', UsedBallController::class)->except(['show','destroy']);
@@ -234,7 +235,7 @@ Route::middleware(['auth','role:member,editor,admin'])->group(function () {
     Route::get('/calendar/{year}/{month}/pdf', [CalendarController::class,'monthlyPdf'])->whereNumber('year')->name('calendar.monthly.pdf');
 
     Route::get('/flash-news/{id}', [FlashNewsPublicController::class, 'show'])
-        ->whereNumber('id')   // ← これがポイント（数値以外はマッチしない）
+        ->whereNumber('id')
         ->name('flash_news.public');
     
     // API（会員以上のみで使う想定：route:list のエントリと一致）
@@ -256,57 +257,47 @@ Route::middleware(['auth','role:editor,admin'])->group(function () {
     Route::get('/scores/input', [ScoreController::class, 'input'])->name('scores.input');
     Route::post('/scores/store', [ScoreController::class, 'store']);
     Route::post('/scores/settings/bulk', [ScoreController::class, 'saveSettingBulk']);
-    Route::post('/scores/settings/save', [ScoreController::class, 'saveSetting']); // 単品（互換）
-    Route::post('/scores/clear-all', [ScoreController::class, 'clearAll']);       // ★ 追加：全クリア
-    Route::post('/scores/clear-game', [ScoreController::class, 'clearGame']);     // ★ 追加：該当Gクリア
+    Route::post('/scores/settings/save', [ScoreController::class, 'saveSetting']);
+    Route::post('/scores/clear-all', [ScoreController::class, 'clearAll']);
+    Route::post('/scores/clear-game', [ScoreController::class, 'clearGame']);
     Route::get('/scores/result', [ScoreController::class, 'result']);
     Route::get('/scores/board', [ScoreController::class, 'board']);
-    Route::get('/scores/api/existing-ids', [ScoreController::class, 'apiExistingIds']);   // ★追加：検証用API
-    Route::post('/scores/update-one', [ScoreController::class, 'updateOne']);            // ★追加：個別更新
-    Route::post('/scores/delete-one', [ScoreController::class, 'deleteOne']);            // ★追加：個別削除
+    Route::get('/scores/api/existing-ids', [ScoreController::class, 'apiExistingIds']);
+    Route::post('/scores/update-one', [ScoreController::class, 'updateOne']);
+    Route::post('/scores/delete-one', [ScoreController::class, 'deleteOne']);
 
-    // 組織マスタ（名称+URL） ※会場と同様の管理
     Route::resource('organizations', \App\Http\Controllers\OrganizationMasterController::class)->except(['show']);
 
-    // API（検索/1件取得）※tournaments/create の主催/協賛 検索UIが利用
     Route::get('/api/organizations/search', [\App\Http\Controllers\OrganizationMasterController::class,'search'])
         ->name('api.organizations.search');
     Route::get('/api/organizations/{id}', [\App\Http\Controllers\OrganizationMasterController::class,'show'])
         ->name('api.organizations.show');
 
-    // 大会コピー作成
     Route::get('/tournaments/{tournament}/clone', [\App\Http\Controllers\TournamentController::class,'clone'])
         ->name('tournaments.clone');
     
-    // 大会マスタ（削除以外）
     Route::resource('tournaments', TournamentController::class)->except(['destroy']);
-    // 用語：リソースルート（index/create/store/edit/update/destroy等をまとめて定義する書き方）
     Route::resource('venues', VenuePageController::class)->except(['show']);
 
-    // 大会成績：ネスト資源（index/create/store/edit/update）+ shallow
     Route::resource('tournaments.results', TournamentResultController::class)
         ->only(['index','create','store','edit','update'])
         ->shallow();
 
-    // ====== 旧ルート名（ビュー後方互換）======
     Route::get('/tournaments/{tournament}/results/create', [TournamentResultController::class, 'create'])
         ->name('tournament_results.create');
     Route::post('/tournaments/{tournament}/results', [TournamentResultController::class, 'store'])
         ->name('tournament_results.store');
 
-    // shallow 側の edit/update にも “tournament_results.*” の別名を提供（route:list と一致）
     Route::get('/tournament_results/{result}/edit', [TournamentResultController::class, 'edit'])
         ->name('tournament_results.edit');
     Route::put('/tournament_results/{result}', [TournamentResultController::class, 'update'])
         ->name('tournament_results.update');
 
-    // 一括登録（旧名そのまま）
     Route::get('/tournament_results/batch-create', [TournamentResultController::class, 'batchCreate'])
         ->name('tournament_results.batchCreate');
     Route::post('/tournament_results/batch-store', [TournamentResultController::class, 'batchStore'])
         ->name('tournament_results.batchStore');
 
-    // 追加アクション
     Route::post('/tournaments/{tournament}/results/apply-awards-points',
         [TournamentResultController::class, 'applyAwardsAndPoints'])
         ->name('tournaments.results.apply_awards_points');
@@ -314,13 +305,11 @@ Route::middleware(['auth','role:editor,admin'])->group(function () {
         [TournamentResultController::class, 'syncTitles'])
         ->name('tournaments.results.sync');
 
-    // 配分マスタ（削除以外）
     Route::prefix('tournaments/{tournament}')->name('tournaments.')->group(function () {
         Route::resource('prize_distributions', PrizeDistributionController::class)->except(['destroy']);
         Route::resource('point_distributions', PointDistributionController::class)->except(['destroy']);
     });
 
-    // 承認ボール（削除以外）
     Route::get('/approved_balls/import', [ApprovedBallImportController::class, 'showImportForm'])
         ->name('approved_balls.import_form');
     Route::post('/approved_balls/import', [ApprovedBallImportController::class, 'import'])
@@ -330,7 +319,6 @@ Route::middleware(['auth','role:editor,admin'])->group(function () {
     Route::resource('approved_balls', ApprovedBallController::class)
         ->except(['destroy', 'show']);
 
-    // プロボウラー（編集系＝公開しない）
     Route::get('/athletes', [ProBowlerController::class, 'index'])->name('athlete.index');
     Route::get('/pro_bowlers', [ProBowlerController::class, 'index'])->name('pro_bowlers.index');
     Route::get('/pro-bowlers/create', [ProBowlerController::class, 'create'])->name('pro_bowlers.create');
@@ -341,7 +329,6 @@ Route::middleware(['auth','role:editor,admin'])->group(function () {
     Route::get('/pro_bowlers/form', fn () => view('pro_bowlers.athlete_form'))->name('athletes.create');
     Route::post('/athletes/store', fn () => '登録完了（仮）')->name('athletes.store');
 
-    // インストラクター（削除以外）
     Route::resource('instructors', InstructorController::class)->except(['destroy']);
     Route::get('/instructors/export-pdf', [InstructorController::class, 'exportPdf'])->name('instructors.exportPdf');
     Route::get('/instructors/license/{license_no}/edit', [InstructorController::class, 'edit'])->name('instructors.edit_by_license');
@@ -353,14 +340,12 @@ Route::middleware(['auth','role:editor,admin'])->group(function () {
     })->name('instructors.edit.legacy');
     Route::get('/certified_instructors/{license_no}/edit', [InstructorController::class, 'edit'])->name('certified_instructors.edit');
 
-    // 訓練系（事務用）
     Route::get('/admin/trainings/bulk',  [BulkTrainingController::class, 'create'])->name('trainings.bulk');
     Route::post('/admin/trainings/bulk', [BulkTrainingController::class, 'store'])->name('trainings.bulk.store');
     Route::get('/admin/trainings/reports/{scope?}', [TrainingReportController::class, 'index'])
         ->whereIn('scope', ['compliant','missing','expired','expiring'])
         ->name('trainings.reports');
 
-    // カレンダーイベント（作成/更新）
     Route::prefix('calendar-events')->name('calendar_events.')->group(function () {
         Route::get('', [CalendarEventController::class,'index'])->name('index');
         Route::get('create', [CalendarEventController::class,'create'])->name('create');
@@ -371,24 +356,18 @@ Route::middleware(['auth','role:editor,admin'])->group(function () {
         Route::post('import', [CalendarEventController::class,'import'])->name('import');
     });
 
-    // レコードタイプ（削除以外）
     Route::resource('record_types', RecordTypeController::class)->except(['destroy']);
 
-    // タイトル付与（作成）
     Route::post('/pro_bowlers/{bowler}/titles', [ProBowlerTitleController::class, 'store'])->name('pro_bowler_titles.store');
 
-    // タイトル反映（同期）
     Route::post('/tournaments/{tournament}/sync-titles', [TitleSyncController::class, 'sync'])->name('tournaments.sync_titles');
 
-    // プロボウラー取り込み
     Route::get('/pro_bowlers/import', [ProBowlerImportController::class, 'form'])->name('pro_bowlers.import_form');
     Route::post('/pro_bowlers/import', [ProBowlerImportController::class, 'import'])->name('pro_bowlers.import');
 
-    // 認定インストラクター取り込み
     Route::get('/instructors/import/auth', [AuthInstructorImportController::class, 'form'])->name('instructors.import_auth_form');
     Route::post('/instructors/import/auth', [AuthInstructorImportController::class, 'import'])->name('instructors.import_auth');
 
-    // プログループ管理
     Route::resource('pro_groups', \App\Http\Controllers\ProGroupController::class)
         ->only(['index','show','create','store','edit','update']);
     Route::post('pro_groups/{pro_group}/rebuild', [\App\Http\Controllers\ProGroupController::class,'rebuild'])
@@ -396,12 +375,10 @@ Route::middleware(['auth','role:editor,admin'])->group(function () {
     Route::get('pro_groups/{pro_group}/export-csv', [\App\Http\Controllers\ProGroupController::class,'exportCsv'])
         ->name('pro_groups.export_csv');
     
-    // 大会参加者グループをワンクリック作成
     Route::post('tournaments/{tournament}/participant-group',
         [\App\Http\Controllers\ProGroupController::class, 'quickCreateTournamentGroup']
     )->name('tournaments.participant_group.create');
 
-    // グループメール
     Route::get('pro_groups/{group}/mail/create', [\App\Http\Controllers\GroupMailController::class,'create'])
         ->name('pro_groups.mail.create');
     Route::post('pro_groups/{group}/mail', [\App\Http\Controllers\GroupMailController::class,'store'])
@@ -409,8 +386,7 @@ Route::middleware(['auth','role:editor,admin'])->group(function () {
     Route::get('pro_groups/{group}/mail/{mailout}', [\App\Http\Controllers\GroupMailController::class,'show'])
         ->name('pro_groups.mail.show');
     
-    // ===== 殿堂 管理（作成/更新のみ。削除なし） =====
-    Route::get('/hof/create', [HofManageController::class, 'create'])->name('hof.create');   // ← 先に定義
+    Route::get('/hof/create', [HofManageController::class, 'create'])->name('hof.create');
     Route::post('/hof',       [HofManageController::class, 'store'])->name('hof.store');
 
     Route::get('/hof/{id}/edit', [HofManageController::class, 'edit'])
@@ -421,19 +397,12 @@ Route::middleware(['auth','role:editor,admin'])->group(function () {
     Route::post('/hof/{id}/photos/upload', [HofManageController::class, 'uploadPhoto'])
         ->whereNumber('id')->name('hof.photos.upload');
 
-    // （URL直貼り追加を残している場合のみ）
-    // Route::post('/hof/{id}/photos/url', [HofManageController::class, 'addPhotoUrl'])
-    //     ->whereNumber('id')->name('hof.photos.url');
-
-    // ===== 殿堂 閲覧（一覧・詳細） =====
     Route::get('/hof', [HofController::class, 'index'])->name('hof.index');
 
-    // 予約語「create」を slug から除外して衝突回避
     Route::get('/hof/{slug}', [HofController::class, 'show'])
         ->where('slug', '^(?!create$)[A-Za-z0-9\-_]+$')
         ->name('hof.show');
 
-    // 便利ショートカット：slug から殿堂レコードIDを解決して編集へリダイレクト
     Route::get('/hof/{slug}/manage', function (string $slug) {
         $T   = env('JPBA_PROFILES_TABLE');
         $CID = env('JPBA_PROFILES_ID_COL','id');
@@ -448,13 +417,10 @@ Route::middleware(['auth','role:editor,admin'])->group(function () {
         return redirect()->route('hof.edit',['id'=>$hof->id]);
     })->where('slug','^(?!create$)[A-Za-z0-9\-_]+$')->name('hof.manage.by_slug');
 
-    /* === 資格ページ（永久シード / A級ライセンス） === */
     Route::prefix('eligibility')->name('eligibility.')->group(function () {
-        // 永久シード
         Route::get('/evergreen', [EligibilityController::class, 'evergreen'])
             ->name('evergreen');
 
-        // A級ライセンス（性別は m / f の2値のみ許可）
         Route::get('/a-class/m', [EligibilityController::class, 'aClassMen'])->name('a_class.m');
         Route::get('/a-class/f', [EligibilityController::class, 'aClassWomen'])->name('a_class.f');
     });
@@ -465,11 +431,9 @@ Route::middleware(['auth','role:editor,admin'])->group(function () {
     Route::get('/flash-news/{id}/edit', [FlashNewsController::class, 'edit'])->name('flash_news.edit');
     Route::put('/flash-news/{id}', [FlashNewsController::class, 'update'])->name('flash_news.update');
 
-    /* === プロボウラー公開プロフィール === */
     Route::get('/pro_bowlers/{id}', [PublicProfileController::class, 'show'])
         ->name('pro_bowlers.public_show');
 
-    // 個別保存（必要なら）
     Route::post('/pro_bowlers/{pro_bowler}/trainings', [ProBowlerTrainingController::class, 'store'])->name('pro_bowler_trainings.store');
 });
 
@@ -481,7 +445,6 @@ Route::prefix('admin')->name('admin.')
     ->group(function () {
         Route::get('/', [AdminHomeController::class, 'index'])->name('home');
 
-        // INFORMATION（管理）最小CRUD
         Route::get('/informations', [InformationAdminController::class, 'index'])->name('informations.index');
         Route::get('/informations/create', [InformationAdminController::class, 'create'])->name('informations.create');
         Route::post('/informations', [InformationAdminController::class, 'store'])->name('informations.store');
@@ -492,20 +455,16 @@ Route::prefix('admin')->name('admin.')
         ->whereNumber('photo')
         ->name('hof.photos.destroy');
 
-        // ★殿堂レコード本体の削除（写真も巻き取り）※管理者のみ
         Route::delete('/hof/{id}', [HofManageController::class, 'destroy'])
             ->whereNumber('id')
             ->name('hof.destroy');
         
-        // 抽選設定
         Route::get('/tournaments/{tournament}/draw-settings', [DrawController::class, 'settings'])->name('tournaments.draw.settings');
         Route::post('/tournaments/{tournament}/draw-settings', [DrawController::class, 'saveSettings'])->name('tournaments.draw.settings.save');
 
-        // コンプライアンス
         Route::get('/compliance', [ComplianceController::class,'index'])->name('compliance.index');
         Route::post('/compliance/notify', [ComplianceController::class,'notify'])->name('compliance.notify');
 
-        // --- 削除系をここに集約 ---
         Route::delete('/tournaments/{tournament}', [TournamentController::class,'destroy'])->name('tournaments.destroy');
         Route::delete('/tournaments/{tournament}/results/{result}', [TournamentResultController::class,'destroy'])->name('tournaments.results.destroy');
         Route::delete('/tournaments/{tournament}/prize_distributions/{prize_distribution}', [PrizeDistributionController::class,'destroy'])
@@ -521,14 +480,12 @@ Route::prefix('admin')->name('admin.')
         Route::delete('/calendar-events/{event}', [CalendarEventController::class,'destroy'])->name('calendar_events.destroy');
         Route::delete('/record_types/{record_type}', [RecordTypeController::class,'destroy'])->name('record_types.destroy');
 
-        // グループ削除（管理者のみ）
         Route::delete('pro_groups/{pro_group}', [\App\Http\Controllers\ProGroupController::class, 'destroy'])
             ->middleware(['auth','role:admin'])
             ->name('pro_groups.destroy');
 
         Route::delete('/pro_bowlers/{bowler}/titles/{title}', [ProBowlerTitleController::class, 'destroy'])->name('pro_bowler_titles.destroy');
         
-        // 全テーブル一覧（現在のスキーマ）
         Route::get('/tools/db/tables', function () {
             $tables = DB::select("SELECT table_name
                                 FROM information_schema.tables
@@ -540,7 +497,6 @@ Route::prefix('admin')->name('admin.')
             ]);
         })->middleware(['auth','role:admin'])->name('tools.db.tables');
 
-        // 任意テーブルのカラム一覧
         Route::get('/tools/db/columns/{table}', function (string $table) {
             if (!Schema::hasTable($table)) {
                 return response()->json(['error' => "table '{$table}' not found in current schema"], 404);
@@ -555,6 +511,5 @@ Route::prefix('admin')->name('admin.')
                 'columns' => $cols,
             ]);
         })->middleware(['auth','role:admin'])->name('tools.db.columns');
-        // ★DBテーブル/カラム診断（管理者専用・一時用）END
     
     });

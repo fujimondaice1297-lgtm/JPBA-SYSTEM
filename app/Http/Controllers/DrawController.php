@@ -154,7 +154,10 @@ class DrawController extends Controller
 
         $chosen = $candidates[array_rand($candidates)];
 
-        $entry->update(['shift' => $chosen]);
+        $entry->update([
+            'shift' => $chosen,
+            'shift_drawn' => true,
+        ]);
 
         return ['ok' => true, 'msg' => "シフト「{$chosen}」が確定しました。", 'shift' => $chosen];
     }
@@ -218,7 +221,10 @@ class DrawController extends Controller
                     throw new \RuntimeException('選択中にレーンが埋まりました。もう一度お試しください。');
                 }
 
-                $entry->update(['lane' => $chosen]);
+                $entry->update([
+                    'lane' => $chosen,
+                    'lane_drawn' => true,
+                ]);
             });
         } catch (\RuntimeException $e) {
             return ['ok' => false, 'msg' => $e->getMessage()];

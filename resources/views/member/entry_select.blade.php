@@ -60,16 +60,21 @@
             <th>大会名</th>
             <th>期間</th>
             <th style="min-width: 180px;">エントリー</th>
-            <th style="min-width: 360px;">操作</th>
+            <th style="min-width: 460px;">操作 / 当日状態</th>
           </tr>
         </thead>
         <tbody>
           @forelse ($tournaments as $tournament)
             @php
               /** @var \App\Models\TournamentEntry|null $entry */
-              $entry    = $entries[$tournament->id] ?? null;
-              $status   = $entry->status ?? 'no_entry';
+              $entry = $entries[$tournament->id] ?? null;
+              $status = $entry->status ?? 'no_entry';
               $hasBalls = (int) ($entry->balls_count ?? 0) > 0;
+              $requiresShift = filled(trim((string) ($tournament->shift_codes ?? '')));
+              $requiresLane = !is_null($tournament->lane_from) && !is_null($tournament->lane_to);
+              $shiftReady = !$requiresShift || !empty($entry?->shift);
+              $laneReady = !$requiresLane || !empty($entry?->lane);
+              $checkedIn = !is_null($entry?->checked_in_at);
             @endphp
 
             <tr>
@@ -90,7 +95,7 @@
                 @endif
               </td>
 
-              <td class="text-nowrap">
+              <td>
                 @if (!$isAllowed)
                   <span class="text-muted">{{ $eligibility['message'] ?? 'エントリー対象外です。' }}</span>
                 @elseif ($entry && $status === 'entry')
@@ -101,27 +106,42 @@
                     </a>
 
                     @if (empty($entry->shift))
-                      <form action="{{ route('member.entries.shift.draw', $entry->id) }}"
-                            method="POST" class="d-inline">
-                        @csrf
-                        <button class="btn btn-outline-success btn-sm">シフト抽選</button>
-                      </form>
+                      <button type="submit"
+                              class="btn btn-outline-success btn-sm"
+                              form="shift-draw-form-{{ $entry->id }}">
+                        シフト抽選
+                      </button>
                     @else
-                      <span class="badge bg-info">シフト: {{ $entry->shift }}</span>
+                      <span class="badge bg-info text-dark">シフト: {{ $entry->shift }}</span>
                     @endif
 
                     @if (!empty($entry->shift) && empty($entry->lane))
-                      <form action="{{ route('member.entries.lane.draw', $entry->id) }}"
-                            method="POST" class="d-inline">
-                        @csrf
-                        <button class="btn btn-outline-secondary btn-sm">レーン抽選</button>
-                      </form>
+                      <button type="submit"
+                              class="btn btn-outline-secondary btn-sm"
+                              form="lane-draw-form-{{ $entry->id }}">
+                        レーン抽選
+                      </button>
                     @elseif (!empty($entry->lane))
                       <span class="badge bg-secondary">レーン: {{ $entry->lane }}</span>
                     @endif
 
                     @if ($hasBalls)
                       <span class="badge bg-success">ボール登録済み</span>
+                    @endif
+
+                    @if ($checkedIn)
+                      <span class="badge bg-dark">チェックイン済み</span>
+                      <span class="badge bg-light text-dark">
+                        {{ optional($entry->checked_in_at)->format('Y-m-d H:i') }}
+                      </span>
+                    @elseif ($shiftReady && $laneReady)
+                      <button type="submit"
+                              class="btn btn-success btn-sm"
+                              form="check-in-form-{{ $entry->id }}">
+                        チェックイン
+                      </button>
+                    @else
+                      <span class="badge bg-warning text-dark">抽選完了後にチェックイン</span>
                     @endif
                   </div>
                 @else
@@ -142,5 +162,32 @@
       <button class="btn btn-primary mt-2">保存する</button>
     @endif
   </form>
+
+  @foreach ($tournaments as $tournament)
+    @php
+      $entry = $entries[$tournament->id] ?? null;
+      $status = $entry->status ?? 'no_entry';
+    @endphp
+
+    @if ($entry && $status === 'entry')
+      <form id="shift-draw-form-{{ $entry->id }}"
+            action="{{ route('member.entries.shift.draw', $entry->id) }}"
+            method="POST" class="d-none">
+        @csrf
+      </form>
+
+      <form id="lane-draw-form-{{ $entry->id }}"
+            action="{{ route('member.entries.lane.draw', $entry->id) }}"
+            method="POST" class="d-none">
+        @csrf
+      </form>
+
+      <form id="check-in-form-{{ $entry->id }}"
+            action="{{ route('member.entries.check_in', $entry->id) }}"
+            method="POST" class="d-none">
+        @csrf
+      </form>
+    @endif
+  @endforeach
 </div>
 @endsection
