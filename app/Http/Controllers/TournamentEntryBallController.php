@@ -18,16 +18,17 @@ class TournamentEntryBallController extends Controller
      */
     public function edit(TournamentEntry $entry)
     {
-        if (Auth::user()->pro_bowler_id !== $entry->pro_bowler_id) {
-            abort(403);
+        if ($guard = $this->guardEntryAccess($entry)) {
+            return $guard;
         }
+
+        $this->syncFromRegisteredBalls((int) $entry->pro_bowler_id);
 
         $usedBalls = UsedBall::with('approvedBall')
             ->where('pro_bowler_id', $entry->pro_bowler_id)
-            // ★修正：期限がNULL（仮登録）または、期限内のものを対象
-            ->where(function($q){
+            ->where(function ($q) {
                 $q->whereNull('expires_at')
-                ->orWhereDate('expires_at', '>=', now()->toDateString());
+                    ->orWhereDate('expires_at', '>=', now()->toDateString());
             })
             ->orderByDesc('registered_at')
             ->get();
@@ -36,10 +37,15 @@ class TournamentEntryBallController extends Controller
         $existingCount = count($linkedIds);
         $remaining = max(0, 12 - $existingCount);
 
-        $inspectionRequired = (bool)($entry->tournament->inspection_required ?? false);
+        $inspectionRequired = (bool) ($entry->tournament->inspection_required ?? false);
 
         return view('member.entry_balls_edit', compact(
-            'entry', 'usedBalls', 'linkedIds', 'existingCount', 'remaining', 'inspectionRequired'
+            'entry',
+            'usedBalls',
+            'linkedIds',
+            'existingCount',
+            'remaining',
+            'inspectionRequired'
         ));
     }
 
@@ -48,8 +54,8 @@ class TournamentEntryBallController extends Controller
      */
     public function bulkStore(Request $request, TournamentEntry $entry)
     {
-        if (Auth::user()->pro_bowler_id !== $entry->pro_bowler_id) {
-            abort(403);
+        if ($guard = $this->guardEntryAccess($entry)) {
+            return $guard;
         }
 
         $data = $request->validate([
@@ -62,40 +68,40 @@ class TournamentEntryBallController extends Controller
             return back()->with('success', '追加はありませんでした。');
         }
 
-        // 既存は除外
-        $already  = $entry->balls()->pluck('used_balls.id')->all();
-        $toAttach = $targetIds->reject(fn($id) => in_array($id, $already, true))->values();
+        $already = $entry->balls()->pluck('used_balls.id')->all();
+        $toAttach = $targetIds->reject(fn ($id) => in_array($id, $already, true))->values();
 
-        // 上限チェック
-        $current  = count($already);
+        $current = count($already);
         $newCount = $toAttach->count();
         if ($current + $newCount > 12) {
             return back()->withErrors([
-                'used_ball_ids' => "1大会で登録できるボールは最大12個までです。（現在 {$current} 個、追加 {$newCount} 個）"
+                'used_ball_ids' => "1大会で登録できるボールは最大12個までです。（現在 {$current} 個、追加 {$newCount} 個）",
             ]);
         }
 
-        // 所有者/期限チェック
         foreach ($toAttach as $ballId) {
             $usedBall = UsedBall::findOrFail($ballId);
 
-            if ($usedBall->pro_bowler_id !== $entry->pro_bowler_id) {
-                return back()->withErrors(['used_ball_ids' => "自分のボールのみ登録できます。（ID: {$ballId}）"]);
+            if ((int) $usedBall->pro_bowler_id !== (int) $entry->pro_bowler_id) {
+                return back()->withErrors([
+                    'used_ball_ids' => "自分のボールのみ登録できます。（ID: {$ballId}）",
+                ]);
             }
-            // 期限切れは不可（NULLは可＝仮登録）
+
             if (!is_null($usedBall->expires_at) && $usedBall->expires_at->lt(now()->startOfDay())) {
-                return back()->withErrors(['used_ball_ids' => "有効期限切れのボールは登録できません。（SN: {$usedBall->serial_number}）"]);
+                return back()->withErrors([
+                    'used_ball_ids' => "有効期限切れのボールは登録できません。（SN: {$usedBall->serial_number}）",
+                ]);
             }
         }
 
-        // 追加のみ（削除なし）
         foreach ($toAttach as $ballId) {
             $entry->balls()->attach($ballId);
         }
 
         return redirect()
             ->route('member.entries.balls.edit', $entry->id)
-            ->with('success', $toAttach->count().'個のボールを登録しました。');
+            ->with('success', $toAttach->count() . '個のボールを登録しました。');
     }
 
     /**
@@ -103,23 +109,30 @@ class TournamentEntryBallController extends Controller
      */
     public function store(Request $request, TournamentEntry $entry)
     {
+        if ($guard = $this->guardEntryAccess($entry)) {
+            return $guard;
+        }
+
         $data = $request->validate([
-            'used_ball_id' => ['required','integer','exists:used_balls,id'],
+            'used_ball_id' => ['required', 'integer', 'exists:used_balls,id'],
         ]);
 
         $usedBall = UsedBall::findOrFail($data['used_ball_id']);
 
         if (Auth::check() && Auth::user()->pro_bowler_id) {
-            if ($usedBall->pro_bowler_id !== Auth::user()->pro_bowler_id) {
+            if ((int) $usedBall->pro_bowler_id !== (int) Auth::user()->pro_bowler_id) {
                 return back()->withErrors(['used_ball_id' => '自分のボールのみ登録できます。']);
             }
         }
-        if ($usedBall->pro_bowler_id !== $entry->pro_bowler_id) {
+
+        if ((int) $usedBall->pro_bowler_id !== (int) $entry->pro_bowler_id) {
             return back()->withErrors(['used_ball_id' => 'このエントリーの選手のボールではありません。']);
         }
+
         if (!is_null($usedBall->expires_at) && $usedBall->expires_at->lt(now()->startOfDay())) {
             return back()->withErrors(['used_ball_id' => '有効期限切れのボールは登録できません。']);
         }
+
         if (!$entry->balls()->where('used_ball_id', $usedBall->id)->exists()) {
             if ($entry->balls()->count() >= 12) {
                 return back()->withErrors(['used_ball_id' => '1大会で登録できるボールは最大12個までです。']);
@@ -135,14 +148,93 @@ class TournamentEntryBallController extends Controller
      */
     public function destroy(TournamentEntry $entry, UsedBall $usedBall)
     {
-        if (!auth()->user()->isAdmin()) {
+        $user = auth()->user();
+        $isAdmin = $user && (method_exists($user, 'isAdmin') ? $user->isAdmin() : (bool) ($user->is_admin ?? false));
+
+        if (!$isAdmin) {
             abort(403, 'この操作は許可されていません。');
         }
-        if (! (Auth::user()->is_admin ?? false)) {
-            abort(403);
-        }
+
         $entry->balls()->detach($usedBall->id);
+
         return back()->with('success', 'ボールの紐付けを解除しました。');
+    }
+
+    private function guardEntryAccess(TournamentEntry $entry)
+    {
+        $userProBowlerId = (int) (Auth::user()?->pro_bowler_id ?? 0);
+
+        if ($userProBowlerId <= 0 || $userProBowlerId !== (int) $entry->pro_bowler_id) {
+            abort(403, '自分のエントリー以外は操作できません。');
+        }
+
+        $bowler = ProBowler::query()->find($entry->pro_bowler_id);
+        $eligibility = $this->resolveEntryEligibility($bowler);
+
+        if (!$eligibility['allowed']) {
+            return redirect()
+                ->route('tournament.entry.select')
+                ->with('error', $eligibility['message']);
+        }
+
+        if ($entry->status !== 'entry') {
+            return redirect()
+                ->route('tournament.entry.select')
+                ->with('error', 'エントリー有効時のみ大会使用ボールを操作できます。');
+        }
+
+        return null;
+    }
+
+    private function resolveEntryEligibility(?ProBowler $bowler): array
+    {
+        if (!$bowler) {
+            return [
+                'allowed' => false,
+                'message' => '選手情報が未結線のため、大会エントリーを利用できません。管理者に確認してください。',
+            ];
+        }
+
+        $memberClass = (string) ($bowler->member_class ?? '');
+        $officialEntryAllowed = (bool) ($bowler->can_enter_official_tournament ?? false);
+        $isActive = (bool) ($bowler->is_active ?? false);
+
+        if (!$isActive) {
+            return [
+                'allowed' => false,
+                'message' => '現在の会員状態が無効のため、大会エントリー対象外です。',
+            ];
+        }
+
+        if ($memberClass !== 'player') {
+            return [
+                'allowed' => false,
+                'message' => $this->memberClassLabel($memberClass) . 'のため、大会エントリー対象外です。',
+            ];
+        }
+
+        if (!$officialEntryAllowed) {
+            return [
+                'allowed' => false,
+                'message' => '現在の会員区分では公式戦出場対象外として登録されています。',
+            ];
+        }
+
+        return [
+            'allowed' => true,
+            'message' => '大会エントリー可能です。',
+        ];
+    }
+
+    private function memberClassLabel(?string $memberClass): string
+    {
+        return match ($memberClass) {
+            'player' => '競技者',
+            'pro_instructor' => 'プロインストラクター',
+            'honorary_or_overseas' => '名誉プロ・海外プロ',
+            'other' => 'その他',
+            default => '-',
+        };
     }
 
     /**
@@ -155,20 +247,24 @@ class TournamentEntryBallController extends Controller
     private function syncFromRegisteredBalls(int $proBowlerId): void
     {
         $pro = ProBowler::find($proBowlerId);
-        if (!$pro || empty($pro->license_no)) return;
+        if (!$pro || empty($pro->license_no)) {
+            return;
+        }
 
         $registered = RegisteredBall::where('license_no', $pro->license_no)->get();
-        if ($registered->isEmpty()) return;
+        if ($registered->isEmpty()) {
+            return;
+        }
 
         $existingSerials = UsedBall::where('pro_bowler_id', $pro->id)
             ->pluck('serial_number')
-            ->map(fn($v) => mb_strtoupper((string)$v))
+            ->map(fn ($v) => mb_strtoupper((string) $v))
             ->all();
 
         foreach ($registered as $rb) {
-            $sn = mb_strtoupper((string)$rb->serial_number);
+            $sn = mb_strtoupper((string) $rb->serial_number);
             if (in_array($sn, $existingSerials, true)) {
-                continue; // 既に取り込み済み
+                continue;
             }
 
             UsedBall::create([
@@ -177,7 +273,7 @@ class TournamentEntryBallController extends Controller
                 'serial_number'     => $rb->serial_number,
                 'inspection_number' => $rb->inspection_number,
                 'registered_at'     => $rb->registered_at,
-                'expires_at'        => $rb->expires_at, // NULLなら仮登録
+                'expires_at'        => $rb->expires_at,
             ]);
 
             $existingSerials[] = $sn;
