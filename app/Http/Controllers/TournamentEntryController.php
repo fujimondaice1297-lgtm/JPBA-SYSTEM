@@ -19,8 +19,8 @@ class TournamentEntryController extends Controller
         $eligibility = $this->resolveEntryEligibility($bowler);
 
         $tournaments = Tournament::query()
-            ->whereDate('entry_start', '<=', now())
-            ->whereDate('entry_end', '>=', now())
+            ->where('entry_start', '<=', now())
+            ->where('entry_end', '>=', now())
             ->orderBy('entry_start')
             ->orderBy('id')
             ->get();
@@ -52,31 +52,57 @@ class TournamentEntryController extends Controller
         $request->validate([
             'entries' => 'array',
             'entries.*' => 'in:entry,no_entry',
+            'preferred_shifts' => 'array',
+            'preferred_shifts.*' => 'nullable|string|max:20',
         ]);
 
-        $openTournamentIds = Tournament::query()
-            ->whereDate('entry_start', '<=', now())
-            ->whereDate('entry_end', '>=', now())
-            ->pluck('id')
-            ->map(fn ($id) => (int) $id)
-            ->all();
+        $openTournaments = Tournament::query()
+            ->where('entry_start', '<=', now())
+            ->where('entry_end', '>=', now())
+            ->get()
+            ->keyBy('id');
 
         foreach ($request->input('entries', []) as $tournamentId => $choice) {
             $tournamentId = (int) $tournamentId;
 
-            if (!in_array($tournamentId, $openTournamentIds, true)) {
+            if (!$openTournaments->has($tournamentId)) {
                 continue;
             }
 
-            TournamentEntry::updateOrCreate(
-                [
-                    'pro_bowler_id' => $proBowlerId,
-                    'tournament_id' => $tournamentId,
-                ],
-                [
-                    'status' => $choice,
-                ]
+            $tournament = $openTournaments->get($tournamentId);
+            $preferredShift = $this->normalizePreferredShift(
+                (string) $request->input("preferred_shifts.{$tournamentId}", ''),
+                $tournament
             );
+
+            if ($choice === 'entry') {
+                TournamentEntry::updateOrCreate(
+                    [
+                        'pro_bowler_id' => $proBowlerId,
+                        'tournament_id' => $tournamentId,
+                    ],
+                    [
+                        'status' => 'entry',
+                        'preferred_shift_code' => $preferredShift,
+                    ]
+                );
+            } else {
+                TournamentEntry::updateOrCreate(
+                    [
+                        'pro_bowler_id' => $proBowlerId,
+                        'tournament_id' => $tournamentId,
+                    ],
+                    [
+                        'status' => 'no_entry',
+                        'preferred_shift_code' => null,
+                        'shift' => null,
+                        'lane' => null,
+                        'checked_in_at' => null,
+                        'shift_drawn' => false,
+                        'lane_drawn' => false,
+                    ]
+                );
+            }
         }
 
         return redirect()
@@ -109,8 +135,9 @@ class TournamentEntryController extends Controller
         }
 
         $tournament = $entry->tournament()->first();
-        $requiresShift = filled(trim((string) ($tournament?->shift_codes ?? '')));
-        $requiresLane = !is_null($tournament?->lane_from) && !is_null($tournament?->lane_to);
+
+        $requiresShift = (bool) ($tournament?->use_shift_draw ?? false);
+        $requiresLane = (bool) ($tournament?->use_lane_draw ?? false);
 
         if ($requiresShift && blank($entry->shift)) {
             return redirect()
@@ -137,6 +164,30 @@ class TournamentEntryController extends Controller
         return redirect()
             ->route('tournament.entry.select')
             ->with('success', 'チェックインを受け付けました。');
+    }
+
+    private function normalizePreferredShift(string $preferredShift, Tournament $tournament): ?string
+    {
+        if (!(bool) ($tournament->use_shift_draw ?? false)) {
+            return null;
+        }
+
+        if (!(bool) ($tournament->accept_shift_preference ?? false)) {
+            return null;
+        }
+
+        $preferredShift = trim($preferredShift);
+        if ($preferredShift === '') {
+            return null;
+        }
+
+        $available = collect(explode(',', (string) ($tournament->shift_codes ?? '')))
+            ->map(fn ($value) => trim((string) $value))
+            ->filter()
+            ->values()
+            ->all();
+
+        return in_array($preferredShift, $available, true) ? $preferredShift : null;
     }
 
     private function resolveEntryEligibility(?ProBowler $bowler): array

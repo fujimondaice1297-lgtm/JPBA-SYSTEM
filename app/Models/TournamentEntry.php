@@ -10,6 +10,7 @@ class TournamentEntry extends Model
         'tournament_id',
         'pro_bowler_id',
         'status',
+        'preferred_shift_code',
         'is_paid',
         'shift_drawn',
         'lane_drawn',

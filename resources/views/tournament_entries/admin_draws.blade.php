@@ -11,14 +11,30 @@
       <a href="{{ route('tournaments.index') }}" class="btn btn-secondary">大会一覧へ戻る</a>
       <a href="{{ route('tournaments.entries.index', $tournament->id) }}" class="btn btn-outline-dark">エントリー一覧</a>
       <a href="{{ route('member.tournaments.draws.index', $tournament->id) }}" class="btn btn-outline-primary">参加選手向け抽選結果</a>
+      <a href="{{ route('tournaments.draw_reminders.create', ['tournament' => $tournament->id, 'pending_type' => 'either']) }}"
+         class="btn btn-outline-danger">未抽選DM</a>
     </div>
   </div>
 
+  @if (session('success'))
+    <div class="alert alert-success">{{ session('success') }}</div>
+  @endif
+
+  @if (session('error'))
+    <div class="alert alert-danger">{{ session('error') }}</div>
+  @endif
+
   <div class="row g-3 mb-4">
-    <div class="col-md-3">
+    <div class="col-md-2">
       <div class="card"><div class="card-body">
         <div class="text-muted small">参加</div>
         <div class="fs-4 fw-bold">{{ $summary['entry_count'] }}</div>
+      </div></div>
+    </div>
+    <div class="col-md-2">
+      <div class="card"><div class="card-body">
+        <div class="text-muted small">希望シフトあり</div>
+        <div class="fs-4 fw-bold">{{ $summary['preferred_shift_count'] }}</div>
       </div></div>
     </div>
     <div class="col-md-3">
@@ -33,11 +49,53 @@
         <div class="fs-4 fw-bold">{{ $summary['pending_lane_count'] }}</div>
       </div></div>
     </div>
-    <div class="col-md-3">
+    <div class="col-md-2">
       <div class="card"><div class="card-body">
         <div class="text-muted small">チェックイン済み</div>
         <div class="fs-4 fw-bold">{{ $summary['checked_in_count'] }}</div>
       </div></div>
+    </div>
+  </div>
+
+  <div class="card mb-4">
+    <div class="card-header fw-bold">事務局一括抽選</div>
+    <div class="card-body">
+      <form method="POST" action="{{ route('tournaments.draws.bulk', $tournament->id) }}" class="d-flex flex-wrap gap-2 align-items-center">
+        @csrf
+
+        <button type="submit"
+                name="target"
+                value="all"
+                class="btn btn-danger"
+                onclick="return confirm('未抽選者を一括抽選します。よろしいですか？');">
+          未抽選者を一括抽選
+        </button>
+
+        @if ($tournament->use_shift_draw)
+          <button type="submit"
+                  name="target"
+                  value="shift"
+                  class="btn btn-outline-success"
+                  onclick="return confirm('シフト未抽選者のみ一括抽選します。よろしいですか？');">
+            シフト未抽選だけ一括抽選
+          </button>
+        @endif
+
+        @if ($tournament->use_lane_draw)
+          <button type="submit"
+                  name="target"
+                  value="lane"
+                  class="btn btn-outline-secondary"
+                  onclick="return confirm('レーン未抽選者のみ一括抽選します。よろしいですか？');">
+            レーン未抽選だけ一括抽選
+          </button>
+        @endif
+      </form>
+
+      <div class="small text-muted mt-2">
+        期日までに本人が抽選しなかった選手を、事務局側でまとめて処理するためのボタンです。<br>
+        「未抽選者を一括抽選」は、シフト未抽選 → レーン未抽選の順で続けて処理します。
+      </div>
     </div>
   </div>
 
@@ -68,6 +126,7 @@
         <tr>
           <th>ライセンスNo</th>
           <th>氏名</th>
+          <th>希望シフト</th>
           <th>シフト</th>
           <th>レーン</th>
           <th>ボール数</th>
@@ -81,24 +140,38 @@
           <tr>
             <td>{{ $bowler->license_no ?? '-' }}</td>
             <td>{{ $bowler->name_kanji ?? '-' }}</td>
+            <td>{{ $entry->preferred_shift_code ?? '-' }}</td>
             <td>
-              @if ($entry->shift)
-                <span class="badge bg-info text-dark">{{ $entry->shift }}</span>
+              @if ($tournament->use_shift_draw)
+                @if ($entry->shift)
+                  <span class="badge bg-info text-dark">{{ $entry->shift }}</span>
+                @else
+                  <span class="badge bg-warning text-dark">未抽選</span>
+                @endif
               @else
-                <span class="badge bg-warning text-dark">未抽選</span>
+                <span class="badge bg-light text-dark">運用なし</span>
               @endif
             </td>
             <td>
-              @if ($entry->lane)
-                <span class="badge bg-secondary">{{ $entry->lane }}</span>
+              @if ($tournament->use_lane_draw)
+                @if ($entry->lane)
+                  <span class="badge bg-secondary">{{ $entry->lane }}</span>
+                @else
+                  <span class="badge bg-warning text-dark">未抽選</span>
+                @endif
               @else
-                <span class="badge bg-warning text-dark">未抽選</span>
+                <span class="badge bg-light text-dark">運用なし</span>
               @endif
             </td>
             <td>{{ $entry->balls_count }}</td>
             <td>{{ optional($entry->checked_in_at)->format('Y-m-d H:i') ?? '-' }}</td>
             <td>
-              @if (!$entry->shift || !$entry->lane)
+              @php
+                $shiftPending = $tournament->use_shift_draw && blank($entry->shift);
+                $lanePending = $tournament->use_lane_draw && blank($entry->lane);
+              @endphp
+
+              @if ($shiftPending || $lanePending)
                 <span class="badge bg-warning text-dark">抽選未完了</span>
               @elseif (!$entry->checked_in_at)
                 <span class="badge bg-light text-dark">抽選済 / 未チェックイン</span>
@@ -109,7 +182,7 @@
           </tr>
         @empty
           <tr>
-            <td colspan="7" class="text-center text-muted">該当データはありません。</td>
+            <td colspan="8" class="text-center text-muted">該当データはありません。</td>
           </tr>
         @endforelse
       </tbody>

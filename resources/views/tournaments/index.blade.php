@@ -61,8 +61,8 @@
           {{ optional($tournament->end_date)->format('Y-m-d') }}
         </td>
         <td>
-          {{ optional($tournament->entry_start)->format('Y-m-d') }}～
-          {{ optional($tournament->entry_end)->format('Y-m-d') }}
+          {{ optional($tournament->entry_start)->format('Y-m-d H:i') }}～
+          {{ optional($tournament->entry_end)->format('Y-m-d H:i') }}
         </td>
         <td>{{ $tournament->venue_name }}</td>
 
@@ -73,6 +73,11 @@
 
             <a href="{{ route('tournaments.edit', $tournament->id) }}"
                class="btn btn-primary btn-sm flex-shrink-0">編集</a>
+
+            @if(auth()->user()?->isAdmin())
+              <a href="{{ route('admin.tournaments.draw.settings', $tournament->id) }}"
+                 class="btn btn-outline-primary btn-sm flex-shrink-0">運営設定</a>
+            @endif
 
             <a href="{{ route('tournament_results.create', $tournament->id) }}"
                class="btn btn-info btn-sm flex-shrink-0">成績入力</a>

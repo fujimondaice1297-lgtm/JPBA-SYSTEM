@@ -71,9 +71,18 @@ class TournamentEntryAdminController extends Controller
             ->where('status', 'entry');
 
         if ($pendingDraw) {
-            $query->where(function (Builder $q) {
-                $q->whereNull('shift')
-                    ->orWhereNull('lane');
+            $query->where(function (Builder $q) use ($tournament) {
+                if ((bool) $tournament->use_shift_draw) {
+                    $q->whereNull('shift');
+                }
+
+                if ((bool) $tournament->use_lane_draw) {
+                    if ((bool) $tournament->use_shift_draw) {
+                        $q->orWhereNull('lane');
+                    } else {
+                        $q->whereNull('lane');
+                    }
+                }
             });
         }
 
@@ -202,6 +211,7 @@ class TournamentEntryAdminController extends Controller
             'checked_in_count' => (clone $base)->whereNotNull('checked_in_at')->count(),
             'pending_shift_count' => (clone $base)->where('status', 'entry')->whereNull('shift')->count(),
             'pending_lane_count' => (clone $base)->where('status', 'entry')->whereNull('lane')->count(),
+            'preferred_shift_count' => (clone $base)->where('status', 'entry')->whereNotNull('preferred_shift_code')->count(),
         ];
     }
 

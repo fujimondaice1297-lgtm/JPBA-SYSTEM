@@ -49,17 +49,23 @@
     </div>
     <div class="col-md-2">
       <div class="card"><div class="card-body">
+        <div class="text-muted small">希望シフトあり</div>
+        <div class="fs-4 fw-bold">{{ $summary['preferred_shift_count'] }}</div>
+      </div></div>
+    </div>
+    <div class="col-md-2">
+      <div class="card"><div class="card-body">
         <div class="text-muted small">チェックイン済み</div>
         <div class="fs-4 fw-bold">{{ $summary['checked_in_count'] }}</div>
       </div></div>
     </div>
-    <div class="col-md-3">
+    <div class="col-md-2">
       <div class="card"><div class="card-body">
         <div class="text-muted small">シフト未抽選</div>
         <div class="fs-4 fw-bold">{{ $summary['pending_shift_count'] }}</div>
       </div></div>
     </div>
-    <div class="col-md-3">
+    <div class="col-md-2">
       <div class="card"><div class="card-body">
         <div class="text-muted small">レーン未抽選</div>
         <div class="fs-4 fw-bold">{{ $summary['pending_lane_count'] }}</div>
@@ -124,6 +130,7 @@
           <th>ライセンスNo</th>
           <th>氏名</th>
           <th>参加権利</th>
+          <th>希望シフト</th>
           <th>シフト</th>
           <th>レーン</th>
           <th>ボール数</th>
@@ -155,6 +162,7 @@
                 {{ $entry->eligibility_short }}
               </span>
             </td>
+            <td>{{ $entry->preferred_shift_code ?? '-' }}</td>
             <td>{{ $entry->shift ?? '-' }}</td>
             <td>{{ $entry->lane ?? '-' }}</td>
             <td>{{ $entry->balls_count }}</td>
@@ -178,7 +186,7 @@
           </tr>
         @empty
           <tr>
-            <td colspan="11" class="text-center text-muted">該当データはありません。</td>
+            <td colspan="12" class="text-center text-muted">該当データはありません。</td>
           </tr>
         @endforelse
       </tbody>

@@ -60,7 +60,8 @@
             <th>大会名</th>
             <th>期間</th>
             <th style="min-width: 180px;">エントリー</th>
-            <th style="min-width: 640px;">操作 / 当日状態</th>
+            <th style="min-width: 180px;">希望シフト</th>
+            <th style="min-width: 660px;">操作 / 当日状態</th>
           </tr>
         </thead>
         <tbody>
@@ -70,11 +71,19 @@
               $entry = $entries[$tournament->id] ?? null;
               $status = $entry->status ?? 'no_entry';
               $hasBalls = (int) ($entry->balls_count ?? 0) > 0;
-              $requiresShift = filled(trim((string) ($tournament->shift_codes ?? '')));
-              $requiresLane = !is_null($tournament->lane_from) && !is_null($tournament->lane_to);
-              $shiftReady = !$requiresShift || !empty($entry?->shift);
-              $laneReady = !$requiresLane || !empty($entry?->lane);
+              $useShiftDraw = (bool) ($tournament->use_shift_draw ?? false);
+              $useLaneDraw = (bool) ($tournament->use_lane_draw ?? false);
+              $acceptShiftPreference = (bool) ($tournament->accept_shift_preference ?? false);
+
+              $shiftCodes = collect(explode(',', (string) ($tournament->shift_codes ?? '')))
+                ->map(fn ($value) => trim((string) $value))
+                ->filter()
+                ->values();
+
+              $shiftReady = !$useShiftDraw || !empty($entry?->shift);
+              $laneReady = !$useLaneDraw || !empty($entry?->lane);
               $checkedIn = !is_null($entry?->checked_in_at);
+              $preferredShift = old("preferred_shifts.{$tournament->id}", $entry?->preferred_shift_code);
             @endphp
 
             <tr>
@@ -94,6 +103,23 @@
                   </select>
                 @else
                   <input type="text" class="form-control" value="対象外" disabled>
+                @endif
+              </td>
+
+              <td>
+                @if ($status === 'waiting')
+                  <span class="text-muted">管理者登録</span>
+                @elseif ($isAllowed && $useShiftDraw && $acceptShiftPreference && $shiftCodes->isNotEmpty())
+                  <select name="preferred_shifts[{{ $tournament->id }}]" class="form-select">
+                    <option value="">指定なし</option>
+                    @foreach ($shiftCodes as $shiftCode)
+                      <option value="{{ $shiftCode }}" {{ $preferredShift === $shiftCode ? 'selected' : '' }}>
+                        {{ $shiftCode }}
+                      </option>
+                    @endforeach
+                  </select>
+                @else
+                  <span class="text-muted">受付なし</span>
                 @endif
               </td>
 
@@ -122,24 +148,36 @@
                       大会使用ボール登録
                     </a>
 
-                    @if (empty($entry->shift))
-                      <button type="submit"
-                              class="btn btn-outline-success btn-sm"
-                              form="shift-draw-form-{{ $entry->id }}">
-                        シフト抽選
-                      </button>
+                    @if ($useShiftDraw)
+                      @if (empty($entry->shift))
+                        <button type="submit"
+                                class="btn btn-outline-success btn-sm"
+                                form="shift-draw-form-{{ $entry->id }}">
+                          シフト抽選
+                        </button>
+                      @else
+                        <span class="badge bg-info text-dark">シフト: {{ $entry->shift }}</span>
+                      @endif
                     @else
-                      <span class="badge bg-info text-dark">シフト: {{ $entry->shift }}</span>
+                      <span class="badge bg-light text-dark">シフト抽選なし</span>
                     @endif
 
-                    @if (!empty($entry->shift) && empty($entry->lane))
-                      <button type="submit"
-                              class="btn btn-outline-secondary btn-sm"
-                              form="lane-draw-form-{{ $entry->id }}">
-                        レーン抽選
-                      </button>
-                    @elseif (!empty($entry->lane))
-                      <span class="badge bg-secondary">レーン: {{ $entry->lane }}</span>
+                    @if ($useLaneDraw)
+                      @if ((!$useShiftDraw || !empty($entry->shift)) && empty($entry->lane))
+                        <button type="submit"
+                                class="btn btn-outline-secondary btn-sm"
+                                form="lane-draw-form-{{ $entry->id }}">
+                          レーン抽選
+                        </button>
+                      @elseif (!empty($entry->lane))
+                        <span class="badge bg-secondary">レーン: {{ $entry->lane }}</span>
+                      @endif
+                    @else
+                      <span class="badge bg-light text-dark">レーン抽選なし</span>
+                    @endif
+
+                    @if (!empty($entry->preferred_shift_code))
+                      <span class="badge bg-light text-dark">希望: {{ $entry->preferred_shift_code }}</span>
                     @endif
 
                     @if ($hasBalls)
@@ -168,7 +206,7 @@
             </tr>
           @empty
             <tr>
-              <td colspan="4" class="text-center text-muted">現在受付中の大会はありません。</td>
+              <td colspan="5" class="text-center text-muted">現在受付中の大会はありません。</td>
             </tr>
           @endforelse
         </tbody>

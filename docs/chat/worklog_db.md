@@ -6,6 +6,88 @@
 
 作業履歴
 
+## 2026-04-14 未抽選者の一括抽選（事務局対応）
+
+- 目的:
+  - 期日までに本人が抽選を行わなかった選手について、事務局側で未抽選者をまとめて抽選できるようにする。
+
+- 実施内容:
+  - `app/Http/Controllers/DrawController.php`
+    - 管理者用の一括抽選 `bulk()` を追加。
+    - `target = all / shift / lane` を受け取り、
+      - 未抽選者を一括抽選
+      - シフト未抽選のみ一括抽選
+      - レーン未抽選のみ一括抽選
+      に対応。
+    - 事務局による一括抽選では、会員向けの抽選受付期間制限をバイパスできるようにした。
+    - 既存の `performShiftDraw()` / `performLaneDraw()` を再利用し、個別抽選と同じロジックで確定するよう整理。
+  - `resources/views/tournament_entries/admin_draws.blade.php`
+    - 抽選一覧に
+      - 未抽選者を一括抽選
+      - シフト未抽選だけ一括抽選
+      - レーン未抽選だけ一括抽選
+      のボタンを追加。
+  - `routes/web.php`
+    - `tournaments.draws.bulk` を追加。
+
+- 現時点の判断:
+  - 会員本人が抽選しなかった場合でも、事務局側で一括処理できる運用が可能になった。
+  - 今回は既存の抽選ロジックを流用しているため、DBスキーマ変更は不要。
+
+## 2026-04-13 大会運営設定・希望シフト・未抽選DM
+
+- 目的:
+  - 大会ごとに「シフト抽選の有無」「レーン抽選の有無」「使用レーン範囲」「BOX運用」「希望シフト受付」を設定できるようにする。
+  - 会員エントリー時に希望シフトを受け付け、管理者側で確認できるようにする。
+  - 抽選未完了の選手へ、管理者が手動で一括DM送信できる導線を追加する。
+
+- 実施内容:
+  - `tournaments`
+    - `use_shift_draw`
+    - `use_lane_draw`
+    - `lane_assignment_mode`
+    - `box_player_count`
+    - `odd_lane_player_count`
+    - `even_lane_player_count`
+    - `accept_shift_preference`
+    を追加。
+  - `tournament_entries`
+    - `preferred_shift_code`
+    を追加。
+  - `TournamentController`
+    - 大会作成 / 編集時に上記設定を保存できるよう拡張。
+  - `DrawController`
+    - 運営 / 抽選設定画面を拡張。
+    - シフト抽選なし / レーン抽選なし大会に対応。
+    - BOX運用時のレーン割付ロジックに対応。
+    - 希望シフトがある場合、最少人数候補内なら優先採用するよう補強。
+  - `TournamentEntryController`
+    - 会員エントリー時の希望シフト保存を追加。
+  - `TournamentEntryAdminController`
+    - 管理者用一覧 / 抽選一覧で希望シフト確認を追加。
+  - `TournamentDrawReminderController`
+    - 未抽選者（シフト / レーン / 両方）を対象に、手動一括DM送信画面を追加。
+  - `resources/views/tournaments/draw_settings.blade.php`
+    - 運営 / 抽選設定画面として再整理。
+  - `resources/views/member/entry_select.blade.php`
+    - 希望シフト入力欄を追加。
+  - `resources/views/tournament_entries/admin_index.blade.php`
+  - `resources/views/tournament_entries/admin_draws.blade.php`
+    - 希望シフト列と未抽選DM導線を追加。
+  - `docs/db/data_dictionary.md`
+    - `tournaments` / `tournament_entries` の正本定義を更新。
+  - `docs/db/ER.dbml`
+    - 辞書から再生成。
+
+- 現時点の判断:
+  - ① シフト有無
+  - ② 使用レーン範囲
+  - ③ BOX運用
+  - ④ 希望シフト受付
+  - ⑤ 未抽選者への手動DM
+  までは実務運用可能な状態に近づいた。
+  - ただし「締切1週間前に自動で送る」処理は、Scheduler / Command / 再送制御を含むため次段階に分離する。
+
 ## 2026-04-11 TOURNAMENT ENTRY 後続一覧 + waitlist
 
 - 目的:

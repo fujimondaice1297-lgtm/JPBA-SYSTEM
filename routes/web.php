@@ -289,6 +289,12 @@ Route::middleware(['auth','role:editor,admin'])->group(function () {
         ->name('tournaments.entries.index');
     Route::get('/tournaments/{tournament}/draws', [\App\Http\Controllers\TournamentEntryAdminController::class, 'draws'])
         ->name('tournaments.draws.index');
+    Route::post('/tournaments/{tournament}/draws/bulk', [\App\Http\Controllers\DrawController::class, 'bulk'])
+        ->name('tournaments.draws.bulk');
+    Route::get('/tournaments/{tournament}/draw-reminders/create', [\App\Http\Controllers\TournamentDrawReminderController::class, 'create'])
+        ->name('tournaments.draw_reminders.create');
+    Route::post('/tournaments/{tournament}/draw-reminders', [\App\Http\Controllers\TournamentDrawReminderController::class, 'store'])
+        ->name('tournaments.draw_reminders.store');
     Route::post('/tournaments/{tournament}/waitlist', [\App\Http\Controllers\TournamentEntryAdminController::class, 'storeWaitlist'])
         ->name('tournaments.waitlist.store');
     Route::post('/tournament_entries/{entry}/promote-waitlist', [\App\Http\Controllers\TournamentEntryAdminController::class, 'promoteWaitlist'])

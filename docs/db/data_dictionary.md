@@ -778,6 +778,37 @@ SNS等リンク集を保持するテーブル。
 ### 外部キー（FK）
 - venue_id -> venues.id
 
+### 運営 / 抽選設定
+- use_shift_draw（bool）
+  - シフト抽選を使うか
+- shift_codes（nullable string）
+  - シフト候補。カンマ区切りで保持（例: `A,B,C`）
+- accept_shift_preference（bool）
+  - 会員エントリー時に希望シフトを受け付けるか
+- shift_draw_open_at / shift_draw_close_at（nullable datetime）
+  - シフト抽選受付期間
+- use_lane_draw（bool）
+  - レーン抽選を使うか
+- lane_from / lane_to（nullable int）
+  - 使用レーン範囲
+- lane_draw_open_at / lane_draw_close_at（nullable datetime）
+  - レーン抽選受付期間
+- lane_assignment_mode（string）
+  - `single_lane` = 通常レーン割付
+  - `box` = BOX運用
+- box_player_count（nullable int）
+  - 1BOX人数
+- odd_lane_player_count（nullable int）
+  - 奇数レーン人数
+- even_lane_player_count（nullable int）
+  - 偶数レーン人数
+
+### 注意（運用方針）
+- シフト抽選を使わない大会では `use_shift_draw = false` とし、`shift` は不要。
+- レーン抽選を使わない大会では `use_lane_draw = false` とし、`lane` は不要。
+- BOX運用では `odd_lane_player_count + even_lane_player_count = box_player_count` を必須とする。
+- 希望シフト受付は `use_shift_draw = true` の大会でのみ有効とする。
+
 ---
 
 ## tournament_entries
@@ -806,6 +837,7 @@ SNS等リンク集を保持するテーブル。
 - waitlisted_at（ウェイティング登録日時：nullable）
 - waitlist_note（ウェイティング備考：nullable）
 - promoted_from_waitlist_at（ウェイティングから繰り上げた日時：nullable）
+- preferred_shift_code（希望シフト：nullable）
 
 ### 注意（運用方針）
 - `tournament_entries` を大会参加管理の正本とする。
@@ -815,6 +847,9 @@ SNS等リンク集を保持するテーブル。
 - `status = waiting` の行は、抽選・使用ボール登録・チェックイン対象外とする。
 - ウェイティングから参加に繰り上げる場合は、同じ行の `status` を `entry` に更新し、`promoted_from_waitlist_at` を記録する。
 - シフト / レーン / チェックインは `status = entry` の大会当日運用情報として保持する。
+- `preferred_shift_code` は会員がエントリー時に入力する希望シフトであり、受付用情報として保持する。
+- 希望シフト受付は `tournaments.accept_shift_preference = true` の大会でのみ有効。
+- 実際の `shift` は抽選確定結果であり、`preferred_shift_code` とは別に保持する。
 
 ### 外部キー（FK）
 - tournament_id -> tournaments.id
