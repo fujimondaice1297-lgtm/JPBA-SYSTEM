@@ -2,23 +2,19 @@
 
 @section('content')
 
-{{-- この画面専用の軽量CSS（1行死守＋横スクロール） --}}
 <style>
-  /* 操作セルは折り返さない */
   .cell-actions { white-space: nowrap; }
-  /* ボタン行：1行固定、足りなければ横スクロール */
   .btn-row {
     display: flex;
-    flex-wrap: nowrap;         /* ← 折り返し禁止 */
+    flex-wrap: nowrap;
     gap: .5rem;
     align-items: center;
-    overflow-x: auto;          /* ← 横スクロール許可 */
+    overflow-x: auto;
     -webkit-overflow-scrolling: touch;
-    scrollbar-width: thin;     /* Firefox 細スクロール */
+    scrollbar-width: thin;
   }
-  .btn-row .btn { flex: 0 0 auto; } /* ボタン幅を潰さない */
+  .btn-row .btn { flex: 0 0 auto; }
 
-  /* 画面が狭い時は少しだけボタンを小さくする */
   @media (max-width: 768px) {
     .btn-row .btn {
       padding: .25rem .5rem;
@@ -29,7 +25,6 @@
 
 <h1>大会一覧</h1>
 
-{{-- 検索フォーム --}}
 <form method="GET" action="{{ route('tournaments.index') }}" class="mb-4">
   <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
     <input type="text" name="name" value="{{ request('name') }}" placeholder="大会名" class="form-control" style="width: 200px;">
@@ -43,10 +38,8 @@
   </div>
 </form>
 
-{{-- 新規登録ボタン --}}
 <a href="{{ route('tournaments.create') }}" class="btn btn-success mb-3">新規登録</a>
 
-{{-- 一覧テーブル --}}
 <table class="table table-bordered align-middle">
   <thead>
     <tr>
@@ -73,7 +66,6 @@
         </td>
         <td>{{ $tournament->venue_name }}</td>
 
-        {{-- ★ ここが1行固定の操作セル --}}
         <td class="cell-actions">
           <div class="btn-row">
             <a href="{{ route('tournaments.show', $tournament->id) }}"
@@ -91,6 +83,15 @@
             <a href="{{ route('tournaments.point_distributions.index', $tournament->id) }}"
                class="btn btn-danger btn-sm flex-shrink-0">ポイント配分</a>
 
+            <a href="{{ route('tournaments.entries.index', $tournament->id) }}"
+               class="btn btn-outline-dark btn-sm flex-shrink-0">エントリー一覧</a>
+
+            <a href="{{ route('tournaments.draws.index', $tournament->id) }}"
+               class="btn btn-outline-dark btn-sm flex-shrink-0">抽選一覧</a>
+
+            <a href="{{ route('tournaments.draws.index', ['tournament' => $tournament->id, 'pending_draw' => 1]) }}"
+               class="btn btn-outline-secondary btn-sm flex-shrink-0">未抽選</a>
+
             @if(auth()->user()?->isAdmin() || auth()->user()?->isEditor())
               <form method="POST" action="{{ route('tournaments.participant_group.create', $tournament->id) }}" class="d-inline">
                 @csrf
@@ -98,7 +99,6 @@
               </form>
             @endif
 
-            {{-- ★ 管理者だけ：大会削除（/admin 側の destroy ルートへ） --}}
             @if(auth()->user()?->isAdmin())
               <form method="POST"
                     action="{{ route('admin.tournaments.destroy', $tournament->id) }}"

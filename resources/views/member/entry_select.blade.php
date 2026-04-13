@@ -60,7 +60,7 @@
             <th>大会名</th>
             <th>期間</th>
             <th style="min-width: 180px;">エントリー</th>
-            <th style="min-width: 460px;">操作 / 当日状態</th>
+            <th style="min-width: 640px;">操作 / 当日状態</th>
           </tr>
         </thead>
         <tbody>
@@ -85,7 +85,9 @@
               </td>
 
               <td>
-                @if ($isAllowed)
+                @if ($status === 'waiting')
+                  <span class="badge bg-warning text-dark">ウェイティング中</span>
+                @elseif ($isAllowed)
                   <select name="entries[{{ $tournament->id }}]" class="form-select">
                     <option value="entry" {{ $status === 'entry' ? 'selected' : '' }}>エントリーする</option>
                     <option value="no_entry" {{ $status === 'no_entry' ? 'selected' : '' }}>エントリーしない</option>
@@ -96,10 +98,25 @@
               </td>
 
               <td>
-                @if (!$isAllowed)
-                  <span class="text-muted">{{ $eligibility['message'] ?? 'エントリー対象外です。' }}</span>
-                @elseif ($entry && $status === 'entry')
-                  <div class="d-flex flex-wrap gap-2">
+                <div class="d-flex flex-wrap gap-2">
+                  <a href="{{ route('member.tournaments.entries.index', $tournament->id) }}"
+                     class="btn btn-outline-secondary btn-sm">
+                    参加一覧
+                  </a>
+
+                  <a href="{{ route('member.tournaments.draws.index', $tournament->id) }}"
+                     class="btn btn-outline-secondary btn-sm">
+                    抽選結果
+                  </a>
+
+                  @if (!$isAllowed && !$entry)
+                    <span class="text-muted">{{ $eligibility['message'] ?? 'エントリー対象外です。' }}</span>
+                  @elseif ($entry && $status === 'waiting')
+                    <span class="badge bg-warning text-dark">ウェイティング登録済み</span>
+                    @if (!is_null($entry->waitlist_priority))
+                      <span class="badge bg-light text-dark">優先順: {{ $entry->waitlist_priority }}</span>
+                    @endif
+                  @elseif ($entry && $status === 'entry')
                     <a href="{{ route('member.entries.balls.edit', $entry->id) }}"
                        class="btn btn-outline-primary btn-sm">
                       大会使用ボール登録
@@ -143,10 +160,10 @@
                     @else
                       <span class="badge bg-warning text-dark">抽選完了後にチェックイン</span>
                     @endif
-                  </div>
-                @else
-                  <span class="text-muted">エントリーで有効化</span>
-                @endif
+                  @else
+                    <span class="text-muted">エントリーで有効化</span>
+                  @endif
+                </div>
               </td>
             </tr>
           @empty

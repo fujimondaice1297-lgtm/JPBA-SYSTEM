@@ -783,7 +783,8 @@ SNS等リンク集を保持するテーブル。
 ## tournament_entries
 
 ### 役割
-大会エントリー（申込）を保持するテーブル。
+大会エントリー（申込）を保持するテーブル。  
+通常参加だけでなく、抽選状態・チェックイン状態・ウェイティング管理もこのテーブルを正本として扱う。
 
 ### 主キー
 - id (bigint)
@@ -791,7 +792,29 @@ SNS等リンク集を保持するテーブル。
 ### 主要カラム
 - tournament_id（どの大会）
 - pro_bowler_id（誰がエントリー）
-- status（申込状態：nullable）
+- status（申込状態）
+  - `entry` = 参加
+  - `no_entry` = 不参加
+  - `waiting` = ウェイティング
+- shift（シフト：nullable）
+- lane（レーン：nullable）
+- checked_in_at（チェックイン日時：nullable）
+- is_paid（支払済フラグ）
+- shift_drawn（シフト抽選済フラグ）
+- lane_drawn（レーン抽選済フラグ）
+- waitlist_priority（ウェイティング優先順：nullable）
+- waitlisted_at（ウェイティング登録日時：nullable）
+- waitlist_note（ウェイティング備考：nullable）
+- promoted_from_waitlist_at（ウェイティングから繰り上げた日時：nullable）
+
+### 注意（運用方針）
+- `tournament_entries` を大会参加管理の正本とする。
+- 1大会1選手につき1行を原則とし、`(tournament_id, pro_bowler_id)` で一意管理する。
+- 通常の抽選・使用ボール登録・チェックイン対象は `status = entry` の行のみとする。
+- `status = waiting` は管理者が登録するウェイティング行として扱う。
+- `status = waiting` の行は、抽選・使用ボール登録・チェックイン対象外とする。
+- ウェイティングから参加に繰り上げる場合は、同じ行の `status` を `entry` に更新し、`promoted_from_waitlist_at` を記録する。
+- シフト / レーン / チェックインは `status = entry` の大会当日運用情報として保持する。
 
 ### 外部キー（FK）
 - tournament_id -> tournaments.id

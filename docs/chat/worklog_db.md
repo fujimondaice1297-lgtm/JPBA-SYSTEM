@@ -6,6 +6,59 @@
 
 作業履歴
 
+## 2026-04-11 TOURNAMENT ENTRY 後続一覧 + waitlist
+
+- 目的:
+  - 大会エントリー後の管理導線を整備し、
+    - 管理者用の参加一覧
+    - 管理者用の抽選結果一覧
+    - 管理者用の未抽選一覧
+    - 参加選手向けの参加一覧 / 抽選結果一覧
+    を追加する。
+  - あわせて、大会参加権利外の選手を待機させる waitlist 運用を `tournament_entries` 正本上で扱えるようにする。
+
+- 実施内容:
+  - `database/migrations/2026_04_11_000001_add_waitlist_columns_to_tournament_entries_table.php`
+    - `tournament_entries` に
+      - `waitlist_priority`
+      - `waitlisted_at`
+      - `waitlist_note`
+      - `promoted_from_waitlist_at`
+      を追加。
+  - `app/Models/TournamentEntry.php`
+    - waitlist 関連カラムを `fillable` / `casts` に追加。
+  - `app/Http/Controllers/TournamentEntryAdminController.php`
+    - 管理者用の参加一覧
+    - 抽選結果一覧
+    - 未抽選絞り込み
+    - waitlist 登録
+    - waitlist から参加への繰り上げ
+    を追加。
+  - `app/Http/Controllers/TournamentEntryPublicController.php`
+    - 参加選手向けの参加一覧 / 抽選結果一覧を追加。
+  - `resources/views/tournament_entries/admin_index.blade.php`
+  - `resources/views/tournament_entries/admin_draws.blade.php`
+  - `resources/views/member/tournament_entries_index.blade.php`
+  - `resources/views/member/tournament_draws_index.blade.php`
+    - 上記画面を追加。
+  - `resources/views/member/entry_select.blade.php`
+    - 参加一覧 / 抽選結果への導線を追加。
+    - `status = waiting` の行は、通常エントリーと分けて表示するように整理。
+  - `resources/views/tournaments/index.blade.php`
+    - 管理者 / 編集者向けに
+      - エントリー一覧
+      - 抽選一覧
+      - 未抽選一覧
+      の導線を追加。
+  - `docs/db/data_dictionary.md`
+    - `tournament_entries` を waitlist / 抽選 / チェックインを含む正本定義へ更新。
+  - `docs/db/ER.dbml`
+    - 辞書から再生成。
+
+- 現時点の判断:
+  - 大会エントリー後続の管理導線は、今回の一覧整備で実務運用可能な状態に近づいた。
+  - `tournament_participants` は現時点では正本にせず、`tournament_entries` を参加導線の正本として維持する。
+
 ## 2026-04-09 INSTRUCTOR 資格遷移の先回り検証と import/current-history 補強
 
 - 目的:

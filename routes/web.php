@@ -201,6 +201,12 @@ Route::middleware(['auth','role:member,editor,admin'])->group(function () {
     Route::post('/member/entries/{entry}/shift-draw', [DrawController::class, 'shift'])->name('member.entries.shift.draw');
     Route::post('/member/entries/{entry}/lane-draw', [DrawController::class, 'lane'])->name('member.entries.lane.draw');
     Route::post('/member/entries/{entry}/check-in', [TournamentEntryController::class, 'checkIn'])->name('member.entries.check_in');
+    
+    // 大会エントリー関連の公開一覧（会員向け）
+    Route::get('/member/tournaments/{tournament}/entries', [\App\Http\Controllers\TournamentEntryPublicController::class, 'index'])
+        ->name('member.tournaments.entries.index');
+    Route::get('/member/tournaments/{tournament}/draws', [\App\Http\Controllers\TournamentEntryPublicController::class, 'draws'])
+        ->name('member.tournaments.draws.index');
 
     // 使用ボール / 登録ボール（※ Controller 側で member は自分の分だけに絞り込み済み）
     Route::resource('used_balls', UsedBallController::class)->except(['show','destroy']);
@@ -277,6 +283,16 @@ Route::middleware(['auth','role:editor,admin'])->group(function () {
         ->name('tournaments.clone');
     
     Route::resource('tournaments', TournamentController::class)->except(['destroy']);
+    
+    // 大会エントリー後続（管理）
+    Route::get('/tournaments/{tournament}/entries', [\App\Http\Controllers\TournamentEntryAdminController::class, 'index'])
+        ->name('tournaments.entries.index');
+    Route::get('/tournaments/{tournament}/draws', [\App\Http\Controllers\TournamentEntryAdminController::class, 'draws'])
+        ->name('tournaments.draws.index');
+    Route::post('/tournaments/{tournament}/waitlist', [\App\Http\Controllers\TournamentEntryAdminController::class, 'storeWaitlist'])
+        ->name('tournaments.waitlist.store');
+    Route::post('/tournament_entries/{entry}/promote-waitlist', [\App\Http\Controllers\TournamentEntryAdminController::class, 'promoteWaitlist'])
+        ->name('tournaments.waitlist.promote');
     Route::resource('venues', VenuePageController::class)->except(['show']);
 
     Route::resource('tournaments.results', TournamentResultController::class)
