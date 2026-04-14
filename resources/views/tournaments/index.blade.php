@@ -25,6 +25,10 @@
 
 <h1>大会一覧</h1>
 
+@if (session('success'))
+  <div class="alert alert-success">{{ session('success') }}</div>
+@endif
+
 <form method="GET" action="{{ route('tournaments.index') }}" class="mb-4">
   <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
     <input type="text" name="name" value="{{ request('name') }}" placeholder="大会名" class="form-control" style="width: 200px;">
@@ -73,6 +77,9 @@
 
             <a href="{{ route('tournaments.edit', $tournament->id) }}"
                class="btn btn-primary btn-sm flex-shrink-0">編集</a>
+
+            <a href="{{ route('tournaments.clone', $tournament->id) }}"
+               class="btn btn-outline-success btn-sm flex-shrink-0">コピー</a>
 
             @if(auth()->user()?->isAdmin())
               <a href="{{ route('admin.tournaments.draw.settings', $tournament->id) }}"
