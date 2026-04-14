@@ -6,6 +6,103 @@
 
 作業履歴
 
+## 2026-04-14 未抽選DMの送信日直接指定（シフト / レーン分離）
+
+- 目的:
+  - 既存の「何日前 + 1セット設定」ではなく、
+    - シフト未抽選DM
+    - レーン未抽選DM
+    を別々に管理し、送信日を直接指定できるようにする。
+  - あわせて、メール本文に「期日までに未対応なら事務局側で一斉抽選を行う」旨を自動で含める。
+
+- 実施内容:
+  - `database/migrations/2025_09_01_000079_add_direct_send_dates_to_tournaments_draw_reminders_table.php`
+    - `tournaments` に
+      - `shift_auto_draw_reminder_enabled`
+      - `shift_auto_draw_reminder_send_on`
+      - `lane_auto_draw_reminder_enabled`
+      - `lane_auto_draw_reminder_send_on`
+      を追加。
+    - 既存の
+      - `auto_draw_reminder_enabled`
+      - `auto_draw_reminder_days_before`
+      - `auto_draw_reminder_pending_type`
+      から、新カラムへ初期バックフィルを行う。
+  - `app/Services/TournamentDrawReminderService.php`
+    - 自動送信を「何日前逆算」から「送信日直接指定」へ変更。
+    - シフト未抽選 / レーン未抽選を別々に判定して送信できるよう整理。
+    - 本文トークンに締切日時と「事務局側で一斉抽選する」文言を追加。
+  - `app/Http/Controllers/TournamentDrawReminderController.php`
+    - 手動送信の初期文面も service のテンプレートを使うよう整理。
+  - `app/Http/Controllers/DrawController.php`
+    - 抽選設定画面から
+      - シフト未抽選DM 送信有無 / 送信日
+      - レーン未抽選DM 送信有無 / 送信日
+      を保存できるよう拡張。
+  - `app/Models/Tournament.php`
+    - 新カラムを `fillable` / `casts` に追加。
+  - `resources/views/tournaments/draw_settings.blade.php`
+    - 未抽選DM自動送信UIを
+      - シフト用
+      - レーン用
+      に分割し、送信日直接指定UIへ変更。
+  - `docs/db/data_dictionary.md`
+    - `tournaments` の未抽選DM定義を直接送信日方式へ更新。
+  - `docs/db/ER.dbml`
+    - 辞書から再生成。
+
+- 現時点の判断:
+  - 未抽選DMは
+    - 手動送信
+    - 一括抽選
+    - 自動送信
+    に加え、
+    - 送信日直接指定
+    - シフト / レーン分離
+    まで対応できるようになった。
+  - 旧「何日前」方式のカラムは互換保持のため残すが、今後の新規運用では新カラムを正とする。
+
+## 2026-04-14 未抽選DMの自動送信
+
+- 目的:
+  - 手動送信まで実装済みの未抽選DMについて、締切○日前に自動送信できるようにする。
+  - あわせて、自動送信の二重送信を防ぐ最低限の履歴管理を入れる。
+
+- 実施内容:
+  - `tournaments`
+    - `auto_draw_reminder_enabled`
+    - `auto_draw_reminder_days_before`
+    - `auto_draw_reminder_pending_type`
+    を追加。
+  - `tournament_draw_reminder_logs`
+    - 手動送信 / 自動送信の履歴を保持する新規テーブルを追加。
+    - 自動送信は `dispatch_key` で重複防止。
+  - `app/Services/TournamentDrawReminderService.php`
+    - 手動送信と自動送信の共通処理を追加。
+    - 未抽選対象抽出、本文トークン置換、送信履歴記録を共通化。
+  - `app/Http/Controllers/TournamentDrawReminderController.php`
+    - 手動送信を service 経由に整理。
+  - `app/Console/Commands/SendTournamentDrawReminders.php`
+    - 自動送信用 Artisan Command を追加。
+  - `app/Console/Kernel.php`
+    - `tournament:send-draw-reminders` を dailyAt('09:00') で登録。
+  - `app/Http/Controllers/DrawController.php`
+    - 抽選設定画面から自動送信設定も保存できるよう拡張。
+  - `resources/views/tournaments/draw_settings.blade.php`
+    - 自動送信ON/OFF、何日前、対象種別を設定できるUIを追加。
+  - `docs/db/data_dictionary.md`
+    - `tournaments` と `tournament_draw_reminder_logs` の正本定義を更新。
+  - `docs/db/ER.dbml`
+    - 辞書から再生成。
+
+- 現時点の判断:
+  - 未抽選DMは
+    - 手動送信
+    - 一括抽選
+    - 自動送信
+    まで一通り揃う。
+  - 今回の自動送信は「1回分の自動通知」を安全に行うことを主眼にし、`dispatch_key` による重複防止を入れている。
+
 ## 2026-04-14 未抽選者の一括抽選（事務局対応）
 
 - 目的:

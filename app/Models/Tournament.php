@@ -63,6 +63,17 @@ class Tournament extends Model
         'even_lane_player_count',
         'accept_shift_preference',
 
+        // 旧互換
+        'auto_draw_reminder_enabled',
+        'auto_draw_reminder_days_before',
+        'auto_draw_reminder_pending_type',
+
+        // 現運用
+        'shift_auto_draw_reminder_enabled',
+        'shift_auto_draw_reminder_send_on',
+        'lane_auto_draw_reminder_enabled',
+        'lane_auto_draw_reminder_send_on',
+
         'sidebar_schedule',
         'award_highlights',
         'gallery_items',
@@ -83,6 +94,15 @@ class Tournament extends Model
         'use_shift_draw' => 'boolean',
         'use_lane_draw' => 'boolean',
         'accept_shift_preference' => 'boolean',
+
+        'auto_draw_reminder_enabled' => 'boolean',
+        'auto_draw_reminder_days_before' => 'integer',
+
+        'shift_auto_draw_reminder_enabled' => 'boolean',
+        'shift_auto_draw_reminder_send_on' => 'date:Y-m-d',
+        'lane_auto_draw_reminder_enabled' => 'boolean',
+        'lane_auto_draw_reminder_send_on' => 'date:Y-m-d',
+
         'poster_images' => 'array',
         'extra_venues'  => 'array',
         'sidebar_schedule' => 'array',
@@ -163,6 +183,18 @@ class Tournament extends Model
             }
             if (!$tournament->lane_assignment_mode) {
                 $tournament->lane_assignment_mode = 'single_lane';
+            }
+            if (!$tournament->auto_draw_reminder_pending_type) {
+                $tournament->auto_draw_reminder_pending_type = 'either';
+            }
+            if (is_null($tournament->auto_draw_reminder_days_before)) {
+                $tournament->auto_draw_reminder_days_before = 7;
+            }
+            if (is_null($tournament->shift_auto_draw_reminder_enabled)) {
+                $tournament->shift_auto_draw_reminder_enabled = false;
+            }
+            if (is_null($tournament->lane_auto_draw_reminder_enabled)) {
+                $tournament->lane_auto_draw_reminder_enabled = false;
             }
         });
     }

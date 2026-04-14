@@ -41,6 +41,11 @@ class DrawController extends Controller
             'box_player_count' => ['nullable', 'integer', 'min:1', 'max:12'],
             'odd_lane_player_count' => ['nullable', 'integer', 'min:1', 'max:12'],
             'even_lane_player_count' => ['nullable', 'integer', 'min:1', 'max:12'],
+
+            'shift_auto_draw_reminder_enabled' => ['nullable', 'boolean'],
+            'shift_auto_draw_reminder_send_on' => ['nullable', 'date'],
+            'lane_auto_draw_reminder_enabled' => ['nullable', 'boolean'],
+            'lane_auto_draw_reminder_send_on' => ['nullable', 'date'],
         ]);
 
         $normalized = [
@@ -58,6 +63,20 @@ class DrawController extends Controller
             'box_player_count' => $data['box_player_count'] ?? null,
             'odd_lane_player_count' => $data['odd_lane_player_count'] ?? null,
             'even_lane_player_count' => $data['even_lane_player_count'] ?? null,
+
+            'shift_auto_draw_reminder_enabled' => $request->boolean('shift_auto_draw_reminder_enabled'),
+            'shift_auto_draw_reminder_send_on' => $request->filled('shift_auto_draw_reminder_send_on')
+                ? Carbon::parse($request->input('shift_auto_draw_reminder_send_on'))->toDateString()
+                : null,
+            'lane_auto_draw_reminder_enabled' => $request->boolean('lane_auto_draw_reminder_enabled'),
+            'lane_auto_draw_reminder_send_on' => $request->filled('lane_auto_draw_reminder_send_on')
+                ? Carbon::parse($request->input('lane_auto_draw_reminder_send_on'))->toDateString()
+                : null,
+
+            // 旧一括設定は互換保持のみ。新運用では使わない。
+            'auto_draw_reminder_enabled' => false,
+            'auto_draw_reminder_days_before' => 7,
+            'auto_draw_reminder_pending_type' => 'either',
         ];
 
         if ($normalized['use_shift_draw'] && blank($normalized['shift_codes'])) {
@@ -89,6 +108,64 @@ class DrawController extends Controller
                         'box_player_count' => 'BOX人数は「奇数レーン人数 + 偶数レーン人数」と一致させてください。',
                     ]);
                 }
+            }
+        }
+
+        if ($normalized['shift_auto_draw_reminder_enabled']) {
+            if (!$normalized['use_shift_draw']) {
+                throw ValidationException::withMessages([
+                    'shift_auto_draw_reminder_enabled' => 'シフト未抽選DMを使う場合は、シフト抽選を有効にしてください。',
+                ]);
+            }
+
+            if (empty($normalized['shift_auto_draw_reminder_send_on'])) {
+                throw ValidationException::withMessages([
+                    'shift_auto_draw_reminder_send_on' => 'シフト未抽選DMを使う場合は、送信日を入力してください。',
+                ]);
+            }
+
+            if (empty($normalized['shift_draw_close_at'])) {
+                throw ValidationException::withMessages([
+                    'shift_draw_close_at' => 'シフト未抽選DMを使う場合は、シフト抽選終了日時を入力してください。',
+                ]);
+            }
+
+            $sendOn = Carbon::parse($normalized['shift_auto_draw_reminder_send_on'])->startOfDay();
+            $deadline = Carbon::parse($normalized['shift_draw_close_at'])->endOfDay();
+
+            if ($sendOn->gt($deadline)) {
+                throw ValidationException::withMessages([
+                    'shift_auto_draw_reminder_send_on' => 'シフト未抽選DMの送信日は、シフト抽選終了日以前にしてください。',
+                ]);
+            }
+        }
+
+        if ($normalized['lane_auto_draw_reminder_enabled']) {
+            if (!$normalized['use_lane_draw']) {
+                throw ValidationException::withMessages([
+                    'lane_auto_draw_reminder_enabled' => 'レーン未抽選DMを使う場合は、レーン抽選を有効にしてください。',
+                ]);
+            }
+
+            if (empty($normalized['lane_auto_draw_reminder_send_on'])) {
+                throw ValidationException::withMessages([
+                    'lane_auto_draw_reminder_send_on' => 'レーン未抽選DMを使う場合は、送信日を入力してください。',
+                ]);
+            }
+
+            if (empty($normalized['lane_draw_close_at'])) {
+                throw ValidationException::withMessages([
+                    'lane_draw_close_at' => 'レーン未抽選DMを使う場合は、レーン抽選終了日時を入力してください。',
+                ]);
+            }
+
+            $sendOn = Carbon::parse($normalized['lane_auto_draw_reminder_send_on'])->startOfDay();
+            $deadline = Carbon::parse($normalized['lane_draw_close_at'])->endOfDay();
+
+            if ($sendOn->gt($deadline)) {
+                throw ValidationException::withMessages([
+                    'lane_auto_draw_reminder_send_on' => 'レーン未抽選DMの送信日は、レーン抽選終了日以前にしてください。',
+                ]);
             }
         }
 

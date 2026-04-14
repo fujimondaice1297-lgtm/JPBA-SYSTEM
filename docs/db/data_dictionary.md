@@ -764,21 +764,19 @@ SNS等リンク集を保持するテーブル。
 ## tournaments
 
 ### 役割
-大会マスタ（大会の基本情報）を保持するテーブル。
+大会マスタ（大会の基本情報・抽選運営設定・未抽選DM設定）を保持するテーブル。
 
 ### 主キー
 - id (bigint)
 
-### 主要カラム（抜粋）
+### 主要カラム
 - name（大会名）
 - start_date / end_date
 - venue_id（会場：nullable）
-- （他、多数）
+- entry_start / entry_end
+- inspection_required
 
-### 外部キー（FK）
-- venue_id -> venues.id
-
-### 運営 / 抽選設定
+### 抽選運営設定
 - use_shift_draw（bool）
   - シフト抽選を使うか
 - shift_codes（nullable string）
@@ -803,11 +801,37 @@ SNS等リンク集を保持するテーブル。
 - even_lane_player_count（nullable int）
   - 偶数レーン人数
 
+### 未抽選DM 自動送信設定（現運用）
+- shift_auto_draw_reminder_enabled（bool）
+  - シフト未抽選DMを送るか
+- shift_auto_draw_reminder_send_on（nullable date）
+  - シフト未抽選DMの送信日
+- lane_auto_draw_reminder_enabled（bool）
+  - レーン未抽選DMを送るか
+- lane_auto_draw_reminder_send_on（nullable date）
+  - レーン未抽選DMの送信日
+
+### 旧互換カラム
+- auto_draw_reminder_enabled（bool）
+- auto_draw_reminder_days_before（int）
+- auto_draw_reminder_pending_type（string）
+  - 初期実装の「何日前 + 対象種別」方式。
+  - 既存データ互換のため残すが、今後の新規運用では直接編集しない。
+
 ### 注意（運用方針）
 - シフト抽選を使わない大会では `use_shift_draw = false` とし、`shift` は不要。
 - レーン抽選を使わない大会では `use_lane_draw = false` とし、`lane` は不要。
 - BOX運用では `odd_lane_player_count + even_lane_player_count = box_player_count` を必須とする。
 - 希望シフト受付は `use_shift_draw = true` の大会でのみ有効とする。
+- シフト未抽選DMは `shift_auto_draw_reminder_send_on` 当日に送信する。
+- レーン未抽選DMは `lane_auto_draw_reminder_send_on` 当日に送信する。
+- シフト未抽選DM本文には `shift_draw_close_at` を締切日として差し込む。
+- レーン未抽選DM本文には `lane_draw_close_at` を締切日として差し込む。
+- いずれのメールにも「期日までに未対応なら事務局側で一斉抽選を行う」旨を自動で含める。
+- 送信日は、それぞれの抽選締切日以前に設定する。
+
+### 外部キー（FK）
+- venue_id -> venues.id
 
 ---
 
@@ -839,6 +863,7 @@ SNS等リンク集を保持するテーブル。
 - promoted_from_waitlist_at（ウェイティングから繰り上げた日時：nullable）
 - preferred_shift_code（希望シフト：nullable）
 
+
 ### 注意（運用方針）
 - `tournament_entries` を大会参加管理の正本とする。
 - 1大会1選手につき1行を原則とし、`(tournament_id, pro_bowler_id)` で一意管理する。
@@ -851,9 +876,44 @@ SNS等リンク集を保持するテーブル。
 - 希望シフト受付は `tournaments.accept_shift_preference = true` の大会でのみ有効。
 - 実際の `shift` は抽選確定結果であり、`preferred_shift_code` とは別に保持する。
 
+
 ### 外部キー（FK）
 - tournament_id -> tournaments.id
 - pro_bowler_id -> pro_bowlers.id
+
+---
+
+## tournament_draw_reminder_logs
+
+### 役割
+未抽選DMの送信履歴を保持するテーブル。
+手動送信と自動送信の両方を記録し、自動送信時の二重送信防止に使う。
+
+### 主キー
+- id (bigint)
+
+### 主要カラム
+- tournament_id
+- tournament_entry_id
+- reminder_kind（`manual` / `auto`）
+- pending_type（`shift` / `lane` / `either`）
+- scheduled_for_date（送信日：nullable）
+- dispatch_key（自動送信の重複防止キー：nullable unique）
+- recipient_email
+- subject
+- status（`sent` / `failed`）
+- sent_at（nullable）
+- error_message（nullable）
+
+### 注意（運用方針）
+- 自動送信では `dispatch_key` を
+  `auto:{tournament_id}:{tournament_entry_id}:{pending_type}:{scheduled_for_date}`
+  形式で生成し、同じ送信日・同じ対象への再送を防ぐ。
+- 手動送信は再送を許容するため、`dispatch_key` は NULL で保持する。
+
+### 外部キー（FK）
+- tournament_id -> tournaments.id
+- tournament_entry_id -> tournament_entries.id
 
 ---
 
