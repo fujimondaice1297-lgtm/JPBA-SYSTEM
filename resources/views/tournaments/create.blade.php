@@ -19,6 +19,13 @@
   <div class="alert alert-success">{{ session('success') }}</div>
 @endif
 
+@if (!empty($prefill))
+  <div class="alert alert-info">
+    前回大会の内容を下書きに反映しています。<br>
+    日付は空にしています。アップロード済み画像・PDFは必要に応じて見直してください。
+  </div>
+@endif
+
 <form method="POST" action="{{ route('tournaments.store') }}" enctype="multipart/form-data" id="tournament-create-form">
   @csrf
 
@@ -81,130 +88,6 @@
              value="{{ old('end_date') }}">
       @error('end_date')<div class="invalid-feedback">{{ $message }}</div>@enderror
     </div>
-
-      {{-- 運営 / 抽選設定 --}}
-  <h4 data-bs-toggle="collapse" href="#t-operation" role="button" aria-expanded="false" aria-controls="t-operation">
-    運営 / 抽選設定 <small class="text-muted">（クリックで開閉）</small>
-  </h4>
-  <div class="form-section row collapse" id="t-operation">
-    <div class="col-md-3 mb-3">
-      <label class="form-label d-block">シフト抽選を使う</label>
-      <input type="hidden" name="use_shift_draw" value="0">
-      <input type="checkbox" name="use_shift_draw" value="1" class="form-check-input"
-            {{ old('use_shift_draw') ? 'checked' : '' }}>
-    </div>
-
-    <div class="col-md-5 mb-3">
-      <label class="form-label">シフト候補</label>
-      <input type="text" name="shift_codes" class="form-control"
-             placeholder="例：A,B,C"
-             value="{{ old('shift_codes') }}">
-    </div>
-
-    <div class="col-md-4 mb-3">
-      <label class="form-label d-block">希望シフト受付</label>
-      <input type="hidden" name="accept_shift_preference" value="0">
-      <input type="checkbox" name="accept_shift_preference" value="1" class="form-check-input"
-            {{ old('accept_shift_preference') ? 'checked' : '' }}>
-      <small class="text-muted d-block">会員エントリー時に希望シフトを受け付けます。</small>
-    </div>
-
-    <div class="col-md-3 mb-3">
-      <label class="form-label">シフト抽選開始</label>
-      <input type="datetime-local" name="shift_draw_open_at"
-             class="form-control @error('shift_draw_open_at') is-invalid @enderror"
-             value="{{ old('shift_draw_open_at') }}">
-      @error('shift_draw_open_at')<div class="invalid-feedback">{{ $message }}</div>@enderror
-    </div>
-
-    <div class="col-md-3 mb-3">
-      <label class="form-label">シフト抽選終了</label>
-      <input type="datetime-local" name="shift_draw_close_at"
-             class="form-control @error('shift_draw_close_at') is-invalid @enderror"
-             value="{{ old('shift_draw_close_at') }}">
-      @error('shift_draw_close_at')<div class="invalid-feedback">{{ $message }}</div>@enderror
-    </div>
-
-    <div class="col-md-3 mb-3">
-      <label class="form-label d-block">レーン抽選を使う</label>
-      <input type="hidden" name="use_lane_draw" value="0">
-      <input type="checkbox" name="use_lane_draw" name="use_lane_draw" value="1" class="form-check-input"
-            {{ old('use_lane_draw') ? 'checked' : '' }}>
-    </div>
-
-    <div class="col-md-3 mb-3">
-      <label class="form-label">割付方式</label>
-      @php $laneMode = old('lane_assignment_mode', 'single_lane'); @endphp
-      <select name="lane_assignment_mode" class="form-select @error('lane_assignment_mode') is-invalid @enderror">
-        <option value="single_lane" {{ $laneMode === 'single_lane' ? 'selected' : '' }}>通常レーン割付</option>
-        <option value="box" {{ $laneMode === 'box' ? 'selected' : '' }}>BOX運用</option>
-      </select>
-      @error('lane_assignment_mode')<div class="invalid-feedback">{{ $message }}</div>@enderror
-    </div>
-
-    <div class="col-md-3 mb-3">
-      <label class="form-label">使用レーン開始</label>
-      <input type="number" name="lane_from"
-             class="form-control @error('lane_from') is-invalid @enderror"
-             value="{{ old('lane_from') }}">
-      @error('lane_from')<div class="invalid-feedback">{{ $message }}</div>@enderror
-    </div>
-
-    <div class="col-md-3 mb-3">
-      <label class="form-label">使用レーン終了</label>
-      <input type="number" name="lane_to"
-             class="form-control @error('lane_to') is-invalid @enderror"
-             value="{{ old('lane_to') }}">
-      @error('lane_to')<div class="invalid-feedback">{{ $message }}</div>@enderror
-    </div>
-
-    <div class="col-md-2 mb-3">
-      <label class="form-label">1BOX人数</label>
-      <input type="number" name="box_player_count"
-             class="form-control @error('box_player_count') is-invalid @enderror"
-             value="{{ old('box_player_count') }}">
-      @error('box_player_count')<div class="invalid-feedback">{{ $message }}</div>@enderror
-    </div>
-
-    <div class="col-md-2 mb-3">
-      <label class="form-label">奇数レーン人数</label>
-      <input type="number" name="odd_lane_player_count"
-             class="form-control @error('odd_lane_player_count') is-invalid @enderror"
-             value="{{ old('odd_lane_player_count') }}">
-      @error('odd_lane_player_count')<div class="invalid-feedback">{{ $message }}</div>@enderror
-    </div>
-
-    <div class="col-md-2 mb-3">
-      <label class="form-label">偶数レーン人数</label>
-      <input type="number" name="even_lane_player_count"
-             class="form-control @error('even_lane_player_count') is-invalid @enderror"
-             value="{{ old('even_lane_player_count') }}">
-      @error('even_lane_player_count')<div class="invalid-feedback">{{ $message }}</div>@enderror
-    </div>
-
-    <div class="col-md-3 mb-3">
-      <label class="form-label">レーン抽選開始</label>
-      <input type="datetime-local" name="lane_draw_open_at"
-             class="form-control @error('lane_draw_open_at') is-invalid @enderror"
-             value="{{ old('lane_draw_open_at') }}">
-      @error('lane_draw_open_at')<div class="invalid-feedback">{{ $message }}</div>@enderror
-    </div>
-
-    <div class="col-md-3 mb-3">
-      <label class="form-label">レーン抽選終了</label>
-      <input type="datetime-local" name="lane_draw_close_at"
-             class="form-control @error('lane_draw_close_at') is-invalid @enderror"
-             value="{{ old('lane_draw_close_at') }}">
-      @error('lane_draw_close_at')<div class="invalid-feedback">{{ $message }}</div>@enderror
-    </div>
-
-    <div class="col-12">
-      <div class="small text-muted">
-        BOX運用では「奇数レーン人数 + 偶数レーン人数 = 1BOX人数」にしてください。<br>
-        例：5番レーン2名、6番レーン3名、BOX5名
-      </div>
-    </div>
-  </div>
 
     {{-- 申込期間 --}}
     <div class="col-md-3 mb-3">
@@ -585,51 +468,4 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 </script>
 @endpush
-
-@push('scripts')
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-  const useShift = document.querySelector('input[name="use_shift_draw"]');
-  const acceptShift = document.querySelector('input[name="accept_shift_preference"]');
-  const laneMode = document.querySelector('select[name="lane_assignment_mode"]');
-  const useLane = document.querySelector('input[name="use_lane_draw"]');
-
-  function toggleOperationFields() {
-    const shiftEnabled = !!useShift?.checked;
-    const laneEnabled = !!useLane?.checked;
-    const isBox = (laneMode?.value || 'single_lane') === 'box';
-
-    document.querySelectorAll('input[name="shift_codes"], input[name="shift_draw_open_at"], input[name="shift_draw_close_at"]').forEach((el) => {
-      el.disabled = !shiftEnabled;
-    });
-
-    if (acceptShift) {
-      acceptShift.disabled = !shiftEnabled;
-      if (!shiftEnabled) {
-        acceptShift.checked = false;
-      }
-    }
-
-    document.querySelectorAll('input[name="lane_from"], input[name="lane_to"], input[name="lane_draw_open_at"], input[name="lane_draw_close_at"]').forEach((el) => {
-      el.disabled = !laneEnabled;
-    });
-
-    document.querySelectorAll('input[name="box_player_count"], input[name="odd_lane_player_count"], input[name="even_lane_player_count"]').forEach((el) => {
-      el.disabled = !laneEnabled || !isBox;
-    });
-
-    if (laneMode) {
-      laneMode.disabled = !laneEnabled;
-    }
-  }
-
-  useShift?.addEventListener('change', toggleOperationFields);
-  useLane?.addEventListener('change', toggleOperationFields);
-  laneMode?.addEventListener('change', toggleOperationFields);
-
-  toggleOperationFields();
-});
-</script>
-@endpush
-
 @endsection

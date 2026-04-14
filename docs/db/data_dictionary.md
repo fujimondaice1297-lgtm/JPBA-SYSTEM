@@ -764,7 +764,7 @@ SNS等リンク集を保持するテーブル。
 ## tournaments
 
 ### 役割
-大会マスタ（大会の基本情報・抽選運営設定・未抽選DM設定）を保持するテーブル。
+大会マスタ。大会の基本情報に加えて、運営設定、抽選設定、未抽選DM設定、右サイド表示用JSON、終了後の結果カード系JSONを保持するテーブル。
 
 ### 主キー
 - id (bigint)
@@ -772,44 +772,46 @@ SNS等リンク集を保持するテーブル。
 ### 主要カラム
 - name（大会名）
 - start_date / end_date
+- year（開催年）
+- gender（M/F/X）
+- official_type（official / approved / other）
+- title_category（normal / season_trial / excluded）
 - venue_id（会場：nullable）
+- venue_name / venue_address / venue_tel / venue_fax
 - entry_start / entry_end
 - inspection_required
+- spectator_policy（paid / free / none）
+- admission_fee（nullable text）
+- broadcast / streaming
+- broadcast_url / streaming_url（nullable）
+- prize（nullable text）
+- entry_conditions（nullable text）
+- materials（nullable text）
+- previous_event / previous_event_url（nullable）
+- image_path（旧互換の単体ポスター：nullable）
+- hero_image_path（トップ画像：nullable）
+- title_logo_path（大会タイトル左ロゴ：nullable）
+- poster_images（複数ポスター：json nullable）
+- extra_venues（追加会場：json nullable）
 
 ### 抽選運営設定
 - use_shift_draw（bool）
-  - シフト抽選を使うか
 - shift_codes（nullable string）
-  - シフト候補。カンマ区切りで保持（例: `A,B,C`）
 - accept_shift_preference（bool）
-  - 会員エントリー時に希望シフトを受け付けるか
 - shift_draw_open_at / shift_draw_close_at（nullable datetime）
-  - シフト抽選受付期間
 - use_lane_draw（bool）
-  - レーン抽選を使うか
 - lane_from / lane_to（nullable int）
-  - 使用レーン範囲
 - lane_draw_open_at / lane_draw_close_at（nullable datetime）
-  - レーン抽選受付期間
-- lane_assignment_mode（string）
-  - `single_lane` = 通常レーン割付
-  - `box` = BOX運用
+- lane_assignment_mode（single_lane / box）
 - box_player_count（nullable int）
-  - 1BOX人数
 - odd_lane_player_count（nullable int）
-  - 奇数レーン人数
 - even_lane_player_count（nullable int）
-  - 偶数レーン人数
 
 ### 未抽選DM 自動送信設定（現運用）
 - shift_auto_draw_reminder_enabled（bool）
-  - シフト未抽選DMを送るか
 - shift_auto_draw_reminder_send_on（nullable date）
-  - シフト未抽選DMの送信日
 - lane_auto_draw_reminder_enabled（bool）
-  - レーン未抽選DMを送るか
 - lane_auto_draw_reminder_send_on（nullable date）
-  - レーン未抽選DMの送信日
 
 ### 旧互換カラム
 - auto_draw_reminder_enabled（bool）
@@ -817,6 +819,23 @@ SNS等リンク集を保持するテーブル。
 - auto_draw_reminder_pending_type（string）
   - 初期実装の「何日前 + 対象種別」方式。
   - 既存データ互換のため残すが、今後の新規運用では直接編集しない。
+
+### 右サイド / 終了後表示用 JSON
+- sidebar_schedule（json nullable）
+  - 右サイド「日程・成績」
+  - 例: `[{date,label,href,separator}]`
+- award_highlights（json nullable）
+  - 右サイド「褒章達成」
+  - 例: `[{type,player,game,lane,note,title,photo}]`
+- gallery_items（json nullable）
+  - 終了後ギャラリー
+  - 例: `[{photo,title}]`
+- simple_result_pdfs（json nullable）
+  - 簡易速報PDF
+  - 例: `[{file,title}]`
+- result_cards（json nullable）
+  - 決勝・優勝ハイライト
+  - 例: `[{title,player,balls,note,url,photos,photo,file}]`
 
 ### 注意（運用方針）
 - シフト抽選を使わない大会では `use_shift_draw = false` とし、`shift` は不要。
@@ -832,6 +851,7 @@ SNS等リンク集を保持するテーブル。
 - `shift_draw_close_at` を過ぎても `shift` が未確定の `tournament_entries.status = entry` は、事務局側の自動一括抽選対象とする。
 - `lane_draw_close_at` を過ぎても `lane` が未確定の `tournament_entries.status = entry` は、事務局側の自動一括抽選対象とする。
 - 自動一括抽選の実行履歴は `tournament_auto_draw_logs` を正本とする。
+- 画像 / PDF はDBへバイナリ保存せず、`storage/public` 配下の相対パス文字列を保持する。
 
 ### 外部キー（FK）
 - venue_id -> venues.id
@@ -1068,14 +1088,25 @@ SNS等リンク集を保持するテーブル。
 
 ### 役割
 大会に紐づく添付ファイルを保持するテーブル。
+大会要項（一般 / 選手）やオイルパターン表、任意の追加資料を大会単位で管理する。
 
 ### 主キー
 - id (bigint)
 
 ### 主要カラム
 - tournament_id
+- type（`outline_public` / `outline_player` / `oil_pattern` / `custom`）
+- title（nullable）
 - file_path
-- kind（pdf/image 等：nullable）
+- visibility（`public` / `members`）
+- sort_order
+
+### 注意（運用方針）
+- `outline_public` は一般公開用の大会要項。
+- `outline_player` は会員向け / 選手向けの大会要項。
+- `oil_pattern` はオイルパターン表。
+- `custom` は任意追加資料。
+- ファイル本体は `storage/public` に保存し、DBには相対パスを保持する。
 
 ### 外部キー（FK）
 - tournament_id -> tournaments.id
@@ -1085,15 +1116,22 @@ SNS等リンク集を保持するテーブル。
 ## tournament_organizations
 
 ### 役割
-主催/共催/後援などの大会組織情報を保持するテーブル。
+主催 / 特別協賛 / 協賛 / 後援 / 協力などの大会組織情報を、大会単位で複数行保持するテーブル。
 
 ### 主キー
 - id (bigint)
 
 ### 主要カラム
 - tournament_id
-- organization_name
-- role（host/cohost/support 等：nullable）
+- category（`host` / `special_sponsor` / `sponsor` / `support` / `cooperation`）
+- name
+- url（nullable）
+- sort_order
+
+### 注意（運用方針）
+- 画面表示の正本はこのテーブル。
+- 旧カラム `host` / `special_sponsor` / `sponsor` / `support` は互換表示用としてテキスト同期を残す。
+- URLは任意で、ある場合は大会詳細から外部リンク表示する。
 
 ### 外部キー（FK）
 - tournament_id -> tournaments.id

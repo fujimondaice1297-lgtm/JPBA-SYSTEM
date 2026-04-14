@@ -6,6 +6,29 @@
 
 作業履歴
 
+## 2026-04-15 大会詳細 clone/create 導線の実働化と辞書正本合わせ
+
+- 目的:
+  - `TournamentController@clone()` で前回大会を下書きコピーしても、create 画面の `old(...)` ベース入力へ十分に反映されない問題を解消する。
+  - あわせて、`tournament_files` / `tournament_organizations` / `tournaments` の詳細系定義を、実装済みの migration / model / controller に合わせて辞書正本へ反映する。
+
+- 実施内容:
+  - `app/Http/Controllers/TournamentController.php`
+    - `create()` で `tournament_prefill` を `flashInput()` へ流し、create 画面の `old(...)` に clone 下書きが乗るよう修正。
+    - `clone()` で大会基本情報、抽選運営設定、右サイド / 褒章 / 結果カードのテキスト系情報を下書きコピーするよう整理。
+    - 日付 / 日時系は毎回見直す前提で空にする方針へ整理。
+    - `buildPrefillOldInput()` / `buildPrefillScheduleRows()` / `buildPrefillAwardRows()` / `buildPrefillResultCardRows()` を追加。
+  - `resources/views/tournaments/create.blade.php`
+    - clone 由来の下書き読み込み中であることを示す案内を追加。
+  - `docs/db/data_dictionary.md`
+    - `tournaments` に詳細表示用JSON・画像系・メディア系の現行定義を反映。
+    - `tournament_files` を `type / title / file_path / visibility / sort_order` へ修正。
+    - `tournament_organizations` を `category / name / url / sort_order` へ修正。
+
+- 現時点の判断:
+  - 大会詳細まわりは、DBスキーマ自体は既に実装済みで、今回は clone/create 導線と辞書正本のズレ修正が中心。
+  - 画像 / PDF の既存アップロード済みファイルを完全自動複製する運用は別論点とし、今回はまずテキスト系・構造系の下書きコピーを実働化した。
+
 ## 2026-04-14 抽選運用ログの管理画面化
 
 - 目的:
