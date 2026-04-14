@@ -829,6 +829,9 @@ SNS等リンク集を保持するテーブル。
 - レーン未抽選DM本文には `lane_draw_close_at` を締切日として差し込む。
 - いずれのメールにも「期日までに未対応なら事務局側で一斉抽選を行う」旨を自動で含める。
 - 送信日は、それぞれの抽選締切日以前に設定する。
+- `shift_draw_close_at` を過ぎても `shift` が未確定の `tournament_entries.status = entry` は、事務局側の自動一括抽選対象とする。
+- `lane_draw_close_at` を過ぎても `lane` が未確定の `tournament_entries.status = entry` は、事務局側の自動一括抽選対象とする。
+- 自動一括抽選の実行履歴は `tournament_auto_draw_logs` を正本とする。
 
 ### 外部キー（FK）
 - venue_id -> venues.id
@@ -914,6 +917,37 @@ SNS等リンク集を保持するテーブル。
 ### 外部キー（FK）
 - tournament_id -> tournaments.id
 - tournament_entry_id -> tournament_entries.id
+
+---
+
+## tournament_auto_draw_logs
+
+### 役割
+締切到来後に、事務局側で自動一括抽選を実行した履歴を保持するテーブル。
+シフト抽選・レーン抽選のどちらを、いつ、何件処理したかを追跡する。
+
+### 主キー
+- id (bigint)
+
+### 主要カラム
+- tournament_id
+- target_type（`shift` / `lane`）
+- deadline_at（対象締切日時：nullable）
+- executed_at（実行日時）
+- total_pending（実行時の未抽選対象件数）
+- success_count（抽選成功件数）
+- failed_count（抽選失敗件数）
+- details_json（失敗明細などのJSON：nullable）
+
+### 注意（運用方針）
+- 自動一括抽選は scheduler / command から実行する。
+- `target_type = shift` は `shift_draw_close_at` 超過後の未シフト者を対象にする。
+- `target_type = lane` は `lane_draw_close_at` 超過後の未レーン者を対象にする。
+- 既存の会員向け抽選ロジックと同じ割付ルールを使い、事務局側で強制確定する。
+- `details_json` には失敗対象の `entry_id` / `license_no` / `name_kanji` / `message` などを保持する。
+
+### 外部キー（FK）
+- tournament_id -> tournaments.id
 
 ---
 

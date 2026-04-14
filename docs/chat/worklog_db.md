@@ -6,6 +6,40 @@
 
 作業履歴
 
+## 2026-04-14 締切到来後の事務局側 自動一括抽選
+
+- 目的:
+  - 未抽選DMで告知したとおり、締切を過ぎても本人が抽選していないエントリー済み選手について、事務局側で自動一括抽選できるようにする。
+  - あわせて、いつ・どの大会で・何件処理したかをDB上に記録できるようにする。
+
+- 実施内容:
+  - `database/migrations/2025_09_01_000080_create_tournament_auto_draw_logs_table.php`
+    - `tournament_auto_draw_logs` を追加。
+    - 大会ごとの自動一括抽選実行履歴を保持できるようにした。
+  - `app/Services/TournamentAutoDrawService.php`
+    - 締切到来後の未抽選者を抽出し、
+      - シフト自動一括抽選
+      - レーン自動一括抽選
+      を実行する共通処理を追加。
+    - 既存の抽選ロジックと同じ割付方針で自動確定するよう整理。
+  - `app/Console/Commands/RunTournamentAutoDraws.php`
+    - 自動一括抽選用の Artisan Command を追加。
+  - `app/Console/Kernel.php`
+    - `tournament:auto-draw-pending` を hourly で登録。
+  - `docs/db/data_dictionary.md`
+    - `tournament_auto_draw_logs` を追加し、`tournaments` の運用方針にも自動一括抽選を追記。
+  - `docs/db/ER.dbml`
+    - 辞書から再生成。
+
+- 現時点の判断:
+  - 大会抽選導線は
+    - 会員本人抽選
+    - 管理者の手動一括抽選
+    - 未抽選DM（手動 / 自動）
+    - 締切到来後の事務局側 自動一括抽選
+    まで揃った。
+  - 今後、管理画面で自動一括抽選ログを参照する画面が必要になれば、`tournament_auto_draw_logs` を正本として追加すればよい。
+
 ## 2026-04-14 未抽選DMの送信日直接指定（シフト / レーン分離）
 
 - 目的:

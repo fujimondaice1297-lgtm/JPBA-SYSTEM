@@ -24,6 +24,8 @@ class Kernel extends ConsoleKernel
         $schedule->command('training:notify --days=60')->dailyAt('08:00');
 
         $schedule->command('tournament:send-draw-reminders')->dailyAt('09:00');
+
+        $schedule->command('tournament:auto-draw-pending')->hourly()->withoutOverlapping();
     }
 
     protected function commands(): void

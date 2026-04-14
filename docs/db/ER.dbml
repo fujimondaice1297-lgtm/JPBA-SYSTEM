@@ -1,5 +1,5 @@
 // Auto-generated from docs/db/data_dictionary.md
-// Generated at: 2026-04-14T21:02:41+09:00
+// Generated at: 2026-04-14T21:29:56+09:00
 
 Project JPBA_SYSTEM {
   database_type: 'PostgreSQL'
@@ -137,6 +137,10 @@ Table sexes {
   // columns omitted (see docs/db/columns_by_table.md)
 }
 
+Table tournament_auto_draw_logs {
+  // columns omitted (see docs/db/columns_by_table.md)
+}
+
 Table tournament_awards {
   // columns omitted (see docs/db/columns_by_table.md)
 }
@@ -230,6 +234,7 @@ Ref: pro_dsp.pro_bowler_id > pro_bowlers.id
 Ref: registered_balls.approved_ball_id > approved_balls.id
 Ref: registered_balls.pro_bowler_id > pro_bowlers.id
 Ref: sessions.user_id > users.id
+Ref: tournament_auto_draw_logs.tournament_id > tournaments.id
 Ref: tournament_awards.tournament_id > tournaments.id
 Ref: tournament_draw_reminder_logs.tournament_entry_id > tournament_entries.id
 Ref: tournament_draw_reminder_logs.tournament_id > tournaments.id
