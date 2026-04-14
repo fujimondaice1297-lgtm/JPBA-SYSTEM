@@ -6,6 +6,43 @@
 
 作業履歴
 
+## 2026-04-14 抽選運用ログの管理画面化
+
+- 目的:
+  - 既に実装済みの
+    - 未抽選DM（手動 / 自動）
+    - 締切到来後の事務局側 自動一括抽選
+    の履歴を、管理画面から確認できるようにする。
+  - あわせて、送信失敗や自動抽選失敗の明細を大会単位で追えるようにする。
+
+- 実施内容:
+  - `app/Http/Controllers/TournamentOperationLogController.php`
+    - 大会ごとの運用ログ一覧画面を追加。
+    - `tournament_draw_reminder_logs`
+    - `tournament_auto_draw_logs`
+    を大会単位で参照し、絞り込み・集計表示できるようにした。
+  - `resources/views/tournament_entries/operation_logs.blade.php`
+    - 未抽選DM送信履歴
+    - 締切到来後の自動一括抽選ログ
+    を1画面で確認できる管理画面を追加。
+    - 失敗明細は details 表示で展開確認できるようにした。
+  - `resources/views/tournaments/index.blade.php`
+    - 大会一覧に `運用ログ` 導線を追加。
+  - `resources/views/tournament_entries/admin_draws.blade.php`
+    - 抽選一覧の上部導線に `運用ログ` を追加。
+  - `routes/web.php`
+    - `tournaments.operation_logs.index` を追加。
+
+- 現時点の判断:
+  - 大会抽選導線は
+    - 本人抽選
+    - 管理者の手動一括抽選
+    - 未抽選DM（手動 / 自動）
+    - 締切到来後の事務局側 自動一括抽選
+    - それらの運用ログ確認
+    まで一通り揃った。
+  - 今後さらに必要になれば、再送・再抽選の実行導線はこの運用ログ画面を起点に追加できる。
+
 ## 2026-04-14 締切到来後の事務局側 自動一括抽選
 
 - 目的:

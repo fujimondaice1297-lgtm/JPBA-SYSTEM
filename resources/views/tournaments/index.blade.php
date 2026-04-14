@@ -94,6 +94,9 @@
             <a href="{{ route('tournaments.draws.index', $tournament->id) }}"
                class="btn btn-outline-dark btn-sm flex-shrink-0">抽選一覧</a>
 
+            <a href="{{ route('tournaments.operation_logs.index', $tournament->id) }}"
+               class="btn btn-outline-info btn-sm flex-shrink-0">運用ログ</a>
+
             <a href="{{ route('tournaments.draws.index', ['tournament' => $tournament->id, 'pending_draw' => 1]) }}"
                class="btn btn-outline-secondary btn-sm flex-shrink-0">未抽選</a>
 

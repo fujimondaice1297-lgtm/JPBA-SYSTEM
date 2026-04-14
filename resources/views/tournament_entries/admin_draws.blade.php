@@ -11,6 +11,7 @@
       <a href="{{ route('tournaments.index') }}" class="btn btn-secondary">大会一覧へ戻る</a>
       <a href="{{ route('tournaments.entries.index', $tournament->id) }}" class="btn btn-outline-dark">エントリー一覧</a>
       <a href="{{ route('member.tournaments.draws.index', $tournament->id) }}" class="btn btn-outline-primary">参加選手向け抽選結果</a>
+      <a href="{{ route('tournaments.operation_logs.index', $tournament->id) }}" class="btn btn-outline-info">運用ログ</a>
       <a href="{{ route('tournaments.draw_reminders.create', ['tournament' => $tournament->id, 'pending_type' => 'either']) }}"
          class="btn btn-outline-danger">未抽選DM</a>
     </div>
