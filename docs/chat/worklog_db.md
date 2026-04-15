@@ -6,6 +6,61 @@
 
 作業履歴
 
+## 2026-04-15 大会詳細 edit 側の再編集整合
+
+- 目的:
+  - `tournaments.edit` で既存大会の詳細構造を正しく再編集できるようにする。
+  - 特に
+    - `sidebar_schedule`
+    - `award_highlights`
+    - `result_cards`
+    - `tournament_files`
+    - `tournament_organizations`
+    の既存値表示・保持・更新を安定化する。
+
+- 実施内容:
+  - `app/Http/Controllers/TournamentController.php`
+    - `validateAndNormalize()` に抽選運営設定を追加し、edit 画面の
+      - `use_shift_draw`
+      - `shift_codes`
+      - `accept_shift_preference`
+      - `shift_draw_open_at / shift_draw_close_at`
+      - `use_lane_draw`
+      - `lane_assignment_mode`
+      - `lane_from / lane_to`
+      - `box_player_count / odd_lane_player_count / even_lane_player_count`
+      を保存対象へ反映。
+    - `title_logo` の保存処理が二重に走っていたため整理し、`title_logos` 配下へ統一。
+    - 既存ロジックのまま
+      - `sidebar_schedule`
+      - `award_highlights`
+      - `gallery_items`
+      - `simple_result_pdfs`
+      - `result_cards`
+      - `tournament_files`
+      を更新できるよう、edit 側入力と整合する controller に整理。
+  - `resources/views/tournaments/edit.blade.php`
+    - 組織・右サイド日程・褒章・結果カードで、既存値を初期表示できるよう整理。
+    - バリデーションエラー後は `old()` を優先して再描画できるよう修正。
+    - PDF差し替え導線を追加し、
+      - `outline_public`
+      - `outline_player`
+      - `oil_pattern`
+      - `custom`
+      の現在値確認と追加・差し替えが可能なUIへ整理。
+    - 既存ギャラリー / 既存簡易速報PDF の keep 入力名を index 付きに修正し、controller 側の期待構造と一致させた。
+
+- 現時点の判断:
+  - 大会詳細は
+    - create / clone
+    - edit / update
+    - show
+    の主要導線が揃った。
+  - 次段では、必要に応じて create 側にも edit と同じ水準の
+    - 右サイド / 褒章 / 結果カード
+    - PDF添付の細かい入力UI
+    をそろえていけばよい。
+
 ## 2026-04-15 大会詳細 clone/create 導線の実働化と辞書正本合わせ
 
 - 目的:
