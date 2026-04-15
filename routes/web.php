@@ -301,6 +301,11 @@ Route::middleware(['auth','role:editor,admin'])->group(function () {
         ->name('tournaments.waitlist.store');
     Route::post('/tournament_entries/{entry}/promote-waitlist', [\App\Http\Controllers\TournamentEntryAdminController::class, 'promoteWaitlist'])
         ->name('tournaments.waitlist.promote');
+    Route::get('/api/venues/search', [VenuePageController::class, 'search'])
+        ->name('api.venues.search');
+    Route::get('/api/venues/{id}', [VenuePageController::class, 'showJson'])
+        ->whereNumber('id')
+        ->name('api.venues.show');
     Route::resource('venues', VenuePageController::class)->except(['show']);
 
     Route::resource('tournaments.results', TournamentResultController::class)

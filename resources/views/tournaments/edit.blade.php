@@ -794,7 +794,7 @@ document.addEventListener('DOMContentLoaded', function () {
     venueBox.querySelectorAll('[data-id]').forEach(el => {
       el.addEventListener('click', async () => {
         const id = el.getAttribute('data-id');
-        const res = await fetch('{{ route('api.venues.show', ['id' => '__ID__']) }}'.replace('__ID__', id));
+        const res = await fetch('{{ url('/api/venues/__ID__') }}'.replace('__ID__', id));
         const v = await res.json();
 
         qs('#venue_id').value = v.id;
@@ -815,7 +815,7 @@ document.addEventListener('DOMContentLoaded', function () {
       renderVenue([]);
       return;
     }
-    const res = await fetch(`{{ route('api.venues.search') }}?q=${encodeURIComponent(q)}`);
+    const res = await fetch(`{{ url('/api/venues/search') }}?q=${encodeURIComponent(q)}`);
     renderVenue(await res.json());
   }
 

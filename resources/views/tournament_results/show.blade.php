@@ -19,6 +19,13 @@
         <a href="{{ route('tournament_results.batchCreate', ['tournament_id' => $tournament->id]) }}"
            class="btn btn-warning">一括登録</a>
 
+        {{-- 配分設定 --}}
+        <a href="{{ route('tournaments.point_distributions.create', $tournament) }}"
+           class="btn btn-outline-primary">ポイント配分</a>
+
+        <a href="{{ route('tournaments.prize_distributions.create', $tournament) }}"
+           class="btn btn-outline-success">賞金配分</a>
+
         {{-- PDF（全体出力のままでOKならこれで） --}}
         <a href="{{ route('tournament_results.pdf') }}" class="btn btn-info">PDF出力</a>
 
@@ -35,6 +42,11 @@
             @csrf
             <button type="submit" class="btn btn-danger">タイトル反映</button>
         </form>
+    </div>
+
+    <div class="alert alert-info py-2">
+        先に <strong>ポイント配分</strong> と <strong>賞金配分</strong> を設定してください。<br>
+        配分未設定の順位は、<strong>賞金・ポイント反映</strong> 実行後も 0 のままです。
     </div>
 
     @if ($results->isEmpty())
@@ -73,18 +85,16 @@
                 <td>{{ isset($result->average) ? number_format($result->average, 2) : '-' }}</td>
                 <td>{{ isset($result->prize_money) ? '¥'.number_format($result->prize_money) : '-' }}</td>
                 <td>
-                    {{-- shallowリソースなので編集は results.edit でOK --}}
                     <a href="{{ route('results.edit', $result) }}" class="btn btn-primary btn-sm">編集</a>
 
                     @if(auth()->user()?->isAdmin())
-                        {{-- 削除は admin 側に寄せたため、admin.tournaments.results.destroy を使用
-                            パラメータは [tournament_id, result_id] の順。--}}
                         <form action="{{ route('admin.tournaments.results.destroy', [$result->tournament_id, $result->id]) }}"
-                            method="POST" class="d-inline"
-                            onsubmit="return confirm('この成績を削除します。よろしいですか？');">
-                        @csrf
-                        @method('DELETE')
-                        <button type="submit" class="btn btn-outline-danger btn-sm">削除</button>
+                              method="POST"
+                              class="d-inline"
+                              onsubmit="return confirm('この成績を削除します。よろしいですか？');">
+                            @csrf
+                            @method('DELETE')
+                            <button type="submit" class="btn btn-outline-danger btn-sm">削除</button>
                         </form>
                     @endif
                 </td>

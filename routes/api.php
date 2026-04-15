@@ -2,7 +2,6 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\VenueController;
 
 use App\Http\Controllers\Api\ApprovedBallController as ApiApprovedBallController;
 use App\Http\Controllers\Api\ProBowlerController as ApiProBowlerController;
@@ -24,9 +23,6 @@ Route::post('auth/login', [ApiAuthController::class, 'login']); // {email,passwo
 
 Route::get('approved-balls/filter', [ApiApprovedBallController::class, 'filter']);
 Route::get('pro_bowlers', [ApiProBowlerController::class, 'search']);
-
-Route::get('/venues', [VenueController::class, 'search'])->name('api.venues.search');
-Route::get('/venues/{id}', [VenueController::class, 'show'])->name('api.venues.show');
 
 // 組織マスタ（主催・協賛 等）検索API
 Route::get('/organizations/search', [\App\Http\Controllers\OrganizationMasterController::class,'search'])->name('api.organizations.search');

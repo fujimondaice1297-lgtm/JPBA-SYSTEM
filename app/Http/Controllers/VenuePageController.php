@@ -25,6 +25,33 @@ class VenuePageController extends Controller
         return view('venues.index', compact('venues'));
     }
 
+
+    // 会場検索API（大会create/edit用）
+    public function search(Request $request)
+    {
+        $q = trim((string) $request->query('q', ''));
+
+        if ($q === '' || mb_strlen($q) < 3) {
+            return response()->json([]);
+        }
+
+        $venues = Venue::query()
+            ->where('name', 'ILIKE', "%{$q}%")
+            ->orderBy('name')
+            ->limit(20)
+            ->get(['id', 'name', 'address', 'tel', 'fax', 'website_url']);
+
+        return response()->json($venues);
+    }
+
+    // 会場詳細API（大会create/edit用）
+    public function showJson(int $id)
+    {
+        $venue = Venue::findOrFail($id, ['id', 'name', 'address', 'postal_code', 'tel', 'fax', 'website_url', 'note']);
+
+        return response()->json($venue);
+    }
+
     // 新規
     public function create()
     {

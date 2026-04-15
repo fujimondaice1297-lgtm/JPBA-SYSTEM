@@ -4,8 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Models\Tournament;
 use App\Models\ProBowler;
-use App\Models\TournamentPoint;
-use App\Models\TournamentAward;
 use App\Models\TournamentResult;
 use App\Models\PointDistribution;
 use App\Models\PrizeDistribution;
@@ -57,6 +55,21 @@ class TournamentResultController extends Controller
         return view('tournament_results.create', compact('tournaments','players'));
     }
 
+
+    private function resolvePoints(int $tournamentId, int $rank): int
+    {
+        return (int) (PointDistribution::where('tournament_id', $tournamentId)
+            ->where('rank', $rank)
+            ->value('points') ?? 0);
+    }
+
+    private function resolvePrize(int $tournamentId, int $rank): int
+    {
+        return (int) (PrizeDistribution::where('tournament_id', $tournamentId)
+            ->where('rank', $rank)
+            ->value('amount') ?? 0);
+    }
+
     public function store(Request $request)
     {
         $v = $request->validate([
@@ -89,9 +102,8 @@ class TournamentResultController extends Controller
 
         $games   = max(1, (int)$v['games']);
         $average = round(((int)$v['total_pin']) / $games, 2);
-        $points  = $pro ? (TournamentPoint::where('rank', (int)$v['ranking'])->value('point') ?? 0) : 0;
-        $prize   = $pro ? (TournamentAward::where('tournament_id', (int)$v['tournament_id'])
-                                    ->where('rank', (int)$v['ranking'])->value('prize_money') ?? 0) : 0;
+        $points  = $pro ? $this->resolvePoints((int) $v['tournament_id'], (int) $v['ranking']) : 0;
+        $prize   = $pro ? $this->resolvePrize((int) $v['tournament_id'], (int) $v['ranking']) : 0;
 
         $data = [
             'tournament_id'  => (int)$v['tournament_id'],
@@ -189,9 +201,8 @@ class TournamentResultController extends Controller
         $result  = TournamentResult::findOrFail($id);
 
         $average = round($request->total_pin / max(1,$request->games), 2);
-        $point   = TournamentPoint::where('rank', $request->ranking)->value('point') ?? 0;
-        $prize   = TournamentAward::where('tournament_id', $request->tournament_id)
-                    ->where('rank', $request->ranking)->value('prize_money') ?? 0;
+        $point   = $this->resolvePoints((int) $request->tournament_id, (int) $request->ranking);
+        $prize   = $this->resolvePrize((int) $request->tournament_id, (int) $request->ranking);
 
         $result->update([
             'pro_bowler_license_no' => $request->pro_bowler_license_no,
@@ -229,9 +240,8 @@ class TournamentResultController extends Controller
 
         foreach ($validated['results'] as $data) {
             $average = round($data['total_pin'] / $data['games'], 2);
-            $point   = TournamentPoint::where('rank', $data['ranking'])->value('point') ?? 0;
-            $prize   = TournamentAward::where('tournament_id', $tournament->id)
-                        ->where('rank', $data['ranking'])->value('prize_money') ?? 0;
+            $point   = $this->resolvePoints((int) $tournament->id, (int) $data['ranking']);
+            $prize   = $this->resolvePrize((int) $tournament->id, (int) $data['ranking']);
 
             TournamentResult::create([
                 'pro_bowler_license_no' => $data['pro_bowler_license_no'],
@@ -322,9 +332,8 @@ class TournamentResultController extends Controller
 
             $games   = max(1, (int)$entry['games']);
             $average = round(((int)$entry['total_pin']) / $games, 2);
-            $points  = $isPro ? ( TournamentPoint::where('rank', (int)$entry['ranking'])->value('point') ?? 0 ) : 0;
-            $prize   = $isPro ? ( TournamentAward::where('tournament_id', $tid)
-                                            ->where('rank', (int)$entry['ranking'])->value('prize_money') ?? 0 ) : 0;
+            $points  = $isPro ? $this->resolvePoints($tid, (int) $entry['ranking']) : 0;
+            $prize   = $isPro ? $this->resolvePrize($tid, (int) $entry['ranking']) : 0;
 
             $data = [
                 'tournament_id'           => $tid,
