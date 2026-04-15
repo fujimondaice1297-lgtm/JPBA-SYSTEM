@@ -29,11 +29,11 @@
         {{-- PDF（全体出力のままでOKならこれで） --}}
         <a href="{{ route('tournament_results.pdf') }}" class="btn btn-info">PDF出力</a>
 
-        {{-- 賞金・ポイント反映 --}}
+        {{-- 賞金・ポイント再計算 --}}
         <form method="POST" action="{{ route('tournaments.results.apply_awards_points', $tournament) }}"
-              onsubmit="return confirm('この大会に賞金・ポイントを反映します。よろしいですか？');">
+              onsubmit="return confirm('この大会の賞金・ポイントを再計算します。よろしいですか？');">
             @csrf
-            <button type="submit" class="btn btn-outline-primary">賞金・ポイント反映</button>
+            <button type="submit" class="btn btn-outline-primary">賞金・ポイント再計算</button>
         </form>
 
         {{-- タイトル反映 --}}
@@ -45,8 +45,9 @@
     </div>
 
     <div class="alert alert-info py-2">
-        先に <strong>ポイント配分</strong> と <strong>賞金配分</strong> を設定してください。<br>
-        配分未設定の順位は、<strong>賞金・ポイント反映</strong> 実行後も 0 のままです。
+        成績の<strong>新規登録・一括登録・編集時</strong>に、設定済みの<strong>ポイント配分</strong>と<strong>賞金配分</strong>が自動反映されます。<br>
+        配分を<strong>後から変更した場合</strong>だけ、<strong>賞金・ポイント再計算</strong>を実行してください。<br>
+        配分未設定の順位は 0 のままです。
     </div>
 
     @if ($results->isEmpty())
