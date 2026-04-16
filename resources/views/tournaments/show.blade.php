@@ -96,8 +96,11 @@
     @endif
     <h1 class="h3 mb-0">{{ $tournament->name }}</h1>
   </div>
-  <div class="d-flex gap-2">
+  <div class="d-flex gap-2 flex-wrap justify-content-end">
     <a href="{{ route('tournaments.edit', $tournament->id) }}" class="btn btn-primary">編集</a>
+    <a href="{{ route('tournaments.results.index', $tournament->id) }}" class="btn btn-outline-primary">成績一覧</a>
+    <a href="{{ route('tournaments.point_distributions.create', $tournament->id) }}" class="btn btn-outline-danger">ポイント配分</a>
+    <a href="{{ route('tournaments.prize_distributions.create', $tournament->id) }}" class="btn btn-outline-warning">賞金配分</a>
     <a href="{{ route('tournaments.index') }}" class="btn btn-secondary">一覧へ戻る</a>
   </div>
 </div>
@@ -105,6 +108,10 @@
 @if(session('success'))
   <div class="alert alert-success">{{ session('success') }}</div>
 @endif
+
+<div class="alert alert-info py-2">
+  操作のおすすめ順は、<strong>ポイント配分 / 賞金配分</strong> → <strong>成績一覧</strong> → 必要時のみ<strong>賞金・ポイント再計算</strong> → <strong>タイトル反映</strong> です。
+</div>
 
 <div class="row">
   <div class="col-lg-8">
