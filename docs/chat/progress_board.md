@@ -94,8 +94,19 @@
 
 ## Phase 2：大会（管理・公開の整合）
 - [ ] tournaments 周辺の最終スキーマが辞書に確定
-- [ ] 添付/動画/配信URL/サイドバー表示の構造が固まる
+- [✓] 添付/動画/配信URL/サイドバー表示の構造が固まる
 - [ ] 結果・表彰・ポイントが破綻なく集計できる
+#### 2026-04-16 メモ（大会詳細 / 成績 / 配分 / 会場検索UIの整備）
+- [✓] `tournaments.create` の大会詳細入力UIを `tournaments.edit` と同水準まで拡張した
+- [✓] `tournaments.create` / `tournaments.edit` の会場検索で、会場マスタ検索 → 候補表示 → 選択反映が動作することを確認した
+- [✓] venue API を `/api/venues/search` / `/api/venues/{id}` の1系統へ整理した
+- [✓] 大会作成 → 詳細表示 → 成績一覧 の基本導線が通ることを確認した
+- [✓] `ポイント配分` / `賞金配分` → `大会成績一覧` → `賞金・ポイント再計算` の運用導線を整備した
+- [✓] `tournament_results` の新規登録 / 一括登録 / 編集で、配分済み順位の `points` / `prize_money` が保存時に自動反映される構成を確認した
+- [✓] `タイトル反映` の冪等性を確認した（初回: 新規作成 / 再実行: 既存扱い）
+- [✓] `tournaments.index` をカード型UIへ整理し、`詳細` / `成績一覧` / `ポイント配分` / `賞金配分` へ迷わず遷移できるようにした
+- [✓] `tournament_results.create` / `batch_create` / `edit` のUIを整理し、補助導線と平均目安表示を追加した
+- [ ] `tournament_awards` / `tournament_points` と `prize_distributions` / `point_distributions` の役割整理、および辞書・現物スキーマ整合は未完了
 
 ## Phase 3：ProTest（後回し）
 - [ ] 要件整理

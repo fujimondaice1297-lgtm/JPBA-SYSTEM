@@ -3156,3 +3156,83 @@ User::where('email','domaine-d@i.softbank.jp')->exists(); // true
   - そのため migration / `docs/db/data_dictionary.md` / `docs/db/ER.dbml` / `docs/db/refs_missing.md` の更新は不要。
   - `docs/db/refs_skipped.md` についても、新しい参照保留や例外ルールの追加は無かったため更新不要。
 
+## 2026-04-16 大会詳細 / 成績 / 配分 / 会場検索UIの整備と辞書差分確認
+
+- 目的:
+  - `tournaments.create` / `tournaments.edit` の大会詳細入力と会場検索を実運用レベルまで整える。
+  - `tournament_results` の新規登録 / 一括登録 / 編集 / 配分 / 再計算 / タイトル反映までを一連の運用導線として閉じる。
+  - あわせて、Phase 2 の未処理である「大会系スキーマの辞書確定」に向け、現物スキーマとの差分確認を始める。
+
+- 実施内容（大会詳細 / 会場検索）:
+  - `resources/views/tournaments/create.blade.php`
+    - `edit` 側と同水準になるよう大会詳細入力UIを拡張。
+    - 会場検索UIを追加し、会場マスタから選ぶと `venue_id / venue_name / venue_address / venue_tel / venue_fax / venue URL` へ反映できるよう整理。
+  - `resources/views/tournaments/edit.blade.php`
+    - 会場検索APIの呼び先を `create` と同じ `/api/venues/search` / `/api/venues/{id}` に統一。
+  - `app/Http/Controllers/VenuePageController.php`
+    - 会場検索JSONと会場詳細JSONの返却を `create` / `edit` で共用できるよう整理。
+  - `routes/web.php` / `routes/api.php`
+    - venue API が二重登録されていた状態を整理し、最終的に `/api/venues/search` / `/api/venues/{id}` の1系統で運用する形へ整理。
+  - 動作確認:
+    - 仮会場データを投入し、`tournaments.create` / `tournaments.edit` の両方で
+      - 会場検索
+      - 候補表示
+      - クリック選択
+      - 会場項目への自動反映
+      が通ることを確認。
+
+- 実施内容（大会成績 / 配分 / タイトル反映）:
+  - `app/Http/Controllers/TournamentResultController.php`
+    - 新規登録 / 一括登録 / 編集の保存時に、配分済み順位であれば `points` / `prize_money` を自動反映する構成を確認・整理。
+    - `賞金・ポイント再計算` と `タイトル反映` の処理を実地確認しやすい状態に整備。
+  - `app/Http/Controllers/PointDistributionController.php`
+  - `app/Http/Controllers/PrizeDistributionController.php`
+    - 配分保存後に大会成績一覧へ戻るよう戻り先を整理。
+  - `resources/views/tournament_results/show.blade.php`
+    - `ポイント配分` / `賞金配分` / `賞金・ポイント再計算` / `タイトル反映` の運用順が分かる説明へ更新。
+  - `resources/views/tournament_results/create.blade.php`
+  - `resources/views/tournament_results/batch_create.blade.php`
+  - `resources/views/tournament_results/edit.blade.php`
+    - 見出し・戻り導線・補助リンクを追加し、平均目安がその場で分かるUIへ整理。
+  - 動作確認:
+    - 大会作成 → 詳細表示 → 成績一覧 → 成績登録 の基本導線が通ることを確認。
+    - 配分設定後、成績登録 / 一括登録 / 編集で `points` / `prize_money` が保存時に自動反映されることを確認。
+    - `賞金・ポイント再計算` は「配分を後から変更した場合の再計算」用途として動作することを確認。
+    - `タイトル反映` は、1回目が新規作成、2回目が既存扱いとなり、冪等であることを確認。
+
+- 実施内容（大会一覧 / 詳細UI整理）:
+  - `resources/views/tournaments/index.blade.php`
+    - 一覧をカード型UIへ変更し、開催期間 / 申込期間 / 会場 / 主操作 / その他操作を1大会ごとに把握しやすく整理。
+  - `resources/views/tournaments/show.blade.php`
+    - 成績一覧 / 配分導線へ迷わず移動できるよう上部導線を整理。
+  - `resources/views/tournament_results/show.blade.php`
+    - 成績画面のボタン順と案内文を実運用順に合わせて整理。
+
+- 現物スキーマ確認（Phase 2 未処理の切り分け）:
+  - `tournament_awards` の現物列は
+    - `id`
+    - `tournament_id`
+    - `rank`
+    - `prize_money`
+    - `created_at`
+    - `updated_at`
+    であることを確認。
+  - `tournament_entries` には
+    - `waitlist_priority`
+    - `waitlisted_at`
+    - `waitlist_note`
+    - `promoted_from_waitlist_at`
+    - `preferred_shift_code`
+    が存在することを確認。
+  - `tournament_draw_reminder_logs` / `tournament_auto_draw_logs` の両テーブルが現物DBに存在することを確認。
+  - この結果、Phase 2 の残課題は「大会系の辞書・ER・現物スキーマ再同期」に絞れることを確認した。
+  - 特に `tournament_awards` / `tournament_points` と、実運用で使っている `prize_distributions` / `point_distributions` の役割整理は未完了のまま残っている。
+
+- 現時点の判断:
+  - 大会詳細 / 会場検索 / 成績登録 / 配分 / 再計算 / タイトル反映 / 一覧UI まで、このチャットで運用導線は大きく前進した。
+  - 次の自然な1バッチは、DB変更の要否を切り分けたうえで
+    - `docs/db/data_dictionary.md`
+    - `docs/db/ER.dbml`
+    - 必要なら migration
+    をセットで更新し、大会系スキーマの正本を確定すること。
+
