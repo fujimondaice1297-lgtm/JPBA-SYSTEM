@@ -206,7 +206,10 @@ final class ScoreController extends Controller
         $gender = $r->gender ?: null;
         $shift  = trim((string) $r->input('shift', ''));
 
-        $historyPayload = $this->buildHistoryPayload($tid, $stage, $game, $shift, $gender, $type);
+        $historyPayload = $this->normalizeHistoryPayload(
+            $this->buildHistoryPayload($tid, $stage, $game, $shift, $gender, $type),
+            $type
+        );
 
         if ($game > 1) {
             foreach ($r->rows as $i => $row) {
@@ -372,7 +375,10 @@ final class ScoreController extends Controller
         $type   = (string) $r->query('identifier_type', 'license_number');
 
         return response()->json(
-            $this->buildHistoryPayload($tid, $stage, $game, $shift, $gender !== '' ? $gender : null, $type)
+            $this->normalizeHistoryPayload(
+                $this->buildHistoryPayload($tid, $stage, $game, $shift, $gender !== '' ? $gender : null, $type),
+                $type
+            )
         );
     }
 
@@ -825,6 +831,68 @@ final class ScoreController extends Controller
         }
 
         return '';
+    }
+
+
+    private function normalizeHistoryPayload(array $payload, string $identifierType): array
+    {
+        $historyMap = [];
+
+        foreach ((array) ($payload['historyMap'] ?? []) as $rawKey => $entry) {
+            $normalizedKey = $this->normalizeIdentifierInput((string) $rawKey, $identifierType);
+            if ($normalizedKey === '') {
+                continue;
+            }
+
+            $historyMap[$normalizedKey] = [
+                'scores' => (array) ($entry['scores'] ?? []),
+                'total'  => (int) ($entry['total'] ?? 0),
+            ];
+        }
+
+        $prevKeys = $this->normalizeIdentifierValueList(
+            array_merge(
+                array_keys($historyMap),
+                (array) ($payload['prevKeys'] ?? []),
+                (array) ($payload['prevDigits'] ?? [])
+            ),
+            $identifierType
+        );
+
+        $existsThisGame = $this->normalizeIdentifierValueList(
+            (array) ($payload['existsThisGame'] ?? []),
+            $identifierType
+        );
+
+        $ambiguousKeys = $this->normalizeIdentifierValueList(
+            (array) ($payload['ambiguousKeys'] ?? []),
+            $identifierType
+        );
+
+        return [
+            'prevKeys'         => $prevKeys,
+            'prevDigits'       => $identifierType === 'license_number' ? $prevKeys : [],
+            'existsThisGame'   => $existsThisGame,
+            'historyMap'       => $historyMap,
+            'ambiguousKeys'    => $ambiguousKeys,
+            'enforceFirstGame' => (bool) ($payload['enforceFirstGame'] ?? false),
+        ];
+    }
+
+    private function normalizeIdentifierValueList(array $values, string $identifierType): array
+    {
+        $normalized = [];
+
+        foreach ($values as $value) {
+            $key = $this->normalizeIdentifierInput((string) $value, $identifierType);
+            if ($key === '') {
+                continue;
+            }
+
+            $normalized[(string) $key] = true;
+        }
+
+        return array_values(array_map(static fn ($key) => (string) $key, array_keys($normalized)));
     }
 
     private function resolveBowlerFromInput(string $value, string $type, ?string $gender): ?array

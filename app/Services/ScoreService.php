@@ -30,26 +30,8 @@ class ScoreService
 
         $tournament = Tournament::find($tid);
 
-        // ====== どのステージを持ち込むかを決定 ======
         $includeStages = [$stage];
-        $carryStages   = [];
-
-        if ($stage === '決勝') {
-            if ($carrySemifinal) {
-                $carryStages[] = '準決勝';
-            }
-            if ($carryPrelim) {
-                $carryStages[] = '予選';
-            }
-        } elseif ($stage === '準決勝') {
-            if ($carryPrelim) {
-                $carryStages[] = '予選';
-            }
-        } else {
-            if ($carryPrelim && $stage !== '予選') {
-                $carryStages[] = '予選';
-            }
-        }
+        $carryStages   = $this->resolveCarryStages($stage, $carryPrelim, $carrySemifinal, $enabledStages);
 
         if (!empty($enabledStages)) {
             $includeStages = array_values(array_intersect($includeStages, $enabledStages));
@@ -110,14 +92,17 @@ class ScoreService
                 $players[$key]['stage_totals'][$stageName] = 0;
             }
 
+            $gameNo = (int)$r->game_number;
+            $score  = (int)$r->score;
+
+            $players[$key]['breakdown'][$stageName][$gameNo] = $score;
+
             if ($stageName === $stage) {
-                if ((int)$r->game_number <= $uptoGame) {
-                    $players[$key]['breakdown'][$stageName][(int)$r->game_number] = (int)$r->score;
-                    $players[$key]['stage_totals'][$stageName] += (int)$r->score;
+                if ($gameNo <= $uptoGame) {
+                    $players[$key]['stage_totals'][$stageName] += $score;
                 }
             } else {
-                $players[$key]['breakdown'][$stageName][(int)$r->game_number] = (int)$r->score;
-                $players[$key]['stage_totals'][$stageName] += (int)$r->score;
+                $players[$key]['stage_totals'][$stageName] += $score;
             }
         }
 
@@ -204,22 +189,70 @@ class ScoreService
 
         return [
             'meta' => [
-                'tournament'               => $tournament,
-                'stage'                    => $stage,
-                'upto_game'                => $uptoGame,
-                'carry_prelim'             => $carryPrelim ? 1 : 0,
-                'carry_semifinal'          => $carrySemifinal ? 1 : 0,
-                'per_point'                => $perPoint,
-                'includeStages'            => $includeStages,
-                'carryStages'              => $carryStages,
-                'border_type'              => $borderType,
-                'border_value'             => $borderValue,
-                'baseline_games'           => $headerBaseGames,
-                'current_stage_total_games'=> $currentStageTotalGames,
+                'tournament'                => $tournament,
+                'stage'                     => $stage,
+                'upto_game'                 => $uptoGame,
+                'carry_prelim'              => $carryPrelim ? 1 : 0,
+                'carry_semifinal'           => $carrySemifinal ? 1 : 0,
+                'per_point'                 => $perPoint,
+                'includeStages'             => $includeStages,
+                'carryStages'               => $carryStages,
+                'border_type'               => $borderType,
+                'border_value'              => $borderValue,
+                'baseline_games'            => $headerBaseGames,
+                'current_stage_total_games' => $currentStageTotalGames,
             ],
             'rows'         => $players,
             'border_index' => $borderIndex,
         ];
+    }
+
+    private function resolveCarryStages(string $stage, bool $carryPrelim, bool $carrySemifinal, array $enabledStages): array
+    {
+        $stageOrder = ['予選', '準々決勝', '準決勝', '決勝'];
+        $activeStages = !empty($enabledStages)
+            ? array_values(array_intersect($stageOrder, $enabledStages))
+            : $stageOrder;
+
+        $currentIndex = array_search($stage, $activeStages, true);
+        if ($currentIndex === false) {
+            return [];
+        }
+
+        $carryStages = [];
+
+        if ($stage === '決勝') {
+            if ($carryPrelim) {
+                foreach (['予選', '準々決勝'] as $carryStage) {
+                    $carryIndex = array_search($carryStage, $activeStages, true);
+                    if ($carryIndex !== false && $carryIndex < $currentIndex) {
+                        $carryStages[] = $carryStage;
+                    }
+                }
+            }
+
+            if ($carrySemifinal) {
+                $carryIndex = array_search('準決勝', $activeStages, true);
+                if ($carryIndex !== false && $carryIndex < $currentIndex) {
+                    $carryStages[] = '準決勝';
+                }
+            }
+
+            return array_values(array_unique($carryStages));
+        }
+
+        if (!$carryPrelim) {
+            return [];
+        }
+
+        foreach ($activeStages as $carryStage) {
+            if ($carryStage === $stage) {
+                break;
+            }
+            $carryStages[] = $carryStage;
+        }
+
+        return array_values(array_unique($carryStages));
     }
 
     private function collectCountedScores(array $player, array $carryStages, string $stage, int $uptoGame): array
