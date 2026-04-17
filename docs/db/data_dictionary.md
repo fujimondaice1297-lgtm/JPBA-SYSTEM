@@ -574,16 +574,23 @@ JPBA公認ボールのマスタ。
 ## point_distributions
 
 ### 役割
-ポイント配分（順位→ポイント）を保持するテーブル。
+大会ごとのポイント配分（順位→ポイント）を保持するテーブル。  
+現行アプリの大会成績反映では、`tournament_points` ではなく **このテーブルを正本** として参照する。
 
 ### 主キー
 - id (bigint)
 
 ### 主要カラム
 - tournament_id（どの大会）
-- pattern_id（配分パターン）
 - rank（順位）
-- point（ポイント）
+- points（ポイント）
+- pattern_id（配分パターン：nullable）
+
+### 注意（運用方針）
+- 現在の大会成績保存・再計算処理は `point_distributions.points` を参照する。
+- 大会ごとの個別配分を保持する正本は `point_distributions` とする。
+- `pattern_id` はテンプレート由来で投入した場合の参照用であり、手入力のカスタム配分では NULL を許容する。
+- 運用上は `tournament_id + rank` 単位で1件に揃える。
 
 ### 外部キー（FK）
 - tournament_id -> tournaments.id
@@ -594,16 +601,23 @@ JPBA公認ボールのマスタ。
 ## prize_distributions
 
 ### 役割
-賞金配分（順位→賞金）を保持するテーブル。
+大会ごとの賞金配分（順位→賞金額）を保持するテーブル。  
+現行アプリの大会成績反映では、`tournament_awards` ではなく **このテーブルを正本** として参照する。
 
 ### 主キー
 - id (bigint)
 
 ### 主要カラム
 - tournament_id（どの大会）
-- pattern_id（配分パターン）
 - rank（順位）
-- prize_money（賞金額）
+- amount（賞金額）
+- pattern_id（配分パターン：nullable）
+
+### 注意（運用方針）
+- 現在の大会成績保存・再計算処理は `prize_distributions.amount` を参照する。
+- 大会ごとの個別配分を保持する正本は `prize_distributions` とする。
+- `pattern_id` はテンプレート由来で投入した場合の参照用であり、手入力のカスタム配分では NULL を許容する。
+- 運用上は `tournament_id + rank` 単位で1件に揃える。
 
 ### 外部キー（FK）
 - tournament_id -> tournaments.id
@@ -1051,15 +1065,22 @@ SNS等リンク集を保持するテーブル。
 ## tournament_points
 
 ### 役割
-大会の順位に対するポイント付与（ポイント表）を保持するテーブル。
+大会の順位に対するポイント付与（ポイント表）を保持する旧互換テーブル。  
+現物スキーマ上は `tournament_id / rank / point` を持つが、現行アプリの成績反映では **`point_distributions` を正本** として扱う。
 
 ### 主キー
-- （実装は複合主キー相当：tournament_id + rank）
+- 主キー列なし（現物実装）
+- 制約: `rank` に UNIQUE 制約あり
 
 ### 主要カラム
 - tournament_id
 - rank
 - point
+
+### 注意（運用方針）
+- 現物スキーマでは `rank` に UNIQUE 制約があり、複数大会で共存しづらい旧設計になっている。
+- 現行の大会成績保存・再計算は `tournament_points` を参照していない。
+- 今後は `point_distributions` への寄せを前提に、`tournament_points` は旧互換用途として扱う。
 
 ### 外部キー（FK）
 - tournament_id -> tournaments.id
@@ -1069,15 +1090,21 @@ SNS等リンク集を保持するテーブル。
 ## tournament_awards
 
 ### 役割
-大会の表彰（賞）情報を保持するテーブル。
+大会ごとの順位別賞金表を保持する旧互換テーブル。  
+現物スキーマ上は `rank / prize_money` を持つが、現行アプリの成績反映では **`prize_distributions` を正本** として扱う。
 
 ### 主キー
 - id (bigint)
 
 ### 主要カラム
 - tournament_id
-- award_name
-- award_rank（nullable）
+- rank（順位）
+- prize_money（賞金額）
+
+### 注意（運用方針）
+- 現物スキーマは「表彰名」ではなく、順位別賞金表として実装されている。
+- 現行の大会成績保存・再計算は `tournament_awards` を参照していない。
+- 今後は `prize_distributions` への寄せを前提に、`tournament_awards` は旧互換用途として扱う。
 
 ### 外部キー（FK）
 - tournament_id -> tournaments.id

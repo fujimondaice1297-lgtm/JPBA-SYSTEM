@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict caCv3UQCZTJAgjlxWIupUC8cWz4F9dAvCOXGpYPJjELXZAvtvc01sBMUgaaMWRg
+\restrict 9dYDtdLD6BQvaxUZ9lVJM23nldifk869IQwAQanWuxNCOB6qGaWY7IbI9vLVuXx
 
 -- Dumped from database version 18.2
 -- Dumped by pg_dump version 18.2
@@ -836,6 +836,202 @@ ALTER SEQUENCE public.informations_id_seq OWNED BY public.informations.id;
 
 
 --
+-- Name: instructor_registry; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.instructor_registry (
+    id bigint NOT NULL,
+    source_type character varying(64) NOT NULL,
+    source_key character varying(255) NOT NULL,
+    legacy_instructor_license_no character varying(255),
+    pro_bowler_id bigint,
+    license_no character varying(255),
+    cert_no character varying(255),
+    name character varying(255) NOT NULL,
+    name_kana character varying(255),
+    sex boolean,
+    district_id bigint,
+    instructor_category character varying(32) NOT NULL,
+    grade character varying(255),
+    coach_qualification boolean DEFAULT false NOT NULL,
+    is_active boolean DEFAULT true NOT NULL,
+    is_visible boolean DEFAULT true NOT NULL,
+    last_synced_at timestamp(0) without time zone,
+    notes text,
+    created_at timestamp(0) without time zone,
+    updated_at timestamp(0) without time zone,
+    source_registered_at timestamp(0) without time zone,
+    is_current boolean DEFAULT true NOT NULL,
+    superseded_at timestamp(0) without time zone,
+    supersede_reason character varying(64),
+    renewal_year smallint,
+    renewal_due_on date,
+    renewal_status character varying(16),
+    renewed_at date,
+    renewal_note text,
+    CONSTRAINT instructor_registry_category_check CHECK (((instructor_category)::text = ANY ((ARRAY['pro_bowler'::character varying, 'pro_instructor'::character varying, 'certified'::character varying])::text[]))),
+    CONSTRAINT instructor_registry_grade_check CHECK (((grade IS NULL) OR ((grade)::text = ANY ((ARRAY['C級'::character varying, '準B級'::character varying, 'B級'::character varying, '準A級'::character varying, 'A級'::character varying, '2級'::character varying, '1級'::character varying])::text[])))),
+    CONSTRAINT instructor_registry_renewal_status_check CHECK (((renewal_status IS NULL) OR ((renewal_status)::text = ANY ((ARRAY['pending'::character varying, 'renewed'::character varying, 'expired'::character varying])::text[]))))
+);
+
+
+ALTER TABLE public.instructor_registry OWNER TO postgres;
+
+--
+-- Name: COLUMN instructor_registry.source_type; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public.instructor_registry.source_type IS '取込元種別（legacy_instructors / pro_bowler / manual など）';
+
+
+--
+-- Name: COLUMN instructor_registry.source_key; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public.instructor_registry.source_key IS 'source_type 内で一意なキー';
+
+
+--
+-- Name: COLUMN instructor_registry.legacy_instructor_license_no; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public.instructor_registry.legacy_instructor_license_no IS '旧 instructors.license_no の退避';
+
+
+--
+-- Name: COLUMN instructor_registry.license_no; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public.instructor_registry.license_no IS 'ライセンス番号';
+
+
+--
+-- Name: COLUMN instructor_registry.cert_no; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public.instructor_registry.cert_no IS '認定番号';
+
+
+--
+-- Name: COLUMN instructor_registry.sex; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public.instructor_registry.sex IS '男性=true / 女性=false / 不明=null';
+
+
+--
+-- Name: COLUMN instructor_registry.instructor_category; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public.instructor_registry.instructor_category IS 'pro_bowler / pro_instructor / certified';
+
+
+--
+-- Name: COLUMN instructor_registry.grade; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public.instructor_registry.grade IS 'C級 / 準B級 / B級 / 準A級 / A級 / 2級 / 1級';
+
+
+--
+-- Name: COLUMN instructor_registry.last_synced_at; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public.instructor_registry.last_synced_at IS '最終同期日時';
+
+
+--
+-- Name: COLUMN instructor_registry.notes; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public.instructor_registry.notes IS '備考';
+
+
+--
+-- Name: COLUMN instructor_registry.source_registered_at; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public.instructor_registry.source_registered_at IS '元データ上の登録日・交付日・開始日';
+
+
+--
+-- Name: COLUMN instructor_registry.is_current; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public.instructor_registry.is_current IS '現在有効な所属状態か';
+
+
+--
+-- Name: COLUMN instructor_registry.superseded_at; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public.instructor_registry.superseded_at IS '後続状態に置き換わった日時';
+
+
+--
+-- Name: COLUMN instructor_registry.supersede_reason; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public.instructor_registry.supersede_reason IS 'promoted_to_pro_bowler / promoted_to_pro_instructor / downgraded_to_certified など';
+
+
+--
+-- Name: COLUMN instructor_registry.renewal_year; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public.instructor_registry.renewal_year IS '更新対象年度';
+
+
+--
+-- Name: COLUMN instructor_registry.renewal_due_on; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public.instructor_registry.renewal_due_on IS '更新期限（原則 12/31）';
+
+
+--
+-- Name: COLUMN instructor_registry.renewal_status; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public.instructor_registry.renewal_status IS 'pending / renewed / expired';
+
+
+--
+-- Name: COLUMN instructor_registry.renewed_at; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public.instructor_registry.renewed_at IS '更新完了日';
+
+
+--
+-- Name: COLUMN instructor_registry.renewal_note; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public.instructor_registry.renewal_note IS '更新備考';
+
+
+--
+-- Name: instructor_registry_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.instructor_registry_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.instructor_registry_id_seq OWNER TO postgres;
+
+--
+-- Name: instructor_registry_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.instructor_registry_id_seq OWNED BY public.instructor_registry.id;
+
+
+--
 -- Name: instructors; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -853,6 +1049,7 @@ CREATE TABLE public.instructors (
     coach_qualification boolean DEFAULT false NOT NULL,
     created_at timestamp(0) without time zone,
     updated_at timestamp(0) without time zone,
+    CONSTRAINT instructors_grade_check CHECK (((grade IS NULL) OR ((grade)::text = ANY ((ARRAY['C級'::character varying, '準B級'::character varying, 'B級'::character varying, '準A級'::character varying, 'A級'::character varying, '2級'::character varying, '1級'::character varying])::text[])))),
     CONSTRAINT instructors_instructor_type_check CHECK (((instructor_type)::text = ANY ((ARRAY['pro'::character varying, 'certified'::character varying])::text[])))
 );
 
@@ -1816,7 +2013,10 @@ CREATE TABLE public.pro_bowlers (
     association_role character varying(255),
     a_license_number integer,
     birthdate_public_hide_year boolean DEFAULT false NOT NULL,
-    birthdate_public_is_private boolean DEFAULT false NOT NULL
+    birthdate_public_is_private boolean DEFAULT false NOT NULL,
+    member_class character varying(32) DEFAULT 'player'::character varying NOT NULL,
+    can_enter_official_tournament boolean DEFAULT true NOT NULL,
+    CONSTRAINT pro_bowlers_member_class_check CHECK (((member_class)::text = ANY ((ARRAY['player'::character varying, 'pro_instructor'::character varying, 'honorary_or_overseas'::character varying, 'other'::character varying])::text[])))
 );
 
 
@@ -1953,6 +2153,20 @@ COMMENT ON COLUMN public.pro_bowlers.free_comment IS '自由記入欄';
 --
 
 COMMENT ON COLUMN public.pro_bowlers.titles_count IS 'タイトル保有数（pro_bowler_titles 件数キャッシュ）';
+
+
+--
+-- Name: COLUMN pro_bowlers.member_class; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public.pro_bowlers.member_class IS 'player / pro_instructor / honorary_or_overseas / other';
+
+
+--
+-- Name: COLUMN pro_bowlers.can_enter_official_tournament; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public.pro_bowlers.can_enter_official_tournament IS '公式戦出場可否';
 
 
 --
@@ -2822,6 +3036,48 @@ ALTER SEQUENCE public.stage_settings_id_seq OWNED BY public.stage_settings.id;
 
 
 --
+-- Name: tournament_auto_draw_logs; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.tournament_auto_draw_logs (
+    id bigint NOT NULL,
+    tournament_id bigint NOT NULL,
+    target_type character varying(10) NOT NULL,
+    deadline_at timestamp(0) without time zone,
+    executed_at timestamp(0) without time zone NOT NULL,
+    total_pending integer DEFAULT 0 NOT NULL,
+    success_count integer DEFAULT 0 NOT NULL,
+    failed_count integer DEFAULT 0 NOT NULL,
+    details_json json,
+    created_at timestamp(0) without time zone,
+    updated_at timestamp(0) without time zone
+);
+
+
+ALTER TABLE public.tournament_auto_draw_logs OWNER TO postgres;
+
+--
+-- Name: tournament_auto_draw_logs_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.tournament_auto_draw_logs_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.tournament_auto_draw_logs_id_seq OWNER TO postgres;
+
+--
+-- Name: tournament_auto_draw_logs_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.tournament_auto_draw_logs_id_seq OWNED BY public.tournament_auto_draw_logs.id;
+
+
+--
 -- Name: tournament_awards; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -2859,6 +3115,51 @@ ALTER SEQUENCE public.tournament_awards_id_seq OWNED BY public.tournament_awards
 
 
 --
+-- Name: tournament_draw_reminder_logs; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.tournament_draw_reminder_logs (
+    id bigint NOT NULL,
+    tournament_id bigint NOT NULL,
+    tournament_entry_id bigint NOT NULL,
+    reminder_kind character varying(20) NOT NULL,
+    pending_type character varying(10) NOT NULL,
+    scheduled_for_date date,
+    dispatch_key character varying(255),
+    recipient_email character varying(255) NOT NULL,
+    subject character varying(200) NOT NULL,
+    status character varying(20) DEFAULT 'sent'::character varying NOT NULL,
+    sent_at timestamp(0) without time zone,
+    error_message text,
+    created_at timestamp(0) without time zone,
+    updated_at timestamp(0) without time zone
+);
+
+
+ALTER TABLE public.tournament_draw_reminder_logs OWNER TO postgres;
+
+--
+-- Name: tournament_draw_reminder_logs_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.tournament_draw_reminder_logs_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.tournament_draw_reminder_logs_id_seq OWNER TO postgres;
+
+--
+-- Name: tournament_draw_reminder_logs_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.tournament_draw_reminder_logs_id_seq OWNED BY public.tournament_draw_reminder_logs.id;
+
+
+--
 -- Name: tournament_entries; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -2874,7 +3175,12 @@ CREATE TABLE public.tournament_entries (
     updated_at timestamp(0) without time zone,
     shift character varying(20),
     lane smallint,
-    checked_in_at timestamp(0) without time zone
+    checked_in_at timestamp(0) without time zone,
+    waitlist_priority integer,
+    waitlisted_at timestamp(0) without time zone,
+    waitlist_note text,
+    promoted_from_waitlist_at timestamp(0) without time zone,
+    preferred_shift_code character varying(20)
 );
 
 
@@ -3167,6 +3473,20 @@ CREATE TABLE public.tournaments (
     gallery_items json,
     simple_result_pdfs json,
     result_cards json,
+    use_shift_draw boolean DEFAULT false NOT NULL,
+    use_lane_draw boolean DEFAULT false NOT NULL,
+    lane_assignment_mode character varying(30) DEFAULT 'single_lane'::character varying NOT NULL,
+    box_player_count smallint,
+    odd_lane_player_count smallint,
+    even_lane_player_count smallint,
+    accept_shift_preference boolean DEFAULT false NOT NULL,
+    auto_draw_reminder_enabled boolean DEFAULT false NOT NULL,
+    auto_draw_reminder_days_before smallint DEFAULT '7'::smallint NOT NULL,
+    auto_draw_reminder_pending_type character varying(10) DEFAULT 'either'::character varying NOT NULL,
+    shift_auto_draw_reminder_enabled boolean DEFAULT false NOT NULL,
+    shift_auto_draw_reminder_send_on date,
+    lane_auto_draw_reminder_enabled boolean DEFAULT false NOT NULL,
+    lane_auto_draw_reminder_send_on date,
     CONSTRAINT tournaments_gender_check CHECK (((gender)::text = ANY ((ARRAY['M'::character varying, 'F'::character varying, 'X'::character varying])::text[]))),
     CONSTRAINT tournaments_official_type_check CHECK (((official_type)::text = ANY ((ARRAY['official'::character varying, 'approved'::character varying, 'other'::character varying])::text[])))
 );
@@ -3690,6 +4010,13 @@ ALTER TABLE ONLY public.informations ALTER COLUMN id SET DEFAULT nextval('public
 
 
 --
+-- Name: instructor_registry id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.instructor_registry ALTER COLUMN id SET DEFAULT nextval('public.instructor_registry_id_seq'::regclass);
+
+
+--
 -- Name: jobs id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
@@ -3935,10 +4262,24 @@ ALTER TABLE ONLY public.stage_settings ALTER COLUMN id SET DEFAULT nextval('publ
 
 
 --
+-- Name: tournament_auto_draw_logs id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.tournament_auto_draw_logs ALTER COLUMN id SET DEFAULT nextval('public.tournament_auto_draw_logs_id_seq'::regclass);
+
+
+--
 -- Name: tournament_awards id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.tournament_awards ALTER COLUMN id SET DEFAULT nextval('public.tournament_awards_id_seq'::regclass);
+
+
+--
+-- Name: tournament_draw_reminder_logs id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.tournament_draw_reminder_logs ALTER COLUMN id SET DEFAULT nextval('public.tournament_draw_reminder_logs_id_seq'::regclass);
 
 
 --
@@ -4255,6 +4596,22 @@ ALTER TABLE ONLY public.information_files
 
 ALTER TABLE ONLY public.informations
     ADD CONSTRAINT informations_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: instructor_registry instructor_registry_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.instructor_registry
+    ADD CONSTRAINT instructor_registry_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: instructor_registry instructor_registry_source_unique; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.instructor_registry
+    ADD CONSTRAINT instructor_registry_source_unique UNIQUE (source_type, source_key);
 
 
 --
@@ -4634,11 +4991,35 @@ ALTER TABLE ONLY public.tournament_entry_balls
 
 
 --
+-- Name: tournament_auto_draw_logs tournament_auto_draw_logs_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.tournament_auto_draw_logs
+    ADD CONSTRAINT tournament_auto_draw_logs_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: tournament_awards tournament_awards_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.tournament_awards
     ADD CONSTRAINT tournament_awards_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: tournament_draw_reminder_logs tournament_draw_reminder_logs_dispatch_key_unique; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.tournament_draw_reminder_logs
+    ADD CONSTRAINT tournament_draw_reminder_logs_dispatch_key_unique UNIQUE (dispatch_key);
+
+
+--
+-- Name: tournament_draw_reminder_logs tournament_draw_reminder_logs_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.tournament_draw_reminder_logs
+    ADD CONSTRAINT tournament_draw_reminder_logs_pkey PRIMARY KEY (id);
 
 
 --
@@ -4906,6 +5287,111 @@ CREATE INDEX informations_starts_at_ends_at_index ON public.informations USING b
 
 
 --
+-- Name: instructor_registry_active_visible_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX instructor_registry_active_visible_idx ON public.instructor_registry USING btree (is_active, is_visible);
+
+
+--
+-- Name: instructor_registry_category_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX instructor_registry_category_idx ON public.instructor_registry USING btree (instructor_category);
+
+
+--
+-- Name: instructor_registry_cert_no_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX instructor_registry_cert_no_idx ON public.instructor_registry USING btree (cert_no);
+
+
+--
+-- Name: instructor_registry_current_category_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX instructor_registry_current_category_idx ON public.instructor_registry USING btree (is_current, instructor_category);
+
+
+--
+-- Name: instructor_registry_current_cert_category_unique; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE UNIQUE INDEX instructor_registry_current_cert_category_unique ON public.instructor_registry USING btree (cert_no, instructor_category) WHERE ((is_current = true) AND (cert_no IS NOT NULL));
+
+
+--
+-- Name: instructor_registry_current_license_category_unique; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE UNIQUE INDEX instructor_registry_current_license_category_unique ON public.instructor_registry USING btree (license_no, instructor_category) WHERE ((is_current = true) AND (license_no IS NOT NULL));
+
+
+--
+-- Name: instructor_registry_current_pro_bowler_category_unique; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE UNIQUE INDEX instructor_registry_current_pro_bowler_category_unique ON public.instructor_registry USING btree (pro_bowler_id, instructor_category) WHERE ((is_current = true) AND (pro_bowler_id IS NOT NULL));
+
+
+--
+-- Name: instructor_registry_district_id_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX instructor_registry_district_id_idx ON public.instructor_registry USING btree (district_id);
+
+
+--
+-- Name: instructor_registry_grade_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX instructor_registry_grade_idx ON public.instructor_registry USING btree (grade);
+
+
+--
+-- Name: instructor_registry_legacy_license_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX instructor_registry_legacy_license_idx ON public.instructor_registry USING btree (legacy_instructor_license_no);
+
+
+--
+-- Name: instructor_registry_license_no_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX instructor_registry_license_no_idx ON public.instructor_registry USING btree (license_no);
+
+
+--
+-- Name: instructor_registry_pro_bowler_id_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX instructor_registry_pro_bowler_id_idx ON public.instructor_registry USING btree (pro_bowler_id);
+
+
+--
+-- Name: instructor_registry_renewal_due_on_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX instructor_registry_renewal_due_on_idx ON public.instructor_registry USING btree (renewal_due_on);
+
+
+--
+-- Name: instructor_registry_renewal_year_status_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX instructor_registry_renewal_year_status_idx ON public.instructor_registry USING btree (renewal_year, renewal_status);
+
+
+--
+-- Name: instructor_registry_source_registered_at_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX instructor_registry_source_registered_at_idx ON public.instructor_registry USING btree (source_registered_at);
+
+
+--
 -- Name: instructors_pro_bowler_id_idx; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -4948,10 +5434,24 @@ CREATE INDEX pro_bowler_trainings_pro_bowler_id_training_id_expires_at_index ON 
 
 
 --
+-- Name: pro_bowlers_can_enter_official_tournament_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX pro_bowlers_can_enter_official_tournament_idx ON public.pro_bowlers USING btree (can_enter_official_tournament);
+
+
+--
 -- Name: pro_bowlers_district_id_index; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX pro_bowlers_district_id_index ON public.pro_bowlers USING btree (district_id);
+
+
+--
+-- Name: pro_bowlers_member_class_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX pro_bowlers_member_class_idx ON public.pro_bowlers USING btree (member_class);
 
 
 --
@@ -4994,6 +5494,41 @@ CREATE INDEX sessions_user_id_index ON public.sessions USING btree (user_id);
 --
 
 CREATE INDEX t_entries_bowler_idx ON public.tournament_entries USING btree (pro_bowler_id);
+
+
+--
+-- Name: t_entries_tournament_status_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX t_entries_tournament_status_idx ON public.tournament_entries USING btree (tournament_id, status);
+
+
+--
+-- Name: t_entries_waitlist_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX t_entries_waitlist_idx ON public.tournament_entries USING btree (tournament_id, status, waitlist_priority);
+
+
+--
+-- Name: tadl_tournament_target_executed_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX tadl_tournament_target_executed_idx ON public.tournament_auto_draw_logs USING btree (tournament_id, target_type, executed_at);
+
+
+--
+-- Name: tdrl_scheduled_date_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX tdrl_scheduled_date_idx ON public.tournament_draw_reminder_logs USING btree (scheduled_for_date);
+
+
+--
+-- Name: tdrl_tournament_pending_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX tdrl_tournament_pending_idx ON public.tournament_draw_reminder_logs USING btree (tournament_id, pending_type);
 
 
 --
@@ -5129,6 +5664,22 @@ ALTER TABLE ONLY public.informations
 
 
 --
+-- Name: instructor_registry instructor_registry_district_id_foreign; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.instructor_registry
+    ADD CONSTRAINT instructor_registry_district_id_foreign FOREIGN KEY (district_id) REFERENCES public.districts(id) ON DELETE SET NULL;
+
+
+--
+-- Name: instructor_registry instructor_registry_pro_bowler_id_foreign; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.instructor_registry
+    ADD CONSTRAINT instructor_registry_pro_bowler_id_foreign FOREIGN KEY (pro_bowler_id) REFERENCES public.pro_bowlers(id) ON DELETE SET NULL;
+
+
+--
 -- Name: instructors instructors_pro_bowler_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -5174,6 +5725,30 @@ ALTER TABLE ONLY public.pro_dsp
 
 ALTER TABLE ONLY public.stage_settings
     ADD CONSTRAINT stage_settings_tournament_id_foreign FOREIGN KEY (tournament_id) REFERENCES public.tournaments(id) ON DELETE CASCADE;
+
+
+--
+-- Name: tournament_auto_draw_logs tournament_auto_draw_logs_tournament_id_foreign; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.tournament_auto_draw_logs
+    ADD CONSTRAINT tournament_auto_draw_logs_tournament_id_foreign FOREIGN KEY (tournament_id) REFERENCES public.tournaments(id) ON DELETE CASCADE;
+
+
+--
+-- Name: tournament_draw_reminder_logs tournament_draw_reminder_logs_tournament_entry_id_foreign; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.tournament_draw_reminder_logs
+    ADD CONSTRAINT tournament_draw_reminder_logs_tournament_entry_id_foreign FOREIGN KEY (tournament_entry_id) REFERENCES public.tournament_entries(id) ON DELETE CASCADE;
+
+
+--
+-- Name: tournament_draw_reminder_logs tournament_draw_reminder_logs_tournament_id_foreign; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.tournament_draw_reminder_logs
+    ADD CONSTRAINT tournament_draw_reminder_logs_tournament_id_foreign FOREIGN KEY (tournament_id) REFERENCES public.tournaments(id) ON DELETE CASCADE;
 
 
 --
@@ -5260,5 +5835,5 @@ ALTER TABLE ONLY public.users
 -- PostgreSQL database dump complete
 --
 
-\unrestrict caCv3UQCZTJAgjlxWIupUC8cWz4F9dAvCOXGpYPJjELXZAvtvc01sBMUgaaMWRg
+\unrestrict 9dYDtdLD6BQvaxUZ9lVJM23nldifk869IQwAQanWuxNCOB6qGaWY7IbI9vLVuXx
 

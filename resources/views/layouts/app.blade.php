@@ -8,10 +8,7 @@
 
     <title>{{ config('app.name', 'Laravel') }}</title>
 
-    {{-- Bootstrap CSS（5.3.3） --}}
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-
-    {{-- 必要なら自前CSS --}}
     @vite(['resources/css/app.css'])
 
     <style>
@@ -27,13 +24,16 @@
 
         @media (max-width: 768px) {
             .mobile-tabbar {
-                position: sticky; bottom: 0; z-index: 1030;
-                background: #fff; border-top: 1px solid #eee;
+                position: sticky;
+                bottom: 0;
+                z-index: 1030;
+                background: #fff;
+                border-top: 1px solid #eee;
             }
             .mobile-tabbar .btn { flex: 1; border-radius: 0; min-height: 48px; }
         }
     </style>
-    {{-- PWA: manifest, meta, service worker --}}
+
     @laravelPWA
 </head>
 <body>
@@ -59,6 +59,7 @@
                             <li class="nav-item"><a class="nav-link" href="{{ route('pro_bowlers.index') }}">全プロデータ</a></li>
                             <li class="nav-item"><a class="nav-link" href="{{ route('tournaments.index') }}">大会管理</a></li>
                             <li class="nav-item"><a class="nav-link" href="{{ route('approved_balls.index') }}">承認ボール管理</a></li>
+                            <li class="nav-item"><a class="nav-link" href="{{ route('scores.input') }}">速報入力</a></li>
                         @endif
 
                         @if($u?->isAdmin())
@@ -101,21 +102,21 @@
         @yield('content')
     </div>
 
-    {{-- Bootstrap JS（Popper同梱） --}}
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-
-    {{-- 自前JS --}}
     @vite(['resources/js/app.js'])
 
     @auth
     <div class="mobile-tabbar d-flex d-md-none">
         <a href="{{ route('tournament.entry.select') }}" class="btn btn-light">エントリー</a>
         <a href="{{ route('registered_balls.index') }}" class="btn btn-light">ボール登録</a>
-        <a href="{{ route('member.dashboard') }}" class="btn btn-primary text-white">マイページ</a>
+        @if($u?->isEditor() || $u?->isAdmin())
+            <a href="{{ route('scores.input') }}" class="btn btn-light">速報入力</a>
+        @else
+            <a href="{{ route('member.dashboard') }}" class="btn btn-primary text-white">マイページ</a>
+        @endif
     </div>
     @endauth
 
-    {{-- ★ ページ固有スクリプトは最後に1回だけ --}}
     @stack('scripts')
 </body>
 </html>
