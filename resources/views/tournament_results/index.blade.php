@@ -30,6 +30,10 @@
         </a>
     </div>
 
+    <div class="alert alert-info">
+        「成績一覧」は最終成績の確認ページです。予選通算・準決勝通算などの途中成績や、正式成績への反映操作は「正式成績反映」から行ってください。
+    </div>
+
     {{-- ※ここに「タイトル反映」ボタンは置かない（大会ごとの成績ページに置く） --}}
 
     {{-- 結果テーブル --}}
@@ -51,9 +55,13 @@
                     <a href="{{ route('tournaments.show', $tournament) }}"
                        class="btn btn-sm btn-outline-primary">詳細を見る</a>
 
-                    {{-- 成績一覧：新しいルートに差し替え --}}
+                    {{-- 成績一覧：最終成績の確認用 --}}
                     <a href="{{ route('tournaments.results.index', $tournament) }}" 
                         class="btn btn-sm btn-primary">成績一覧</a>
+
+                    {{-- 途中成績 / 反映管理ページ --}}
+                    <a href="{{ route('tournaments.result_snapshots.index', $tournament) }}"
+                        class="btn btn-sm btn-outline-success">正式成績反映</a>
                 </td>
             </tr>
         @empty

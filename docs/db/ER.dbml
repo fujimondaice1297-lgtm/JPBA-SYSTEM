@@ -1,5 +1,5 @@
 // Auto-generated from docs/db/data_dictionary.md
-// Generated at: 2026-04-16T11:17:22+09:00
+// Generated at: 2026-04-20T12:12:57+09:00
 
 Project JPBA_SYSTEM {
   database_type: 'PostgreSQL'
@@ -173,6 +173,14 @@ Table tournament_points {
   // columns omitted (see docs/db/columns_by_table.md)
 }
 
+Table tournament_result_snapshot_rows {
+  // columns omitted (see docs/db/columns_by_table.md)
+}
+
+Table tournament_result_snapshots {
+  // columns omitted (see docs/db/columns_by_table.md)
+}
+
 Table tournament_results {
   // columns omitted (see docs/db/columns_by_table.md)
 }
@@ -247,6 +255,10 @@ Ref: tournament_organizations.tournament_id > tournaments.id
 Ref: tournament_participants.pro_bowler_id > pro_bowlers.id
 Ref: tournament_participants.tournament_id > tournaments.id
 Ref: tournament_points.tournament_id > tournaments.id
+Ref: tournament_result_snapshot_rows.pro_bowler_id > pro_bowlers.id
+Ref: tournament_result_snapshot_rows.snapshot_id > tournament_result_snapshots.id
+Ref: tournament_result_snapshots.reflected_by > users.id
+Ref: tournament_result_snapshots.tournament_id > tournaments.id
 Ref: tournament_results.pro_bowler_id > pro_bowlers.id
 Ref: tournament_results.tournament_id > tournaments.id
 Ref: tournaments.venue_id > venues.id

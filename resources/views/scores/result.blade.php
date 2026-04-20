@@ -192,6 +192,12 @@
     }
 
     $isPublic = ((int)request('public', 0) === 1);
+
+    $tournamentId = (int)(request('tournament_id') ?: ($meta['tournament_id'] ?? ($meta['tournament']['id'] ?? 0)));
+    $snapshotQuery = array_filter([
+        'gender' => $genderFilter !== '' ? $genderFilter : null,
+        'shift'  => (string)(request('shifts') ?: ''),
+    ], static fn ($v) => $v !== null && $v !== '');
 @endphp
 
 @if($isPublic)
@@ -273,6 +279,10 @@
     @unless($isPublic)
     <div class="toolbar">
         <a class="btn" href="{{ url('/scores/input') }}">速報入力ページへ</a>
+        @if($tournamentId > 0)
+            <a class="btn" href="{{ route('tournaments.result_snapshots.index', ['tournament' => $tournamentId] + $snapshotQuery) }}">正式成績反映へ</a>
+            <a class="btn" href="{{ route('tournaments.results.index', $tournamentId) }}">大会成績一覧へ</a>
+        @endif
         <a class="btn" href="{{ request()->fullUrlWithQuery(['public'=>1]) }}">共有URL(公開)</a>
 
         <form method="GET" action="" style="display:inline-flex; gap:.5rem; align-items:center; flex-wrap:wrap;">

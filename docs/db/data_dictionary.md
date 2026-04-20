@@ -68,6 +68,8 @@ JPBA SYSTEM Database Data Dictionary
   - [tournament_participants](#tournament_participants)
   - [tournament_points](#tournament_points)
   - [tournament_results](#tournament_results)
+  - [tournament_result_snapshots](#tournament_result_snapshots)
+  - [tournament_result_snapshot_rows](#tournament_result_snapshot_rows)
   - [tournaments](#tournaments)
   - [trainings](#trainings)
   - [used_balls](#used_balls)
@@ -1055,10 +1057,108 @@ SNS等リンク集を保持するテーブル。
 ### 注意（運用方針）
 - 既存データは `pro_bowler_license_no` のままでも壊れない。
 - アマ参加者は `amateur_name`（および `pro_bowler_id` NULL）で保持する。
+- `tournament_results` は **最終成績の正本** として扱う。
+- 予選前半 / 予選通算 / 準々決勝通算 / 準決勝通算などの途中公開単位は、`tournament_result_snapshots` / `tournament_result_snapshot_rows` に保存し、`is_final = true` の反映単位だけを `tournament_results` に同期する。
+- `tournament_results` への自動同期は、`tournament_result_snapshots` の `final_total` から行う。
+- 同期時には、snapshot row 側で解決済みの `pro_bowler_id` / 正式ライセンス番号 / 表示名を優先して保持する。
 
 ### 外部キー（DB上で確認できたもの）
 - tournament_results.tournament_id -> tournaments.id
 - tournament_results.pro_bowler_id -> pro_bowlers.id（ON DELETE SET NULL）
+
+---
+
+## tournament_result_snapshots
+
+### 役割
+大会速報（`game_scores`）から正式成績へ反映した単位を保持するヘッダテーブル。  
+JPBA公式ページのような「予選前半成績」「予選通算成績」「準決勝通算成績」「最終成績」など、**公開粒度ごとの確定スナップショット** を保持する。
+
+### 主キー
+- id (bigint)
+
+### 主要カラム
+- tournament_id（どの大会か）
+- result_code（反映単位コード）
+  - 例: `prelim_first_half` / `prelim_second_half` / `prelim_total` / `quarterfinal_stage` / `quarterfinal_total` / `semifinal_stage` / `semifinal_total` / `final_total`
+- result_name（表示名）
+  - 例: `予選前半成績` / `予選通算成績` / `準決勝通算成績` / `最終成績`
+- result_type（計算方式）
+  - 初期実装は `total_pin`
+- stage_name（主対象ステージ名：nullable）
+- gender（M/F：nullable）
+- shift（単独シフト集計時のみ設定：nullable）
+- games_count（この反映単位で集計対象になったゲーム数）
+- carry_game_count（持ち込みゲーム数）
+- carry_stage_names（持ち込み元ステージ名の配列：json, nullable）
+- calculation_definition（反映条件JSON：nullable）
+  - 例: `source_sets` として、どのステージの何G〜何Gを `scratch` / `carry` として集計したかを保持する
+- reflected_at（反映実行日時）
+- reflected_by（反映実行ユーザー：nullable）
+- is_final（最終成績かどうか）
+- is_published（公開済みかどうか）
+- is_current（同一反映単位の現行版かどうか）
+- notes（備考：nullable）
+
+### 注意（運用方針）
+- `game_scores` を速報入力の正本とし、このテーブルは **正式成績反映単位のヘッダ** として使う。
+- 反映は **ボタン方式** とし、入力のたび自動確定はしない。
+- 同一大会・同一反映単位で再反映する場合、旧行を `is_current = false` にし、新行を `is_current = true` とする運用を想定する。
+- 初期実装は `total_pin` のみ対象とし、ラウンドロビン / ステップラダー / トーナメント / ダブルエリミネーション / シュートアウトは後続で拡張する。
+- `calculation_definition` は、同じ `stage_name` でも「予選前半」「予選後半」「予選通算」のようなゲーム範囲差を再現するための正本条件として使う。
+- `is_final = true` の反映単位だけを、既存 `tournament_results` へ同期対象とする。
+- `calculation_definition` を正本とし、公開単位ごとの scratch / carry の対象ステージ、ゲーム範囲、集計条件を JSON で保持する。
+- `final_total` でも、性別やシフトで絞って反映した snapshot は `tournament_results` へ同期しない。
+- `final_total` かつ 性別=全体 かつ シフト=全体 の反映単位だけを、大会全体の最終成績として `tournament_results` に同期する。
+
+
+### 外部キー（FK）
+- tournament_id -> tournaments.id
+- reflected_by -> users.id（nullable, ON DELETE SET NULL）
+
+
+---
+
+## tournament_result_snapshot_rows
+
+### 役割
+`tournament_result_snapshots` にぶら下がる順位表明細。  
+1つの反映単位に対して、選手ごとの順位・トータルピン・carry 内訳・賞金・ポイント等を保持する。
+
+### 主キー
+- id (bigint)
+
+### 主要カラム
+- snapshot_id（どの反映単位か）
+- ranking（順位）
+- pro_bowler_id（対象プロボウラー：nullable）
+- pro_bowler_license_no（ライセンス番号スナップショット：nullable）
+- amateur_name（アマ参加者名：nullable）
+- display_name（画面表示名）
+- gender（M/F：nullable）
+- shift（シフト：nullable）
+- entry_number（エントリー番号：nullable）
+- scratch_pin（今回ステージ単体のピン）
+- carry_pin（持ち込みピン）
+- total_pin（合算後のトータルピン）
+- games（集計ゲーム数）
+- average（アベレージ：nullable）
+- tie_break_value（タイブレーク計算値：nullable）
+- points（この反映単位で確定したポイント：nullable）
+- prize_money（この反映単位で確定した賞金：nullable）
+
+### 注意（運用方針）
+- `display_name` は公開表示用の固定値を保持し、後から `pro_bowlers` 側の氏名が変わっても当時の表示を再現できるようにする。
+- `pro_bowler_id` が取れない参加者は、`amateur_name` または `pro_bowler_license_no` を使って保持する。
+- トータルピン方式では、`scratch_pin + carry_pin = total_pin` を基本とする。
+- `points` / `prize_money` は、最終成績だけを確定反映する運用でも保持できるよう nullable で持つ。
+- 同順位（タイ）があり得るため、`ranking` の一意制約は張らない。
+- `pro_bowler_license_no` は速報入力時の生値をそのまま使わず、反映時に解決できた場合は `pro_bowlers.license_no` の正式値へ寄せる。
+- 速報入力で下4桁ライセンス番号を使った場合でも、性別と組み合わせて `pro_bowlers` を一意解決できた行は `pro_bowler_id` / 正式ライセンス番号 / 正式氏名へ正規化して保持する。
+
+### 外部キー（FK）
+- snapshot_id -> tournament_result_snapshots.id（ON DELETE CASCADE）
+- pro_bowler_id -> pro_bowlers.id（nullable, ON DELETE SET NULL）
 
 ---
 

@@ -266,7 +266,7 @@ Route::middleware(['auth','role:editor,admin'])->group(function () {
     Route::post('/scores/settings/save', [ScoreController::class, 'saveSetting']);
     Route::post('/scores/clear-all', [ScoreController::class, 'clearAll']);
     Route::post('/scores/clear-game', [ScoreController::class, 'clearGame']);
-    Route::get('/scores/result', [ScoreController::class, 'result']);
+    Route::get('/scores/result', [ScoreController::class, 'result'])->name('scores.result');
     Route::get('/scores/board', [ScoreController::class, 'board']);
     Route::get('/scores/api/existing-ids', [ScoreController::class, 'apiExistingIds']);
     Route::post('/scores/update-one', [ScoreController::class, 'updateOne']);
@@ -333,6 +333,11 @@ Route::middleware(['auth','role:editor,admin'])->group(function () {
     Route::post('/tournaments/{tournament}/results/sync-titles',
         [TournamentResultController::class, 'syncTitles'])
         ->name('tournaments.results.sync');
+
+    Route::get('/tournaments/{tournament}/result-snapshots', [\App\Http\Controllers\TournamentResultSnapshotController::class, 'index'])
+        ->name('tournaments.result_snapshots.index');
+    Route::post('/tournaments/{tournament}/result-snapshots/reflect', [\App\Http\Controllers\TournamentResultSnapshotController::class, 'reflect'])
+        ->name('tournaments.result_snapshots.reflect');
 
     Route::prefix('tournaments/{tournament}')->name('tournaments.')->group(function () {
         Route::resource('prize_distributions', PrizeDistributionController::class)->except(['destroy']);

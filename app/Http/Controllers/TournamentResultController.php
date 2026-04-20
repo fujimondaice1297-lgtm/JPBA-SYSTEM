@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Tournament;
 use App\Models\ProBowler;
 use App\Models\TournamentResult;
+use App\Models\TournamentResultSnapshot;
 use App\Models\PointDistribution;
 use App\Models\PrizeDistribution;
 use App\Models\ProBowlerTitle;
@@ -42,6 +43,19 @@ class TournamentResultController extends Controller
 
         $rankCol ? $q->orderBy($rankCol) : $q->orderBy('id');
         $results = $q->get();
+
+        if ($results->isEmpty()) {
+            $hasSnapshots = TournamentResultSnapshot::query()
+                ->where('tournament_id', $tournament->id)
+                ->where('is_current', true)
+                ->exists();
+
+            if ($hasSnapshots) {
+                return redirect()
+                    ->route('tournaments.result_snapshots.index', $tournament)
+                    ->with('info', 'このページは最終成績のみ表示します。現在は途中成績スナップショットが反映済みのため、正式成績反映ページへ移動しました。');
+            }
+        }
 
         return view('tournament_results.show', compact('tournament', 'results'));
     }
