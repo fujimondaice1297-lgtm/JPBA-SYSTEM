@@ -1,6 +1,32 @@
 @extends('layouts.app')
 
 @section('content')
+@php
+    $presetGroups = [
+        '予選' => [],
+        '準々決勝' => [],
+        '準決勝' => [],
+        '決勝' => [],
+        'その他' => [],
+    ];
+
+    foreach ($presets as $preset) {
+        $code = (string) ($preset['preset_key'] ?? '');
+
+        if (str_starts_with($code, 'prelim_')) {
+            $presetGroups['予選'][] = $preset;
+        } elseif (str_starts_with($code, 'quarterfinal_')) {
+            $presetGroups['準々決勝'][] = $preset;
+        } elseif (str_starts_with($code, 'semifinal_')) {
+            $presetGroups['準決勝'][] = $preset;
+        } elseif (str_starts_with($code, 'final_')) {
+            $presetGroups['決勝'][] = $preset;
+        } else {
+            $presetGroups['その他'][] = $preset;
+        }
+    }
+@endphp
+
 <div class="container py-4">
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
         <div>
@@ -12,6 +38,8 @@
             <a href="{{ route('tournaments.results.index', $tournament) }}" class="btn btn-outline-secondary">大会成績一覧へ</a>
             @if($currentFinalSnapshot && $finalResultsCount > 0)
                 <a href="{{ route('tournaments.results.index', $tournament) }}" class="btn btn-success">最終成績を見る</a>
+            @elseif($currentFinalSnapshot)
+                <a href="{{ route('tournaments.result_snapshots.show', ['tournament' => $tournament->id, 'snapshot' => $currentFinalSnapshot->id]) }}" class="btn btn-primary">snapshotを見る</a>
             @endif
             <a href="{{ route('tournaments.index') }}" class="btn btn-outline-secondary">大会一覧へ</a>
         </div>
@@ -38,21 +66,56 @@
         </div>
     @endif
 
-
     @if($currentFinalSnapshot)
         <div class="alert alert-info d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
             <div>
                 <div class="fw-bold">最新の最終成績スナップショットがあります</div>
-                <div class="small">{{ $currentFinalSnapshot->result_name }} / 反映日時: {{ optional($currentFinalSnapshot->reflected_at)->format('Y-m-d H:i') }} / 行数: {{ $currentFinalSnapshot->rows()->count() }}</div>
+                <div class="small">
+                    {{ $currentFinalSnapshot->result_name }}
+                    / 反映日時: {{ optional($currentFinalSnapshot->reflected_at)->format('Y-m-d H:i') }}
+                    / 行数: {{ $currentFinalSnapshot->rows()->count() }}
+                </div>
                 <div class="small">大会成績一覧への同期件数: {{ $finalResultsCount }} 件</div>
             </div>
-            @if($finalResultsCount > 0)
-                <a href="{{ route('tournaments.results.index', $tournament) }}" class="btn btn-primary">最終成績を見る</a>
-            @else
-                <span class="text-muted small">最終成績一覧への同期はまだありません。</span>
-            @endif
+            <div class="d-flex gap-2">
+                <a href="{{ route('tournaments.result_snapshots.show', ['tournament' => $tournament->id, 'snapshot' => $currentFinalSnapshot->id]) }}" class="btn btn-primary">snapshotを見る</a>
+                @if($finalResultsCount > 0)
+                    <a href="{{ route('tournaments.results.index', $tournament) }}" class="btn btn-success">最終成績を見る</a>
+                @endif
+            </div>
         </div>
     @endif
+
+    <div class="card mb-4">
+        <div class="card-header">現在の成績を見る</div>
+        <div class="card-body">
+            @foreach(['予選', '準々決勝', '準決勝', '決勝', 'その他'] as $groupLabel)
+                @if(!empty($presetGroups[$groupLabel]))
+                    <div class="mb-3">
+                        <div class="fw-bold mb-2">{{ $groupLabel }}</div>
+                        <div class="d-flex flex-wrap gap-2">
+                            @foreach($presetGroups[$groupLabel] as $preset)
+                                @php
+                                    $currentSnapshot = $currentSnapshotsByCode->get($preset['preset_key']);
+                                @endphp
+
+                                @if($currentSnapshot)
+                                    <a href="{{ route('tournaments.result_snapshots.show', ['tournament' => $tournament->id, 'snapshot' => $currentSnapshot->id]) }}"
+                                       class="btn btn-sm btn-outline-primary">
+                                        {{ $preset['result_name'] }}
+                                    </a>
+                                @else
+                                    <span class="btn btn-sm btn-outline-secondary disabled">
+                                        {{ $preset['result_name'] }} ／未反映
+                                    </span>
+                                @endif
+                            @endforeach
+                        </div>
+                    </div>
+                @endif
+            @endforeach
+        </div>
+    </div>
 
     <div class="card mb-4">
         <div class="card-header">反映条件</div>
@@ -128,13 +191,22 @@
                                     @endforeach
                                 </ul>
 
-                                <form method="POST" action="{{ route('tournaments.result_snapshots.reflect', $tournament) }}">
-                                    @csrf
-                                    <input type="hidden" name="preset_key" value="{{ $preset['preset_key'] }}">
-                                    <input type="hidden" name="gender" value="{{ $gender ?? '' }}">
-                                    <input type="hidden" name="shift" value="{{ $shift ?? '' }}">
-                                    <button type="submit" class="btn btn-success">この単位で反映する</button>
-                                </form>
+                                <div class="d-flex flex-wrap gap-2">
+                                    <form method="POST" action="{{ route('tournaments.result_snapshots.reflect', $tournament) }}">
+                                        @csrf
+                                        <input type="hidden" name="preset_key" value="{{ $preset['preset_key'] }}">
+                                        <input type="hidden" name="gender" value="{{ $gender ?? '' }}">
+                                        <input type="hidden" name="shift" value="{{ $shift ?? '' }}">
+                                        <button type="submit" class="btn btn-success">この単位で反映する</button>
+                                    </form>
+
+                                    @if($currentSnapshotsByCode->has($preset['preset_key']))
+                                        <a href="{{ route('tournaments.result_snapshots.show', ['tournament' => $tournament->id, 'snapshot' => $currentSnapshotsByCode->get($preset['preset_key'])->id]) }}"
+                                           class="btn btn-outline-primary">
+                                            現在の成績を見る
+                                        </a>
+                                    @endif
+                                </div>
                             </div>
                         </div>
                     @endforeach
@@ -184,24 +256,25 @@
                                 </td>
                                 <td>
                                     @if($snapshot->is_published)
-                                        <span class="badge text-bg-primary">public</span>
+                                        <span class="badge text-bg-primary">published</span>
                                     @else
                                         <span class="badge text-bg-light">draft</span>
                                     @endif
                                 </td>
                                 <td>{{ optional($snapshot->reflected_at)->format('Y-m-d H:i') }}</td>
-                                <td>{{ $snapshot->reflectedBy?->name ?? $snapshot->reflectedBy?->email ?? '-' }}</td>
+                                <td>{{ $snapshot->reflectedBy->name ?? $snapshot->reflectedBy->email ?? 'system' }}</td>
                                 <td>
-                                    @if($snapshot->is_final && $snapshot->is_current && $finalResultsCount > 0)
-                                        <a href="{{ route('tournaments.results.index', $tournament) }}" class="btn btn-sm btn-outline-primary">最終成績を見る</a>
-                                    @else
-                                        <span class="text-muted small">-</span>
-                                    @endif
+                                    <div class="d-flex flex-wrap gap-2">
+                                        <a href="{{ route('tournaments.result_snapshots.show', ['tournament' => $tournament->id, 'snapshot' => $snapshot->id]) }}" class="btn btn-sm btn-outline-primary">表示</a>
+                                        @if($snapshot->is_final && $snapshot->is_current && $finalResultsCount > 0 && is_null($snapshot->gender) && is_null($snapshot->shift))
+                                            <a href="{{ route('tournaments.results.index', $tournament) }}" class="btn btn-sm btn-outline-success">最終成績</a>
+                                        @endif
+                                    </div>
                                 </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="11" class="text-center text-muted py-4">まだ反映履歴はありません。</td>
+                                <td colspan="11" class="text-center text-muted py-4">まだ反映履歴がありません。</td>
                             </tr>
                         @endforelse
                     </tbody>

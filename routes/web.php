@@ -233,6 +233,8 @@ Route::middleware(['auth','role:member,editor,admin'])->group(function () {
     Route::get('/tournament_results', [TournamentResultController::class, 'list'])->name('tournament_results.index');
     Route::get('/tournament_results/rankings', [TournamentResultController::class, 'rankings'])->name('tournament_results.rankings');
     Route::get('/tournament_results/pdf', [TournamentResultController::class, 'exportPdf'])->name('tournament_results.pdf');
+    Route::get('/tournaments/{tournament}/result-snapshots/{snapshot}', [\App\Http\Controllers\TournamentResultSnapshotController::class, 'show'])
+    ->name('tournaments.result_snapshots.show');
 
     // カレンダー（閲覧）
     Route::get('/calendar/{year?}', [CalendarController::class,'annual'])->whereNumber('year')->name('calendar.annual');
