@@ -486,10 +486,34 @@ class TournamentResultController extends Controller
         return view('tournament_results.rankings', compact('year','years','moneyRanks','pointRanks','averageRanks'));
     }
 
+    public function exportTournamentPdf(Tournament $tournament)
+    {
+        $rankCol = collect(['ranking','rank','position','placing','result_rank','order_no'])
+            ->first(fn($c) => Schema::hasColumn('tournament_results', $c));
+
+        $q = TournamentResult::with(['tournament','player','bowler'])
+            ->where('tournament_id', $tournament->id);
+
+        $rankCol ? $q->orderBy($rankCol) : $q->orderBy('id');
+        $results = $q->get();
+
+        $pdf = Pdf::loadView('tournament_results.pdf', [
+            'tournament' => $tournament,
+            'results'    => $results,
+        ]);
+
+        return $pdf->download('tournament_' . $tournament->id . '_results.pdf');
+    }
+
     public function exportPdf()
     {
-        $results = TournamentResult::with(['tournament','player'])->orderBy('ranking_year','desc')->get();
+        $results = TournamentResult::with(['tournament','player','bowler'])
+            ->orderByDesc('ranking_year')
+            ->orderBy('tournament_id')
+            ->get();
+
         $pdf = Pdf::loadView('tournament_results.pdf', compact('results'));
+
         return $pdf->download('tournament_results.pdf');
     }
 

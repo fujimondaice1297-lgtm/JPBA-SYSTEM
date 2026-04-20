@@ -329,6 +329,9 @@ Route::middleware(['auth','role:editor,admin'])->group(function () {
     Route::post('/tournament_results/batch-store', [TournamentResultController::class, 'batchStore'])
         ->name('tournament_results.batchStore');
 
+    Route::get('/tournaments/{tournament}/results/pdf', [TournamentResultController::class, 'exportTournamentPdf'])
+        ->name('tournaments.results.pdf');
+
     Route::post('/tournaments/{tournament}/results/apply-awards-points',
         [TournamentResultController::class, 'applyAwardsAndPoints'])
         ->name('tournaments.results.apply_awards_points');
