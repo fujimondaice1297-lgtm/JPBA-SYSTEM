@@ -488,33 +488,34 @@ class TournamentResultController extends Controller
 
     public function exportTournamentPdf(Tournament $tournament)
     {
-        $rankCol = collect(['ranking','rank','position','placing','result_rank','order_no'])
-            ->first(fn($c) => Schema::hasColumn('tournament_results', $c));
+        $rankCol = collect(['ranking', 'rank', 'position', 'placing', 'result_rank', 'order_no'])
+            ->first(fn ($c) => Schema::hasColumn('tournament_results', $c));
 
-        $q = TournamentResult::with(['tournament','player','bowler'])
+        $query = TournamentResult::with(['tournament', 'player', 'bowler'])
             ->where('tournament_id', $tournament->id);
 
-        $rankCol ? $q->orderBy($rankCol) : $q->orderBy('id');
-        $results = $q->get();
+        $rankCol ? $query->orderBy($rankCol) : $query->orderBy('id');
 
-        $pdf = Pdf::loadView('tournament_results.pdf', [
-            'tournament' => $tournament,
-            'results'    => $results,
-        ]);
+        $results = $query->get();
 
-        return $pdf->download('tournament_' . $tournament->id . '_results.pdf');
+        return $this->makePdfWithJapaneseFont(
+            'tournament_results.pdf',
+            compact('tournament', 'results'),
+            "{$tournament->year}_{$tournament->name}_results.pdf"
+        );
     }
 
     public function exportPdf()
     {
-        $results = TournamentResult::with(['tournament','player','bowler'])
-            ->orderByDesc('ranking_year')
-            ->orderBy('tournament_id')
+        $results = TournamentResult::with(['tournament', 'player', 'bowler'])
+            ->orderBy('ranking_year', 'desc')
             ->get();
 
-        $pdf = Pdf::loadView('tournament_results.pdf', compact('results'));
-
-        return $pdf->download('tournament_results.pdf');
+        return $this->makePdfWithJapaneseFont(
+            'tournament_results.pdf',
+            compact('results'),
+            'tournament_results.pdf'
+        );
     }
 
     public function destroy(Tournament $tournament, TournamentResult $result)
@@ -528,5 +529,34 @@ class TournamentResultController extends Controller
         return redirect()
             ->route('tournaments.results.index', $tournament) // モデルで渡すとキレイ
             ->with('success', '成績を削除しました。');
+    }
+
+    private function makePdfWithJapaneseFont(string $view, array $data, string $downloadName)
+    {
+        $pdf = Pdf::loadView($view, $data);
+
+        $dompdf = $pdf->getDomPDF();
+        $options = $dompdf->getOptions();
+
+        $options->set('fontDir', storage_path('fonts'));
+        $options->set('fontCache', storage_path('fonts'));
+        $options->set('defaultFont', 'ipaexg');
+        $options->set('isRemoteEnabled', false);
+        $options->set('isHtml5ParserEnabled', true);
+
+        $fontPath = storage_path('fonts/ipaexg.ttf');
+
+        if (is_file($fontPath)) {
+            $dompdf->getFontMetrics()->registerFont(
+                [
+                    'family' => 'ipaexg',
+                    'style' => 'normal',
+                    'weight' => 'normal',
+                ],
+                $fontPath
+            );
+        }
+
+        return $pdf->download($downloadName);
     }
 }

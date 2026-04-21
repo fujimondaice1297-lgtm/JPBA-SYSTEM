@@ -1,54 +1,106 @@
 <!DOCTYPE html>
-<html>
+<html lang="ja">
 <head>
-    <meta charset="utf-8">
-    <title>{{ isset($tournament) ? $tournament->year . '年 ' . $tournament->name . ' 大会成績一覧PDF' : '大会成績一覧PDF' }}</title>
+    <meta charset="UTF-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+    <title>
+        @php
+            $jp = fn (string $s) => html_entity_decode($s, ENT_QUOTES, 'UTF-8');
+            $titlePdf = $jp('&#x5927;&#x4F1A;&#x6210;&#x7E3E;&#x4E00;&#x89A7;PDF');
+        @endphp
+        {{ isset($tournament) ? $tournament->year . $jp('&#x5E74;') . ' ' . $tournament->name . ' ' . $titlePdf : $titlePdf }}
+    </title>
     <style>
+        body,
+        table,
+        th,
+        td,
+        h1,
+        h2,
+        h3,
+        div,
+        span,
+        p {
+            font-family: ipaexg, sans-serif;
+        }
+
         body {
-            font-family: DejaVu Sans, sans-serif;
-            font-size: 12px;
+            font-size: 11px;
+            font-weight: normal;
         }
+
         h2 {
-            margin-bottom: 12px;
+            margin: 0 0 12px 0;
+            font-size: 24px;
+            font-weight: normal !important;
         }
+
         table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 11px;
+            table-layout: fixed;
+            font-size: 10px;
         }
+
         th, td {
             border: 1px solid #333;
             padding: 4px;
             text-align: center;
             vertical-align: middle;
+            word-break: break-word;
+            font-weight: normal !important;
         }
+
         th {
             background: #f0f0f0;
+        }
+
+        .text-left {
+            text-align: left;
         }
     </style>
 </head>
 <body>
+    @php
+        $jp = fn (string $s) => html_entity_decode($s, ENT_QUOTES, 'UTF-8');
+
+        $labelYear = $jp('&#x5E74;&#x5EA6;');
+        $labelTournament = $jp('&#x5927;&#x4F1A;&#x540D;');
+        $labelPlayer = $jp('&#x9078;&#x624B;&#x540D;');
+        $labelLicense = $jp('&#x30E9;&#x30A4;&#x30BB;&#x30F3;&#x30B9;No');
+        $labelRank = $jp('&#x9806;&#x4F4D;');
+        $labelPoint = $jp('&#x30DD;&#x30A4;&#x30F3;&#x30C8;');
+        $labelTotalPin = $jp('&#x30C8;&#x30FC;&#x30BF;&#x30EB;&#x30D4;&#x30F3;');
+        $labelAverage = $jp('&#x30A2;&#x30D9;&#x30EC;&#x30FC;&#x30B8;');
+        $labelPrize = $jp('&#x8CDE;&#x91D1;');
+        $labelResults = $jp('&#x5927;&#x4F1A;&#x6210;&#x7E3E;&#x4E00;&#x89A7;');
+        $labelUnknownPlayer = $jp('&#x4E0D;&#x660E;&#x306A;&#x9078;&#x624B;');
+        $labelUnknownTournament = $jp('&#x4E0D;&#x660E;&#x306A;&#x5927;&#x4F1A;');
+        $labelColon = $jp('&#xFF1A;');
+        $labelYearSuffix = $jp('&#x5E74;');
+    @endphp
+
     @if (isset($tournament))
-        <h2>{{ $tournament->year }}年 {{ $tournament->name }}：大会成績一覧</h2>
+        <h2>{{ $tournament->year }}{{ $labelYearSuffix }} {{ $tournament->name }}{{ $labelColon }}{{ $labelResults }}</h2>
     @else
-        <h2>大会成績一覧</h2>
+        <h2>{{ $labelResults }}</h2>
     @endif
 
     <table>
         <thead>
             <tr>
-                <th>年度</th>
+                <th>{{ $labelYear }}</th>
                 @if (!isset($tournament))
-                    <th>大会名</th>
+                    <th>{{ $labelTournament }}</th>
                 @endif
-                <th>選手名</th>
-                <th>ライセンスNo</th>
-                <th>順位</th>
-                <th>ポイント</th>
-                <th>トータルピン</th>
+                <th>{{ $labelPlayer }}</th>
+                <th>{{ $labelLicense }}</th>
+                <th>{{ $labelRank }}</th>
+                <th>{{ $labelPoint }}</th>
+                <th>{{ $labelTotalPin }}</th>
                 <th>G</th>
-                <th>アベレージ</th>
-                <th>賞金</th>
+                <th>{{ $labelAverage }}</th>
+                <th>{{ $labelPrize }}</th>
             </tr>
         </thead>
         <tbody>
@@ -56,11 +108,16 @@
                 @php
                     $name = optional($result->player)->name_kanji
                             ?? optional($result->bowler)->name_kanji
-                            ?? ($result->amateur_name ?? '不明な選手');
+                            ?? ($result->amateur_name ?? $labelUnknownPlayer);
 
-                    $licenseNo = $result->pro_bowler_license_no
-                                ?? optional($result->bowler)->license_no
-                                ?? '-';
+                    $rawLicenseNo = $result->pro_bowler_license_no
+                                    ?? optional($result->player)->license_no
+                                    ?? optional($result->bowler)->license_no
+                                    ?? null;
+
+                    $licenseNo = $rawLicenseNo
+                                ? substr((string) $rawLicenseNo, -4)
+                                : '-';
 
                     $rank = $result->ranking
                             ?? $result->rank
@@ -72,10 +129,12 @@
                 @endphp
                 <tr>
                     <td>{{ $result->ranking_year ?? '-' }}</td>
+
                     @if (!isset($tournament))
-                        <td>{{ optional($result->tournament)->name ?? '不明な大会' }}</td>
+                        <td class="text-left">{{ optional($result->tournament)->name ?? $labelUnknownTournament }}</td>
                     @endif
-                    <td>{{ $name }}</td>
+
+                    <td class="text-left">{{ $name }}</td>
                     <td>{{ $licenseNo }}</td>
                     <td>{{ $rank }}</td>
                     <td>{{ number_format($result->points ?? 0) }}</td>

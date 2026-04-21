@@ -2,18 +2,38 @@
 
 return [
 
-    'font_dir' => storage_path('fonts/'),
-    'font_cache' => storage_path('fonts/'),
+    'show_warnings' => false,
+    'public_path' => public_path(),
+    'convert_entities' => true,
 
-    'default_font' => 'ipaexg',
+    'options' => [
+        'fontDir' => storage_path('fonts'),
+        'fontCache' => storage_path('fonts'),
+        'tempDir' => sys_get_temp_dir(),
+        'chroot' => realpath(base_path()) ?: base_path(),
+        'logOutputFile' => storage_path('logs/dompdf.html'),
 
-    'font_data' => [
-        'ipaexg' => [
-            'R' => 'ipaexg.ttf',
-            'useOTL' => 0xFF, // ←0x00から0xFFに変えてみる（日本語文字幅とか対応）
-            'useKashida' => 75,
-        ],
+        'defaultMediaType' => 'screen',
+        'defaultPaperSize' => 'a4',
+        'defaultPaperOrientation' => 'portrait',
+        'defaultFont' => 'ipaexg',
+
+        'dpi' => 96,
+        'fontHeightRatio' => 1.1,
+
+        'isPhpEnabled' => false,
+        'isRemoteEnabled' => false,
+        'isJavascriptEnabled' => true,
+        'isHtml5ParserEnabled' => true,
+
+        'allowedRemoteHosts' => null,
+        'isFontSubsettingEnabled' => false,
+        'isPdfAEnabled' => false,
+
+        'pdfBackend' => 'CPDF',
+        'pdflibLicense' => '',
+        'adminUsername' => 'user',
+        'adminPassword' => 'password',
+        'artifactPathValidation' => null,
     ],
-
-    // 他の設定（もしあるならそのままで）
 ];
