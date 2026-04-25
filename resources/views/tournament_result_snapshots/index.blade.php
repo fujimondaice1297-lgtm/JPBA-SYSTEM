@@ -19,7 +19,7 @@
             $presetGroups['準々決勝'][] = $preset;
         } elseif (str_starts_with($code, 'semifinal_')) {
             $presetGroups['準決勝'][] = $preset;
-        } elseif (str_starts_with($code, 'final_')) {
+        } elseif (str_starts_with($code, 'final_') || str_starts_with($code, 'step_ladder_')) {
             $presetGroups['決勝'][] = $preset;
         } else {
             $presetGroups['その他'][] = $preset;
@@ -166,7 +166,7 @@
     </div>
 
     <div class="card mb-4">
-        <div class="card-header">反映ボタン（トータルピン方式）</div>
+        <div class="card-header">反映ボタン</div>
         <div class="card-body">
             @if(empty($presets))
                 <div class="text-muted">この条件では反映対象をまだ作れません。先に速報入力を進めてください。</div>
