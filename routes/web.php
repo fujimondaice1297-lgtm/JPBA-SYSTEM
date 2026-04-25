@@ -273,6 +273,8 @@ Route::middleware(['auth','role:editor,admin'])->group(function () {
     Route::get('/scores/api/existing-ids', [ScoreController::class, 'apiExistingIds']);
     Route::post('/scores/update-one', [ScoreController::class, 'updateOne']);
     Route::post('/scores/delete-one', [ScoreController::class, 'deleteOne']);
+    Route::post('/scores/tournament-photos', [\App\Http\Controllers\TournamentPhotoController::class, 'store'])
+    ->name('scores.tournament_photos.store');
 
     Route::resource('organizations', \App\Http\Controllers\OrganizationMasterController::class)->except(['show']);
 

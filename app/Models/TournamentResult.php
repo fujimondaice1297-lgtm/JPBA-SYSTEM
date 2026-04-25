@@ -20,6 +20,7 @@ class TournamentResult extends Model
         'ranking_year',
         // ある環境では ID で持っている可能性があるため許可しておく（無ければ無視される）
         'pro_bowler_id',
+        'amateur_name',
     ];
 
     /** 大会 */

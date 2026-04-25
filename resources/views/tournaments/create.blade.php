@@ -151,6 +151,48 @@
     運営 / 抽選設定 <small class="text-muted">（クリックで開閉）</small>
   </h4>
   <div class="form-section row collapse" id="t-operation">
+
+    <div class="col-md-4 mb-3">
+      <label class="form-label">予選後フロー</label>
+      @php $flowType = old('result_flow_type', 'legacy_standard'); @endphp
+      <select name="result_flow_type" class="form-select @error('result_flow_type') is-invalid @enderror">
+        <option value="legacy_standard" {{ $flowType === 'legacy_standard' ? 'selected' : '' }}>既存（予選→準々決勝→準決勝→決勝）</option>
+        <option value="prelim_to_rr_to_final" {{ $flowType === 'prelim_to_rr_to_final' ? 'selected' : '' }}>予選→ラウンドロビン→決勝ステップラダー</option>
+        <option value="prelim_to_quarterfinal_to_rr_to_final" {{ $flowType === 'prelim_to_quarterfinal_to_rr_to_final' ? 'selected' : '' }}>予選→準々決勝→ラウンドロビン→決勝ステップラダー</option>
+      </select>
+      @error('result_flow_type')<div class="invalid-feedback">{{ $message }}</div>@enderror
+      <small class="text-muted d-block">ラウンドロビンを使う大会だけ、下の進出人数 / ボーナス設定を使います。決勝は現時点ではステップラダー表記です。</small>
+    </div>
+
+    <div class="col-md-2 mb-3">
+      <label class="form-label">RR進出人数</label>
+      <input type="number" name="round_robin_qualifier_count" class="form-control @error('round_robin_qualifier_count') is-invalid @enderror"
+             value="{{ old('round_robin_qualifier_count', 8) }}">
+      @error('round_robin_qualifier_count')<div class="invalid-feedback">{{ $message }}</div>@enderror
+    </div>
+
+    <div class="col-md-2 mb-3">
+      <label class="form-label">勝ちボーナス</label>
+      <input type="number" name="round_robin_win_bonus" class="form-control @error('round_robin_win_bonus') is-invalid @enderror"
+             value="{{ old('round_robin_win_bonus', 30) }}">
+      @error('round_robin_win_bonus')<div class="invalid-feedback">{{ $message }}</div>@enderror
+    </div>
+
+    <div class="col-md-2 mb-3">
+      <label class="form-label">引き分けボーナス</label>
+      <input type="number" name="round_robin_tie_bonus" class="form-control @error('round_robin_tie_bonus') is-invalid @enderror"
+             value="{{ old('round_robin_tie_bonus', 15) }}">
+      @error('round_robin_tie_bonus')<div class="invalid-feedback">{{ $message }}</div>@enderror
+    </div>
+
+    <div class="col-md-2 mb-3">
+      <label class="form-label d-block">ポジションマッチ</label>
+      <input type="hidden" name="round_robin_position_round_enabled" value="0">
+      <input type="checkbox" name="round_robin_position_round_enabled" value="1" class="form-check-input"
+             {{ old('round_robin_position_round_enabled', 1) ? 'checked' : '' }}>
+      <small class="text-muted d-block">総当たり後に順位別1Gを行う</small>
+    </div>
+
     <div class="col-md-3 mb-3">
       <label class="form-label d-block">シフト抽選を使う</label>
       <input type="hidden" name="use_shift_draw" value="0">

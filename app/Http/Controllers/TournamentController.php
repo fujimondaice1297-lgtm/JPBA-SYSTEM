@@ -55,6 +55,11 @@ class TournamentController extends Controller
             'gender',
             'official_type',
             'title_category',
+            'result_flow_type',
+            'round_robin_qualifier_count',
+            'round_robin_win_bonus',
+            'round_robin_tie_bonus',
+            'round_robin_position_round_enabled',
             'spectator_policy',
             'broadcast',
             'streaming',
@@ -255,6 +260,11 @@ class TournamentController extends Controller
             'gender'               => 'required|in:M,F,X',
             'official_type'        => 'required|in:official,approved,other',
             'title_category'       => 'nullable|in:normal,season_trial,excluded',
+            'result_flow_type'     => 'nullable|in:legacy_standard,prelim_to_rr_to_final,prelim_to_quarterfinal_to_rr_to_final',
+            'round_robin_qualifier_count' => 'nullable|integer|min:4|max:16',
+            'round_robin_win_bonus' => 'nullable|integer|min:0|max:200',
+            'round_robin_tie_bonus' => 'nullable|integer|min:0|max:200',
+            'round_robin_position_round_enabled' => 'nullable|boolean',
             'entry_start'          => 'nullable|date',
             'entry_end'            => 'nullable|date|after_or_equal:entry_start',
             'inspection_required'  => 'nullable|boolean',
@@ -347,11 +357,41 @@ class TournamentController extends Controller
 
         $validated['inspection_required'] = $request->boolean('inspection_required');
 
+        $flowType = trim((string) ($validated['result_flow_type'] ?? 'legacy_standard')) ?: 'legacy_standard';
+        $usesRoundRobin = in_array($flowType, ['prelim_to_rr_to_final', 'prelim_to_quarterfinal_to_rr_to_final'], true);
+
+        $validated['result_flow_type'] = $flowType;
+        $validated['round_robin_qualifier_count'] = $usesRoundRobin
+            ? (int) ($request->input('round_robin_qualifier_count', 8) ?: 8)
+            : null;
+        $validated['round_robin_win_bonus'] = $usesRoundRobin
+            ? (int) ($request->input('round_robin_win_bonus', 30) ?: 30)
+            : null;
+        $validated['round_robin_tie_bonus'] = $usesRoundRobin
+            ? (int) ($request->input('round_robin_tie_bonus', 15) ?: 15)
+            : null;
+        $validated['round_robin_position_round_enabled'] = $usesRoundRobin
+            ? $request->boolean('round_robin_position_round_enabled', true)
+            : false;
+
+        if ($usesRoundRobin && (($validated['round_robin_qualifier_count'] ?? 0) % 2 !== 0)) {
+            throw ValidationException::withMessages([
+                'round_robin_qualifier_count' => 'ラウンドロビン進出人数は偶数で指定してください。',
+            ]);
+        }
+
         $validated['use_shift_draw'] = $useShiftDraw;
         $validated['accept_shift_preference'] = $useShiftDraw && $request->boolean('accept_shift_preference');
         $validated['shift_codes'] = $useShiftDraw
             ? $this->normalizeShiftCodes($request->input('shift_codes'))
             : null;
+
+        unset(
+            $validated['schedule'],
+            $validated['awards'],
+            $validated['org']
+        );
+        
         $validated['shift_draw_open_at'] = $useShiftDraw && $request->filled('shift_draw_open_at')
             ? Carbon::parse($request->input('shift_draw_open_at'))
             : null;
@@ -793,7 +833,9 @@ class TournamentController extends Controller
             $validated['result_cards'] = $cards;
         }
 
-        $t = Tournament::create($validated);
+        $t = new Tournament();
+        $t->forceFill($validated);
+        $t->save();
 
         $org = $this->buildOrgRowsAndTexts($request);
         if (!empty($org['rows'])) {
@@ -894,7 +936,7 @@ class TournamentController extends Controller
             ? $this->buildResultCards($request, $t)
             : $t->result_cards;
 
-        $t->update($validated);
+        $t->forceFill($validated)->save();
 
         $t->organizations()->delete();
         $org = $this->buildOrgRowsAndTexts($request);

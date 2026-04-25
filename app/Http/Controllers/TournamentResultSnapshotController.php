@@ -5,11 +5,18 @@ namespace App\Http\Controllers;
 
 use App\Models\Tournament;
 use App\Models\TournamentResultSnapshot;
+use App\Models\TournamentResultSnapshotRow;
+use App\Models\TournamentResult;
+use App\Models\ProBowler;
+use App\Services\RoundRobinService;
+use App\Services\StepLadderService;
 use App\Services\TournamentResultSnapshotService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\View\View;
 
 final class TournamentResultSnapshotController extends Controller
@@ -82,7 +89,8 @@ final class TournamentResultSnapshotController extends Controller
             ->map(fn (Collection $items) => $items->first());
 
         /** @var TournamentResultSnapshot|null $currentFinalSnapshot */
-        $currentFinalSnapshot = $currentSnapshotsByCode->get('final_total');
+        $currentFinalSnapshot = $currentSnapshots->first(fn ($snapshot) => (bool) $snapshot->is_final)
+            ?? $currentSnapshotsByCode->get('final_total');
 
         $finalResultsCount = DB::table('tournament_results')
             ->where('tournament_id', $tournament->id)
@@ -124,7 +132,9 @@ final class TournamentResultSnapshotController extends Controller
     public function reflect(
         Request $request,
         $tournament,
-        TournamentResultSnapshotService $service
+        TournamentResultSnapshotService $service,
+        RoundRobinService $roundRobinService,
+        StepLadderService $stepLadderService
     ): RedirectResponse {
         $tournament = $this->resolveTournament($tournament);
 
@@ -158,7 +168,15 @@ final class TournamentResultSnapshotController extends Controller
             return back()->withErrors(['preset_key' => '反映対象が見つかりません。'])->withInput();
         }
 
-        $snapshot = $service->createTotalPinSnapshot($preset['definition']);
+        $resultType = (string) ($preset['definition']['result_type'] ?? 'total_pin');
+
+        if ($resultType === 'round_robin') {
+            $snapshot = $this->createRoundRobinSnapshot($preset['definition'], $roundRobinService);
+        } elseif ($resultType === 'step_ladder') {
+            $snapshot = $this->createStepLadderSnapshot($preset['definition'], $stepLadderService);
+        } else {
+            $snapshot = $service->createTotalPinSnapshot($preset['definition']);
+        }
 
         if ($snapshot->is_final && (bool) $snapshot->getAttribute('synced_to_tournament_results')) {
             return redirect()
@@ -196,6 +214,11 @@ final class TournamentResultSnapshotController extends Controller
                 'stage' => '決勝',
                 'label' => '決勝（' . ((int) ($stageCounts['決勝'] ?? 0)) . 'ゲーム）',
                 'games' => (int) ($stageCounts['決勝'] ?? 0),
+            ],
+            [
+                'stage' => 'ラウンドロビン',
+                'label' => 'ラウンドロビン（' . ((int) ($stageCounts['ラウンドロビン'] ?? 0)) . 'ゲーム）',
+                'games' => (int) ($stageCounts['ラウンドロビン'] ?? 0),
             ],
             [
                 'stage' => '準決勝',
@@ -348,7 +371,7 @@ final class TournamentResultSnapshotController extends Controller
         }
 
         $ordered = [];
-        foreach (['予選', '準々決勝', '準決勝', '決勝'] as $stage) {
+        foreach (['予選', '準々決勝', '準決勝', 'ラウンドロビン', '決勝'] as $stage) {
             if (isset($raw[$stage])) {
                 $ordered[$stage] = $raw[$stage];
                 unset($raw[$stage]);
@@ -376,7 +399,14 @@ final class TournamentResultSnapshotController extends Controller
         $prelimGames = (int) ($stageCounts['予選'] ?? 0);
         $quarterGames = (int) ($stageCounts['準々決勝'] ?? 0);
         $semiGames = (int) ($stageCounts['準決勝'] ?? 0);
+        $roundRobinGames = (int) ($stageCounts['ラウンドロビン'] ?? 0);
         $finalGames = (int) ($stageCounts['決勝'] ?? 0);
+
+        $flowType = trim((string) DB::table('tournaments')->where('id', $tournamentId)->value('result_flow_type'));
+        $usesStepLadderFinal = in_array($flowType, [
+            'prelim_to_rr_to_final',
+            'prelim_to_quarterfinal_to_rr_to_final',
+        ], true);
 
         if ($prelimGames > 0) {
             $half = intdiv($prelimGames, 2);
@@ -512,7 +542,60 @@ final class TournamentResultSnapshotController extends Controller
             );
         }
 
-        if ($finalGames > 0) {
+
+        if ($roundRobinGames > 0) {
+            $sourceSets = [];
+            $descriptionLines = [];
+
+            if ($quarterGames > 0) {
+                $sourceSets[] = ['stage' => '準々決勝', 'game_from' => 1, 'game_to' => $quarterGames, 'bucket' => 'carry'];
+                $descriptionLines[] = 'carry: 準々決勝 1G-' . $quarterGames . 'G';
+            } elseif ($prelimGames > 0) {
+                $sourceSets[] = ['stage' => '予選', 'game_from' => 1, 'game_to' => $prelimGames, 'bucket' => 'carry'];
+                $descriptionLines[] = 'carry: 予選 1G-' . $prelimGames . 'G';
+            }
+
+            $sourceSets[] = ['stage' => 'ラウンドロビン', 'game_from' => 1, 'game_to' => $roundRobinGames, 'bucket' => 'scratch'];
+            $descriptionLines[] = 'scratch: ラウンドロビン 1G-' . $roundRobinGames . 'G';
+            $descriptionLines[] = 'bonus: 勝敗ボーナス込みで順位を確定';
+
+            $presets[] = $this->makePreset(
+                tournamentId: $tournamentId,
+                resultCode: 'round_robin_total',
+                resultName: 'ラウンドロビン最終成績',
+                stageName: 'ラウンドロビン',
+                gender: $gender,
+                shift: $shift,
+                reflectedBy: $reflectedBy,
+                sourceSets: $sourceSets,
+                descriptionLines: $descriptionLines,
+                resultType: 'round_robin',
+            );
+        }
+
+        if ($usesStepLadderFinal && $roundRobinGames > 0 && $finalGames > 0) {
+            $presets[] = $this->makePreset(
+                tournamentId: $tournamentId,
+                resultCode: 'step_ladder_final',
+                resultName: '決勝ステップラダー最終成績',
+                stageName: '決勝',
+                gender: $gender,
+                shift: $shift,
+                reflectedBy: $reflectedBy,
+                sourceSets: [
+                    ['stage' => '決勝', 'game_from' => 1, 'game_to' => $finalGames, 'bucket' => 'scratch'],
+                ],
+                descriptionLines: [
+                    'seed: ラウンドロビン最終成績 上位3名',
+                    'scratch: 決勝ステップラダー 1G-' . $finalGames . 'G',
+                    'ranking: 優勝 / 準優勝 / 3位 を正式順位として反映',
+                ],
+                isFinal: true,
+                resultType: 'step_ladder',
+            );
+        }
+
+        if ($finalGames > 0 && !$usesStepLadderFinal) {
             $presets[] = $this->makePreset(
                 tournamentId: $tournamentId,
                 resultCode: 'final_stage',
@@ -578,7 +661,8 @@ final class TournamentResultSnapshotController extends Controller
         ?int $reflectedBy,
         array $sourceSets,
         array $descriptionLines,
-        bool $isFinal = false
+        bool $isFinal = false,
+        string $resultType = 'total_pin'
     ): array {
         return [
             'preset_key' => $resultCode,
@@ -588,7 +672,7 @@ final class TournamentResultSnapshotController extends Controller
                 'tournament_id' => $tournamentId,
                 'result_code' => $resultCode,
                 'result_name' => $resultName,
-                'result_type' => 'total_pin',
+                'result_type' => $resultType,
                 'stage_name' => $stageName,
                 'gender' => $gender,
                 'shift' => $shift,
@@ -601,6 +685,785 @@ final class TournamentResultSnapshotController extends Controller
                 ],
             ],
         ];
+    }
+
+
+    private function createRoundRobinSnapshot(array $definition, RoundRobinService $roundRobinService): TournamentResultSnapshot
+    {
+        $tournamentId = (int) ($definition['tournament_id'] ?? 0);
+        $gender = $this->normalizeGender($definition['gender'] ?? null);
+        $shift = $this->normalizeText($definition['shift'] ?? null);
+        $calculationDefinition = (array) ($definition['calculation_definition'] ?? []);
+        $sourceSets = array_values(array_filter((array) ($calculationDefinition['source_sets'] ?? []), fn ($set) => is_array($set)));
+
+        $rr = $roundRobinService->build([
+            'tournament_id' => $tournamentId,
+            'gender' => $gender ?? '',
+            'shift' => $shift ?? '',
+            'upto_game' => 99,
+        ]);
+
+        if (($rr['missing_carry_snapshot'] ?? false) || empty($rr['players'])) {
+            throw new \InvalidArgumentException('ラウンドロビンの持込元 snapshot が見つかりません。先に直前ステージの正式成績反映を実行してください。');
+        }
+
+        $players = (array) ($rr['players'] ?? []);
+        $meta = (array) ($rr['meta'] ?? []);
+        $roundRobinGames = (int) ($meta['round_robin_games'] ?? 0);
+        $carryGameCount = 0;
+        $carryStageNames = [];
+
+        foreach ($sourceSets as $set) {
+            if (($set['bucket'] ?? 'scratch') !== 'carry') {
+                continue;
+            }
+            $carryGameCount += max(0, ((int) ($set['game_to'] ?? 0)) - ((int) ($set['game_from'] ?? 0)) + 1);
+            $stage = trim((string) ($set['stage'] ?? ''));
+            if ($stage !== '' && !in_array($stage, $carryStageNames, true)) {
+                $carryStageNames[] = $stage;
+            }
+        }
+
+        return DB::transaction(function () use ($definition, $players, $calculationDefinition, $roundRobinGames, $carryGameCount, $carryStageNames, $tournamentId, $gender, $shift) {
+            $this->closeCurrentSnapshots(
+                tournamentId: $tournamentId,
+                resultCode: (string) ($definition['result_code'] ?? ''),
+                gender: $gender,
+                shift: $shift,
+            );
+
+            $snapshot = TournamentResultSnapshot::create([
+                'tournament_id' => $tournamentId,
+                'result_code' => (string) ($definition['result_code'] ?? ''),
+                'result_name' => (string) ($definition['result_name'] ?? ''),
+                'result_type' => 'round_robin',
+                'stage_name' => (string) ($definition['stage_name'] ?? 'ラウンドロビン'),
+                'gender' => $gender,
+                'shift' => $shift,
+                'games_count' => $roundRobinGames + $carryGameCount,
+                'carry_game_count' => $carryGameCount,
+                'carry_stage_names' => $carryStageNames === [] ? null : $carryStageNames,
+                'calculation_definition' => $calculationDefinition,
+                'reflected_at' => Carbon::now(),
+                'reflected_by' => isset($definition['reflected_by']) && $definition['reflected_by'] !== '' ? (int) $definition['reflected_by'] : null,
+                'is_final' => (bool) ($definition['is_final'] ?? false),
+                'is_published' => (bool) ($definition['is_published'] ?? false),
+                'is_current' => true,
+                'notes' => $definition['notes'] ?? null,
+            ]);
+
+            foreach (array_values($players) as $index => $row) {
+                $carryPin = (int) ($row['carry_pin'] ?? 0);
+                $rrPin = (int) ($row['rr_total_pin'] ?? 0);
+                $bonusPoints = (int) ($row['bonus_points'] ?? 0);
+                $carryGames = (int) ($row['carry_games'] ?? 0);
+                $rrGames = count((array) ($row['rr_scores'] ?? []));
+                $scoreAverage = ($carryGames + $rrGames) > 0
+                    ? round(($carryPin + $rrPin) / ($carryGames + $rrGames), 2)
+                    : null;
+                $licenseNo = $this->normalizeText($row['license_no'] ?? null);
+                $displayName = trim((string) ($row['display_name'] ?? ''));
+                $amateurName = $licenseNo === null ? ($displayName !== '' ? $displayName : null) : null;
+
+                TournamentResultSnapshotRow::create([
+                    'snapshot_id' => $snapshot->id,
+                    'ranking' => $index + 1,
+                    'pro_bowler_id' => isset($row['pro_bowler_id']) ? (int) $row['pro_bowler_id'] ?: null : null,
+                    'pro_bowler_license_no' => $licenseNo,
+                    'amateur_name' => $amateurName,
+                    'display_name' => $displayName !== '' ? $displayName : $amateurName,
+                    'gender' => $gender,
+                    'shift' => $shift,
+                    'entry_number' => null,
+                    'scratch_pin' => $rrPin,
+                    'carry_pin' => $carryPin,
+                    'total_pin' => (int) ($row['overall_total_points'] ?? 0),
+                    'games' => $carryGames + $rrGames,
+                    'average' => $scoreAverage,
+                    'tie_break_value' => (float) ($row['overall_total_points'] ?? 0),
+                    'points' => $bonusPoints,
+                    'prize_money' => null,
+                ]);
+            }
+
+            return $snapshot->load(['rows', 'tournament', 'reflectedBy']);
+        });
+    }
+
+
+    private function createStepLadderSnapshot(array $definition, StepLadderService $stepLadderService): TournamentResultSnapshot
+    {
+        $tournamentId = (int) ($definition['tournament_id'] ?? 0);
+        $gender = $this->normalizeGender($definition['gender'] ?? null);
+        $shift = $this->normalizeText($definition['shift'] ?? null);
+
+        $stepLadder = $stepLadderService->build([
+            'tournament_id' => $tournamentId,
+            'gender' => $gender ?? '',
+            'shift' => $shift ?? '',
+            'upto_game' => 2,
+        ]);
+
+        if (($stepLadder['missing_seed_snapshot'] ?? false) || empty($stepLadder['seeds'])) {
+            throw new \InvalidArgumentException('決勝ステップラダーの元になるラウンドロビン最終成績が見つかりません。先に「ラウンドロビン最終成績」を反映してください。');
+        }
+
+        $semifinal = (array) ($stepLadder['semifinal'] ?? []);
+        $final = (array) ($stepLadder['final'] ?? []);
+        $standings = array_values((array) ($stepLadder['standings'] ?? []));
+        $meta = (array) ($stepLadder['meta'] ?? []);
+
+        if (($semifinal['status'] ?? '') !== 'done') {
+            throw new \InvalidArgumentException('決勝ステップラダー1G（2位通過 vs 3位通過）が未確定です。先に1Gを入力してください。');
+        }
+
+        if (($final['status'] ?? '') !== 'done') {
+            throw new \InvalidArgumentException('決勝ステップラダー2G（優勝決定戦）が未確定です。先に2Gを入力してください。');
+        }
+
+        if (count($standings) < 3) {
+            throw new \InvalidArgumentException('決勝ステップラダーの順位を3名分作成できませんでした。入力内容を確認してください。');
+        }
+
+        $finalRows = $this->buildStepLadderFinalSnapshotRows(
+            tournamentId: $tournamentId,
+            gender: $gender,
+            shift: $shift,
+            standings: $standings,
+            semifinal: $semifinal,
+            final: $final,
+            meta: $meta,
+        );
+
+        if (count($finalRows) < 3) {
+            throw new \InvalidArgumentException('決勝ステップラダーの最終順位を作成できませんでした。ラウンドロビン最終成績と決勝入力を確認してください。');
+        }
+
+        $calculationDefinition = (array) ($definition['calculation_definition'] ?? []);
+        $calculationDefinition['step_ladder'] = [
+            'seed_snapshot_code' => (string) ($meta['seed_snapshot_code'] ?? 'round_robin_total'),
+            'seed_snapshot_id' => $meta['seed_snapshot_id'] ?? null,
+            'semifinal_status' => (string) ($semifinal['status'] ?? ''),
+            'final_status' => (string) ($final['status'] ?? ''),
+            'final_rows_count' => count($finalRows),
+            'ranking_policy' => '1-3 step ladder, 4+ round robin order, then previous stage order',
+        ];
+
+        return DB::transaction(function () use (
+            $definition,
+            $calculationDefinition,
+            $finalRows,
+            $tournamentId,
+            $gender,
+            $shift
+        ) {
+            $this->closeCurrentSnapshots(
+                tournamentId: $tournamentId,
+                resultCode: (string) ($definition['result_code'] ?? ''),
+                gender: $gender,
+                shift: $shift,
+            );
+
+            $snapshot = TournamentResultSnapshot::create([
+                'tournament_id' => $tournamentId,
+                'result_code' => (string) ($definition['result_code'] ?? 'step_ladder_final'),
+                'result_name' => (string) ($definition['result_name'] ?? '決勝ステップラダー最終成績'),
+                'result_type' => 'step_ladder',
+                'stage_name' => (string) ($definition['stage_name'] ?? '決勝'),
+                'gender' => $gender,
+                'shift' => $shift,
+                'games_count' => 2,
+                'carry_game_count' => 0,
+                'carry_stage_names' => null,
+                'calculation_definition' => $calculationDefinition,
+                'reflected_at' => Carbon::now(),
+                'reflected_by' => isset($definition['reflected_by']) && $definition['reflected_by'] !== '' ? (int) $definition['reflected_by'] : null,
+                'is_final' => true,
+                'is_published' => (bool) ($definition['is_published'] ?? false),
+                'is_current' => true,
+                'notes' => $definition['notes'] ?? null,
+            ]);
+
+            foreach ($finalRows as $row) {
+                TournamentResultSnapshotRow::create(array_merge($row, [
+                    'snapshot_id' => $snapshot->id,
+                ]));
+            }
+
+            $syncedToTournamentResults = $this->syncFinalSnapshotToTournamentResults($snapshot);
+
+            $snapshot = $snapshot->load(['rows', 'tournament', 'reflectedBy']);
+            $snapshot->setAttribute('synced_to_tournament_results', $syncedToTournamentResults);
+
+            return $snapshot;
+        });
+    }
+
+    /**
+     * @param array<int,array<string,mixed>> $standings
+     * @return array<int,array<string,mixed>>
+     */
+    private function buildStepLadderFinalSnapshotRows(
+        int $tournamentId,
+        ?string $gender,
+        ?string $shift,
+        array $standings,
+        array $semifinal,
+        array $final,
+        array $meta
+    ): array {
+        $seedSnapshotId = isset($meta['seed_snapshot_id']) ? (int) $meta['seed_snapshot_id'] : 0;
+        $roundRobinSnapshot = $seedSnapshotId > 0
+            ? DB::table('tournament_result_snapshots')->where('id', $seedSnapshotId)->first()
+            : null;
+
+        if (!$roundRobinSnapshot) {
+            $roundRobinSnapshot = $this->findCurrentSnapshotByCode($tournamentId, 'round_robin_total', $gender, $shift);
+        }
+
+        $roundRobinRows = $roundRobinSnapshot
+            ? $this->loadSnapshotRowsAsArrays((int) $roundRobinSnapshot->id)
+            : [];
+
+        $baseSnapshot = $this->findStepLadderBaseSnapshot($tournamentId, $gender, $shift);
+        $baseRows = $baseSnapshot
+            ? $this->loadSnapshotRowsAsArrays((int) $baseSnapshot->id)
+            : [];
+
+        $lookupRows = [];
+        foreach (array_merge($roundRobinRows, $baseRows) as $row) {
+            $key = $this->identityKeyFromSnapshotArray($row);
+            if ($key !== '' && !isset($lookupRows[$key])) {
+                $lookupRows[$key] = $row;
+            }
+        }
+
+        $usedKeys = [];
+        $finalRows = [];
+        $nextRank = 1;
+
+        foreach ($standings as $standing) {
+            if ($nextRank > 3) {
+                break;
+            }
+
+            $player = (array) ($standing['player'] ?? []);
+            $key = $this->identityKeyFromStepLadderPlayer($player);
+            $baseRow = $key !== '' ? ($lookupRows[$key] ?? null) : null;
+            $stepScore = $this->resolveStepLadderPinAndGamesForPlayer($player, $semifinal, $final);
+
+            $finalRows[] = $this->makeStepLadderPodiumRowPayload(
+                player: $player,
+                baseRow: is_array($baseRow) ? $baseRow : null,
+                rank: $nextRank,
+                stepPin: $stepScore['pin'],
+                stepGames: $stepScore['games'],
+                gender: $gender,
+                shift: $shift,
+            );
+
+            if ($key !== '') {
+                $usedKeys[$key] = true;
+            }
+            if (is_array($baseRow)) {
+                $baseKey = $this->identityKeyFromSnapshotArray($baseRow);
+                if ($baseKey !== '') {
+                    $usedKeys[$baseKey] = true;
+                }
+            }
+
+            $nextRank++;
+        }
+
+        foreach ($roundRobinRows as $row) {
+            $key = $this->identityKeyFromSnapshotArray($row);
+            if ($key !== '' && isset($usedKeys[$key])) {
+                continue;
+            }
+
+            $finalRows[] = $this->makeSnapshotCarryForwardRowPayload($row, $nextRank, $gender, $shift);
+            if ($key !== '') {
+                $usedKeys[$key] = true;
+            }
+            $nextRank++;
+        }
+
+        foreach ($baseRows as $row) {
+            $key = $this->identityKeyFromSnapshotArray($row);
+            if ($key !== '' && isset($usedKeys[$key])) {
+                continue;
+            }
+
+            $finalRows[] = $this->makeSnapshotCarryForwardRowPayload($row, $nextRank, $gender, $shift);
+            if ($key !== '') {
+                $usedKeys[$key] = true;
+            }
+            $nextRank++;
+        }
+
+        return $finalRows;
+    }
+
+    private function findStepLadderBaseSnapshot(int $tournamentId, ?string $gender, ?string $shift): ?object
+    {
+        $flowType = trim((string) DB::table('tournaments')->where('id', $tournamentId)->value('result_flow_type'));
+
+        $codes = $flowType === 'prelim_to_quarterfinal_to_rr_to_final'
+            ? ['quarterfinal_total', 'prelim_total', 'semifinal_total', 'round_robin_total']
+            : ['prelim_total', 'quarterfinal_total', 'semifinal_total', 'round_robin_total'];
+
+        foreach (array_values(array_unique($codes)) as $code) {
+            $snapshot = $this->findCurrentSnapshotByCode($tournamentId, $code, $gender, $shift);
+            if ($snapshot) {
+                return $snapshot;
+            }
+        }
+
+        return null;
+    }
+
+    private function findCurrentSnapshotByCode(int $tournamentId, string $resultCode, ?string $gender, ?string $shift): ?object
+    {
+        $candidates = [
+            ['gender' => $gender, 'shift' => $shift],
+        ];
+
+        if ($gender !== null || $shift !== null) {
+            $candidates[] = ['gender' => null, 'shift' => null];
+        }
+
+        foreach ($candidates as $candidate) {
+            $query = DB::table('tournament_result_snapshots')
+                ->where('tournament_id', $tournamentId)
+                ->where('result_code', $resultCode)
+                ->where('is_current', true);
+
+            if ($candidate['gender'] === null) {
+                $query->whereNull('gender');
+            } else {
+                $query->where('gender', $candidate['gender']);
+            }
+
+            if ($candidate['shift'] === null) {
+                $query->whereNull('shift');
+            } else {
+                $query->where('shift', $candidate['shift']);
+            }
+
+            $snapshot = $query->orderByDesc('reflected_at')->orderByDesc('id')->first();
+            if ($snapshot) {
+                return $snapshot;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @return array<int,array<string,mixed>>
+     */
+    private function loadSnapshotRowsAsArrays(int $snapshotId): array
+    {
+        return DB::table('tournament_result_snapshot_rows')
+            ->where('snapshot_id', $snapshotId)
+            ->orderBy('ranking')
+            ->orderBy('id')
+            ->get([
+                'ranking',
+                'pro_bowler_id',
+                'pro_bowler_license_no',
+                'amateur_name',
+                'display_name',
+                'gender',
+                'shift',
+                'entry_number',
+                'scratch_pin',
+                'carry_pin',
+                'total_pin',
+                'games',
+                'average',
+                'tie_break_value',
+            ])
+            ->map(fn ($row) => (array) $row)
+            ->all();
+    }
+
+    private function makeStepLadderPodiumRowPayload(
+        array $player,
+        ?array $baseRow,
+        int $rank,
+        ?int $stepPin,
+        int $stepGames,
+        ?string $gender,
+        ?string $shift
+    ): array {
+        $proBowlerId = isset($player['pro_bowler_id']) ? (int) $player['pro_bowler_id'] : 0;
+        if ($proBowlerId <= 0 && $baseRow && isset($baseRow['pro_bowler_id'])) {
+            $proBowlerId = (int) $baseRow['pro_bowler_id'];
+        }
+
+        $licenseNo = $this->normalizeText($player['license_no'] ?? null)
+            ?? ($baseRow ? $this->normalizeText($baseRow['pro_bowler_license_no'] ?? null) : null);
+
+        $displayName = trim((string) ($player['display_name'] ?? ''));
+        if ($displayName === '' && $baseRow) {
+            $displayName = trim((string) ($baseRow['display_name'] ?? $baseRow['amateur_name'] ?? ''));
+        }
+        if ($displayName === '') {
+            $displayName = $licenseNo ?? 'unknown';
+        }
+
+        $carryPin = (int) ($baseRow['total_pin'] ?? 0);
+        $carryGames = (int) ($baseRow['games'] ?? 0);
+        $scratchPin = $stepPin ?? 0;
+        $games = $carryGames + max(0, $stepGames);
+        $totalPin = $carryPin + $scratchPin;
+        $average = $games > 0 ? round($totalPin / $games, 2) : null;
+
+        return [
+            'ranking' => $rank,
+            'pro_bowler_id' => $proBowlerId > 0 ? $proBowlerId : null,
+            'pro_bowler_license_no' => $licenseNo,
+            'amateur_name' => $proBowlerId > 0 ? null : $displayName,
+            'display_name' => $displayName,
+            'gender' => $gender ?? ($baseRow ? $this->normalizeGender($baseRow['gender'] ?? null) : null),
+            'shift' => $shift ?? ($baseRow ? $this->normalizeText($baseRow['shift'] ?? null) : null),
+            'entry_number' => $baseRow['entry_number'] ?? null,
+            'scratch_pin' => $scratchPin,
+            'carry_pin' => $carryPin,
+            'total_pin' => $totalPin,
+            'games' => $games,
+            'average' => $average,
+            'tie_break_value' => (float) (100000 - $rank),
+            'points' => null,
+            'prize_money' => null,
+        ];
+    }
+
+    private function makeSnapshotCarryForwardRowPayload(array $row, int $rank, ?string $gender, ?string $shift): array
+    {
+        $displayName = $this->normalizeText($row['display_name'] ?? null)
+            ?? $this->normalizeText($row['amateur_name'] ?? null)
+            ?? $this->normalizeText($row['pro_bowler_license_no'] ?? null)
+            ?? 'unknown';
+
+        $proBowlerId = isset($row['pro_bowler_id']) && $row['pro_bowler_id'] !== null
+            ? (int) $row['pro_bowler_id']
+            : null;
+
+        return [
+            'ranking' => $rank,
+            'pro_bowler_id' => $proBowlerId && $proBowlerId > 0 ? $proBowlerId : null,
+            'pro_bowler_license_no' => $this->normalizeText($row['pro_bowler_license_no'] ?? null),
+            'amateur_name' => $proBowlerId ? null : ($this->normalizeText($row['amateur_name'] ?? null) ?? $displayName),
+            'display_name' => $displayName,
+            'gender' => $gender ?? $this->normalizeGender($row['gender'] ?? null),
+            'shift' => $shift ?? $this->normalizeText($row['shift'] ?? null),
+            'entry_number' => $row['entry_number'] ?? null,
+            'scratch_pin' => (int) ($row['scratch_pin'] ?? 0),
+            'carry_pin' => (int) ($row['carry_pin'] ?? 0),
+            'total_pin' => (int) ($row['total_pin'] ?? 0),
+            'games' => (int) ($row['games'] ?? 0),
+            'average' => isset($row['average']) && $row['average'] !== null ? (float) $row['average'] : null,
+            'tie_break_value' => (float) (100000 - $rank),
+            'points' => null,
+            'prize_money' => null,
+        ];
+    }
+
+    private function identityKeyFromStepLadderPlayer(array $player): string
+    {
+        $proBowlerId = isset($player['pro_bowler_id']) ? (int) $player['pro_bowler_id'] : 0;
+        $licenseNo = $this->normalizeText($player['license_no'] ?? null);
+        $displayName = $this->normalizeText($player['display_name'] ?? null);
+
+        return $this->identityKeyFromValues($proBowlerId, $licenseNo, $displayName);
+    }
+
+    private function identityKeyFromSnapshotArray(array $row): string
+    {
+        $proBowlerId = isset($row['pro_bowler_id']) ? (int) $row['pro_bowler_id'] : 0;
+        $licenseNo = $this->normalizeText($row['pro_bowler_license_no'] ?? null);
+        $displayName = $this->normalizeText($row['display_name'] ?? null)
+            ?? $this->normalizeText($row['amateur_name'] ?? null);
+
+        return $this->identityKeyFromValues($proBowlerId, $licenseNo, $displayName);
+    }
+
+    private function identityKeyFromValues(int $proBowlerId, ?string $licenseNo, ?string $displayName): string
+    {
+        if ($proBowlerId > 0) {
+            return 'pro:' . $proBowlerId;
+        }
+
+        $digits = preg_replace('/\D+/', '', (string) $licenseNo);
+        if (is_string($digits) && $digits !== '') {
+            return 'lic:' . $digits;
+        }
+
+        $name = $this->normalizeNameForMatch($displayName);
+        if ($name !== '') {
+            return 'name:' . $name;
+        }
+
+        return '';
+    }
+
+
+    /**
+     * @return array{pin:?int,games:int}
+     */
+    private function resolveStepLadderPinAndGamesForPlayer(array $player, array $semifinal, array $final): array
+    {
+        $pin = 0;
+        $games = 0;
+
+        if ($this->isSameStepLadderPlayer($player, (array) ($semifinal['top'] ?? [])) && isset($semifinal['top_score'])) {
+            $pin += (int) $semifinal['top_score'];
+            $games++;
+        }
+
+        if ($this->isSameStepLadderPlayer($player, (array) ($semifinal['bottom'] ?? [])) && isset($semifinal['bottom_score'])) {
+            $pin += (int) $semifinal['bottom_score'];
+            $games++;
+        }
+
+        if ($this->isSameStepLadderPlayer($player, (array) ($final['top'] ?? [])) && isset($final['top_score'])) {
+            $pin += (int) $final['top_score'];
+            $games++;
+        }
+
+        if ($this->isSameStepLadderPlayer($player, (array) ($final['bottom'] ?? [])) && isset($final['bottom_score'])) {
+            $pin += (int) $final['bottom_score'];
+            $games++;
+        }
+
+        return [
+            'pin' => $games > 0 ? $pin : null,
+            'games' => $games,
+        ];
+    }
+
+    private function isSameStepLadderPlayer(array $a, array $b): bool
+    {
+        $keyA = trim((string) ($a['participant_key'] ?? ''));
+        $keyB = trim((string) ($b['participant_key'] ?? ''));
+
+        if ($keyA !== '' && $keyB !== '') {
+            return $keyA === $keyB;
+        }
+
+        $licenseA = $this->extractLast4Digits($a['license_no'] ?? null);
+        $licenseB = $this->extractLast4Digits($b['license_no'] ?? null);
+        if ($licenseA !== '' && $licenseB !== '') {
+            return $licenseA === $licenseB;
+        }
+
+        return $this->normalizeNameForMatch($a['display_name'] ?? null) !== ''
+            && $this->normalizeNameForMatch($a['display_name'] ?? null) === $this->normalizeNameForMatch($b['display_name'] ?? null);
+    }
+
+    private function syncFinalSnapshotToTournamentResults(TournamentResultSnapshot $snapshot): bool
+    {
+        if ($snapshot->gender !== null || $snapshot->shift !== null) {
+            return false;
+        }
+
+        $tournament = Tournament::query()->find($snapshot->tournament_id);
+        if (!$tournament) {
+            return false;
+        }
+
+        $rankingYear = $this->resolveRankingYear($tournament);
+        $pointMap = $this->loadPointMap((int) $snapshot->tournament_id);
+        $prizeMap = $this->loadPrizeMap((int) $snapshot->tournament_id);
+
+        TournamentResult::query()
+            ->where('tournament_id', $snapshot->tournament_id)
+            ->delete();
+
+        $hasProBowlerId = Schema::hasColumn('tournament_results', 'pro_bowler_id');
+        $hasLicenseNo = Schema::hasColumn('tournament_results', 'pro_bowler_license_no');
+        $hasPoints = Schema::hasColumn('tournament_results', 'points');
+        $hasPrizeMoney = Schema::hasColumn('tournament_results', 'prize_money');
+        $hasAmateurName = Schema::hasColumn('tournament_results', 'amateur_name');
+
+        $rows = $snapshot->rows()->orderBy('ranking')->orderBy('id')->get();
+
+        foreach ($rows as $row) {
+            $resolvedBowler = $this->resolveBowlerFromSnapshotRow($row);
+            $resolvedProBowlerId = $resolvedBowler?->id ?? ($row->pro_bowler_id !== null ? (int) $row->pro_bowler_id : null);
+            $resolvedLicenseNo = $resolvedBowler?->license_no ?? $this->normalizeText($row->pro_bowler_license_no);
+            $resolvedDisplayName = $resolvedBowler?->name_kanji
+                ?? $resolvedBowler?->name_kana
+                ?? $this->normalizeText($row->display_name)
+                ?? $this->normalizeText($row->amateur_name);
+
+            if ($resolvedDisplayName === null) {
+                $resolvedDisplayName = '参加者' . (string) ((int) $row->ranking);
+            }
+
+            // tournament_results.pro_bowler_license_no は既存互換のため NOT NULL の環境がある。
+            // アマ・ダミーなどライセンス未解決の参加者は amateur_name を正として残しつつ、
+            // tournament_results への保存時だけ衝突しにくい内部キーを入れて NOT NULL 制約を満たす。
+            $tournamentResultLicenseNo = $resolvedLicenseNo
+                ?? $this->makeFallbackTournamentResultLicenseNo($snapshot, $row, $resolvedDisplayName);
+
+            $points = $resolvedProBowlerId !== null ? (int) ($pointMap[(int) $row->ranking] ?? 0) : 0;
+            $prizeMoney = $resolvedProBowlerId !== null ? (int) ($prizeMap[(int) $row->ranking] ?? 0) : 0;
+
+            $payload = [
+                'tournament_id' => (int) $snapshot->tournament_id,
+                'ranking_year' => $rankingYear,
+                'ranking' => (int) $row->ranking,
+                'total_pin' => (int) $row->total_pin,
+                'games' => (int) $row->games,
+                'average' => $row->average !== null ? (float) $row->average : null,
+            ];
+
+            if ($hasLicenseNo) {
+                $payload['pro_bowler_license_no'] = $tournamentResultLicenseNo;
+            }
+            if ($hasProBowlerId) {
+                $payload['pro_bowler_id'] = $resolvedProBowlerId;
+            }
+            if ($hasPoints) {
+                $payload['points'] = $points;
+            }
+            if ($hasPrizeMoney) {
+                $payload['prize_money'] = $prizeMoney;
+            }
+            if ($hasAmateurName) {
+                $payload['amateur_name'] = $resolvedProBowlerId === null ? $resolvedDisplayName : null;
+            }
+
+            TournamentResult::query()->create($payload);
+
+            $row->forceFill([
+                'pro_bowler_id' => $resolvedProBowlerId,
+                'pro_bowler_license_no' => $resolvedLicenseNo,
+                'display_name' => $resolvedDisplayName,
+                'amateur_name' => $resolvedProBowlerId === null ? $resolvedDisplayName : null,
+                'points' => $points,
+                'prize_money' => $prizeMoney,
+            ])->save();
+        }
+
+        return true;
+    }
+
+    private function makeFallbackTournamentResultLicenseNo(TournamentResultSnapshot $snapshot, object $row, ?string $displayName): string
+    {
+        $ranking = (int) ($row->ranking ?? 0);
+        $rowId = (int) ($row->id ?? 0);
+        $nameKey = $this->normalizeNameForMatch($displayName)
+            ?: $this->normalizeNameForMatch($row->display_name ?? null)
+            ?: $this->normalizeNameForMatch($row->amateur_name ?? null)
+            ?: 'unknown';
+
+        $hash = substr(sha1((string) $snapshot->tournament_id . '|' . (string) $ranking . '|' . (string) $rowId . '|' . $nameKey), 0, 8);
+
+        return 'AMATEUR-' . (string) $snapshot->tournament_id . '-' . str_pad((string) $ranking, 3, '0', STR_PAD_LEFT) . '-' . $hash;
+    }
+    private function resolveBowlerFromSnapshotRow(object $row): ?ProBowler
+    {
+        if ($row->pro_bowler_id !== null) {
+            $byId = ProBowler::query()->find((int) $row->pro_bowler_id);
+            if ($byId) {
+                return $byId;
+            }
+        }
+
+        $license = $this->normalizeText($row->pro_bowler_license_no ?? null);
+        if ($license === null) {
+            return null;
+        }
+
+        $normalizedLicense = strtoupper(trim($license));
+        $last4 = $this->extractLast4Digits($normalizedLicense);
+        if ($last4 === '') {
+            return null;
+        }
+
+        $exact = ProBowler::query()
+            ->whereRaw('upper(license_no) = ?', [$normalizedLicense])
+            ->first();
+        if ($exact) {
+            return $exact;
+        }
+
+        $query = ProBowler::query()
+            ->whereRaw("right(regexp_replace(upper(license_no), '[^0-9]', '', 'g'), 4) = ?", [$last4]);
+
+        $gender = strtoupper(trim((string) ($row->gender ?? '')));
+        if (in_array($gender, ['M', 'F'], true)) {
+            $query->whereRaw('upper(left(license_no, 1)) = ?', [$gender]);
+        }
+
+        $candidates = $query->orderBy('id')->get();
+
+        return $candidates->count() === 1 ? $candidates->first() : null;
+    }
+
+    private function resolveRankingYear(Tournament $tournament): int
+    {
+        if (!empty($tournament->year)) {
+            return (int) $tournament->year;
+        }
+
+        if (!empty($tournament->start_date)) {
+            try {
+                return Carbon::parse($tournament->start_date)->year;
+            } catch (\Throwable) {
+                // no-op
+            }
+        }
+
+        return (int) now()->year;
+    }
+
+    /**
+     * @return array<int,int>
+     */
+    private function loadPointMap(int $tournamentId): array
+    {
+        return DB::table('point_distributions')
+            ->where('tournament_id', $tournamentId)
+            ->pluck('points', 'rank')
+            ->mapWithKeys(fn ($points, $rank) => [(int) $rank => (int) $points])
+            ->all();
+    }
+
+    /**
+     * @return array<int,int>
+     */
+    private function loadPrizeMap(int $tournamentId): array
+    {
+        return DB::table('prize_distributions')
+            ->where('tournament_id', $tournamentId)
+            ->pluck('amount', 'rank')
+            ->mapWithKeys(fn ($amount, $rank) => [(int) $rank => (int) $amount])
+            ->all();
+    }
+
+
+    private function closeCurrentSnapshots(int $tournamentId, string $resultCode, ?string $gender, ?string $shift): void
+    {
+        TournamentResultSnapshot::query()
+            ->where('tournament_id', $tournamentId)
+            ->where('result_code', $resultCode)
+            ->when(
+                $gender !== null,
+                fn ($q) => $q->where('gender', $gender),
+                fn ($q) => $q->whereNull('gender')
+            )
+            ->when(
+                $shift !== null,
+                fn ($q) => $q->where('shift', $shift),
+                fn ($q) => $q->whereNull('shift')
+            )
+            ->where('is_current', true)
+            ->update(['is_current' => false]);
     }
 
     private function buildStagePinMap(
@@ -634,6 +1497,7 @@ final class TournamentResultSnapshotController extends Controller
         foreach ($rows as $row) {
             $result[(int) $row->id] = [
                 '決勝' => null,
+                'ラウンドロビン' => null,
                 '準決勝' => null,
                 '準々決勝' => null,
                 '予選' => null,

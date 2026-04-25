@@ -7,6 +7,8 @@ use App\Models\GameScore;
 use App\Models\ProBowler;
 use App\Models\Tournament;
 use App\Services\ScoreService;
+use App\Services\RoundRobinService;
+use App\Services\StepLadderService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -17,7 +19,15 @@ final class ScoreController extends Controller
     {
         $tournaments = Tournament::orderBy('start_date', 'desc')
             ->orderBy('id', 'desc')
-            ->get(['id', 'name']);
+            ->get([
+                'id',
+                'name',
+                'result_flow_type',
+                'round_robin_qualifier_count',
+                'round_robin_win_bonus',
+                'round_robin_tie_bonus',
+                'round_robin_position_round_enabled',
+            ]);
 
         $new = (array) session('stage_settings', []);
         $old = (array) session('score_settings', []);
@@ -53,7 +63,7 @@ final class ScoreController extends Controller
 
         foreach ($stageSettingsMap as $tid => $st) {
             $clean = [];
-            foreach (['予選', '準々決勝', '準決勝', '決勝'] as $label) {
+            foreach (['予選', '準々決勝', 'ラウンドロビン', '準決勝', '決勝'] as $label) {
                 $g = (int) ($st[$label] ?? 0);
                 if ($g > 0) {
                     $clean[$label] = $g;
@@ -62,8 +72,23 @@ final class ScoreController extends Controller
             $stageSettingsMap[$tid] = $clean;
         }
 
+        foreach ($tournaments as $tournament) {
+            $tid = (string) $tournament->id;
+            $flowType = trim((string) ($tournament->result_flow_type ?? 'legacy_standard'));
+            if (in_array($flowType, ['prelim_to_rr_to_final', 'prelim_to_quarterfinal_to_rr_to_final'], true)) {
+                $stageSettingsMap[$tid] = $stageSettingsMap[$tid] ?? [];
+                if (!isset($stageSettingsMap[$tid]['ラウンドロビン'])) {
+                    $stageSettingsMap[$tid]['ラウンドロビン'] = 8;
+                }
+                if (!isset($stageSettingsMap[$tid]['決勝'])) {
+                    $stageSettingsMap[$tid]['決勝'] = 2;
+                }
+                $stageSettingsMap[$tid]['決勝ステップラダー'] = (int) $stageSettingsMap[$tid]['決勝'];
+            }
+        }
+
         $playerLookupRows = ProBowler::query()
-            ->select(['license_no', 'name_kanji'])
+            ->select(['id', 'license_no', 'name_kanji'])
             ->whereNotNull('license_no')
             ->whereNotNull('name_kanji')
             ->orderBy('license_no')
@@ -200,7 +225,7 @@ final class ScoreController extends Controller
         ]);
 
         $tid    = (int) $r->tournament_id;
-        $stage  = (string) $r->stage;
+        $stage  = $this->normalizeStageLabel((string) $r->stage);
         $game   = (int) $r->game_number;
         $type   = (string) $r->identifier_type;
         $gender = $r->gender ?: null;
@@ -210,6 +235,8 @@ final class ScoreController extends Controller
             $this->buildHistoryPayload($tid, $stage, $game, $shift, $gender, $type),
             $type
         );
+
+        $isStepLadderStage = $this->isStepLadderStage($tid, $stage);
 
         if ($game > 1) {
             foreach ($r->rows as $i => $row) {
@@ -228,7 +255,13 @@ final class ScoreController extends Controller
                         ->withInput();
                 }
 
-                if ($normalized === '' || !in_array($normalized, $historyPayload['prevKeys'], true)) {
+                $existsInPreviousGame = $normalized !== '' && in_array($normalized, $historyPayload['prevKeys'], true);
+
+                $isAllowedStepLadderSeed = $isStepLadderStage
+                    && $game === 2
+                    && $this->isStepLadderSeedInput($tid, $stage, $game, $rawId, $type, $gender, $shift);
+
+                if (!$existsInPreviousGame && !$isAllowedStepLadderSeed) {
                     return back()
                         ->withErrors(['rows.' . $i . '.id' => '前ゲームまでに存在しない識別値です（大会・ステージ・シフト・性別も確認）'])
                         ->withInput();
@@ -277,10 +310,13 @@ final class ScoreController extends Controller
                     $existing->shift = $shift;
                 }
                 if ($resolvedBowler) {
-                    if (!$existing->license_number && !empty($resolvedBowler['license_no'])) {
+                    if (!$existing->pro_bowler_id && !empty($resolvedBowler['id'])) {
+                        $existing->pro_bowler_id = (int) $resolvedBowler['id'];
+                    }
+                    if (!empty($resolvedBowler['license_no']) && ($type === 'license_number' || !$existing->license_number)) {
                         $existing->license_number = $resolvedBowler['license_no'];
                     }
-                    if (!$existing->name && !empty($resolvedBowler['name_kanji'])) {
+                    if (!empty($resolvedBowler['name_kanji']) && ($type !== 'name' || !$existing->name || $existing->name === $rawId)) {
                         $existing->name = $resolvedBowler['name_kanji'];
                     }
                 }
@@ -299,7 +335,9 @@ final class ScoreController extends Controller
             ];
 
             if ($type === 'license_number') {
-                $data['license_number'] = $rawId;
+                $data['license_number'] = !empty($resolvedBowler['license_no'])
+                    ? $resolvedBowler['license_no']
+                    : $rawId;
             } elseif ($type === 'entry_number') {
                 $data['entry_number'] = $rawId;
             } else {
@@ -307,10 +345,15 @@ final class ScoreController extends Controller
             }
 
             if ($resolvedBowler) {
-                if (empty($data['license_number']) && !empty($resolvedBowler['license_no'])) {
+                if (!empty($resolvedBowler['id'])) {
+                    $data['pro_bowler_id'] = (int) $resolvedBowler['id'];
+                }
+                if ($type !== 'license_number' && empty($data['license_number']) && !empty($resolvedBowler['license_no'])) {
                     $data['license_number'] = $resolvedBowler['license_no'];
                 }
-                if (empty($data['name']) && !empty($resolvedBowler['name_kanji'])) {
+                if (!empty($data['name']) && $type === 'name') {
+                    // 入力した表示名を優先
+                } elseif (!empty($resolvedBowler['name_kanji']) && empty($data['name'])) {
                     $data['name'] = $resolvedBowler['name_kanji'];
                 }
             }
@@ -324,7 +367,7 @@ final class ScoreController extends Controller
             ->withInput($r->only(['tournament_id', 'stage', 'game_number', 'identifier_type', 'gender', 'shift']));
     }
 
-    public function result(Request $r, ScoreService $service)
+    public function result(Request $r, ScoreService $service, RoundRobinService $roundRobinService, StepLadderService $stepLadderService)
     {
         $opt = [
             'tournament_id'   => (int) $r->get('tournament_id'),
@@ -339,10 +382,49 @@ final class ScoreController extends Controller
             'carry_semifinal' => (int) $r->get('carry_semifinal', 0),
         ];
 
-        $data = $service->getRankings($opt);
+        $opt['stage'] = $this->normalizeStageLabel((string) $opt['stage']);
 
         $t = Tournament::find($opt['tournament_id']);
         $tournament_name = $t?->name ?? '大会名';
+        $flowType = trim((string) ($t?->result_flow_type ?? 'legacy_standard')) ?: 'legacy_standard';
+
+        if ($opt['stage'] === 'ラウンドロビン') {
+            $data = $roundRobinService->build([
+                'tournament_id' => $opt['tournament_id'],
+                'upto_game' => $opt['upto_game'],
+                'shift' => $opt['shifts'],
+                'gender' => $opt['gender_filter'],
+            ]);
+
+            return view('scores.round_robin_result', [
+                'tournament_name' => $tournament_name,
+                'tournament' => $t,
+                'rr' => $data,
+                'upto_game' => (int) $opt['upto_game'],
+                'shifts' => (string) $opt['shifts'],
+                'gender_filter' => (string) $opt['gender_filter'],
+            ]);
+        }
+
+        if ($opt['stage'] === '決勝' && in_array($flowType, ['prelim_to_rr_to_final', 'prelim_to_quarterfinal_to_rr_to_final'], true)) {
+            $data = $stepLadderService->build([
+                'tournament_id' => $opt['tournament_id'],
+                'upto_game' => $opt['upto_game'],
+                'shift' => $opt['shifts'],
+                'gender' => $opt['gender_filter'],
+            ]);
+
+            return view('scores.step_ladder_result', [
+                'tournament_name' => $tournament_name,
+                'tournament' => $t,
+                'stepLadder' => $data,
+                'upto_game' => (int) $opt['upto_game'],
+                'shifts' => (string) $opt['shifts'],
+                'gender_filter' => (string) $opt['gender_filter'],
+            ]);
+        }
+
+        $data = $service->getRankings($opt);
 
         return view('scores.result', [
             'rankings'        => $data['rows'],
@@ -360,26 +442,36 @@ final class ScoreController extends Controller
         ]);
     }
 
-    public function board(Request $r, ScoreService $service)
+    public function board(Request $r, ScoreService $service, RoundRobinService $roundRobinService, StepLadderService $stepLadderService)
     {
-        return $this->result($r, $service);
+        return $this->result($r, $service, $roundRobinService, $stepLadderService);
     }
 
     public function apiExistingIds(Request $r)
     {
         $tid    = (int) $r->query('tournament_id');
-        $stage  = (string) $r->query('stage', '予選');
+        $stage  = $this->normalizeStageLabel((string) $r->query('stage', '予選'));
         $game   = max(1, (int) $r->query('game_number', 1));
         $shift  = trim((string) $r->query('shift', ''));
         $gender = trim((string) $r->query('gender', ''));
         $type   = (string) $r->query('identifier_type', 'license_number');
 
-        return response()->json(
-            $this->normalizeHistoryPayload(
-                $this->buildHistoryPayload($tid, $stage, $game, $shift, $gender !== '' ? $gender : null, $type),
-                $type
-            )
+        $payload = $this->normalizeHistoryPayload(
+            $this->buildHistoryPayload($tid, $stage, $game, $shift, $gender !== '' ? $gender : null, $type),
+            $type
         );
+
+        $payload = $this->applyStepLadderSeedExceptionToHistoryPayload(
+            $payload,
+            $tid,
+            $stage,
+            $game,
+            $type,
+            $gender !== '' ? $gender : null,
+            $shift
+        );
+
+        return response()->json($payload);
     }
 
     public function updateOne(Request $r)
@@ -397,7 +489,7 @@ final class ScoreController extends Controller
 
         $q = GameScore::query()
             ->where('tournament_id', (int) $r->tournament_id)
-            ->where('stage', (string) $r->stage)
+            ->where('stage', $this->normalizeStageLabel((string) $r->stage))
             ->where('game_number', (int) $r->game_number);
 
         if ($r->filled('shift')) {
@@ -451,7 +543,7 @@ final class ScoreController extends Controller
 
         $q = GameScore::query()
             ->where('tournament_id', (int) $r->tournament_id)
-            ->where('stage', (string) $r->stage)
+            ->where('stage', $this->normalizeStageLabel((string) $r->stage))
             ->where('game_number', (int) $r->game_number);
 
         if ($r->filled('shift')) {
@@ -493,7 +585,7 @@ final class ScoreController extends Controller
 
         $q = GameScore::query()
             ->where('tournament_id', (int) $r->tournament_id)
-            ->where('stage', (string) $r->stage)
+            ->where('stage', $this->normalizeStageLabel((string) $r->stage))
             ->where('game_number', (int) $r->game_number);
 
         if ($r->filled('shift')) {
@@ -728,7 +820,7 @@ final class ScoreController extends Controller
         $byDigits = [];
         $byName = [];
 
-        $query = ProBowler::query()->select(['license_no', 'name_kanji']);
+        $query = ProBowler::query()->select(['id', 'license_no', 'name_kanji']);
 
         $query->where(function ($q) use ($licenseDigits, $names) {
             foreach (array_keys($licenseDigits) as $digits) {
@@ -895,6 +987,317 @@ final class ScoreController extends Controller
         return array_values(array_map(static fn ($key) => (string) $key, array_keys($normalized)));
     }
 
+    private function isStepLadderStage(int $tid, string $stage): bool
+    {
+        if ($stage !== '決勝') {
+            return false;
+        }
+
+        $flowType = trim((string) Tournament::query()
+            ->whereKey($tid)
+            ->value('result_flow_type'));
+
+        return in_array($flowType, ['prelim_to_rr_to_final', 'prelim_to_quarterfinal_to_rr_to_final'], true);
+    }
+
+    private function applyStepLadderSeedExceptionToHistoryPayload(
+        array $payload,
+        int $tid,
+        string $stage,
+        int $game,
+        string $type,
+        ?string $gender,
+        string $shift
+    ): array {
+        if (!$this->isStepLadderStage($tid, $stage) || $game !== 2 || $type === 'entry_number') {
+            return $payload;
+        }
+
+        $seed = $this->findStepLadderTopSeedRow($tid, $gender, $shift);
+        if (!$seed) {
+            return $payload;
+        }
+
+        $keys = $this->resolveStepLadderSeedKeys($seed, $type, $gender);
+        if (empty($keys)) {
+            return $payload;
+        }
+
+        foreach ($keys as $key) {
+            if ($key === '') {
+                continue;
+            }
+
+            $payload['prevKeys'][] = $key;
+            if ($type === 'license_number') {
+                $payload['prevDigits'][] = $key;
+            }
+
+            if (!isset($payload['historyMap'][$key])) {
+                $payload['historyMap'][$key] = [
+                    'scores' => [],
+                    'total'  => 0,
+                    'seeded' => true,
+                ];
+            }
+        }
+
+        $payload['prevKeys'] = array_values(array_unique((array) ($payload['prevKeys'] ?? [])));
+        $payload['prevDigits'] = array_values(array_unique((array) ($payload['prevDigits'] ?? [])));
+
+        // 入力画面の事前判定で「前ゲーム無し」扱いにして弾かないための例外。
+        // 保存時の厳密判定は store() 側の isStepLadderSeedInput() で行う。
+        $payload['enforceFirstGame'] = false;
+
+        return $payload;
+    }
+
+    private function isStepLadderSeedInput(
+        int $tid,
+        string $stage,
+        int $game,
+        string $rawId,
+        string $type,
+        ?string $gender,
+        string $shift
+    ): bool {
+        if (!$this->isStepLadderStage($tid, $stage) || $game !== 2 || $type === 'entry_number') {
+            return false;
+        }
+
+        $seed = $this->findStepLadderTopSeedRow($tid, $gender, $shift);
+        if (!$seed) {
+            return false;
+        }
+
+        $resolvedBowler = $this->resolveBowlerFromInput($rawId, $type, $gender);
+
+        $seedProBowlerId = (int) ($seed->pro_bowler_id ?? 0);
+        if ($resolvedBowler && !empty($resolvedBowler['id']) && $seedProBowlerId > 0) {
+            if ((int) $resolvedBowler['id'] === $seedProBowlerId) {
+                return true;
+            }
+        }
+
+        $inputLicenseDigits = $this->normalizeDigits($rawId);
+        $resolvedLicenseDigits = $resolvedBowler
+            ? $this->normalizeDigits((string) ($resolvedBowler['license_no'] ?? ''))
+            : '';
+
+        $seedLicenseDigits = $this->normalizeDigits((string) ($seed->pro_bowler_license_no ?? ''));
+        if ($seedLicenseDigits === '') {
+            $seedLicenseDigits = $this->normalizeDigits((string) ($seed->license_number ?? ''));
+        }
+        if ($seedLicenseDigits === '') {
+            $seedLicenseDigits = $this->normalizeDigits((string) ($seed->license_no ?? ''));
+        }
+
+        if ($type === 'license_number' && $seedLicenseDigits !== '') {
+            if ($inputLicenseDigits !== '' && $inputLicenseDigits === $seedLicenseDigits) {
+                return true;
+            }
+            if ($resolvedLicenseDigits !== '' && $resolvedLicenseDigits === $seedLicenseDigits) {
+                return true;
+            }
+        }
+
+        $seedNames = array_values(array_filter(array_unique([
+            $this->normalizeName((string) ($seed->display_name ?? '')),
+            $this->normalizeName((string) ($seed->pro_bowler_name ?? '')),
+            $this->normalizeName((string) ($seed->name ?? '')),
+            $this->normalizeName((string) ($seed->amateur_name ?? '')),
+        ])));
+
+        $inputName = $this->normalizeName($rawId);
+        $resolvedName = $resolvedBowler
+            ? $this->normalizeName((string) ($resolvedBowler['name_kanji'] ?? ''))
+            : '';
+
+        foreach ($seedNames as $seedName) {
+            if ($seedName === '') {
+                continue;
+            }
+            if ($type === 'name' && $inputName !== '' && $inputName === $seedName) {
+                return true;
+            }
+            if ($resolvedName !== '' && $resolvedName === $seedName) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function resolveStepLadderSeedKeys(object $seed, string $type, ?string $gender): array
+    {
+        if ($type === 'entry_number') {
+            return [];
+        }
+
+        $keys = [];
+
+        $licenseDigits = $this->normalizeDigits((string) ($seed->pro_bowler_license_no ?? ''));
+        if ($licenseDigits === '') {
+            $licenseDigits = $this->normalizeDigits((string) ($seed->license_number ?? ''));
+        }
+        if ($licenseDigits === '') {
+            $licenseDigits = $this->normalizeDigits((string) ($seed->license_no ?? ''));
+        }
+
+        if ($type === 'license_number') {
+            if ($licenseDigits !== '') {
+                $keys[] = $licenseDigits;
+            }
+
+            $names = array_values(array_filter(array_unique([
+                $this->normalizeName((string) ($seed->display_name ?? '')),
+                $this->normalizeName((string) ($seed->pro_bowler_name ?? '')),
+                $this->normalizeName((string) ($seed->name ?? '')),
+                $this->normalizeName((string) ($seed->amateur_name ?? '')),
+            ])));
+
+            foreach ($names as $name) {
+                $rows = ProBowler::query()
+                    ->select(['license_no'])
+                    ->where('name_kanji', $name)
+                    ->get();
+
+                if ($gender) {
+                    $rows = $rows->filter(function ($row) use ($gender) {
+                        $licenseNo = trim((string) ($row->license_no ?? ''));
+                        return preg_match('/^[MF]/i', $licenseNo)
+                            ? strtoupper(substr($licenseNo, 0, 1)) === $gender
+                            : true;
+                    })->values();
+                }
+
+                if ($rows->count() === 1) {
+                    $digits = $this->normalizeDigits((string) ($rows->first()->license_no ?? ''));
+                    if ($digits !== '') {
+                        $keys[] = $digits;
+                    }
+                }
+            }
+
+            return array_values(array_unique(array_filter($keys)));
+        }
+
+        foreach ([
+            $seed->display_name ?? '',
+            $seed->pro_bowler_name ?? '',
+            $seed->name ?? '',
+            $seed->amateur_name ?? '',
+        ] as $name) {
+            $normalizedName = $this->normalizeName((string) $name);
+            if ($normalizedName !== '') {
+                $keys[] = $normalizedName;
+            }
+        }
+
+        if ($licenseDigits !== '') {
+            $rows = ProBowler::query()
+                ->select(['name_kanji'])
+                ->where('license_no', 'like', '%' . $licenseDigits)
+                ->get();
+
+            if ($gender) {
+                $rows = $rows->filter(function ($row) use ($gender) {
+                    $licenseNo = trim((string) ($row->license_no ?? ''));
+                    return preg_match('/^[MF]/i', $licenseNo)
+                        ? strtoupper(substr($licenseNo, 0, 1)) === $gender
+                        : true;
+                })->values();
+            }
+
+            if ($rows->count() === 1) {
+                $name = $this->normalizeName((string) ($rows->first()->name_kanji ?? ''));
+                if ($name !== '') {
+                    $keys[] = $name;
+                }
+            }
+        }
+
+        return array_values(array_unique(array_filter($keys)));
+    }
+
+    private function findStepLadderTopSeedRow(int $tid, ?string $gender, string $shift): ?object
+    {
+        $snapshot = $this->findCurrentRoundRobinSnapshotForStepLadder($tid, $gender, $shift);
+        if (!$snapshot) {
+            return null;
+        }
+
+        return DB::table('tournament_result_snapshot_rows')
+            ->where('snapshot_id', $snapshot->id)
+            ->where('ranking', 1)
+            ->first();
+    }
+
+    private function findCurrentRoundRobinSnapshotForStepLadder(int $tid, ?string $gender, string $shift): ?object
+    {
+        $gender = $gender !== null && trim($gender) !== '' ? trim($gender) : null;
+        $shift = trim($shift) !== '' ? trim($shift) : null;
+
+        $candidates = [];
+        $push = function (?string $candidateGender, ?string $candidateShift) use (&$candidates): void {
+            $key = ($candidateGender ?? '__NULL__') . '|' . ($candidateShift ?? '__NULL__');
+
+            if (!isset($candidates[$key])) {
+                $candidates[$key] = [
+                    'gender' => $candidateGender,
+                    'shift' => $candidateShift,
+                ];
+            }
+        };
+
+        $push($gender, $shift);
+
+        if ($gender !== null && $shift !== null) {
+            $push($gender, null);
+            $push(null, $shift);
+        }
+
+        if ($gender !== null || $shift !== null) {
+            $push(null, null);
+        }
+
+        foreach (array_values($candidates) as $candidate) {
+            $query = DB::table('tournament_result_snapshots')
+                ->where('tournament_id', $tid)
+                ->where('result_code', 'round_robin_total')
+                ->where('is_current', true);
+
+            if ($candidate['gender'] === null) {
+                $query->whereNull('gender');
+            } else {
+                $query->where('gender', $candidate['gender']);
+            }
+
+            if ($candidate['shift'] === null) {
+                $query->whereNull('shift');
+            } else {
+                $query->where('shift', $candidate['shift']);
+            }
+
+            $snapshot = $query->orderByDesc('reflected_at')->first();
+
+            if ($snapshot) {
+                return $snapshot;
+            }
+        }
+
+        return null;
+    }
+
+    private function normalizeStageLabel(string $stage): string
+    {
+        $stage = trim($stage);
+
+        return $stage === '決勝ステップラダー'
+            ? '決勝'
+            : $stage;
+    }
+
     private function resolveBowlerFromInput(string $value, string $type, ?string $gender): ?array
     {
         if ($type === 'entry_number') {
@@ -908,7 +1311,7 @@ final class ScoreController extends Controller
             }
 
             $rows = ProBowler::query()
-                ->select(['license_no', 'name_kanji'])
+                ->select(['id', 'license_no', 'name_kanji'])
                 ->where('license_no', 'like', '%' . $digits)
                 ->get();
 
@@ -923,6 +1326,7 @@ final class ScoreController extends Controller
                 if ($filtered->count() === 1) {
                     $row = $filtered->first();
                     return [
+                        'id'         => (int) ($row->id ?? 0),
                         'license_no' => (string) ($row->license_no ?? ''),
                         'name_kanji' => (string) ($row->name_kanji ?? ''),
                     ];
@@ -932,6 +1336,7 @@ final class ScoreController extends Controller
             if ($rows->count() === 1) {
                 $row = $rows->first();
                 return [
+                    'id'         => (int) ($row->id ?? 0),
                     'license_no' => (string) ($row->license_no ?? ''),
                     'name_kanji' => (string) ($row->name_kanji ?? ''),
                 ];
@@ -946,7 +1351,7 @@ final class ScoreController extends Controller
         }
 
         $rows = ProBowler::query()
-            ->select(['license_no', 'name_kanji'])
+            ->select(['id', 'license_no', 'name_kanji'])
             ->where('name_kanji', $name)
             ->get();
 
@@ -961,6 +1366,7 @@ final class ScoreController extends Controller
             if ($filtered->count() === 1) {
                 $row = $filtered->first();
                 return [
+                    'id'         => (int) ($row->id ?? 0),
                     'license_no' => (string) ($row->license_no ?? ''),
                     'name_kanji' => (string) ($row->name_kanji ?? ''),
                 ];

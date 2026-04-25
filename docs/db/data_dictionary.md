@@ -792,6 +792,14 @@ SNS等リンク集を保持するテーブル。
 - gender（M/F/X）
 - official_type（official / approved / other）
 - title_category（normal / season_trial / excluded）
+- result_flow_type（予選後の進行分岐）
+  - `legacy_standard` = 既存（予選 → 準々決勝 → 準決勝 → 決勝）
+  - `prelim_to_rr_to_final` = 予選 → ラウンドロビン → 決勝
+  - `prelim_to_quarterfinal_to_rr_to_final` = 予選 → 準々決勝 → ラウンドロビン → 決勝
+- round_robin_qualifier_count（ラウンドロビン進出人数：nullable）
+- round_robin_win_bonus（勝ちボーナス：nullable。既定30）
+- round_robin_tie_bonus（引き分けボーナス：nullable。既定15）
+- round_robin_position_round_enabled（順位決定ポジションマッチを行うか）
 - venue_id（会場：nullable）
 - venue_name / venue_address / venue_tel / venue_fax
 - entry_start / entry_end
@@ -868,6 +876,10 @@ SNS等リンク集を保持するテーブル。
 - `lane_draw_close_at` を過ぎても `lane` が未確定の `tournament_entries.status = entry` は、事務局側の自動一括抽選対象とする。
 - 自動一括抽選の実行履歴は `tournament_auto_draw_logs` を正本とする。
 - 画像 / PDF はDBへバイナリ保存せず、`storage/public` 配下の相対パス文字列を保持する。
+- `result_flow_type` は、速報入力・公開順位表・正式成績反映で『予選後にどの方式へ進むか』を決める正本とする。
+- ラウンドロビン方式では、直前の current snapshot（`prelim_total` または `quarterfinal_total`）上位 `round_robin_qualifier_count` 名を seed 順とみなし、総当たり + ポジションマッチを表示・集計する。
+- ラウンドロビンのスコア入力自体は `game_scores.stage = ラウンドロビン` を正本として継続利用する。
+- ラウンドロビンの公開表示は、JPBAサンプルに合わせて `対戦表` と `8G成績` を基本単位とし、8G成績には `W-L-T` / `Bonus` / `RR合計` / `通算ポイント` を表示できるようにする。
 
 ### 外部キー（FK）
 - venue_id -> venues.id
