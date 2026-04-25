@@ -253,3 +253,66 @@
 - [✓] 大会成績PDFのライセンスNo表示を下4桁（末尾4文字）へ統一した
 - [✓] **トータルピン方式は、速報入力 → snapshot反映 → 最終成績同期 → snapshot閲覧 → ポイント / タイトル / PDF確認 まで完了**
 - [ ] 次はラウンドロビン方式の要件整理と実装着手へ進む
+#### 2026-04-25 メモ（ラウンドロビン / 決勝ステップラダー / 正式成績反映 完了）
+- [✓] `tournaments` にラウンドロビン進行用の設定を追加した
+  - `result_flow_type`
+  - `round_robin_qualifier_count`
+  - `round_robin_win_bonus`
+  - `round_robin_tie_bonus`
+  - `round_robin_position_round_enabled`
+- [✓] `tournaments.create` / `tournaments.edit` で、ラウンドロビン・決勝ステップラダー方式の大会進行設定を保存できるようにした
+- [✓] `RoundRobinService` を追加し、ラウンドロビンの対戦表・W-L-T・Bonus・RR合計・通算ポイントを表示できるようにした
+- [✓] `StepLadderService` を追加し、決勝ステップラダーの進出者・対戦結果・優勝者・準優勝・3位を判定できるようにした
+- [✓] `scores/round_robin_result.blade.php` を追加し、ラウンドロビン最終成績にステップラダー進出者3名の写真枠・氏名・通過順位を表示できるようにした
+- [✓] `scores/step_ladder_result.blade.php` を追加し、JPBAサンプルに近い決勝ステップラダー図を表示できるようにした
+- [✓] ステップラダー図はCSS/SVGでの完全再現が不安定だったため、`public/images/step_ladder_tournament_bracket_template.png` を背景テンプレートとして使い、その上に氏名・スコア・勝者ルートを重ねる方式へ切り替えた
+- [✓] 大会専用写真の登録導線を追加した
+  - `TournamentPhotoController`
+  - `routes/web.php` の大会写真登録ルート
+  - ラウンドロビン進出者カードから大会専用写真を登録可能
+  - 登録写真はラウンドロビン画面と決勝ステップラダー画面で共通利用
+- [✓] 決勝ステップラダーでは、勝者のスコアを赤、敗者のスコアを黒で表示し、勝者側の線だけ赤で進出表示するようにした
+- [✓] 決勝ステップラダーのレイアウトは、名前・点数・線が重ならない形まで調整済み
+- [✓] 決勝ステップラダーのシード選手について、前ゲームが無くても速報入力を受け付けられるようにした
+- [✓] `TournamentResultSnapshotController` の正式成績反映処理を拡張し、ラウンドロビン / 決勝ステップラダー後の最終順位を `tournament_results` へ同期できるようにした
+- [✓] 最終成績は上位3名だけでなく、予選・ラウンドロビンを含む全選手を `tournament_results` に反映するようにした
+- [✓] アマチュア選手・ライセンス番号が無い選手は、プロフィール反映対象にせず、`amateur_name` を表示名として保持する方針にした
+- [✓] 上位3名の `total_pin` はステップラダー単体スコアではなく、予選・ラウンドロビン・ステップラダーを含む通算トータルピンとして反映するようにした
+- [✓] `TournamentResult` モデルに `amateur_name` を保存対象として追加した
+- [✓] 反映確認結果
+  - `snapshot_id=31`
+  - `snapshot_rows=8`
+  - `tournament_results=8`
+  - 1位: 山田幸 / F00000524 / total_pin=3445 / games=14 / avg=246.07
+  - 2位: 三浦美里 / F00000520 / total_pin=3186 / games=13 / avg=245.08
+  - 3位: 桑藤美樹 / F00000494 / total_pin=3117 / games=13 / avg=239.77
+  - 7位・8位のアマチュア選手は `amateur_name=RRテストA / RRテストB` として保持確認済み
+- [✓] 以下2コミットを `main` へ push 済み
+  - `dfb1fad` `feat: ラウンドロビンと決勝ステップラダーの正式成績反映を追加`
+  - `de607e2` `fix: 正式成績反映と大会成績表示を調整`
+- [✓] ローカルに残っている `public/tournament_images/` は、テスト登録した大会写真の実ファイルであり、Git管理外。不要なら削除する
+- [ ] 次チャット開始時は、まず `git status -sb` で `public/tournament_images/` が残っているか確認する
+- [ ] 次の自然な後続は、トーナメント / ダブルエリミネーション / シュートアウト方式の速報・正式成績反映設計
+
+#### 2026-04-25 メモ（トーナメント方式 / シングルエリミネーション設計方針）
+- [✓] トーナメント方式は敗者復活なしの `single_elimination` として扱う方針を確認
+- [✓] トーナメント進出者数を大会ごとに設定する方針を確認
+- [✓] 8人 / 16人 / 24人 / 32人など、人数に応じた可変ブラケットに対応する方針を確認
+- [✓] 24人など2の累乗ではない人数は、次の2の累乗枠まで広げ、BYEを使って処理する方針を確認
+- [✓] 1回戦シード / 2回戦シードなどは `entry_round` で表現する方針を確認
+- [✓] シード対象者は、進出元snapshotの順位を基準に指定する方針を確認
+- [✓] 進出元成績は `prelim_total` / `quarterfinal_total` / `semifinal_total` など、大会ごとに選択できるようにする方針を確認
+- [✓] 同じラウンドで負けた選手は同順位タイとする方針を確認
+  - 準決勝敗退者: 3位タイ
+  - 準々決勝敗退者: 5位タイ
+  - ベスト16初戦敗退者: 9位タイ
+- [✓] `game_scores` / `tournament_result_snapshots` / `tournament_results` の既存三層構造は崩さない方針を確認
+- [✓] 正式反映時のブラケット条件は `tournament_result_snapshots.calculation_definition` に保存する方針を確認
+- [ ] `tournaments` に single elimination 用設定カラムを追加する
+- [ ] `docs/db/data_dictionary.md` に single elimination 用設定と運用方針を追記する
+- [ ] `docs/db/ER.dbml` を辞書から再生成する
+- [ ] `SingleEliminationService` を追加する
+- [ ] 大会作成 / 編集画面でトーナメント進出人数・進出元成績・シード設定を保存できるようにする
+- [ ] 速報表示画面 `scores/single_elimination_result.blade.php` を追加する
+- [ ] 正式成績反映ページから `single_elimination_final` を作成できるようにする
+- [ ] `single_elimination_final` を `tournament_results` へ同期できるようにする
