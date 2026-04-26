@@ -285,6 +285,12 @@
         進出元：{{ $meta['seed_source_name'] ?? '—' }}
         ／ 進出人数：{{ (int) ($meta['qualifier_count'] ?? 0) }}名
         ／ 方式：{{ $meta['seed_policy_name'] ?? '—' }}
+        @if(!empty($meta['seed_snapshot_id']))
+            ／ seed snapshot: #{{ $meta['seed_snapshot_id'] }}
+            @if(!empty($meta['seed_snapshot_gender']))
+                / {{ $meta['seed_snapshot_gender'] }}
+            @endif
+        @endif
     </div>
 
     @unless($isPublic)

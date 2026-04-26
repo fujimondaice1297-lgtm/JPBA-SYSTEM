@@ -814,6 +814,17 @@ SNS等リンク集を保持するテーブル。
   - `custom` = `single_elimination_seed_settings` のJSON指定を使う
 - single_elimination_seed_settings（トーナメントseed/BYE詳細設定：json nullable）
   - 例: `{"seed_overrides":[{"seed":1,"entry_round":2},{"seed":2,"entry_round":2}]}`
+- result_carry_preset（成績持ち込みプリセット：nullable）
+  - `default` = 標準（現行どおり）
+  - `no_carry` = 全ステージ持ち込みなし
+  - `reset_after_quarterfinal` = 予選→準々決勝までは持ち込み、準決勝からリセット
+  - `reset_from_quarterfinal` = 予選から準々決勝へは持ち込まない
+  - `carry_to_semifinal_reset_rr` = 予選→準々決勝→準決勝までは持ち込み、ラウンドロビンからリセット
+  - `carry_prelim_to_semifinal_for_tournament` = 予選＋準決勝の通算でトーナメント進出者を決定
+  - `custom` = `result_carry_settings` のJSON指定を使う
+- result_carry_settings（成績持ち込み詳細設定：json nullable）
+  - result_code ごとに、集計対象ステージを `source_stages` で保持する
+  - 例: `{"semifinal_total":{"source_stages":["予選","準決勝"]}}`
 - venue_id（会場：nullable）
 - venue_name / venue_address / venue_tel / venue_fax
 - entry_start / entry_end
@@ -910,6 +921,12 @@ SNS等リンク集を保持するテーブル。
   - 32枠1回戦敗退者は17位タイ
 - トーナメントのスコア入力自体は `game_scores.stage = トーナメント` を正本として継続利用する。
 - 正式反映時には、ブラケットサイズ、round構成、seed設定、BYE設定、順位決定方針を `tournament_result_snapshots.calculation_definition` に保存する。
+- 成績持ち込み設定は `result_carry_preset` と `result_carry_settings` を正本とする。
+- 画面上はプルダウン選択を基本とし、コードを書けない運用者でも設定できるようにする。
+- `result_carry_settings` は内部保存用JSONであり、正式成績反映時に `tournament_result_snapshots.calculation_definition.source_sets` へ変換して保存する。
+- `source_stages` の最後のステージを scratch、それ以前のステージを carry として扱う。
+  - 例: `["予選","準決勝"]` は、予選を carry、準決勝を scratch として `semifinal_total` を作る。
+- 過去に反映済みの snapshot は、その時点の `calculation_definition` を保持するため、後から大会設定を変えても過去snapshotの計算根拠は維持される。
 
 ### 外部キー（FK）
 - venue_id -> venues.id

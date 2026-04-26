@@ -251,7 +251,7 @@ class TournamentController extends Controller
         return $normalized !== '' ? $normalized : null;
     }
 
-        private function normalizeSingleEliminationSeedSettings($value): ?array
+    private function normalizeSingleEliminationSeedSettings($value): ?array
     {
         if (is_null($value) || $value === '') {
             return null;
@@ -270,6 +270,107 @@ class TournamentController extends Controller
         }
 
         return empty($decoded) ? null : $decoded;
+    }
+
+    private function normalizeResultCarrySettings(string $preset, $customJson): array
+    {
+        $preset = trim($preset) ?: 'default';
+
+        if ($preset === 'custom') {
+            $json = trim((string) $customJson);
+
+            if ($json === '') {
+                return [];
+            }
+
+            $decoded = json_decode($json, true);
+
+            if (json_last_error() !== JSON_ERROR_NONE || !is_array($decoded)) {
+                throw ValidationException::withMessages([
+                    'result_carry_settings' => '成績持ち込み設定はJSON形式で入力してください。',
+                ]);
+            }
+
+            return $decoded;
+        }
+
+        return $this->resultCarryPresetSettings($preset);
+    }
+
+    private function resultCarryPresetSettings(string $preset): array
+    {
+        return match ($preset) {
+            // すべての通算系を、そのステージ単体で集計する
+            'no_carry' => [
+                'quarterfinal_total' => [
+                    'source_stages' => ['準々決勝'],
+                ],
+                'semifinal_total' => [
+                    'source_stages' => ['準決勝'],
+                ],
+                'round_robin_total' => [
+                    'source_stages' => ['ラウンドロビン'],
+                ],
+                'final_total' => [
+                    'source_stages' => ['決勝'],
+                ],
+            ],
+
+            // 予選→準々決勝までは持ち込み、準決勝からリセット
+            'reset_after_quarterfinal' => [
+                'quarterfinal_total' => [
+                    'source_stages' => ['予選', '準々決勝'],
+                ],
+                'semifinal_total' => [
+                    'source_stages' => ['準決勝'],
+                ],
+                'round_robin_total' => [
+                    'source_stages' => ['準決勝', 'ラウンドロビン'],
+                ],
+                'final_total' => [
+                    'source_stages' => ['準決勝', '決勝'],
+                ],
+            ],
+
+            // 予選から準々決勝へは持ち込まない。準々決勝以降を通算する
+            'reset_from_quarterfinal' => [
+                'quarterfinal_total' => [
+                    'source_stages' => ['準々決勝'],
+                ],
+                'semifinal_total' => [
+                    'source_stages' => ['準々決勝', '準決勝'],
+                ],
+                'round_robin_total' => [
+                    'source_stages' => ['準々決勝', '準決勝', 'ラウンドロビン'],
+                ],
+                'final_total' => [
+                    'source_stages' => ['準々決勝', '準決勝', '決勝'],
+                ],
+            ],
+
+            // 予選→準々決勝→準決勝までは持ち込み、ラウンドロビンからリセット
+            'carry_to_semifinal_reset_rr' => [
+                'quarterfinal_total' => [
+                    'source_stages' => ['予選', '準々決勝'],
+                ],
+                'semifinal_total' => [
+                    'source_stages' => ['予選', '準々決勝', '準決勝'],
+                ],
+                'round_robin_total' => [
+                    'source_stages' => ['ラウンドロビン'],
+                ],
+            ],
+
+            // 今回のBBBカップ想定：予選＋準決勝の通算でトーナメント進出者を決める
+            'carry_prelim_to_semifinal_for_tournament' => [
+                'semifinal_total' => [
+                    'source_stages' => ['予選', '準決勝'],
+                ],
+            ],
+
+            // default は現行ロジックを維持
+            default => [],
+        };
     }
 
     private function validateAndNormalize(Request $request): array
@@ -294,6 +395,8 @@ class TournamentController extends Controller
             'single_elimination_seed_source_result_code' => 'nullable|in:prelim_total,quarterfinal_total,semifinal_total',
             'single_elimination_seed_policy' => 'nullable|in:standard,higher_seed_bye,custom',
             'single_elimination_seed_settings' => 'nullable|string|max:10000',
+            'result_carry_preset' => 'nullable|in:default,no_carry,reset_after_quarterfinal,reset_from_quarterfinal,carry_to_semifinal_reset_rr,carry_prelim_to_semifinal_for_tournament,custom',
+            'result_carry_settings' => 'nullable|string|max:20000',
             'entry_start'          => 'nullable|date',
             'entry_end'            => 'nullable|date|after_or_equal:entry_start',
             'inspection_required'  => 'nullable|boolean',
@@ -439,6 +542,14 @@ class TournamentController extends Controller
         $validated['single_elimination_seed_settings'] = $usesSingleElimination
             ? $this->normalizeSingleEliminationSeedSettings($request->input('single_elimination_seed_settings'))
             : null;
+
+        $carryPreset = trim((string) ($request->input('result_carry_preset', 'default') ?: 'default'));
+
+        $validated['result_carry_preset'] = $carryPreset;
+        $validated['result_carry_settings'] = $this->normalizeResultCarrySettings(
+            preset: $carryPreset,
+            customJson: $request->input('result_carry_settings')
+        );
 
         $validated['use_shift_draw'] = $useShiftDraw;
         $validated['accept_shift_preference'] = $useShiftDraw && $request->boolean('accept_shift_preference');

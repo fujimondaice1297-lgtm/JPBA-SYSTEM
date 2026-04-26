@@ -1333,15 +1333,44 @@ final class ScoreController extends Controller
         $seedSettings = $tournament->single_elimination_seed_settings;
         $seedSettings = is_array($seedSettings) ? $seedSettings : [];
 
-        $gender = trim((string) ($opt['gender_filter'] ?? ''));
+        $requestedGender = trim((string) ($opt['gender_filter'] ?? ''));
+        $tournamentGender = trim((string) DB::table('tournaments')
+            ->where('id', (int) $tournament->id)
+            ->value('gender'));
+
+        if (!in_array($requestedGender, ['M', 'F'], true)) {
+            $requestedGender = '';
+        }
+
+        if (!in_array($tournamentGender, ['M', 'F'], true)) {
+            $tournamentGender = '';
+        }
+
+        // gender_filter が空のときは、まず gender=NULL の大会全体snapshotを優先する。
+        // ただし大会全体snapshotが無い場合に備えて、後段で tournament.gender へfallbackする。
+        $gender = $requestedGender;
+
         $shift = trim((string) ($opt['shifts'] ?? ''));
 
-        $seedSnapshot = $this->findCurrentSingleEliminationSeedSnapshot(
+                $seedSnapshot = $this->findCurrentSingleEliminationSeedSnapshot(
             tid: (int) $tournament->id,
             resultCode: $seedSourceResultCode,
             gender: $gender !== '' ? $gender : null,
             shift: $shift
         );
+
+        // gender_filter 未指定で大会全体snapshotが無い場合のみ、大会genderへfallbackする。
+        // 今回のBBBカップのように gender=NULL の最新snapshotがある場合は、そちらを優先する。
+        if (!$seedSnapshot && $requestedGender === '' && $tournamentGender !== '') {
+            $gender = $tournamentGender;
+
+            $seedSnapshot = $this->findCurrentSingleEliminationSeedSnapshot(
+                tid: (int) $tournament->id,
+                resultCode: $seedSourceResultCode,
+                gender: $tournamentGender,
+                shift: $shift
+            );
+        }
 
         $seedEntries = [];
         $seedRows = [];
@@ -1401,6 +1430,9 @@ final class ScoreController extends Controller
             'meta' => [
                 'tournament_id' => (int) $tournament->id,
                 'result_flow_type' => $flowType,
+                'seed_snapshot_id' => $seedSnapshot?->id,
+                'seed_snapshot_gender' => $seedSnapshot?->gender,
+                'seed_snapshot_shift' => $seedSnapshot?->shift,
                 'seed_source_result_code' => $seedSourceResultCode,
                 'seed_source_name' => $this->singleEliminationSeedSourceName($seedSourceResultCode),
                 'qualifier_count' => $qualifierCount,

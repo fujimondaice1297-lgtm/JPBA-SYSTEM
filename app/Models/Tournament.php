@@ -90,6 +90,8 @@ class Tournament extends Model
         'single_elimination_seed_source_result_code',
         'single_elimination_seed_policy',
         'single_elimination_seed_settings',
+        'result_carry_preset',
+        'result_carry_settings',
     ];
 
     protected $casts = [
@@ -129,6 +131,7 @@ class Tournament extends Model
 
         'single_elimination_qualifier_count' => 'integer',
         'single_elimination_seed_settings' => 'array',
+         'result_carry_settings' => 'array',
     ];
 
     public function prizeDistributions()
@@ -211,6 +214,12 @@ class Tournament extends Model
             }
             if (!$tournament->single_elimination_seed_policy) {
                 $tournament->single_elimination_seed_policy = 'standard';
+            }
+            if (!$tournament->result_carry_preset) {
+                $tournament->result_carry_preset = 'default';
+            }
+            if (is_null($tournament->result_carry_settings)) {
+                $tournament->result_carry_settings = [];
             }
             if (is_null($tournament->auto_draw_reminder_days_before)) {
                 $tournament->auto_draw_reminder_days_before = 7;

@@ -333,6 +333,102 @@
       <small class="text-muted d-block">空欄なら標準配置。1回戦シードは entry_round=2、2回戦シードは entry_round=3。</small>
     </div>
 
+    <div class="col-md-12">
+      <hr>
+      <div class="alert alert-light border mb-3">
+        <strong>成績の持ち込み設定</strong>
+        <div class="small text-muted">
+          通算成績を作るときに、前ステージのスコアを持ち込むか、どこでリセットするかを大会ごとに設定します。
+          通常はプルダウンを選ぶだけで大丈夫です。JSON欄は上級者向けです。
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-4 mb-3">
+      <label class="form-label">持ち込みプリセット</label>
+      @php $carryPreset = old('result_carry_preset', $tournament->result_carry_preset ?? 'default'); @endphp
+      <select name="result_carry_preset" id="result_carry_preset" class="form-select @error('result_carry_preset') is-invalid @enderror">
+        <option value="default" {{ $carryPreset === 'default' ? 'selected' : '' }}>標準（現行どおり）</option>
+        <option value="no_carry" {{ $carryPreset === 'no_carry' ? 'selected' : '' }}>全ステージ持ち込みなし</option>
+        <option value="reset_after_quarterfinal" {{ $carryPreset === 'reset_after_quarterfinal' ? 'selected' : '' }}>予選→準々決勝までは持ち込み、準決勝からリセット</option>
+        <option value="reset_from_quarterfinal" {{ $carryPreset === 'reset_from_quarterfinal' ? 'selected' : '' }}>予選から準々決勝へは持ち込まない</option>
+        <option value="carry_to_semifinal_reset_rr" {{ $carryPreset === 'carry_to_semifinal_reset_rr' ? 'selected' : '' }}>予選→準々決勝→準決勝までは持ち込み、ラウンドロビンからリセット</option>
+        <option value="carry_prelim_to_semifinal_for_tournament" {{ $carryPreset === 'carry_prelim_to_semifinal_for_tournament' ? 'selected' : '' }}>予選＋準決勝の通算でトーナメント進出者を決定</option>
+        <option value="custom" {{ $carryPreset === 'custom' ? 'selected' : '' }}>カスタムJSON</option>
+      </select>
+      @error('result_carry_preset')<div class="invalid-feedback">{{ $message }}</div>@enderror
+    </div>
+
+    <div class="col-md-8 mb-3">
+      <label class="form-label">持ち込み詳細設定（JSON / 上級者向け）</label>
+      @php
+        $carrySettings = old('result_carry_settings', $tournament->result_carry_settings ?? '');
+        if (is_array($carrySettings)) {
+            $carrySettings = json_encode($carrySettings, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+        }
+      @endphp
+      <textarea name="result_carry_settings" id="result_carry_settings" rows="6" class="form-control @error('result_carry_settings') is-invalid @enderror"
+                placeholder='例: {"semifinal_total":{"source_stages":["予選","準決勝"]}}'>{{ $carrySettings }}</textarea>
+      @error('result_carry_settings')<div class="invalid-feedback">{{ $message }}</div>@enderror
+      <small class="text-muted d-block">
+        プリセットを選ぶと自動でJSON例が入ります。通常は編集不要です。
+      </small>
+      <div class="small text-muted mt-2">
+        <div>・予選＋準決勝でトーナメント進出者を決める場合：<code>{"semifinal_total":{"source_stages":["予選","準決勝"]}}</code></div>
+        <div>・準決勝からリセットする場合：<code>{"semifinal_total":{"source_stages":["準決勝"]}}</code></div>
+        <div>・ラウンドロビンから持ち込まない場合：<code>{"round_robin_total":{"source_stages":["ラウンドロビン"]}}</code></div>
+      </div>
+    </div>
+
+    <script>
+      document.addEventListener('DOMContentLoaded', function () {
+        const preset = document.getElementById('result_carry_preset');
+        const textarea = document.getElementById('result_carry_settings');
+
+        if (!preset || !textarea) {
+          return;
+        }
+
+        const examples = {
+          default: {},
+          no_carry: {
+            quarterfinal_total: { source_stages: ['準々決勝'] },
+            semifinal_total: { source_stages: ['準決勝'] },
+            round_robin_total: { source_stages: ['ラウンドロビン'] },
+            final_total: { source_stages: ['決勝'] }
+          },
+          reset_after_quarterfinal: {
+            quarterfinal_total: { source_stages: ['予選', '準々決勝'] },
+            semifinal_total: { source_stages: ['準決勝'] },
+            round_robin_total: { source_stages: ['準決勝', 'ラウンドロビン'] },
+            final_total: { source_stages: ['準決勝', '決勝'] }
+          },
+          reset_from_quarterfinal: {
+            quarterfinal_total: { source_stages: ['準々決勝'] },
+            semifinal_total: { source_stages: ['準々決勝', '準決勝'] },
+            round_robin_total: { source_stages: ['準々決勝', '準決勝', 'ラウンドロビン'] },
+            final_total: { source_stages: ['準々決勝', '準決勝', '決勝'] }
+          },
+          carry_to_semifinal_reset_rr: {
+            quarterfinal_total: { source_stages: ['予選', '準々決勝'] },
+            semifinal_total: { source_stages: ['予選', '準々決勝', '準決勝'] },
+            round_robin_total: { source_stages: ['ラウンドロビン'] }
+          },
+          carry_prelim_to_semifinal_for_tournament: {
+            semifinal_total: { source_stages: ['予選', '準決勝'] }
+          }
+        };
+
+        preset.addEventListener('change', function () {
+          if (preset.value === 'custom') {
+            return;
+          }
+
+          textarea.value = JSON.stringify(examples[preset.value] || {}, null, 2);
+        });
+      });
+    </script>
+
     <div class="col-md-3 mb-3">
       <label class="form-label d-block">シフト抽選を使う</label>
       <input type="hidden" name="use_shift_draw" value="0">

@@ -403,6 +403,8 @@ final class TournamentResultSnapshotController extends Controller
         $finalGames = (int) ($stageCounts['決勝'] ?? 0);
 
         $flowType = trim((string) DB::table('tournaments')->where('id', $tournamentId)->value('result_flow_type'));
+        $resultCarrySettings = $this->loadResultCarrySettings($tournamentId);
+
         $usesStepLadderFinal = in_array($flowType, [
             'prelim_to_rr_to_final',
             'prelim_to_quarterfinal_to_rr_to_final',
@@ -643,14 +645,130 @@ final class TournamentResultSnapshotController extends Controller
             );
         }
 
+        if (!empty($resultCarrySettings)) {
+            $presets = array_map(
+                fn (array $preset): array => $this->applyResultCarrySettingsToPreset(
+                    preset: $preset,
+                    stageCounts: $stageCounts,
+                    carrySettings: $resultCarrySettings
+                ),
+                $presets
+            );
+        }
+
         return $presets;
     }
+
 
     /**
      * @param array<int,array<string,mixed>> $sourceSets
      * @param array<int,string> $descriptionLines
      * @return array<string,mixed>
      */
+
+    private function loadResultCarrySettings(int $tournamentId): array
+    {
+        $raw = DB::table('tournaments')
+            ->where('id', $tournamentId)
+            ->value('result_carry_settings');
+
+        if (is_array($raw)) {
+            return $raw;
+        }
+
+        if (!is_string($raw) || trim($raw) === '') {
+            return [];
+        }
+
+        $decoded = json_decode($raw, true);
+
+        return is_array($decoded) ? $decoded : [];
+    }
+
+    private function applyResultCarrySettingsToPreset(
+        array $preset,
+        array $stageCounts,
+        array $carrySettings
+    ): array {
+        $definition = (array) ($preset['definition'] ?? []);
+        $resultCode = (string) ($definition['result_code'] ?? ($preset['preset_key'] ?? ''));
+        $resultType = (string) ($definition['result_type'] ?? 'total_pin');
+
+        // まずは total_pin 系の反映単位だけに適用する。
+        // round_robin / step_ladder は専用Service側の持ち込み判定があるため、別フェーズで接続する。
+        if ($resultCode === '' || $resultType !== 'total_pin') {
+            return $preset;
+        }
+
+        $setting = $carrySettings[$resultCode] ?? null;
+
+        if (!is_array($setting)) {
+            return $preset;
+        }
+
+        $sourceStages = array_values(array_filter(
+            (array) ($setting['source_stages'] ?? []),
+            fn ($stage) => is_string($stage) && trim($stage) !== ''
+        ));
+
+        if (empty($sourceStages)) {
+            return $preset;
+        }
+
+        $validStages = [];
+
+        foreach ($sourceStages as $stage) {
+            $stage = trim((string) $stage);
+            $games = (int) ($stageCounts[$stage] ?? 0);
+
+            if ($stage === '' || $games <= 0) {
+                continue;
+            }
+
+            $validStages[] = [
+                'stage' => $stage,
+                'games' => $games,
+            ];
+        }
+
+        if (empty($validStages)) {
+            return $preset;
+        }
+
+        $lastIndex = count($validStages) - 1;
+        $sourceSets = [];
+        $descriptionLines = [];
+
+        foreach ($validStages as $index => $stageInfo) {
+            $bucket = $index === $lastIndex ? 'scratch' : 'carry';
+            $stage = $stageInfo['stage'];
+            $games = (int) $stageInfo['games'];
+
+            $sourceSets[] = [
+                'stage' => $stage,
+                'game_from' => 1,
+                'game_to' => $games,
+                'bucket' => $bucket,
+            ];
+
+            $descriptionLines[] = $bucket . ': ' . $stage . ' 1G-' . $games . 'G';
+        }
+
+        $calculationDefinition = (array) ($definition['calculation_definition'] ?? []);
+        $calculationDefinition['source_sets'] = $sourceSets;
+        $calculationDefinition['carry_setting'] = [
+            'source' => 'tournaments.result_carry_settings',
+            'result_code' => $resultCode,
+            'source_stages' => array_map(fn (array $row): string => $row['stage'], $validStages),
+        ];
+
+        $preset['description_lines'] = $descriptionLines;
+        $preset['definition']['stage_name'] = $validStages[$lastIndex]['stage'];
+        $preset['definition']['calculation_definition'] = $calculationDefinition;
+
+        return $preset;
+    }
+
     private function makePreset(
         int $tournamentId,
         string $resultCode,

@@ -345,23 +345,34 @@ class TournamentResultSnapshotService
 
     private function buildParticipantKey(object $row): string
     {
-        if ($row->pro_bowler_id !== null) {
-            return 'pro_id:' . (int) $row->pro_bowler_id;
+        // pro_bowler_id が入っている行と、license_number だけの行が混在しても、
+        // 同じ選手を別人扱いしないよう、まずライセンスから正式プロを解決する。
+        //
+        // 例:
+        // - 予選 game_scores: pro_bowler_id = null / license_number = M00001289
+        // - 準決勝 game_scores: pro_bowler_id = 123 / license_number = M00001289
+        //
+        // 従来は license:M00001289 と pro_id:123 に分かれてしまい、
+        // carry + scratch が合算されなかった。
+        $resolvedBowler = $this->resolveBowlerFromGameScoreRow($row);
+
+        if ($resolvedBowler) {
+            return 'pro_id:' . (int) $resolvedBowler->id;
         }
 
         $license = $this->nullableTrim($row->license_number);
         if ($license !== null) {
-            return 'license:' . $license;
-        }
-
-        $name = $this->nullableTrim($row->name);
-        if ($name !== null) {
-            return 'name:' . $name;
+            return 'license:' . strtoupper($license);
         }
 
         $entryNumber = $this->nullableTrim($row->entry_number);
         if ($entryNumber !== null) {
             return 'entry:' . $entryNumber;
+        }
+
+        $name = $this->nullableTrim($row->name);
+        if ($name !== null) {
+            return 'name:' . $name;
         }
 
         return 'row:' . (string) $row->id;
