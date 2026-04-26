@@ -468,6 +468,102 @@ final class ScoreController extends Controller
         ]);
     }
 
+    public function storeSingleEliminationMatch(Request $r)
+    {
+        $validated = $r->validate([
+            'tournament_id' => 'required|integer|exists:tournaments,id',
+            'round_no' => 'required|integer|min:1|max:10',
+            'match_no' => 'required|integer|min:1|max:128',
+            'match_key' => 'required|string|max:32',
+            'scores.A' => 'nullable|integer|min:0|max:300',
+            'scores.B' => 'nullable|integer|min:0|max:300',
+            'slots.A' => 'nullable|array',
+            'slots.B' => 'nullable|array',
+            'upto_game' => 'nullable|integer|min:1|max:99',
+            'shifts' => 'nullable|string|max:50',
+            'gender_filter' => 'nullable|string|max:10',
+        ]);
+
+        $tournamentId = (int) $validated['tournament_id'];
+        $roundNo = (int) $validated['round_no'];
+        $matchNo = (int) $validated['match_no'];
+        $matchKey = trim((string) $validated['match_key']);
+
+        if (!preg_match('/^R\d+-M\d+$/', $matchKey)) {
+            return back()->withErrors([
+                'match_key' => 'トーナメント試合キーが不正です。',
+            ]);
+        }
+
+        $scores = (array) ($validated['scores'] ?? []);
+        $slots = (array) ($validated['slots'] ?? []);
+
+        DB::transaction(function () use ($tournamentId, $roundNo, $matchNo, $matchKey, $scores, $slots): void {
+            foreach (['A', 'B'] as $slotCode) {
+                $scoreRaw = $scores[$slotCode] ?? null;
+                $slot = (array) ($slots[$slotCode] ?? []);
+                $entryNumber = 'SE:' . $matchKey . ':' . $slotCode;
+
+                if ($scoreRaw === null || $scoreRaw === '') {
+                    DB::table('game_scores')
+                        ->where('tournament_id', $tournamentId)
+                        ->where('stage', 'トーナメント')
+                        ->where('game_number', $roundNo)
+                        ->where('entry_number', $entryNumber)
+                        ->delete();
+
+                    continue;
+                }
+
+                $score = max(0, min(300, (int) $scoreRaw));
+
+                $slotType = trim((string) ($slot['type'] ?? ''));
+                if ($slotType === 'bye' || $slotType === '') {
+                    continue;
+                }
+
+                $displayName = trim((string) ($slot['display_name'] ?? $slot['label'] ?? ''));
+                if ($displayName === '') {
+                    $displayName = $matchKey . ' ' . $slotCode;
+                }
+
+                $licenseNo = trim((string) ($slot['pro_bowler_license_no'] ?? ''));
+                if ($licenseNo === '') {
+                    $licenseNo = trim((string) ($slot['participant_key'] ?? $entryNumber));
+                }
+
+                $proBowlerId = (int) ($slot['pro_bowler_id'] ?? 0);
+
+                DB::table('game_scores')->updateOrInsert(
+                    [
+                        'tournament_id' => $tournamentId,
+                        'stage' => 'トーナメント',
+                        'game_number' => $roundNo,
+                        'entry_number' => $entryNumber,
+                    ],
+                    [
+                        'shift' => 'single_elimination',
+                        'gender' => null,
+                        'license_number' => $licenseNo,
+                        'name' => $displayName,
+                        'score' => $score,
+                        'pro_bowler_id' => $proBowlerId > 0 ? $proBowlerId : null,
+                        'updated_at' => now(),
+                        'created_at' => now(),
+                    ]
+                );
+            }
+        });
+
+        return redirect()->route('scores.result', [
+            'tournament_id' => $tournamentId,
+            'stage' => 'トーナメント',
+            'upto_game' => (int) $r->input('upto_game', 1),
+            'shifts' => (string) $r->input('shifts', ''),
+            'gender_filter' => (string) $r->input('gender_filter', ''),
+        ])->with('success', 'トーナメント ' . $matchKey . ' のスコアを保存しました。');
+    }
+
     public function board(Request $r, ScoreService $service, RoundRobinService $roundRobinService, StepLadderService $stepLadderService, SingleEliminationService $singleEliminationService)
     {
         return $this->result($r, $service, $roundRobinService, $stepLadderService, $singleEliminationService);
@@ -1315,6 +1411,40 @@ final class ScoreController extends Controller
         return null;
     }
 
+    private function loadSingleEliminationMatchScores(int $tournamentId): array
+    {
+        $rows = DB::table('game_scores')
+            ->where('tournament_id', $tournamentId)
+            ->where('stage', 'トーナメント')
+            ->where('entry_number', 'like', 'SE:%')
+            ->orderBy('game_number')
+            ->orderBy('entry_number')
+            ->get();
+
+        $scores = [];
+
+        foreach ($rows as $row) {
+            $entryNumber = trim((string) ($row->entry_number ?? ''));
+
+            if (!preg_match('/^SE:(R\d+-M\d+):([AB])$/', $entryNumber, $m)) {
+                continue;
+            }
+
+            $matchKey = $m[1];
+            $slotCode = $m[2];
+
+            $scores[$matchKey][$slotCode] = [
+                'score' => (int) ($row->score ?? 0),
+                'row_id' => (int) ($row->id ?? 0),
+                'license_number' => $row->license_number ?? null,
+                'name' => $row->name ?? null,
+                'pro_bowler_id' => $row->pro_bowler_id ?? null,
+            ];
+        }
+
+        return $scores;
+    }
+
     private function buildSingleEliminationResultPayload(
         Tournament $tournament,
         SingleEliminationService $singleEliminationService,
@@ -1420,6 +1550,15 @@ final class ScoreController extends Controller
             seedPolicy: $seedPolicy,
             seedSettings: $seedSettings,
             seedEntries: $seedEntries
+        );
+
+        $matchScores = $this->loadSingleEliminationMatchScores(
+            tournamentId: (int) $tournament->id
+        );
+
+        $bracket = $singleEliminationService->applyMatchScores(
+            bracket: $bracket,
+            matchScores: $matchScores
         );
 
         return [

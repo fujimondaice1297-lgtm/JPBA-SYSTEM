@@ -65,6 +65,146 @@ class SingleEliminationService
     }
 
     /**
+     * 保存済みのトーナメントスコアをブラケットへ反映し、勝者を次ラウンドへ進める。
+     *
+     * matchScores 形式:
+     * [
+     *   'R1-M1' => [
+     *      'A' => ['score' => 210],
+     *      'B' => ['score' => 198],
+     *   ],
+     * ]
+     */
+    public function applyMatchScores(array $bracket, array $matchScores): array
+    {
+        $winnerByMatch = [];
+
+        foreach ($bracket['rounds'] as &$round) {
+            foreach ($round['matches'] as &$match) {
+                $matchKey = (string) ($match['match_key'] ?? '');
+
+                $match['slot_a'] = $this->resolveWinnerSlot(
+                    slot: (array) ($match['slot_a'] ?? []),
+                    winnerByMatch: $winnerByMatch
+                );
+
+                $match['slot_b'] = $this->resolveWinnerSlot(
+                    slot: (array) ($match['slot_b'] ?? []),
+                    winnerByMatch: $winnerByMatch
+                );
+
+                $slotA = (array) ($match['slot_a'] ?? []);
+                $slotB = (array) ($match['slot_b'] ?? []);
+
+                $scoreA = $this->nullableScore($matchScores[$matchKey]['A']['score'] ?? null);
+                $scoreB = $this->nullableScore($matchScores[$matchKey]['B']['score'] ?? null);
+
+                $match['score_a'] = $scoreA;
+                $match['score_b'] = $scoreB;
+                $match['score_rows'] = $matchScores[$matchKey] ?? [];
+                $match['is_complete'] = false;
+                $match['is_tied'] = false;
+                $match['winner_slot'] = null;
+                $match['winner_node'] = null;
+                $match['loser_node'] = null;
+
+                $slotAType = (string) ($slotA['type'] ?? '');
+                $slotBType = (string) ($slotB['type'] ?? '');
+
+                if ($slotAType === 'bye' && $slotBType !== 'bye') {
+                    $match['is_complete'] = true;
+                    $match['winner_slot'] = 'B';
+                    $match['winner_node'] = $slotB;
+                    $winnerByMatch[$matchKey] = $this->makeAdvancedNode($slotB, $match);
+                    continue;
+                }
+
+                if ($slotBType === 'bye' && $slotAType !== 'bye') {
+                    $match['is_complete'] = true;
+                    $match['winner_slot'] = 'A';
+                    $match['winner_node'] = $slotA;
+                    $winnerByMatch[$matchKey] = $this->makeAdvancedNode($slotA, $match);
+                    continue;
+                }
+
+                if (!$this->isPlayableSlot($slotA) || !$this->isPlayableSlot($slotB)) {
+                    continue;
+                }
+
+                if ($scoreA === null || $scoreB === null) {
+                    continue;
+                }
+
+                if ($scoreA === $scoreB) {
+                    $match['is_tied'] = true;
+                    continue;
+                }
+
+                $winnerSlot = $scoreA > $scoreB ? 'A' : 'B';
+                $winnerNode = $winnerSlot === 'A' ? $slotA : $slotB;
+                $loserNode = $winnerSlot === 'A' ? $slotB : $slotA;
+
+                $match['is_complete'] = true;
+                $match['winner_slot'] = $winnerSlot;
+                $match['winner_node'] = $winnerNode;
+                $match['loser_node'] = $loserNode;
+
+                $winnerByMatch[$matchKey] = $this->makeAdvancedNode($winnerNode, $match);
+            }
+
+            unset($match);
+        }
+
+        unset($round);
+
+        $bracket['winners_by_match'] = $winnerByMatch;
+
+        return $bracket;
+    }
+
+    private function resolveWinnerSlot(array $slot, array $winnerByMatch): array
+    {
+        if (($slot['type'] ?? '') !== 'winner') {
+            return $slot;
+        }
+
+        $sourceMatchKey = (string) ($slot['source_match_key'] ?? '');
+
+        if ($sourceMatchKey !== '' && isset($winnerByMatch[$sourceMatchKey])) {
+            return $winnerByMatch[$sourceMatchKey];
+        }
+
+        return $slot;
+    }
+
+    private function nullableScore($value): ?int
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        return max(0, min(300, (int) $value));
+    }
+
+    private function isPlayableSlot(array $slot): bool
+    {
+        return in_array((string) ($slot['type'] ?? ''), ['seed', 'advanced'], true);
+    }
+
+    private function makeAdvancedNode(array $winnerNode, array $match): array
+    {
+        $advanced = $winnerNode;
+        $advanced['type'] = 'advanced';
+        $advanced['advanced_from_match_key'] = $match['match_key'] ?? null;
+        $advanced['advanced_from_round_no'] = $match['round_no'] ?? null;
+        $advanced['advanced_from_match_no'] = $match['match_no'] ?? null;
+        $advanced['label'] = $winnerNode['display_name'] ?? $winnerNode['label'] ?? '勝者';
+        $advanced['display_name'] = $winnerNode['display_name'] ?? $winnerNode['label'] ?? '勝者';
+
+        return $advanced;
+    }
+
+    /**
      * snapshot反映時に calculation_definition へ保存する前提の定義を作る。
      */
     public function buildCalculationDefinition(

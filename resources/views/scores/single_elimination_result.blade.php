@@ -258,6 +258,52 @@
         margin-top: .5rem;
     }
 
+    .se-score-form {
+        margin-top: .55rem;
+        padding-top: .55rem;
+        border-top: 1px dashed #d1d5db;
+    }
+
+    .se-score-row {
+        display: grid;
+        grid-template-columns: 1fr 88px;
+        gap: .5rem;
+        align-items: center;
+        margin-bottom: .4rem;
+    }
+
+    .se-score-row label {
+        margin: 0;
+        font-size: .85rem;
+        color: #374151;
+        font-weight: 700;
+    }
+
+    .se-score-row input[type="number"] {
+        width: 88px;
+        text-align: right;
+    }
+
+    .se-winner {
+        margin-top: .45rem;
+        padding: .4rem .5rem;
+        border-radius: .5rem;
+        background: #ecfdf5;
+        border: 1px solid #a7f3d0;
+        color: #065f46;
+        font-weight: 700;
+    }
+
+    .se-tie-warning {
+        margin-top: .45rem;
+        padding: .4rem .5rem;
+        border-radius: .5rem;
+        background: #fff7ed;
+        border: 1px solid #fed7aa;
+        color: #9a3412;
+        font-weight: 700;
+    }
+
     @media (max-width: 1199.98px) {
         .se-round-grid {
             grid-template-columns: repeat(2, minmax(260px, 1fr));
@@ -418,12 +464,23 @@
                                 $slotB = (array) ($match['slot_b'] ?? []);
                             @endphp
 
+                            @php
+                                $scoreA = $match['score_a'] ?? null;
+                                $scoreB = $match['score_b'] ?? null;
+                                $slotAType = (string) ($slotA['type'] ?? '');
+                                $slotBType = (string) ($slotB['type'] ?? '');
+                                $slotAPlayable = in_array($slotAType, ['seed', 'advanced'], true);
+                                $slotBPlayable = in_array($slotBType, ['seed', 'advanced'], true);
+                                $canInputMatch = !$isPublic && $slotAPlayable && $slotBPlayable;
+                                $winnerNode = (array) ($match['winner_node'] ?? []);
+                            @endphp
+
                             <div class="se-match">
                                 <div class="se-match-head">{{ $match['label'] ?? '—' }}</div>
 
                                 <div class="se-slot {{ ($slotA['type'] ?? '') === 'bye' ? 'se-slot-bye' : '' }}">
-                                    @if(($slotA['type'] ?? '') === 'seed')
-                                        <span class="se-seed">#{{ $slotA['seed'] ?? '—' }}</span>
+                                    @if(in_array(($slotA['type'] ?? ''), ['seed', 'advanced'], true) && isset($slotA['seed']))
+                                        <span class="se-seed">#{{ $slotA['seed'] }}</span>
                                     @endif
                                     <span class="se-name">{{ $slotName($slotA) }}</span>
                                     @if($slotSub($slotA) !== '')
@@ -434,14 +491,81 @@
                                 <div class="se-vs">vs</div>
 
                                 <div class="se-slot {{ ($slotB['type'] ?? '') === 'bye' ? 'se-slot-bye' : '' }}">
-                                    @if(($slotB['type'] ?? '') === 'seed')
-                                        <span class="se-seed">#{{ $slotB['seed'] ?? '—' }}</span>
+                                    @if(in_array(($slotB['type'] ?? ''), ['seed', 'advanced'], true) && isset($slotB['seed']))
+                                        <span class="se-seed">#{{ $slotB['seed'] }}</span>
                                     @endif
                                     <span class="se-name">{{ $slotName($slotB) }}</span>
                                     @if($slotSub($slotB) !== '')
                                         <div class="se-mini">{{ $slotSub($slotB) }}</div>
                                     @endif
                                 </div>
+
+                                @if($canInputMatch)
+                                    <form method="POST" action="{{ route('scores.single_elimination.store') }}" class="se-score-form">
+                                        @csrf
+                                        <input type="hidden" name="tournament_id" value="{{ $meta['tournament_id'] ?? request('tournament_id') }}">
+                                        <input type="hidden" name="round_no" value="{{ $match['round_no'] ?? $round['round_no'] ?? 1 }}">
+                                        <input type="hidden" name="match_no" value="{{ $match['match_no'] ?? 1 }}">
+                                        <input type="hidden" name="match_key" value="{{ $match['match_key'] ?? '' }}">
+                                        <input type="hidden" name="upto_game" value="{{ $upto_game ?? request('upto_game', 1) }}">
+                                        <input type="hidden" name="shifts" value="{{ $shiftValue }}">
+                                        <input type="hidden" name="gender_filter" value="{{ $genderValue }}">
+
+                                        @foreach(['A' => $slotA, 'B' => $slotB] as $slotCode => $slot)
+                                            @foreach([
+                                                'type',
+                                                'seed',
+                                                'display_name',
+                                                'label',
+                                                'pro_bowler_id',
+                                                'pro_bowler_license_no',
+                                                'amateur_name',
+                                                'participant_key',
+                                                'source_row_id',
+                                                'source_ranking',
+                                                'total_pin',
+                                                'games',
+                                                'average',
+                                                'min_seed',
+                                                'max_seed',
+                                            ] as $field)
+                                                @if(array_key_exists($field, $slot) && !is_array($slot[$field]))
+                                                    <input type="hidden" name="slots[{{ $slotCode }}][{{ $field }}]" value="{{ $slot[$field] }}">
+                                                @endif
+                                            @endforeach
+                                        @endforeach
+
+                                        <div class="se-score-row">
+                                            <label>A：{{ $slotName($slotA) }}</label>
+                                            <input type="number" name="scores[A]" class="form-control form-control-sm" min="0" max="300" value="{{ $scoreA !== null ? $scoreA : '' }}">
+                                        </div>
+
+                                        <div class="se-score-row">
+                                            <label>B：{{ $slotName($slotB) }}</label>
+                                            <input type="number" name="scores[B]" class="form-control form-control-sm" min="0" max="300" value="{{ $scoreB !== null ? $scoreB : '' }}">
+                                        </div>
+
+                                        <button type="submit" class="btn btn-sm btn-primary">この試合を保存</button>
+                                    </form>
+                                @else
+                                    <div class="se-mini mt-2">
+                                        @if($slotAType === 'winner' || $slotBType === 'winner')
+                                            前ラウンドの勝者確定後に入力できます。
+                                        @elseif($slotAType === 'bye' || $slotBType === 'bye')
+                                            BYEにより自動進出します。
+                                        @endif
+                                    </div>
+                                @endif
+
+                                @if(!empty($match['is_tied']))
+                                    <div class="se-tie-warning">
+                                        同点です。勝者を確定できません。タイブレーク用のスコアに修正してください。
+                                    </div>
+                                @elseif(!empty($match['winner_node']))
+                                    <div class="se-winner">
+                                        勝者：{{ $winnerNode['display_name'] ?? $winnerNode['label'] ?? '—' }}
+                                    </div>
+                                @endif
 
                                 <div class="se-mini mt-2">
                                     勝者 → {{ $match['winner_to'] ?? '優勝' }}
