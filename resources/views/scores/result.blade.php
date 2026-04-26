@@ -69,26 +69,28 @@
                 continue;
             }
 
-            if (preg_match('/(\d{3,6})/', $s, $m)) {
-                $raw = $m[1];
-                $pad4 = strlen($raw) >= 4 ? substr($raw, -4) : str_pad($raw, 4, '0', STR_PAD_LEFT);
-                $strip = ltrim($pad4, '0');
-                if ($strip === '') {
-                    $strip = '0';
-                }
-
-                $sex = null;
-                if (preg_match('/^[MF]/i', $s)) {
-                    $sex = strtoupper(substr($s, 0, 1));
-                }
-
-                return [
-                    'full'   => $s,
-                    'pad4'   => $pad4,
-                    'raw'    => $strip,
-                    'gender' => $sex,
-                ];
+            $digits = preg_replace('/\D+/', '', $s) ?: '';
+            if ($digits === '') {
+                continue;
             }
+
+            $pad4 = strlen($digits) >= 4 ? substr($digits, -4) : str_pad($digits, 4, '0', STR_PAD_LEFT);
+            $strip = ltrim($pad4, '0');
+            if ($strip === '') {
+                $strip = '0';
+            }
+
+            $sex = null;
+            if (preg_match('/^[MF]/i', $s)) {
+                $sex = strtoupper(substr($s, 0, 1));
+            }
+
+            return [
+                'full'   => $s,
+                'pad4'   => $pad4,
+                'raw'    => $strip,
+                'gender' => $sex,
+            ];
         }
 
         return [
