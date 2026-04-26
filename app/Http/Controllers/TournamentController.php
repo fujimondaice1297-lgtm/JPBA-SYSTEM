@@ -60,6 +60,10 @@ class TournamentController extends Controller
             'round_robin_win_bonus',
             'round_robin_tie_bonus',
             'round_robin_position_round_enabled',
+            'single_elimination_qualifier_count',
+            'single_elimination_seed_source_result_code',
+            'single_elimination_seed_policy',
+            'single_elimination_seed_settings',
             'spectator_policy',
             'broadcast',
             'streaming',
@@ -247,6 +251,27 @@ class TournamentController extends Controller
         return $normalized !== '' ? $normalized : null;
     }
 
+        private function normalizeSingleEliminationSeedSettings($value): ?array
+    {
+        if (is_null($value) || $value === '') {
+            return null;
+        }
+
+        if (is_array($value)) {
+            return empty($value) ? null : $value;
+        }
+
+        $decoded = json_decode((string) $value, true);
+
+        if (json_last_error() !== JSON_ERROR_NONE || !is_array($decoded)) {
+            throw ValidationException::withMessages([
+                'single_elimination_seed_settings' => 'シード詳細設定はJSON形式で入力してください。',
+            ]);
+        }
+
+        return empty($decoded) ? null : $decoded;
+    }
+
     private function validateAndNormalize(Request $request): array
     {
         $validated = $request->validate([
@@ -260,11 +285,15 @@ class TournamentController extends Controller
             'gender'               => 'required|in:M,F,X',
             'official_type'        => 'required|in:official,approved,other',
             'title_category'       => 'nullable|in:normal,season_trial,excluded',
-            'result_flow_type'     => 'nullable|in:legacy_standard,prelim_to_rr_to_final,prelim_to_quarterfinal_to_rr_to_final',
+            'result_flow_type'     => 'nullable|in:legacy_standard,prelim_to_rr_to_final,prelim_to_quarterfinal_to_rr_to_final,prelim_to_single_elimination_to_final,prelim_to_quarterfinal_to_single_elimination_to_final,prelim_to_semifinal_to_single_elimination_to_final',
             'round_robin_qualifier_count' => 'nullable|integer|min:4|max:16',
             'round_robin_win_bonus' => 'nullable|integer|min:0|max:200',
             'round_robin_tie_bonus' => 'nullable|integer|min:0|max:200',
             'round_robin_position_round_enabled' => 'nullable|boolean',
+            'single_elimination_qualifier_count' => 'nullable|integer|min:2|max:64',
+            'single_elimination_seed_source_result_code' => 'nullable|in:prelim_total,quarterfinal_total,semifinal_total',
+            'single_elimination_seed_policy' => 'nullable|in:standard,higher_seed_bye,custom',
+            'single_elimination_seed_settings' => 'nullable|string|max:10000',
             'entry_start'          => 'nullable|date',
             'entry_end'            => 'nullable|date|after_or_equal:entry_start',
             'inspection_required'  => 'nullable|boolean',
@@ -359,8 +388,14 @@ class TournamentController extends Controller
 
         $flowType = trim((string) ($validated['result_flow_type'] ?? 'legacy_standard')) ?: 'legacy_standard';
         $usesRoundRobin = in_array($flowType, ['prelim_to_rr_to_final', 'prelim_to_quarterfinal_to_rr_to_final'], true);
+        $usesSingleElimination = in_array($flowType, [
+            'prelim_to_single_elimination_to_final',
+            'prelim_to_quarterfinal_to_single_elimination_to_final',
+            'prelim_to_semifinal_to_single_elimination_to_final',
+        ], true);
 
         $validated['result_flow_type'] = $flowType;
+
         $validated['round_robin_qualifier_count'] = $usesRoundRobin
             ? (int) ($request->input('round_robin_qualifier_count', 8) ?: 8)
             : null;
@@ -379,6 +414,31 @@ class TournamentController extends Controller
                 'round_robin_qualifier_count' => 'ラウンドロビン進出人数は偶数で指定してください。',
             ]);
         }
+
+        $fixedSeedSource = match ($flowType) {
+            'prelim_to_quarterfinal_to_single_elimination_to_final' => 'quarterfinal_total',
+            'prelim_to_semifinal_to_single_elimination_to_final' => 'semifinal_total',
+            default => 'prelim_total',
+        };
+
+        $validated['single_elimination_qualifier_count'] = $usesSingleElimination
+            ? (int) ($request->input('single_elimination_qualifier_count', 8) ?: 8)
+            : null;
+
+        // 進出元成績は result_flow_type と矛盾しないよう、Controller側で固定する。
+        // 画面入力値をそのまま信用すると「準決勝通算→トーナメント」なのに
+        // quarterfinal_total を参照するような不整合が起きるため。
+        $validated['single_elimination_seed_source_result_code'] = $usesSingleElimination
+            ? $fixedSeedSource
+            : null;
+
+        $validated['single_elimination_seed_policy'] = $usesSingleElimination
+            ? ($request->input('single_elimination_seed_policy') ?: 'standard')
+            : null;
+
+        $validated['single_elimination_seed_settings'] = $usesSingleElimination
+            ? $this->normalizeSingleEliminationSeedSettings($request->input('single_elimination_seed_settings'))
+            : null;
 
         $validated['use_shift_draw'] = $useShiftDraw;
         $validated['accept_shift_preference'] = $useShiftDraw && $request->boolean('accept_shift_preference');

@@ -796,10 +796,24 @@ SNS等リンク集を保持するテーブル。
   - `legacy_standard` = 既存（予選 → 準々決勝 → 準決勝 → 決勝）
   - `prelim_to_rr_to_final` = 予選 → ラウンドロビン → 決勝
   - `prelim_to_quarterfinal_to_rr_to_final` = 予選 → 準々決勝 → ラウンドロビン → 決勝
+  - `prelim_to_single_elimination_to_final` = 予選 → トーナメント → 最終成績
+  - `prelim_to_quarterfinal_to_single_elimination_to_final` = 予選 → 準々決勝 → トーナメント → 最終成績
+  - `prelim_to_semifinal_to_single_elimination_to_final` = 予選 → 準決勝通算 → トーナメント → 最終成績
 - round_robin_qualifier_count（ラウンドロビン進出人数：nullable）
 - round_robin_win_bonus（勝ちボーナス：nullable。既定30）
 - round_robin_tie_bonus（引き分けボーナス：nullable。既定15）
 - round_robin_position_round_enabled（順位決定ポジションマッチを行うか）
+- single_elimination_qualifier_count（トーナメント進出人数：nullable）
+- single_elimination_seed_source_result_code（トーナメント進出元の current snapshot result_code：nullable）
+  - `prelim_total` = 予選通算成績から進出者を決める
+  - `quarterfinal_total` = 準々決勝通算成績から進出者を決める
+  - `semifinal_total` = 準決勝通算成績から進出者を決める
+- single_elimination_seed_policy（トーナメントのseed/BYE配置方針：nullable）
+  - `standard` = 標準配置
+  - `higher_seed_bye` = 2の累乗に満たない場合、上位seedへBYEを優先
+  - `custom` = `single_elimination_seed_settings` のJSON指定を使う
+- single_elimination_seed_settings（トーナメントseed/BYE詳細設定：json nullable）
+  - 例: `{"seed_overrides":[{"seed":1,"entry_round":2},{"seed":2,"entry_round":2}]}`
 - venue_id（会場：nullable）
 - venue_name / venue_address / venue_tel / venue_fax
 - entry_start / entry_end
@@ -880,6 +894,22 @@ SNS等リンク集を保持するテーブル。
 - ラウンドロビン方式では、直前の current snapshot（`prelim_total` または `quarterfinal_total`）上位 `round_robin_qualifier_count` 名を seed 順とみなし、総当たり + ポジションマッチを表示・集計する。
 - ラウンドロビンのスコア入力自体は `game_scores.stage = ラウンドロビン` を正本として継続利用する。
 - ラウンドロビンの公開表示は、JPBAサンプルに合わせて `対戦表` と `8G成績` を基本単位とし、8G成績には `W-L-T` / `Bonus` / `RR合計` / `通算ポイント` を表示できるようにする。
+- トーナメント方式は敗者復活なしのシングルエリミネーションとして扱う。
+- トーナメント進出者は、`single_elimination_seed_source_result_code` で指定した current snapshot の順位を seed 順として抽出する。
+- `single_elimination_qualifier_count` は大会ごとに設定し、8人 / 16人 / 24人 / 32人など可変人数に対応する。
+- 進出人数が2の累乗でない場合は、内部的に次の2の累乗枠まで広げ、空き枠はBYEとして扱う。
+- 1回戦シード / 2回戦シードなどは、`single_elimination_seed_settings` の `entry_round` で表現する。
+  - `entry_round = 1` は1回戦から出場
+  - `entry_round = 2` は1回戦シード
+  - `entry_round = 3` は2回戦シード
+- トーナメント方式では敗者ラウンドを作らない。
+- 同じラウンドで負けた選手は同順位タイとして扱う。
+  - 準決勝敗退者は3位タイ
+  - 準々決勝敗退者は5位タイ
+  - ベスト16初戦敗退者は9位タイ
+  - 32枠1回戦敗退者は17位タイ
+- トーナメントのスコア入力自体は `game_scores.stage = トーナメント` を正本として継続利用する。
+- 正式反映時には、ブラケットサイズ、round構成、seed設定、BYE設定、順位決定方針を `tournament_result_snapshots.calculation_definition` に保存する。
 
 ### 外部キー（FK）
 - venue_id -> venues.id

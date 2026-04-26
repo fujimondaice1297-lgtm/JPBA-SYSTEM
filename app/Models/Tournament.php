@@ -79,6 +79,17 @@ class Tournament extends Model
         'gallery_items',
         'simple_result_pdfs',
         'result_cards',
+
+        'result_flow_type',
+        'round_robin_qualifier_count',
+        'round_robin_win_bonus',
+        'round_robin_tie_bonus',
+        'round_robin_position_round_enabled',
+
+        'single_elimination_qualifier_count',
+        'single_elimination_seed_source_result_code',
+        'single_elimination_seed_policy',
+        'single_elimination_seed_settings',
     ];
 
     protected $casts = [
@@ -110,6 +121,14 @@ class Tournament extends Model
         'gallery_items' => 'array',
         'simple_result_pdfs' => 'array',
         'result_cards' => 'array',
+
+        'round_robin_qualifier_count' => 'integer',
+        'round_robin_win_bonus' => 'integer',
+        'round_robin_tie_bonus' => 'integer',
+        'round_robin_position_round_enabled' => 'boolean',
+
+        'single_elimination_qualifier_count' => 'integer',
+        'single_elimination_seed_settings' => 'array',
     ];
 
     public function prizeDistributions()
@@ -186,6 +205,12 @@ class Tournament extends Model
             }
             if (!$tournament->auto_draw_reminder_pending_type) {
                 $tournament->auto_draw_reminder_pending_type = 'either';
+            }
+            if (!$tournament->result_flow_type) {
+                $tournament->result_flow_type = 'legacy_standard';
+            }
+            if (!$tournament->single_elimination_seed_policy) {
+                $tournament->single_elimination_seed_policy = 'standard';
             }
             if (is_null($tournament->auto_draw_reminder_days_before)) {
                 $tournament->auto_draw_reminder_days_before = 7;

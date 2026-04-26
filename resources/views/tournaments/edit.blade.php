@@ -238,7 +238,9 @@
         <option value="legacy_standard" {{ $flowType === 'legacy_standard' ? 'selected' : '' }}>既存（予選→準々決勝→準決勝→決勝）</option>
         <option value="prelim_to_rr_to_final" {{ $flowType === 'prelim_to_rr_to_final' ? 'selected' : '' }}>予選→ラウンドロビン→決勝ステップラダー</option>
         <option value="prelim_to_quarterfinal_to_rr_to_final" {{ $flowType === 'prelim_to_quarterfinal_to_rr_to_final' ? 'selected' : '' }}>予選→準々決勝→ラウンドロビン→決勝ステップラダー</option>
-      </select>
+        <option value="prelim_to_single_elimination_to_final" {{ $flowType === 'prelim_to_single_elimination_to_final' ? 'selected' : '' }}>予選→トーナメント→最終成績</option>
+        <option value="prelim_to_quarterfinal_to_single_elimination_to_final" {{ $flowType === 'prelim_to_quarterfinal_to_single_elimination_to_final' ? 'selected' : '' }}>予選→準々決勝→トーナメント→最終成績</option>
+        <option value="prelim_to_semifinal_to_single_elimination_to_final" {{ $flowType === 'prelim_to_semifinal_to_single_elimination_to_final' ? 'selected' : '' }}>予選→準決勝通算→トーナメント→最終成績</option>      </select>
       @error('result_flow_type')<div class="invalid-feedback">{{ $message }}</div>@enderror
       <small class="text-muted d-block">ラウンドロビンを使う大会だけ、下の進出人数 / ボーナス設定を使います。決勝は現時点ではステップラダー表記です。</small>
     </div>
@@ -270,6 +272,65 @@
       <input type="checkbox" name="round_robin_position_round_enabled" value="1" class="form-check-input"
              {{ old('round_robin_position_round_enabled', $tournament->round_robin_position_round_enabled ?? true) ? 'checked' : '' }}>
       <small class="text-muted d-block">総当たり後に順位別1Gを行う</small>
+    </div>
+
+    <div class="col-md-12">
+      <hr>
+      <div class="alert alert-light border mb-3">
+        <strong>トーナメント方式設定</strong>
+        <div class="small text-muted">
+          「予選→トーナメント」「準々決勝→トーナメント」「準決勝通算→トーナメント」を選んだ大会で使用します。
+          敗者ラウンドは作らず、同じラウンドで負けた選手は同順位タイとして扱います。
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-2 mb-3">
+      <label class="form-label">進出人数</label>
+      <input type="number" name="single_elimination_qualifier_count" class="form-control @error('single_elimination_qualifier_count') is-invalid @enderror"
+             value="{{ old('single_elimination_qualifier_count', $tournament->single_elimination_qualifier_count ?? 8) }}" min="2" max="64">
+      @error('single_elimination_qualifier_count')<div class="invalid-feedback">{{ $message }}</div>@enderror
+      <small class="text-muted d-block">例：8 / 16 / 24 / 32</small>
+    </div>
+
+    <div class="col-md-3 mb-3">
+      <label class="form-label">進出元成績</label>
+      @php
+        $currentSeedSourceLabel = match ($tournament->single_elimination_seed_source_result_code ?? null) {
+            'quarterfinal_total' => '準々決勝通算成績',
+            'semifinal_total' => '準決勝通算成績',
+            default => '予選通算成績',
+        };
+      @endphp
+      <input type="text" class="form-control" value="{{ $currentSeedSourceLabel }}（保存時に予選後フローから自動決定）" readonly>
+      <small class="text-muted d-block">
+        予選→トーナメントなら予選通算、準々決勝→トーナメントなら準々決勝通算、準決勝通算→トーナメントなら準決勝通算を使います。
+      </small>
+    </div>
+
+    <div class="col-md-3 mb-3">
+      <label class="form-label">シード設定方式</label>
+      @php $singleSeedPolicy = old('single_elimination_seed_policy', $tournament->single_elimination_seed_policy ?? 'standard'); @endphp
+      <select name="single_elimination_seed_policy" class="form-select @error('single_elimination_seed_policy') is-invalid @enderror">
+        <option value="standard" {{ $singleSeedPolicy === 'standard' ? 'selected' : '' }}>標準配置</option>
+        <option value="higher_seed_bye" {{ $singleSeedPolicy === 'higher_seed_bye' ? 'selected' : '' }}>上位シードへBYE優先</option>
+        <option value="custom" {{ $singleSeedPolicy === 'custom' ? 'selected' : '' }}>JSONで個別指定</option>
+      </select>
+      @error('single_elimination_seed_policy')<div class="invalid-feedback">{{ $message }}</div>@enderror
+    </div>
+
+    <div class="col-md-4 mb-3">
+      <label class="form-label">シード詳細設定（JSON任意）</label>
+      @php
+        $singleSeedSettings = old('single_elimination_seed_settings', $tournament->single_elimination_seed_settings ?? '');
+        if (is_array($singleSeedSettings)) {
+            $singleSeedSettings = json_encode($singleSeedSettings, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+        }
+      @endphp
+      <textarea name="single_elimination_seed_settings" rows="4" class="form-control @error('single_elimination_seed_settings') is-invalid @enderror"
+                placeholder='例: {"seed_overrides":[{"seed":1,"entry_round":2},{"seed":2,"entry_round":2}] }'>{{ $singleSeedSettings }}</textarea>
+      @error('single_elimination_seed_settings')<div class="invalid-feedback">{{ $message }}</div>@enderror
+      <small class="text-muted d-block">空欄なら標準配置。1回戦シードは entry_round=2、2回戦シードは entry_round=3。</small>
     </div>
 
     <div class="col-md-3 mb-3">
