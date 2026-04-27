@@ -24,7 +24,12 @@
         <a href="{{ route('tournaments.prize_distributions.create', $tournament) }}"
            class="btn btn-outline-success">賞金配分</a>
 
-        <a href="{{ route('tournament_results.pdf') }}" class="btn btn-info">PDF出力</a>
+        <a href="{{ route('tournaments.results.pdf', $tournament) }}"
+           class="btn btn-info"
+           target="_blank"
+           rel="noopener">
+            PDF出力
+        </a>
 
         <form method="POST" action="{{ route('tournaments.results.apply_awards_points', $tournament) }}"
               onsubmit="return confirm('この大会の賞金・ポイントを再計算します。よろしいですか？');">

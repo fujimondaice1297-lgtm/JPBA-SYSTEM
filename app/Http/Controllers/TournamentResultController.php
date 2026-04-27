@@ -497,6 +497,7 @@ class TournamentResultController extends Controller
         $rankCol ? $query->orderBy($rankCol) : $query->orderBy('id');
 
         $results = $query->get();
+        $this->attachBowlerPeriodLabels($results);
 
         return $this->makePdfWithJapaneseFont(
             'tournament_results.pdf',
@@ -505,11 +506,19 @@ class TournamentResultController extends Controller
         );
     }
 
-    public function exportPdf()
+    public function exportPdf(Request $request)
     {
+        if ($request->filled('tournament_id')) {
+            $tournament = Tournament::findOrFail((int) $request->input('tournament_id'));
+
+            return $this->exportTournamentPdf($tournament);
+        }
+
         $results = TournamentResult::with(['tournament', 'player', 'bowler'])
             ->orderBy('ranking_year', 'desc')
             ->get();
+
+        $this->attachBowlerPeriodLabels($results);
 
         return $this->makePdfWithJapaneseFont(
             'tournament_results.pdf',
@@ -529,6 +538,133 @@ class TournamentResultController extends Controller
         return redirect()
             ->route('tournaments.results.index', $tournament) // モデルで渡すとキレイ
             ->with('success', '成績を削除しました。');
+    }
+
+    private function attachBowlerPeriodLabels($results): void
+    {
+        $periodColumn = $this->detectProBowlerPeriodColumn();
+
+        if (!$periodColumn) {
+            foreach ($results as $result) {
+                $result->setAttribute('bowler_period_label', null);
+            }
+
+            return;
+        }
+
+        $licenses = $results
+            ->map(fn ($result) => $result->pro_bowler_license_no
+                ?? optional($result->player)->license_no
+                ?? optional($result->bowler)->license_no
+                ?? null)
+            ->filter()
+            ->map(fn ($license) => strtoupper(trim((string) $license)))
+            ->unique()
+            ->values();
+
+        $ids = $results
+            ->map(fn ($result) => $result->pro_bowler_id ?? optional($result->player)->id ?? optional($result->bowler)->id ?? null)
+            ->filter()
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values();
+
+        $proQuery = ProBowler::query()
+            ->select(array_values(array_unique(array_filter([
+                'id',
+                'license_no',
+                $periodColumn,
+            ]))));
+
+        $proQuery->where(function ($q) use ($licenses, $ids) {
+            if ($licenses->isNotEmpty()) {
+                $q->orWhereIn(DB::raw('upper(license_no)'), $licenses->all());
+            }
+
+            if ($ids->isNotEmpty()) {
+                $q->orWhereIn('id', $ids->all());
+            }
+        });
+
+        $proBowlers = $proQuery->get();
+
+        $byId = $proBowlers->keyBy('id');
+        $byLicense = $proBowlers->keyBy(fn ($bowler) => strtoupper(trim((string) $bowler->license_no)));
+
+        foreach ($results as $result) {
+            $bowler = null;
+
+            $proBowlerId = $result->pro_bowler_id ?? optional($result->player)->id ?? optional($result->bowler)->id ?? null;
+            if ($proBowlerId && $byId->has((int) $proBowlerId)) {
+                $bowler = $byId->get((int) $proBowlerId);
+            }
+
+            if (!$bowler) {
+                $license = strtoupper(trim((string) (
+                    $result->pro_bowler_license_no
+                    ?? optional($result->player)->license_no
+                    ?? optional($result->bowler)->license_no
+                    ?? ''
+                )));
+
+                if ($license !== '' && $byLicense->has($license)) {
+                    $bowler = $byLicense->get($license);
+                }
+            }
+
+            $periodValue = $bowler ? ($bowler->{$periodColumn} ?? null) : null;
+
+            $result->setAttribute('bowler_period_label', $this->formatBowlerPeriodLabel($periodValue));
+        }
+    }
+
+    private function detectProBowlerPeriodColumn(): ?string
+    {
+        $candidates = [
+            'period_no',
+            'period',
+            'term_no',
+            'term',
+            'generation_no',
+            'generation',
+            'kisei',
+            'kibetsu',
+            'pro_period',
+            'pro_term',
+            'license_period',
+            'license_term',
+            'entry_period',
+            'entered_period',
+            'jpba_period',
+            'jpba_term',
+        ];
+
+        foreach ($candidates as $column) {
+            if (Schema::hasColumn('pro_bowlers', $column)) {
+                return $column;
+            }
+        }
+
+        return null;
+    }
+
+    private function formatBowlerPeriodLabel($value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        $label = trim((string) $value);
+
+        if ($label === '') {
+            return null;
+        }
+
+        if (str_contains($label, '期')) {
+            return $label;
+        }
+
+        return $label . '期';
     }
 
     private function makePdfWithJapaneseFont(string $view, array $data, string $downloadName)

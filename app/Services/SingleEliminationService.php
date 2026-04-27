@@ -205,6 +205,239 @@ class SingleEliminationService
     }
 
     /**
+     * トーナメント完了後の正式順位行を作る。
+     *
+     * 順位ルール:
+     * - 決勝勝者 = 1位
+     * - 決勝敗者 = 2位
+     * - 準決勝敗者 = 3位タイ
+     * - 準々決勝敗者 = 5位タイ
+     * - 1回戦敗者 = 9位タイ
+     */
+    public function buildFinalStandingRows(array $bracket): array
+    {
+        $rounds = array_values((array) ($bracket['rounds'] ?? []));
+        $roundCount = (int) ($bracket['summary']['round_count'] ?? count($rounds));
+
+        if ($roundCount <= 0 || empty($rounds)) {
+            throw new InvalidArgumentException('トーナメント表が作成されていません。');
+        }
+
+        $nodesByKey = [];
+        $scoreStatsByKey = [];
+        $rankByKey = [];
+
+        foreach ($rounds as $round) {
+            $round = (array) $round;
+            $roundNo = (int) ($round['round_no'] ?? 0);
+            $matches = array_values((array) ($round['matches'] ?? []));
+
+            foreach ($matches as $match) {
+                $match = (array) $match;
+                $slotA = (array) ($match['slot_a'] ?? []);
+                $slotB = (array) ($match['slot_b'] ?? []);
+                $matchKey = (string) ($match['match_key'] ?? '');
+
+                $this->rememberStandingNode($nodesByKey, $slotA);
+                $this->rememberStandingNode($nodesByKey, $slotB);
+
+                if ((bool) ($match['is_bye'] ?? false)) {
+                    continue;
+                }
+
+                if ($matchKey === '') {
+                    throw new InvalidArgumentException('トーナメント試合キーが見つかりません。');
+                }
+
+                if (!empty($match['is_tied'])) {
+                    throw new InvalidArgumentException($matchKey . ' が同点です。タイブレーク後のスコアに修正してください。');
+                }
+
+                if (empty($match['is_complete']) || empty($match['winner_node'])) {
+                    throw new InvalidArgumentException($matchKey . ' が未確定です。全試合のスコアを入力してください。');
+                }
+
+                $scoreA = $this->nullableScore($match['score_a'] ?? null);
+                $scoreB = $this->nullableScore($match['score_b'] ?? null);
+
+                if ($scoreA === null || $scoreB === null) {
+                    throw new InvalidArgumentException($matchKey . ' のスコアが未入力です。');
+                }
+
+                $this->addStandingScore($nodesByKey, $scoreStatsByKey, $slotA, $scoreA);
+                $this->addStandingScore($nodesByKey, $scoreStatsByKey, $slotB, $scoreB);
+
+                $winnerNode = (array) ($match['winner_node'] ?? []);
+                $loserNode = (array) ($match['loser_node'] ?? []);
+                $loserRank = (int) ($match['loser_rank'] ?? 0);
+
+                $this->rememberStandingNode($nodesByKey, $winnerNode);
+                $this->rememberStandingNode($nodesByKey, $loserNode);
+
+                $loserKey = $this->standingNodeKey($loserNode);
+                if ($loserKey !== '' && $loserRank > 0) {
+                    $rankByKey[$loserKey] = $loserRank;
+                }
+
+                if ($roundNo === $roundCount) {
+                    $winnerKey = $this->standingNodeKey($winnerNode);
+                    if ($winnerKey !== '') {
+                        $rankByKey[$winnerKey] = 1;
+                    }
+                }
+            }
+        }
+
+        if (!in_array(1, array_values($rankByKey), true)) {
+            throw new InvalidArgumentException('優勝者を確定できませんでした。決勝スコアを確認してください。');
+        }
+
+        $rows = [];
+
+        foreach ($rankByKey as $key => $ranking) {
+            $node = $nodesByKey[$key] ?? null;
+            if (!is_array($node)) {
+                continue;
+            }
+
+            $stats = $scoreStatsByKey[$key] ?? [
+                'scratch_pin' => 0,
+                'games' => 0,
+            ];
+
+            $carryPin = (int) ($node['total_pin'] ?? 0);
+            $carryGames = (int) ($node['games'] ?? 0);
+            $scratchPin = (int) ($stats['scratch_pin'] ?? 0);
+            $scratchGames = (int) ($stats['games'] ?? 0);
+            $games = $carryGames + $scratchGames;
+            $totalPin = $carryPin + $scratchPin;
+            $average = $games > 0 ? round($totalPin / $games, 2) : null;
+
+            $displayName = trim((string) ($node['display_name'] ?? $node['label'] ?? ''));
+            if ($displayName === '') {
+                $displayName = trim((string) ($node['pro_bowler_license_no'] ?? 'unknown'));
+            }
+
+            $proBowlerId = isset($node['pro_bowler_id']) && $node['pro_bowler_id'] !== null
+                ? (int) $node['pro_bowler_id']
+                : null;
+
+            $rows[] = [
+                'ranking' => (int) $ranking,
+                'pro_bowler_id' => $proBowlerId && $proBowlerId > 0 ? $proBowlerId : null,
+                'pro_bowler_license_no' => $node['pro_bowler_license_no'] ?? null,
+                'amateur_name' => $proBowlerId ? null : ($node['amateur_name'] ?? $displayName),
+                'display_name' => $displayName,
+                'gender' => null,
+                'shift' => null,
+                'entry_number' => $node['participant_key'] ?? null,
+                'scratch_pin' => $scratchPin,
+                'carry_pin' => $carryPin,
+                'total_pin' => $totalPin,
+                'games' => $games,
+                'average' => $average,
+                'tie_break_value' => (float) (100000 - (int) $ranking),
+                'points' => null,
+                'prize_money' => null,
+                '_sort_seed' => (int) ($node['seed'] ?? $node['min_seed'] ?? 999999),
+            ];
+        }
+
+        usort($rows, function (array $a, array $b): int {
+            $byRank = ((int) $a['ranking']) <=> ((int) $b['ranking']);
+            if ($byRank !== 0) {
+                return $byRank;
+            }
+
+            $bySeed = ((int) ($a['_sort_seed'] ?? 999999)) <=> ((int) ($b['_sort_seed'] ?? 999999));
+            if ($bySeed !== 0) {
+                return $bySeed;
+            }
+
+            return strcmp((string) ($a['display_name'] ?? ''), (string) ($b['display_name'] ?? ''));
+        });
+
+        foreach ($rows as &$row) {
+            unset($row['_sort_seed']);
+        }
+        unset($row);
+
+        return $rows;
+    }
+
+    private function rememberStandingNode(array &$nodesByKey, array $node): void
+    {
+        if (!$this->isPlayableSlot($node)) {
+            return;
+        }
+
+        $key = $this->standingNodeKey($node);
+        if ($key === '') {
+            return;
+        }
+
+        if (!isset($nodesByKey[$key])) {
+            $nodesByKey[$key] = $node;
+        }
+    }
+
+    private function addStandingScore(array &$nodesByKey, array &$scoreStatsByKey, array $node, int $score): void
+    {
+        if (!$this->isPlayableSlot($node)) {
+            return;
+        }
+
+        $key = $this->standingNodeKey($node);
+        if ($key === '') {
+            return;
+        }
+
+        if (!isset($nodesByKey[$key])) {
+            $nodesByKey[$key] = $node;
+        }
+
+        if (!isset($scoreStatsByKey[$key])) {
+            $scoreStatsByKey[$key] = [
+                'scratch_pin' => 0,
+                'games' => 0,
+            ];
+        }
+
+        $scoreStatsByKey[$key]['scratch_pin'] += $score;
+        $scoreStatsByKey[$key]['games']++;
+    }
+
+    private function standingNodeKey(array $node): string
+    {
+        $participantKey = trim((string) ($node['participant_key'] ?? ''));
+        if ($participantKey !== '') {
+            return 'participant:' . $participantKey;
+        }
+
+        $proBowlerId = (int) ($node['pro_bowler_id'] ?? 0);
+        if ($proBowlerId > 0) {
+            return 'pro:' . $proBowlerId;
+        }
+
+        $license = strtoupper(trim((string) ($node['pro_bowler_license_no'] ?? '')));
+        if ($license !== '') {
+            return 'license:' . $license;
+        }
+
+        $amateurName = trim((string) ($node['amateur_name'] ?? ''));
+        if ($amateurName !== '') {
+            return 'amateur:' . md5($amateurName);
+        }
+
+        $displayName = trim((string) ($node['display_name'] ?? $node['label'] ?? ''));
+        if ($displayName !== '') {
+            return 'name:' . md5($displayName);
+        }
+
+        return '';
+    }
+
+    /**
      * snapshot反映時に calculation_definition へ保存する前提の定義を作る。
      */
     public function buildCalculationDefinition(

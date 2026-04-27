@@ -19,7 +19,7 @@
             $presetGroups['準々決勝'][] = $preset;
         } elseif (str_starts_with($code, 'semifinal_')) {
             $presetGroups['準決勝'][] = $preset;
-        } elseif (str_starts_with($code, 'final_') || str_starts_with($code, 'step_ladder_')) {
+        } elseif (str_starts_with($code, 'final_') || str_starts_with($code, 'step_ladder_') || str_starts_with($code, 'single_elimination_')) {
             $presetGroups['決勝'][] = $preset;
         } else {
             $presetGroups['その他'][] = $preset;

@@ -11,6 +11,10 @@
         {{ isset($tournament) ? $tournament->year . $jp('&#x5E74;') . ' ' . $tournament->name . ' ' . $titlePdf : $titlePdf }}
     </title>
     <style>
+        @page {
+            margin: 22px 26px;
+        }
+
         body,
         table,
         th,
@@ -25,13 +29,13 @@
         }
 
         body {
-            font-size: 11px;
+            font-size: 10px;
             font-weight: normal;
         }
 
         h2 {
             margin: 0 0 12px 0;
-            font-size: 24px;
+            font-size: 22px;
             font-weight: normal !important;
         }
 
@@ -39,16 +43,18 @@
             width: 100%;
             border-collapse: collapse;
             table-layout: fixed;
-            font-size: 10px;
+            font-size: 9px;
         }
 
         th, td {
             border: 1px solid #333;
-            padding: 4px;
+            padding: 3px 4px;
             text-align: center;
             vertical-align: middle;
-            word-break: break-word;
+            word-break: normal;
+            overflow-wrap: normal;
             font-weight: normal !important;
+            line-height: 1.25;
         }
 
         th {
@@ -57,6 +63,37 @@
 
         .text-left {
             text-align: left;
+        }
+
+        .nowrap {
+            white-space: nowrap;
+            word-break: keep-all;
+            overflow-wrap: normal;
+        }
+
+        .col-year { width: 8%; }
+        .col-tournament { width: 13%; }
+        .col-player { width: 13%; }
+        .col-license { width: 8%; }
+        .col-period { width: 6%; }
+        .col-rank { width: 6%; }
+        .col-point { width: 8%; }
+        .col-total { width: 9%; }
+        .col-games { width: 5%; }
+        .col-average { width: 8%; }
+        .col-prize { width: 12%; }
+
+        .money {
+            white-space: nowrap;
+            word-break: keep-all;
+            overflow-wrap: normal;
+            font-size: 8.5px;
+            letter-spacing: -0.2px;
+        }
+
+        .license {
+            white-space: nowrap;
+            font-size: 8.8px;
         }
     </style>
 </head>
@@ -68,6 +105,7 @@
         $labelTournament = $jp('&#x5927;&#x4F1A;&#x540D;');
         $labelPlayer = $jp('&#x9078;&#x624B;&#x540D;');
         $labelLicense = $jp('&#x30E9;&#x30A4;&#x30BB;&#x30F3;&#x30B9;No');
+        $labelPeriod = $jp('&#x671F;');
         $labelRank = $jp('&#x9806;&#x4F4D;');
         $labelPoint = $jp('&#x30DD;&#x30A4;&#x30F3;&#x30C8;');
         $labelTotalPin = $jp('&#x30C8;&#x30FC;&#x30BF;&#x30EB;&#x30D4;&#x30F3;');
@@ -89,18 +127,19 @@
     <table>
         <thead>
             <tr>
-                <th>{{ $labelYear }}</th>
+                <th class="col-year nowrap">{{ $labelYear }}</th>
                 @if (!isset($tournament))
-                    <th>{{ $labelTournament }}</th>
+                    <th class="col-tournament">{{ $labelTournament }}</th>
                 @endif
-                <th>{{ $labelPlayer }}</th>
-                <th>{{ $labelLicense }}</th>
-                <th>{{ $labelRank }}</th>
-                <th>{{ $labelPoint }}</th>
-                <th>{{ $labelTotalPin }}</th>
-                <th>G</th>
-                <th>{{ $labelAverage }}</th>
-                <th>{{ $labelPrize }}</th>
+                <th class="col-player">{{ $labelPlayer }}</th>
+                <th class="col-license nowrap">{{ $labelLicense }}</th>
+                <th class="col-period nowrap">{{ $labelPeriod }}</th>
+                <th class="col-rank nowrap">{{ $labelRank }}</th>
+                <th class="col-point nowrap">{{ $labelPoint }}</th>
+                <th class="col-total nowrap">{{ $labelTotalPin }}</th>
+                <th class="col-games nowrap">G</th>
+                <th class="col-average nowrap">{{ $labelAverage }}</th>
+                <th class="col-prize nowrap">{{ $labelPrize }}</th>
             </tr>
         </thead>
         <tbody>
@@ -119,6 +158,8 @@
                                 ? substr((string) $rawLicenseNo, -4)
                                 : '-';
 
+                    $periodLabel = $result->bowler_period_label ?? null;
+
                     $rank = $result->ranking
                             ?? $result->rank
                             ?? $result->position
@@ -128,20 +169,21 @@
                             ?? '-';
                 @endphp
                 <tr>
-                    <td>{{ $result->ranking_year ?? '-' }}</td>
+                    <td class="nowrap">{{ $result->ranking_year ?? '-' }}</td>
 
                     @if (!isset($tournament))
                         <td class="text-left">{{ optional($result->tournament)->name ?? $labelUnknownTournament }}</td>
                     @endif
 
                     <td class="text-left">{{ $name }}</td>
-                    <td>{{ $licenseNo }}</td>
-                    <td>{{ $rank }}</td>
-                    <td>{{ number_format($result->points ?? 0) }}</td>
-                    <td>{{ number_format($result->total_pin ?? 0) }}</td>
-                    <td>{{ $result->games ?? '-' }}</td>
-                    <td>{{ isset($result->average) ? number_format($result->average, 2) : '-' }}</td>
-                    <td>{{ isset($result->prize_money) ? '¥' . number_format($result->prize_money) : '-' }}</td>
+                    <td class="license">{{ $licenseNo }}</td>
+                    <td class="nowrap">{{ $periodLabel ?: '-' }}</td>
+                    <td class="nowrap">{{ $rank }}</td>
+                    <td class="nowrap">{{ number_format($result->points ?? 0) }}</td>
+                    <td class="nowrap">{{ number_format($result->total_pin ?? 0) }}</td>
+                    <td class="nowrap">{{ $result->games ?? '-' }}</td>
+                    <td class="nowrap">{{ isset($result->average) ? number_format($result->average, 2) : '-' }}</td>
+                    <td class="money">{{ isset($result->prize_money) ? '¥' . number_format($result->prize_money) : '-' }}</td>
                 </tr>
             @endforeach
         </tbody>

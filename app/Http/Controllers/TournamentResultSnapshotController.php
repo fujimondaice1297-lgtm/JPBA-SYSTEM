@@ -10,6 +10,7 @@ use App\Models\TournamentResult;
 use App\Models\ProBowler;
 use App\Services\RoundRobinService;
 use App\Services\StepLadderService;
+use App\Services\SingleEliminationService;
 use App\Services\TournamentResultSnapshotService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -134,7 +135,8 @@ final class TournamentResultSnapshotController extends Controller
         $tournament,
         TournamentResultSnapshotService $service,
         RoundRobinService $roundRobinService,
-        StepLadderService $stepLadderService
+        StepLadderService $stepLadderService,
+        SingleEliminationService $singleEliminationService
     ): RedirectResponse {
         $tournament = $this->resolveTournament($tournament);
 
@@ -174,6 +176,8 @@ final class TournamentResultSnapshotController extends Controller
             $snapshot = $this->createRoundRobinSnapshot($preset['definition'], $roundRobinService);
         } elseif ($resultType === 'step_ladder') {
             $snapshot = $this->createStepLadderSnapshot($preset['definition'], $stepLadderService);
+        } elseif ($resultType === 'single_elimination') {
+            $snapshot = $this->createSingleEliminationSnapshot($tournament, $preset['definition'], $singleEliminationService);
         } else {
             $snapshot = $service->createTotalPinSnapshot($preset['definition']);
         }
@@ -371,7 +375,7 @@ final class TournamentResultSnapshotController extends Controller
         }
 
         $ordered = [];
-        foreach (['予選', '準々決勝', '準決勝', 'ラウンドロビン', '決勝'] as $stage) {
+        foreach (['予選', '準々決勝', '準決勝', 'ラウンドロビン', 'トーナメント', '決勝'] as $stage) {
             if (isset($raw[$stage])) {
                 $ordered[$stage] = $raw[$stage];
                 unset($raw[$stage]);
@@ -400,6 +404,7 @@ final class TournamentResultSnapshotController extends Controller
         $quarterGames = (int) ($stageCounts['準々決勝'] ?? 0);
         $semiGames = (int) ($stageCounts['準決勝'] ?? 0);
         $roundRobinGames = (int) ($stageCounts['ラウンドロビン'] ?? 0);
+        $singleEliminationGames = (int) ($stageCounts['トーナメント'] ?? 0);
         $finalGames = (int) ($stageCounts['決勝'] ?? 0);
 
         $flowType = trim((string) DB::table('tournaments')->where('id', $tournamentId)->value('result_flow_type'));
@@ -408,6 +413,12 @@ final class TournamentResultSnapshotController extends Controller
         $usesStepLadderFinal = in_array($flowType, [
             'prelim_to_rr_to_final',
             'prelim_to_quarterfinal_to_rr_to_final',
+        ], true);
+
+        $usesSingleEliminationFinal = in_array($flowType, [
+            'prelim_to_single_elimination_to_final',
+            'prelim_to_quarterfinal_to_single_elimination_to_final',
+            'prelim_to_semifinal_to_single_elimination_to_final',
         ], true);
 
         if ($prelimGames > 0) {
@@ -594,6 +605,28 @@ final class TournamentResultSnapshotController extends Controller
                 ],
                 isFinal: true,
                 resultType: 'step_ladder',
+            );
+        }
+
+        if ($usesSingleEliminationFinal && $singleEliminationGames > 0) {
+            $presets[] = $this->makePreset(
+                tournamentId: $tournamentId,
+                resultCode: 'single_elimination_final',
+                resultName: 'トーナメント最終成績',
+                stageName: 'トーナメント',
+                gender: $gender,
+                shift: $shift,
+                reflectedBy: $reflectedBy,
+                sourceSets: [
+                    ['stage' => 'トーナメント', 'game_from' => 1, 'game_to' => $singleEliminationGames, 'bucket' => 'scratch'],
+                ],
+                descriptionLines: [
+                    'seed: 大会設定のトーナメント進出元 snapshot',
+                    'scratch: トーナメント 1回戦〜決勝',
+                    'ranking: 優勝 / 準優勝 / 同じラウンド敗退者は同順位タイ',
+                ],
+                isFinal: true,
+                resultType: 'single_elimination',
             );
         }
 
@@ -908,6 +941,273 @@ final class TournamentResultSnapshotController extends Controller
         });
     }
 
+    private function createSingleEliminationSnapshot(
+        Tournament $tournament,
+        array $definition,
+        SingleEliminationService $singleEliminationService
+    ): TournamentResultSnapshot {
+        $tournamentId = (int) $tournament->id;
+        $gender = $this->normalizeGender($definition['gender'] ?? null);
+        $shift = $this->normalizeText($definition['shift'] ?? null);
+
+        $flowType = trim((string) ($tournament->result_flow_type ?? 'legacy_standard'));
+        $seedSourceResultCode = trim((string) ($tournament->single_elimination_seed_source_result_code ?? ''))
+            ?: $this->defaultSingleEliminationSeedSourceResultCode($flowType);
+
+        $qualifierCount = (int) ($tournament->single_elimination_qualifier_count ?? 0);
+        if ($qualifierCount < 2) {
+            throw new \InvalidArgumentException('トーナメント進出人数が設定されていません。大会設定を確認してください。');
+        }
+
+        $seedPolicy = trim((string) ($tournament->single_elimination_seed_policy ?? '')) ?: 'higher_seed_bye';
+        $seedSettings = $this->normalizeSingleEliminationSeedSettingsForSnapshot(
+            $tournament->single_elimination_seed_settings ?? null
+        );
+
+        $seedSnapshot = $this->findCurrentSnapshotByCode(
+            $tournamentId,
+            $seedSourceResultCode,
+            $gender,
+            $shift
+        );
+
+        if (!$seedSnapshot) {
+            throw new \InvalidArgumentException(
+                'トーナメント進出元 snapshot（' . $seedSourceResultCode . '）が見つかりません。先に進出元ステージの正式成績反映を実行してください。'
+            );
+        }
+
+        $seedEntries = $this->buildSingleEliminationSeedEntriesFromSnapshot(
+            snapshotId: (int) $seedSnapshot->id,
+            qualifierCount: $qualifierCount
+        );
+
+        if (count($seedEntries) < $qualifierCount) {
+            throw new \InvalidArgumentException(
+                'トーナメント進出者数 ' . $qualifierCount . ' 名に対して、進出元snapshotの行数が不足しています。'
+            );
+        }
+
+        $bracket = $singleEliminationService->buildBracket(
+            qualifierCount: $qualifierCount,
+            seedPolicy: $seedPolicy,
+            seedSettings: $seedSettings,
+            seedEntries: $seedEntries
+        );
+
+        $matchScores = $this->loadSingleEliminationMatchScores($tournamentId);
+        $bracket = $singleEliminationService->applyMatchScores(
+            bracket: $bracket,
+            matchScores: $matchScores
+        );
+
+        $finalRows = $singleEliminationService->buildFinalStandingRows($bracket);
+
+        if (count($finalRows) < $qualifierCount) {
+            throw new \InvalidArgumentException('トーナメント最終順位を全員分作成できませんでした。未入力の試合がないか確認してください。');
+        }
+
+        $calculationDefinition = (array) ($definition['calculation_definition'] ?? []);
+        $calculationDefinition['single_elimination'] = [
+            'seed_source_result_code' => $seedSourceResultCode,
+            'seed_source_name' => $this->singleEliminationSeedSourceName($seedSourceResultCode),
+            'seed_snapshot_id' => (int) $seedSnapshot->id,
+            'qualifier_count' => $qualifierCount,
+            'seed_policy' => $seedPolicy,
+            'ranking_policy' => 'winner first, final loser second, same lost round shared rank',
+            'final_rows_count' => count($finalRows),
+        ];
+
+        $maxGames = collect($finalRows)->max(fn (array $row) => (int) ($row['games'] ?? 0)) ?? 0;
+        $carryGames = (int) ($seedSnapshot->games_count ?? 0);
+        $carryStageNames = [
+            trim((string) ($seedSnapshot->result_name ?? $this->singleEliminationSeedSourceName($seedSourceResultCode))),
+        ];
+        $carryStageNames = array_values(array_filter($carryStageNames, fn ($value) => $value !== ''));
+
+        return DB::transaction(function () use (
+            $definition,
+            $calculationDefinition,
+            $finalRows,
+            $tournamentId,
+            $gender,
+            $shift,
+            $maxGames,
+            $carryGames,
+            $carryStageNames
+        ) {
+            $this->closeCurrentSnapshots(
+                tournamentId: $tournamentId,
+                resultCode: (string) ($definition['result_code'] ?? 'single_elimination_final'),
+                gender: $gender,
+                shift: $shift,
+            );
+
+            $snapshot = TournamentResultSnapshot::create([
+                'tournament_id' => $tournamentId,
+                'result_code' => (string) ($definition['result_code'] ?? 'single_elimination_final'),
+                'result_name' => (string) ($definition['result_name'] ?? 'トーナメント最終成績'),
+                'result_type' => 'single_elimination',
+                'stage_name' => (string) ($definition['stage_name'] ?? 'トーナメント'),
+                'gender' => $gender,
+                'shift' => $shift,
+                'games_count' => (int) $maxGames,
+                'carry_game_count' => $carryGames,
+                'carry_stage_names' => empty($carryStageNames) ? null : $carryStageNames,
+                'calculation_definition' => $calculationDefinition,
+                'reflected_at' => Carbon::now(),
+                'reflected_by' => isset($definition['reflected_by']) && $definition['reflected_by'] !== '' ? (int) $definition['reflected_by'] : null,
+                'is_final' => true,
+                'is_published' => (bool) ($definition['is_published'] ?? false),
+                'is_current' => true,
+                'notes' => $definition['notes'] ?? null,
+            ]);
+
+            foreach ($finalRows as $row) {
+                TournamentResultSnapshotRow::create(array_merge($row, [
+                    'snapshot_id' => $snapshot->id,
+                ]));
+            }
+
+            $syncedToTournamentResults = $this->syncFinalSnapshotToTournamentResults($snapshot);
+
+            $snapshot = $snapshot->load(['rows', 'tournament', 'reflectedBy']);
+            $snapshot->setAttribute('synced_to_tournament_results', $syncedToTournamentResults);
+
+            return $snapshot;
+        });
+    }
+
+    private function buildSingleEliminationSeedEntriesFromSnapshot(int $snapshotId, int $qualifierCount): array
+    {
+        $rows = DB::table('tournament_result_snapshot_rows')
+            ->where('snapshot_id', $snapshotId)
+            ->orderBy('ranking')
+            ->orderByDesc('total_pin')
+            ->orderBy('id')
+            ->limit($qualifierCount)
+            ->get();
+
+        $entries = [];
+
+        foreach ($rows as $index => $row) {
+            $seed = $index + 1;
+            $displayName = trim((string) ($row->display_name ?? ''));
+            if ($displayName === '') {
+                $displayName = trim((string) ($row->amateur_name ?? ''));
+            }
+            if ($displayName === '') {
+                $displayName = trim((string) ($row->pro_bowler_license_no ?? 'seed' . $seed));
+            }
+
+            $entries[] = [
+                'seed' => $seed,
+                'display_name' => $displayName,
+                'pro_bowler_id' => $row->pro_bowler_id ?? null,
+                'pro_bowler_license_no' => $row->pro_bowler_license_no ?? null,
+                'amateur_name' => $row->amateur_name ?? null,
+                'source_row_id' => $row->id ?? null,
+                'participant_key' => $this->singleEliminationParticipantKeyFromSnapshotRow($row, $seed),
+                'source_ranking' => $row->ranking ?? null,
+                'total_pin' => $row->total_pin ?? null,
+                'games' => $row->games ?? null,
+                'average' => $row->average ?? null,
+            ];
+        }
+
+        return $entries;
+    }
+
+    private function loadSingleEliminationMatchScores(int $tournamentId): array
+    {
+        $rows = DB::table('game_scores')
+            ->where('tournament_id', $tournamentId)
+            ->where('stage', 'トーナメント')
+            ->where('entry_number', 'like', 'SE:%')
+            ->orderBy('game_number')
+            ->orderBy('entry_number')
+            ->get();
+
+        $scores = [];
+
+        foreach ($rows as $row) {
+            $entryNumber = trim((string) ($row->entry_number ?? ''));
+
+            if (!preg_match('/^SE:(R\d+-M\d+):([AB])$/', $entryNumber, $m)) {
+                continue;
+            }
+
+            $matchKey = $m[1];
+            $slotCode = $m[2];
+
+            $scores[$matchKey][$slotCode] = [
+                'score' => (int) ($row->score ?? 0),
+                'row_id' => (int) ($row->id ?? 0),
+                'license_number' => $row->license_number ?? null,
+                'name' => $row->name ?? null,
+                'pro_bowler_id' => $row->pro_bowler_id ?? null,
+            ];
+        }
+
+        return $scores;
+    }
+
+    private function normalizeSingleEliminationSeedSettingsForSnapshot($seedSettings): array
+    {
+        if (is_array($seedSettings)) {
+            return $seedSettings;
+        }
+
+        if (is_string($seedSettings) && trim($seedSettings) !== '') {
+            $decoded = json_decode($seedSettings, true);
+            return is_array($decoded) ? $decoded : [];
+        }
+
+        return [];
+    }
+
+    private function defaultSingleEliminationSeedSourceResultCode(string $flowType): string
+    {
+        return match ($flowType) {
+            'prelim_to_quarterfinal_to_single_elimination_to_final' => 'quarterfinal_total',
+            'prelim_to_semifinal_to_single_elimination_to_final' => 'semifinal_total',
+            default => 'prelim_total',
+        };
+    }
+
+    private function singleEliminationSeedSourceName(string $resultCode): string
+    {
+        return match ($resultCode) {
+            'quarterfinal_total' => '準々決勝通算成績',
+            'semifinal_total' => '準決勝通算成績',
+            default => '予選通算成績',
+        };
+    }
+
+    private function singleEliminationParticipantKeyFromSnapshotRow(object $row, int $seed): string
+    {
+        $proBowlerId = (int) ($row->pro_bowler_id ?? 0);
+        if ($proBowlerId > 0) {
+            return 'pro_bowler:' . $proBowlerId;
+        }
+
+        $license = trim((string) ($row->pro_bowler_license_no ?? ''));
+        if ($license !== '') {
+            return 'license:' . strtoupper($license);
+        }
+
+        $amateurName = trim((string) ($row->amateur_name ?? ''));
+        if ($amateurName !== '') {
+            return 'amateur:' . md5($amateurName);
+        }
+
+        $displayName = trim((string) ($row->display_name ?? ''));
+        if ($displayName !== '') {
+            return 'name:' . md5($displayName);
+        }
+
+        return 'seed:' . $seed;
+    }
 
     private function createStepLadderSnapshot(array $definition, StepLadderService $stepLadderService): TournamentResultSnapshot
     {
