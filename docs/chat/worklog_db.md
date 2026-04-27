@@ -1,112 +1,205 @@
-## 2026-04-25 トーナメント方式（シングルエリミネーション）設計方針整理
+## 2026-04-27 トーナメント方式（シングルエリミネーション）実装 / 正式成績反映 / PDF整合 完了
 
 - 目的:
-  - ラウンドロビン / 決勝ステップラダーの実装完了後、次の方式としてトーナメント方式の速報表示・正式成績反映を設計する。
-  - 今回のトーナメント方式は、敗者復活のないシングルエリミネーションとして扱う。
-  - ダブルエリミネーションは別方式として後続に分離する。
+  - 2026-04-25 に整理したトーナメント方式（シングルエリミネーション）の設計方針を、実際の速報入力・トーナメント表表示・勝者反映・正式成績反映・大会成績PDFまで接続する。
+  - 敗者復活なしのトーナメント方式として、負けたラウンドごとに同順位タイを作る。
+  - 既存の三層構造
+    - `game_scores` = 速報入力の正本
+    - `tournament_result_snapshots` / `tournament_result_snapshot_rows` = 途中公開・確定スナップショット
+    - `tournament_results` = 最終成績の正本
+    は崩さない。
 
-- 追加要件:
-  - トーナメント進出者数は大会ごとに設定できるようにする。
-  - 進出者数に応じて、8人 / 16人 / 24人 / 32人などの可変ブラケットに対応する。
-  - 24人など2の累乗ではない人数では、内部的に次の2の累乗枠まで広げ、BYEを使ってブラケットを構成する。
-  - 1回戦シード / 2回戦シードなど、シード権を大会ごとに設定できるようにする。
-  - シードさせる選手は、進出元成績の順位を基準に指定できるようにする。
-  - トーナメントでは負けた時点で終了とし、敗者ラウンドは作らない。
-  - 同じラウンドで負けた選手は同順位タイとする。
-    - 準決勝敗退者は3位タイ
-    - 準々決勝敗退者は5位タイ
-    - ベスト16初戦敗退者は9位タイ
-    - 32枠1回戦敗退者は17位タイ
-  - 予選だけで進出者を決める大会、予選→準決勝まで行ってから進出者を決める大会など、進出元成績を大会ごとに設定できるようにする。
+- 作業開始時の前提:
+  - 作業開始前に差分なしを確認済み。
+  - 直前のラウンドロビン / 決勝ステップラダー作業は push 済み。
+  - ProTest は今回の対象外。
+  - 既存テーブルはデータがあるため、破壊的変更は行わず、追加カラムと段階移行を基本とした。
 
-- 基本方針:
-  - 表示名は「トーナメント方式」とする。
-  - 内部名は `single_elimination` とする。
-  - Service 名は `SingleEliminationService` とする。
-  - `game_scores` は引き続き速報入力の正本として使う。
-  - `tournament_result_snapshots` / `tournament_result_snapshot_rows` は途中公開・確定スナップショットとして使う。
-  - `tournament_results` は最終成績の正本として使う。
-  - 既存の三層構造は崩さない。
-
-- DB設定方針:
-  - `tournaments` にトーナメント方式用の設定を追加する。
-  - 追加候補:
+- DB / 辞書:
+  - `database/migrations/2025_09_02_000210_add_single_elimination_flow_to_tournaments_table.php` を追加し、`tournaments` にシングルエリミネーション用設定を追加した。
     - `single_elimination_qualifier_count`
     - `single_elimination_seed_source_result_code`
     - `single_elimination_seed_policy`
     - `single_elimination_seed_settings`
-  - `single_elimination_seed_source_result_code` には、進出元となる current snapshot の result_code を保存する。
-    - 例: `prelim_total`
-    - 例: `quarterfinal_total`
-    - 例: `semifinal_total`
-  - `single_elimination_seed_settings` には、BYE、1回戦シード、2回戦シード、手動seed配置などをJSONで保持する。
+  - `database/migrations/2025_09_02_000211_add_result_carry_settings_to_tournaments_table.php` を追加し、成績持ち込み設定を追加した。
+    - `result_carry_preset`
+    - `result_carry_settings`
+  - `docs/db/data_dictionary.md` を更新し、以下を正本として追記した。
+    - トーナメント方式は敗者復活なしの `single_elimination`
+    - 進出人数は大会ごとに `single_elimination_qualifier_count` で設定
+    - 進出元 snapshot は `single_elimination_seed_source_result_code` で指定
+    - シード / BYE は `single_elimination_seed_policy` / `single_elimination_seed_settings` で扱う
+    - 成績持ち込みは `result_carry_preset` / `result_carry_settings` で扱う
+  - `docs/db/ER.dbml` は `tools/generate_er_from_dictionary.php` で再生成済み。
 
-- シード設定方針:
-  - `entry_round` で何回戦から登場するかを表現する。
-    - `entry_round = 1`: 1回戦から出場
-    - `entry_round = 2`: 1回戦シード、2回戦から出場
-    - `entry_round = 3`: 2回戦シード、3回戦から出場
-  - 標準配置では、上位seedが早い段階で当たりにくいように配置する。
-  - 手動設定がある場合は、`seed_overrides` で上書きする。
+- 大会作成 / 編集:
+  - `app/Http/Controllers/TournamentController.php`
+    - single elimination 用設定の validation / 保存を追加。
+    - 成績持ち込みプリセットと詳細設定の保存を追加。
+  - `app/Models/Tournament.php`
+    - single elimination 用カラムを `fillable` / `casts` に追加。
+    - `result_carry_settings` を配列として扱えるようにした。
+  - `resources/views/tournaments/create.blade.php`
+  - `resources/views/tournaments/edit.blade.php`
+    - トーナメント方式設定UIを追加。
+    - 進出人数、進出元成績、シード設定方式、シード詳細JSONを設定できるようにした。
+    - 成績持ち込み設定は、コードを書けない運用者でも扱えるようにプリセット選択を基本にした。
+    - JSONを使う場合も、画面上でコピペ例や説明を見ながら設定できる方向に整理した。
 
-- ブラケット生成方針:
-  - `SingleEliminationService` が、進出元snapshotを読み、上位 `single_elimination_qualifier_count` 名をseed化する。
-  - 進出者数から `bracket_size` を算出する。
-    - 4人 → 4枠
-    - 8人 → 8枠
-    - 16人 → 16枠
-    - 24人 → 32枠
-  - `round_count` は `bracket_size` から自動算出する。
-    - 8枠なら3回戦
-    - 16枠なら4回戦
-    - 32枠なら5回戦
-  - BYEは「試合なしで次ラウンドへ進む枠」として扱う。
-  - 試合スコアは `game_scores.stage = トーナメント` として保持する。
-  - 対戦表の確定条件はService側で組み立て、正式反映時には `tournament_result_snapshots.calculation_definition` に凍結する。
+- 成績持ち込み設定:
+  - 当初、準決勝1G入力後の速報ランキングが準決勝単体スコアだけで表示され、予選4Gが持ち込まれていなかった。
+  - ただし大会によっては持ち込みなし・途中リセット・ラウンドロビン開始時リセットなどがあり得るため、固定処理ではなく大会設定化した。
+  - 代表プリセットとして以下を追加した。
+    - `default`
+    - `no_carry`
+    - `reset_after_quarterfinal`
+    - `reset_from_quarterfinal`
+    - `carry_to_semifinal_reset_rr`
+    - `carry_prelim_to_semifinal_for_tournament`
+    - `custom`
+  - `result_carry_settings` では、result_code ごとに `source_stages` を持つ。
+    - 例: `{"semifinal_total":{"source_stages":["予選","準決勝"]}}`
+  - 集計時は `source_stages` の最後のステージを scratch、それ以前を carry として扱う方針にした。
+  - 反映後の snapshot には、その時点の `calculation_definition` が保存されるため、後から大会設定を変えても過去snapshotの計算根拠は維持される。
 
-- 順位決定方針:
-  - 優勝者: 1位
-  - 決勝敗者: 2位
-  - 準決勝敗者: 3位タイ
-  - 準々決勝敗者: 5位タイ
-  - ベスト16初戦敗者: 9位タイ
-  - 32枠1回戦敗者: 17位タイ
-  - 同じラウンドで負けた選手は、同じ `ranking` を保存する。
+- SingleEliminationService:
+  - `app/Services/SingleEliminationService.php` を追加。
+  - 主な役割:
+    - 進出人数から `bracket_size` を算出
+    - `round_count` を算出
+    - BYE数を算出
+    - seedをブラケットに配置
+    - 保存済み試合スコアをブラケットに反映
+    - 勝者を次ラウンドへ反映
+    - トーナメント完了後の最終順位行を生成
+  - 14人進出では以下を確認した。
+    - 進出人数: 14
+    - ブラケット枠: 16
+    - ラウンド数: 4
+    - BYE: 2
+    - 実試合数: 13
+  - 将来的に、途中保存された固定ブラケットや手動勝者指定が必要になった場合は、`tournament_bracket_matches` のような専用テーブル追加を検討する余地を残した。
 
-- snapshot反映方針:
-  - `result_type = single_elimination` を追加する。
-  - `result_code = single_elimination_final` を追加する。
-  - `calculation_definition` に以下を保持する。
-    - 進出元 result_code
-    - 進出元 snapshot_id
-    - 進出人数
-    - bracket_size
-    - round_count
-    - seed_settings
-    - round構成
-    - ranking_policy
-  - `is_final = true` の反映単位だけを `tournament_results` へ同期する。
+- 速報表示 / トーナメント表:
+  - `app/Http/Controllers/ScoreController.php`
+    - トーナメント方式用の表示分岐を追加。
+    - `SingleEliminationService` を使って、進出元snapshotからseed一覧を作り、トーナメント表を表示するようにした。
+    - トーナメント試合スコア保存処理を追加。
+  - `resources/views/scores/single_elimination_result.blade.php`
+    - トーナメント表を追加。
+    - 進出者seed一覧を表示。
+    - 各試合カードにA/Bスコア入力欄と保存ボタンを表示。
+    - 勝者が決まると次ラウンドへ表示されるようにした。
+    - 未確定カードは「前ラウンドの勝者確定後に入力できます」と表示するようにした。
+  - `routes/web.php`
+    - トーナメント試合保存用ルートを追加。
+  - 試合スコアは `game_scores.stage = トーナメント`、`entry_number = SE:Rn-Mn:A/B` 形式で保存する方針にした。
 
-- 実装予定:
-  - DB / 辞書:
-    - migration追加
-    - `docs/db/data_dictionary.md` 更新
-    - `docs/db/ER.dbml` 再生成
-  - アプリ:
-    - `app/Services/SingleEliminationService.php`
-    - `app/Http/Controllers/TournamentController.php`
-    - `app/Http/Controllers/ScoreController.php`
-    - `app/Http/Controllers/TournamentResultSnapshotController.php`
-    - `app/Models/Tournament.php`
-  - Blade:
-    - `resources/views/tournaments/create.blade.php`
-    - `resources/views/tournaments/edit.blade.php`
-    - `resources/views/scores/single_elimination_result.blade.php`
-    - `resources/views/tournament_result_snapshots/index.blade.php`
+- ライセンス番号修正:
+  - 男子の速報入力で、`1297` / `1287` / `1455` などを入力した際、画面表示上で頭2桁が落ちているように見える問題があった。
+  - 原因は表示・照合側のライセンス番号扱いで、女子ではたまたま問題が表面化していなかった。
+  - 修正後、男子でも `M00001297` → 表示 `1297` のように正しく扱えることを確認した。
+
+- 実動確認（BBBカップ / tournament_id=4）:
+  - 大会設定:
+    - `result_flow_type = prelim_to_semifinal_to_single_elimination_to_final`
+    - 進出人数: 14名
+    - 進出元成績: `semifinal_total`
+    - シード設定方式: `higher_seed_bye`
+  - 予選4G → 準決勝1Gを反映し、`semifinal_total` を作成。
+  - `semifinal_total` は予選4G + 準決勝1Gの5G通算として表示されることを確認。
+  - トーナメント表では14名がseed化され、16枠 / BYE 2件で表示された。
+  - 1回戦6試合を入力。
+    - DB上は12行保存。
+  - 準々決勝4試合を入力。
+    - DB上は累計20行保存。
+  - 準決勝2試合を入力。
+    - DB上は累計24行保存。
+  - 決勝1試合を入力。
+    - DB上は累計26行保存。
+  - 決勝:
+    - 藤川大輔 300 - 298 髙田浩規
+    - 優勝: 藤川大輔
+    - 準優勝: 髙田浩規
+
+- 正式成績反映:
+  - `app/Http/Controllers/TournamentResultSnapshotController.php`
+    - `result_type = single_elimination` に対応。
+    - `result_code = single_elimination_final` のプリセットを追加。
+    - `SingleEliminationService::buildFinalStandingRows()` を使い、トーナメント完了後の順位行を作成。
+    - `is_final = true` として `tournament_results` へ同期するようにした。
+  - `resources/views/tournament_result_snapshots/index.blade.php`
+    - `single_elimination_final` を正式成績反映ページの決勝グループに表示するようにした。
+  - 最終順位ルール:
+    - 決勝勝者 = 1位
+    - 決勝敗者 = 2位
+    - 準決勝敗者 = 3位タイ
+    - 準々決勝敗者 = 5位タイ
+    - 1回戦敗者 = 9位タイ
+  - `single_elimination_final` 反映後、`tournament_results` に14名が同期されることを確認した。
+  - 確認結果:
+    - 1位: 藤川大輔 / M00001297 / total_pin=2264 / games=9 / avg=251.56
+    - 2位: 髙田浩規 / M00001288 / total_pin=2284 / games=9 / avg=253.78
+    - 3位タイ: 宮澤拓哉 / M00001445 / total_pin=2045 / games=8 / avg=255.63
+    - 3位タイ: 藤井信人 / M00001287 / total_pin=2058 / games=8 / avg=257.25
+    - 5位タイ: 谷合貴志 / M00001289
+    - 5位タイ: 御手洗彰彦 / M00001487
+    - 5位タイ: 斉藤祐哉 / M00001233
+    - 5位タイ: 甘糟翔太 / M00001345
+    - 9位タイ: 門川健一 / M00001252
+    - 9位タイ: 神山匠 / M00001399
+    - 9位タイ: 吉山将太 / M00001498
+    - 9位タイ: 山迫 耕太 / M00001420
+    - 9位タイ: 小林龍一 / M00001328
+    - 9位タイ: 佐藤匡 / M00001299
+
+- PDF / 大会成績一覧:
+  - 大会成績PDFで全大会PDFと大会別PDFが混在していた。
+  - ルートは以下の2系統であることを確認。
+    - 全体PDF: `/tournament_results/pdf`
+    - 大会別PDF: `/tournaments/{tournament}/results/pdf`
+  - `app/Http/Controllers/TournamentResultController.php`
+    - 大会別PDFでは対象大会のみを出力。
+    - `exportPdf()` に `tournament_id` が渡された場合は大会別PDFへ寄せる処理を追加。
+    - pro_bowlers から期別を解決し、PDF表示用に `bowler_period_label` を付与する処理を追加。
+  - `resources/views/tournament_results/pdf.blade.php`
+    - ライセンスNoの右に `期` 列を追加。
+    - 賞金列を折り返さないよう調整。
+    - `¥10,000,000` などが1行で枠内に収まることを確認。
+  - `resources/views/tournament_results/show.blade.php`
+    - BBBカップ個別画面の `PDF出力` ボタンが全体PDFを向いていたため、大会別PDFルート `tournaments.results.pdf` へ修正。
+  - 確認結果:
+    - `/tournaments/4/results/pdf` はBBBカップのみ表示。
+    - BBBカップ成績一覧画面のPDF出力ボタンでもBBBカップのみ表示。
+    - 全体PDF `/tournament_results/pdf` は全大会一覧として維持。
+
+- 確認済みコマンド:
+  - `php artisan migrate`
+  - `php tools/generate_er_from_dictionary.php`
+  - `php -l app/Http/Controllers/TournamentResultController.php`
+  - `php -l app/Http/Controllers/TournamentResultSnapshotController.php`
+  - `php -l app/Services/SingleEliminationService.php`
+  - `php artisan view:cache`
+  - `php artisan view:clear`
+  - `php artisan optimize:clear`
+  - `php artisan tinker --execute="dump(...)"` による snapshot / tournament_results / game_scores の件数・内容確認
+
+- コミット / Push:
+  - 複数回に分けて `main` へ push 済み。
+  - 最終確認HEAD:
+    - `a03493d`
+  - 最終 `git status -sb`:
+    - `## main...origin/main`
+  - 差分なし。
 
 - 現時点の判断:
-  - まずは専用の対戦テーブルを増やさず、`tournaments` の設定 + `game_scores` + `SingleEliminationService` + `snapshot.calculation_definition` で構成する。
-  - ただし、将来的に「試合ごとの状態管理」「途中保存された固定ブラケット」「手動勝者指定」などが必要になった場合は、`tournament_bracket_matches` のような専用テーブルを追加する余地を残す。
+  - **トーナメント方式（シングルエリミネーション）は、速報入力 → トーナメント表表示 → 勝者反映 → 優勝者確定 → single_elimination_final正式反映 → tournament_results同期 → 大会成績PDF出力まで完了。**
+  - 既存の `game_scores` / `tournament_result_snapshots` / `tournament_results` の三層構造とも整合している。
+  - 今回の方式では敗者ラウンドを作らず、同じラウンドで負けた選手を同順位タイとして扱う設計が実動確認できた。
+  - 次の自然な後続は、ダブルエリミネーション方式またはシュートアウト方式の設計。
+  - ただしダブルエリミネーションは敗者側ブラケット・リセット決勝・敗者側順位など論点が多いため、次回はまず設計ログから始めるのが安全。
+
+---
 
 ## 2026-04-25 ラウンドロビン / 決勝ステップラダー / 正式成績反映 完了
 

@@ -292,27 +292,70 @@
   - `de607e2` `fix: 正式成績反映と大会成績表示を調整`
 - [✓] ローカルに残っている `public/tournament_images/` は、テスト登録した大会写真の実ファイルであり、Git管理外。不要なら削除する
 - [ ] 次チャット開始時は、まず `git status -sb` で `public/tournament_images/` が残っているか確認する
-- [ ] 次の自然な後続は、トーナメント / ダブルエリミネーション / シュートアウト方式の速報・正式成績反映設計
+- [✓] 次の自然な後続としてトーナメント方式（シングルエリミネーション）へ着手し、速報入力・正式成績反映・PDF確認まで完了
+- [ ] 次の自然な後続は、ダブルエリミネーション / シュートアウト方式の速報・正式成績反映設計
 
-#### 2026-04-25 メモ（トーナメント方式 / シングルエリミネーション設計方針）
-- [✓] トーナメント方式は敗者復活なしの `single_elimination` として扱う方針を確認
-- [✓] トーナメント進出者数を大会ごとに設定する方針を確認
-- [✓] 8人 / 16人 / 24人 / 32人など、人数に応じた可変ブラケットに対応する方針を確認
-- [✓] 24人など2の累乗ではない人数は、次の2の累乗枠まで広げ、BYEを使って処理する方針を確認
-- [✓] 1回戦シード / 2回戦シードなどは `entry_round` で表現する方針を確認
-- [✓] シード対象者は、進出元snapshotの順位を基準に指定する方針を確認
-- [✓] 進出元成績は `prelim_total` / `quarterfinal_total` / `semifinal_total` など、大会ごとに選択できるようにする方針を確認
-- [✓] 同じラウンドで負けた選手は同順位タイとする方針を確認
-  - 準決勝敗退者: 3位タイ
-  - 準々決勝敗退者: 5位タイ
-  - ベスト16初戦敗退者: 9位タイ
-- [✓] `game_scores` / `tournament_result_snapshots` / `tournament_results` の既存三層構造は崩さない方針を確認
-- [✓] 正式反映時のブラケット条件は `tournament_result_snapshots.calculation_definition` に保存する方針を確認
-- [ ] `tournaments` に single elimination 用設定カラムを追加する
-- [ ] `docs/db/data_dictionary.md` に single elimination 用設定と運用方針を追記する
-- [ ] `docs/db/ER.dbml` を辞書から再生成する
-- [ ] `SingleEliminationService` を追加する
-- [ ] 大会作成 / 編集画面でトーナメント進出人数・進出元成績・シード設定を保存できるようにする
-- [ ] 速報表示画面 `scores/single_elimination_result.blade.php` を追加する
-- [ ] 正式成績反映ページから `single_elimination_final` を作成できるようにする
-- [ ] `single_elimination_final` を `tournament_results` へ同期できるようにする
+#### 2026-04-27 メモ（トーナメント方式 / シングルエリミネーション実装完了）
+- [✓] `tournaments` に single elimination 用設定カラムを追加した
+  - `single_elimination_qualifier_count`
+  - `single_elimination_seed_source_result_code`
+  - `single_elimination_seed_policy`
+  - `single_elimination_seed_settings`
+- [✓] 成績持ち込み設定を追加した
+  - `result_carry_preset`
+  - `result_carry_settings`
+- [✓] `docs/db/data_dictionary.md` に single elimination 用設定・成績持ち込み設定・運用方針を追記した
+- [✓] `docs/db/ER.dbml` を辞書から再生成した
+- [✓] `SingleEliminationService` を追加し、可変人数ブラケットを生成できるようにした
+  - 14人進出時は16枠 / 4ラウンド / BYE 2件として生成できることを確認
+  - 8人 / 16人 / 24人 / 32人など、次の2の累乗枠を基準にラウンド数を算出する方針で実装
+- [✓] 大会作成 / 編集画面でトーナメント進出人数・進出元成績・シード設定を保存できるようにした
+- [✓] 成績持ち込み設定は、コードを書けない運用者でも扱えるようにプリセット選択を基本にした
+  - 予選→準々決勝までは持ち込み、準決勝からリセット
+  - 予選から準々決勝へは持ち込まない
+  - 予選→準々決勝→準決勝までは持ち込み、ラウンドロビンからリセット
+  - 予選＋準決勝の通算でトーナメント進出者を決定
+  - カスタムJSON
+- [✓] `scores/single_elimination_result.blade.php` を追加し、トーナメント表を表示できるようにした
+- [✓] トーナメント表上で試合ごとのスコア入力・保存・勝者表示ができるようにした
+- [✓] 勝者が次ラウンドへ自動反映されることを確認した
+- [✓] シード / BYE がある場合、前ラウンド未入力でも該当選手が次ラウンドへ進めることを確認した
+- [✓] 男子ライセンス番号の下4桁表示・照合が誤って下2桁扱いになる問題を修正した
+- [✓] `game_scores.stage = トーナメント`、`entry_number = SE:Rn-Mn:A/B` 形式でトーナメント試合スコアを保持する方針を確認した
+- [✓] 14人トーナメントで実動確認を行った
+  - 1回戦 6試合 = 12行
+  - 準々決勝 4試合 = 8行
+  - 準決勝 2試合 = 4行
+  - 決勝 1試合 = 2行
+  - 合計 26行
+- [✓] BBBカップで決勝まで入力し、優勝者が確定することを確認した
+  - 優勝: 藤川大輔 / `M00001297`
+  - 準優勝: 髙田浩規 / `M00001288`
+  - 決勝スコア: 藤川大輔 300 - 298 髙田浩規
+- [✓] 正式成績反映ページから `single_elimination_final` を作成できるようにした
+- [✓] `single_elimination_final` を `tournament_results` へ同期できるようにした
+- [✓] 同じラウンドで負けた選手を同順位タイとして保存できることを確認した
+  - 1位: 藤川大輔
+  - 2位: 髙田浩規
+  - 3位タイ: 宮澤拓哉 / 藤井信人
+  - 5位タイ: 谷合貴志 / 御手洗彰彦 / 斉藤祐哉 / 甘糟翔太
+  - 9位タイ: 門川健一 / 神山匠 / 吉山将太 / 山迫 耕太 / 小林龍一 / 佐藤匡
+- [✓] `single_elimination_final` 反映後、`tournament_results` に14名が同期されることを確認した
+- [✓] 大会成績一覧PDFを調整した
+  - 大会別PDF `/tournaments/{tournament}/results/pdf` では対象大会だけを出力
+  - 全体PDF `/tournament_results/pdf` は全大会一覧として維持
+  - ライセンスNoの右に `期` 列を追加
+  - `¥10,000,000` などの賞金欄が折り返されないように調整
+- [✓] BBBカップ成績一覧画面の `PDF出力` ボタンを、大会別PDFルートへ修正した
+- [✓] 確認済みコマンド
+  - `php -l app/Http/Controllers/TournamentResultController.php`
+  - `php -l app/Http/Controllers/TournamentResultSnapshotController.php`
+  - `php -l app/Services/SingleEliminationService.php`
+  - `php artisan view:cache`
+  - `php artisan view:clear`
+  - `php artisan optimize:clear`
+- [✓] 最終状態は `git status -sb` が `## main...origin/main`
+- [✓] 最終確認HEADは `a03493d`
+- [ ] 次の自然な後続は、ダブルエリミネーション方式の速報・正式成績反映設計
+- [ ] その次の候補は、シュートアウト方式の速報・正式成績反映設計
+- [ ] 将来的に必要なら、トーナメントの固定ブラケット保存用に `tournament_bracket_matches` のような専用テーブル追加を検討する
