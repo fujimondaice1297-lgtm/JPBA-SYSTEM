@@ -799,6 +799,9 @@ SNS等リンク集を保持するテーブル。
   - `prelim_to_single_elimination_to_final` = 予選 → トーナメント → 最終成績
   - `prelim_to_quarterfinal_to_single_elimination_to_final` = 予選 → 準々決勝 → トーナメント → 最終成績
   - `prelim_to_semifinal_to_single_elimination_to_final` = 予選 → 準決勝通算 → トーナメント → 最終成績
+  - `prelim_to_shootout_to_final` = 予選 → シュートアウト → 最終成績
+  - `prelim_to_quarterfinal_to_shootout_to_final` = 予選 → 準々決勝 → シュートアウト → 最終成績
+  - `prelim_to_semifinal_to_shootout_to_final` = 予選 → 準決勝通算 → シュートアウト → 最終成績
 - round_robin_qualifier_count（ラウンドロビン進出人数：nullable）
 - round_robin_win_bonus（勝ちボーナス：nullable。既定30）
 - round_robin_tie_bonus（引き分けボーナス：nullable。既定15）
@@ -927,6 +930,19 @@ SNS等リンク集を保持するテーブル。
 - `source_stages` の最後のステージを scratch、それ以前のステージを carry として扱う。
   - 例: `["予選","準決勝"]` は、予選を carry、準決勝を scratch として `semifinal_total` を作る。
 - 過去に反映済みの snapshot は、その時点の `calculation_definition` を保持するため、後から大会設定を変えても過去snapshotの計算根拠は維持される。
+- シュートアウト方式は、標準では8名進出として扱う。
+- シュートアウト進出者は、`shootout_seed_source_result_code` で指定した current snapshot の順位を seed 順として抽出する。
+- 標準8名シュートアウトは以下の構成とする。
+  - 1stマッチ: 5位〜8位通過の4名で1Gを投球し、最上位者のみ2ndマッチへ進出
+  - 2ndマッチ: 2位〜4位通過の3名 + 1stマッチ勝者の計4名で1Gを投球し、最上位者のみ優勝決定戦へ進出
+  - 優勝決定戦: 1位通過者 + 2ndマッチ勝者で1Gを投球し、勝者を優勝とする
+- シュートアウト各マッチのスコアは、勝ち上がり者を決めるために使う。
+- シュートアウト各マッチの敗退者順位は、そのマッチのスコア順では決めない。
+- シュートアウト敗退者の順位は、進出元 snapshot の通過順位を引き継ぐ。
+  - 例: 5位〜8位通過者の1stマッチで8位通過者が勝ち上がった場合でも、敗退した5位通過者は6位、6位通過者は7位、7位通過者は8位として扱う。
+  - 2ndマッチでも同様に、敗退者は2位〜4位通過者および1st勝者のうち、勝者を除いた元通過順位順で3位〜5位を付ける。
+- シュートアウトのスコア入力自体は `game_scores.stage = シュートアウト` を正本として継続利用する。
+- 正式反映時には、シュートアウト進出元 snapshot、各マッチ構成、勝ち上がり結果、敗退者順位決定方針を `tournament_result_snapshots.calculation_definition` に保存する。
 
 ### 外部キー（FK）
 - venue_id -> venues.id

@@ -64,6 +64,10 @@ class TournamentController extends Controller
             'single_elimination_seed_source_result_code',
             'single_elimination_seed_policy',
             'single_elimination_seed_settings',
+            'shootout_qualifier_count',
+            'shootout_seed_source_result_code',
+            'shootout_format',
+            'shootout_settings',
             'spectator_policy',
             'broadcast',
             'streaming',
@@ -251,6 +255,15 @@ class TournamentController extends Controller
         return $normalized !== '' ? $normalized : null;
     }
 
+    private function defaultShootoutSeedSourceResultCode(string $flowType): string
+    {
+        return match ($flowType) {
+            'prelim_to_quarterfinal_to_shootout_to_final' => 'quarterfinal_total',
+            'prelim_to_semifinal_to_shootout_to_final' => 'semifinal_total',
+            default => 'prelim_total',
+        };
+    }
+
     private function normalizeSingleEliminationSeedSettings($value): ?array
     {
         if (is_null($value) || $value === '') {
@@ -386,7 +399,7 @@ class TournamentController extends Controller
             'gender'               => 'required|in:M,F,X',
             'official_type'        => 'required|in:official,approved,other',
             'title_category'       => 'nullable|in:normal,season_trial,excluded',
-            'result_flow_type'     => 'nullable|in:legacy_standard,prelim_to_rr_to_final,prelim_to_quarterfinal_to_rr_to_final,prelim_to_single_elimination_to_final,prelim_to_quarterfinal_to_single_elimination_to_final,prelim_to_semifinal_to_single_elimination_to_final',
+            'result_flow_type'     => 'nullable|in:legacy_standard,prelim_to_rr_to_final,prelim_to_quarterfinal_to_rr_to_final,prelim_to_single_elimination_to_final,prelim_to_quarterfinal_to_single_elimination_to_final,prelim_to_semifinal_to_single_elimination_to_final,prelim_to_shootout_to_final,prelim_to_quarterfinal_to_shootout_to_final,prelim_to_semifinal_to_shootout_to_final',
             'round_robin_qualifier_count' => 'nullable|integer|min:4|max:16',
             'round_robin_win_bonus' => 'nullable|integer|min:0|max:200',
             'round_robin_tie_bonus' => 'nullable|integer|min:0|max:200',
@@ -395,6 +408,10 @@ class TournamentController extends Controller
             'single_elimination_seed_source_result_code' => 'nullable|in:prelim_total,quarterfinal_total,semifinal_total',
             'single_elimination_seed_policy' => 'nullable|in:standard,higher_seed_bye,custom',
             'single_elimination_seed_settings' => 'nullable|string|max:10000',
+            'shootout_qualifier_count' => 'nullable|integer|min:2|max:32',
+            'shootout_seed_source_result_code' => 'nullable|in:prelim_total,quarterfinal_total,semifinal_total',
+            'shootout_format' => 'nullable|in:standard_8,custom',
+            'shootout_settings' => 'nullable|string',
             'result_carry_preset' => 'nullable|in:default,no_carry,reset_after_quarterfinal,reset_from_quarterfinal,carry_to_semifinal_reset_rr,carry_prelim_to_semifinal_for_tournament,custom',
             'result_carry_settings' => 'nullable|string|max:20000',
             'entry_start'          => 'nullable|date',
@@ -490,7 +507,23 @@ class TournamentController extends Controller
         $validated['inspection_required'] = $request->boolean('inspection_required');
 
         $flowType = trim((string) ($validated['result_flow_type'] ?? 'legacy_standard')) ?: 'legacy_standard';
-        $usesRoundRobin = in_array($flowType, ['prelim_to_rr_to_final', 'prelim_to_quarterfinal_to_rr_to_final'], true);
+
+        $usesRoundRobin = in_array($flowType, [
+            'prelim_to_rr_to_final',
+            'prelim_to_quarterfinal_to_rr_to_final',
+        ], true);
+
+        $usesSingleElimination = in_array($flowType, [
+            'prelim_to_single_elimination_to_final',
+            'prelim_to_quarterfinal_to_single_elimination_to_final',
+            'prelim_to_semifinal_to_single_elimination_to_final',
+        ], true);
+
+        $usesShootout = in_array($flowType, [
+            'prelim_to_shootout_to_final',
+            'prelim_to_quarterfinal_to_shootout_to_final',
+            'prelim_to_semifinal_to_shootout_to_final',
+        ], true);
         $usesSingleElimination = in_array($flowType, [
             'prelim_to_single_elimination_to_final',
             'prelim_to_quarterfinal_to_single_elimination_to_final',
@@ -542,6 +575,46 @@ class TournamentController extends Controller
         $validated['single_elimination_seed_settings'] = $usesSingleElimination
             ? $this->normalizeSingleEliminationSeedSettings($request->input('single_elimination_seed_settings'))
             : null;
+
+        $validated['shootout_qualifier_count'] = $usesShootout
+            ? (int) ($request->input('shootout_qualifier_count', 8) ?: 8)
+            : null;
+
+        $validated['shootout_seed_source_result_code'] = $usesShootout
+            ? (trim((string) $request->input('shootout_seed_source_result_code', '')) ?: $this->defaultShootoutSeedSourceResultCode($flowType))
+            : null;
+
+        $validated['shootout_format'] = $usesShootout
+            ? (trim((string) $request->input('shootout_format', 'standard_8')) ?: 'standard_8')
+            : null;
+
+        $shootoutSettingsRaw = trim((string) $request->input('shootout_settings', ''));
+
+        if ($usesShootout && $shootoutSettingsRaw !== '') {
+            $decodedShootoutSettings = json_decode($shootoutSettingsRaw, true);
+
+            if (!is_array($decodedShootoutSettings)) {
+                throw ValidationException::withMessages([
+                    'shootout_settings' => 'シュートアウト詳細設定JSONの形式が正しくありません。',
+                ]);
+            }
+
+            $validated['shootout_settings'] = $decodedShootoutSettings;
+        } else {
+            $validated['shootout_settings'] = null;
+        }
+
+        if ($usesShootout && $validated['shootout_qualifier_count'] < 2) {
+            throw ValidationException::withMessages([
+                'shootout_qualifier_count' => 'シュートアウト進出人数は2名以上で指定してください。',
+            ]);
+        }
+
+        if ($usesShootout && $validated['shootout_format'] === 'standard_8' && $validated['shootout_qualifier_count'] !== 8) {
+            throw ValidationException::withMessages([
+                'shootout_qualifier_count' => '標準シュートアウトは8名で指定してください。',
+            ]);
+        }
 
         $carryPreset = trim((string) ($request->input('result_carry_preset', 'default') ?: 'default'));
 

@@ -240,7 +240,10 @@
         <option value="prelim_to_quarterfinal_to_rr_to_final" {{ $flowType === 'prelim_to_quarterfinal_to_rr_to_final' ? 'selected' : '' }}>予選→準々決勝→ラウンドロビン→決勝ステップラダー</option>
         <option value="prelim_to_single_elimination_to_final" {{ $flowType === 'prelim_to_single_elimination_to_final' ? 'selected' : '' }}>予選→トーナメント→最終成績</option>
         <option value="prelim_to_quarterfinal_to_single_elimination_to_final" {{ $flowType === 'prelim_to_quarterfinal_to_single_elimination_to_final' ? 'selected' : '' }}>予選→準々決勝→トーナメント→最終成績</option>
-        <option value="prelim_to_semifinal_to_single_elimination_to_final" {{ $flowType === 'prelim_to_semifinal_to_single_elimination_to_final' ? 'selected' : '' }}>予選→準決勝通算→トーナメント→最終成績</option>      </select>
+        <option value="prelim_to_semifinal_to_single_elimination_to_final" {{ $flowType === 'prelim_to_semifinal_to_single_elimination_to_final' ? 'selected' : '' }}>予選→準決勝通算→トーナメント→最終成績</option>
+        <option value="prelim_to_shootout_to_final" {{ $flowType === 'prelim_to_shootout_to_final' ? 'selected' : '' }}>予選→シュートアウト→最終成績</option>
+        <option value="prelim_to_quarterfinal_to_shootout_to_final" {{ $flowType === 'prelim_to_quarterfinal_to_shootout_to_final' ? 'selected' : '' }}>予選→準々決勝→シュートアウト→最終成績</option>
+        <option value="prelim_to_semifinal_to_shootout_to_final" {{ $flowType === 'prelim_to_semifinal_to_shootout_to_final' ? 'selected' : '' }}>予選→準決勝通算→シュートアウト→最終成績</option>     </select>
       @error('result_flow_type')<div class="invalid-feedback">{{ $message }}</div>@enderror
       <small class="text-muted d-block">ラウンドロビンを使う大会だけ、下の進出人数 / ボーナス設定を使います。決勝は現時点ではステップラダー表記です。</small>
     </div>
@@ -283,6 +286,66 @@
           敗者ラウンドは作らず、同じラウンドで負けた選手は同順位タイとして扱います。
         </div>
       </div>
+    </div>
+
+    <div class="col-12 mt-3">
+      <div class="border rounded p-3 bg-light">
+        <strong>シュートアウト方式設定</strong>
+        <div class="small text-muted mt-1">
+          「予選→シュートアウト」「準々決勝→シュートアウト」「準決勝通算→シュートアウト」を選んだ大会で使用します。<br>
+          標準8名方式では、5〜8位の1st、2〜4位＋1st勝者の2nd、1位通過者＋2nd勝者の優勝決定戦を行います。<br>
+          敗退者順位は各マッチのスコア順ではなく、進出元snapshotの通過順位を引き継ぎます。
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-2 mb-3">
+      <label class="form-label">SO進出人数</label>
+      <input type="number" name="shootout_qualifier_count" class="form-control @error('shootout_qualifier_count') is-invalid @enderror"
+             value="{{ old('shootout_qualifier_count', $tournament->shootout_qualifier_count ?? 8) }}">
+      @error('shootout_qualifier_count')<div class="invalid-feedback">{{ $message }}</div>@enderror
+      <small class="text-muted d-block">標準は8名</small>
+    </div>
+
+    <div class="col-md-3 mb-3">
+      <label class="form-label">SO進出元成績</label>
+      @php $shootoutSeedSource = old('shootout_seed_source_result_code', $tournament->shootout_seed_source_result_code ?? 'semifinal_total'); @endphp
+      <select name="shootout_seed_source_result_code" class="form-select @error('shootout_seed_source_result_code') is-invalid @enderror">
+        <option value="prelim_total" {{ $shootoutSeedSource === 'prelim_total' ? 'selected' : '' }}>予選通算成績</option>
+        <option value="quarterfinal_total" {{ $shootoutSeedSource === 'quarterfinal_total' ? 'selected' : '' }}>準々決勝通算成績</option>
+        <option value="semifinal_total" {{ $shootoutSeedSource === 'semifinal_total' ? 'selected' : '' }}>準決勝通算成績</option>
+      </select>
+      @error('shootout_seed_source_result_code')<div class="invalid-feedback">{{ $message }}</div>@enderror
+      <small class="text-muted d-block">シーズントライアル型は準決勝通算成績を使用</small>
+    </div>
+
+    <div class="col-md-3 mb-3">
+      <label class="form-label">SO方式</label>
+      @php $shootoutFormat = old('shootout_format', $tournament->shootout_format ?? 'standard_8'); @endphp
+      <select name="shootout_format" class="form-select @error('shootout_format') is-invalid @enderror">
+        <option value="standard_8" {{ $shootoutFormat === 'standard_8' ? 'selected' : '' }}>標準8名方式</option>
+        <option value="custom" {{ $shootoutFormat === 'custom' ? 'selected' : '' }}>カスタム</option>
+      </select>
+      @error('shootout_format')<div class="invalid-feedback">{{ $message }}</div>@enderror
+    </div>
+
+    <div class="col-md-4 mb-3">
+      <label class="form-label">SO詳細設定（JSON任意）</label>
+      @php
+        $shootoutSettingsValue = old('shootout_settings');
+        if ($shootoutSettingsValue === null) {
+            $rawShootoutSettings = $tournament->shootout_settings ?? null;
+            $shootoutSettingsValue = is_array($rawShootoutSettings)
+                ? json_encode($rawShootoutSettings, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT)
+                : '';
+        }
+      @endphp
+      <textarea name="shootout_settings" rows="3" class="form-control @error('shootout_settings') is-invalid @enderror"
+                placeholder='例: {"ranking_policy":"carry_seed_order_for_losers"}'>{{ $shootoutSettingsValue }}</textarea>
+      @error('shootout_settings')<div class="invalid-feedback">{{ $message }}</div>@enderror
+      <small class="text-muted d-block">
+        空欄なら標準設定。敗退者順位は通過順位引き継ぎ。
+      </small>
     </div>
 
     <div class="col-md-2 mb-3">

@@ -90,6 +90,10 @@ class Tournament extends Model
         'single_elimination_seed_source_result_code',
         'single_elimination_seed_policy',
         'single_elimination_seed_settings',
+        'shootout_qualifier_count',
+        'shootout_seed_source_result_code',
+        'shootout_format',
+        'shootout_settings',
         'result_carry_preset',
         'result_carry_settings',
     ];
@@ -131,6 +135,8 @@ class Tournament extends Model
 
         'single_elimination_qualifier_count' => 'integer',
         'single_elimination_seed_settings' => 'array',
+        'shootout_qualifier_count' => 'integer',
+        'shootout_settings' => 'array',
          'result_carry_settings' => 'array',
     ];
 
@@ -214,6 +220,9 @@ class Tournament extends Model
             }
             if (!$tournament->single_elimination_seed_policy) {
                 $tournament->single_elimination_seed_policy = 'standard';
+            }
+            if (!$tournament->shootout_format) {
+                $tournament->shootout_format = 'standard_8';
             }
             if (!$tournament->result_carry_preset) {
                 $tournament->result_carry_preset = 'default';
