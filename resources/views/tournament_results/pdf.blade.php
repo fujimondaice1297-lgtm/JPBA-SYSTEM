@@ -71,12 +71,12 @@
             overflow-wrap: normal;
         }
 
+        .col-rank { width: 6%; }
         .col-year { width: 8%; }
         .col-tournament { width: 13%; }
         .col-player { width: 13%; }
         .col-license { width: 8%; }
         .col-period { width: 6%; }
-        .col-rank { width: 6%; }
         .col-point { width: 8%; }
         .col-total { width: 9%; }
         .col-games { width: 5%; }
@@ -127,6 +127,7 @@
     <table>
         <thead>
             <tr>
+                <th class="col-rank nowrap">{{ $labelRank }}</th>
                 <th class="col-year nowrap">{{ $labelYear }}</th>
                 @if (!isset($tournament))
                     <th class="col-tournament">{{ $labelTournament }}</th>
@@ -134,7 +135,6 @@
                 <th class="col-player">{{ $labelPlayer }}</th>
                 <th class="col-license nowrap">{{ $labelLicense }}</th>
                 <th class="col-period nowrap">{{ $labelPeriod }}</th>
-                <th class="col-rank nowrap">{{ $labelRank }}</th>
                 <th class="col-point nowrap">{{ $labelPoint }}</th>
                 <th class="col-total nowrap">{{ $labelTotalPin }}</th>
                 <th class="col-games nowrap">G</th>
@@ -169,6 +169,7 @@
                             ?? '-';
                 @endphp
                 <tr>
+                    <td class="nowrap">{{ $rank }}</td>
                     <td class="nowrap">{{ $result->ranking_year ?? '-' }}</td>
 
                     @if (!isset($tournament))
@@ -178,7 +179,6 @@
                     <td class="text-left">{{ $name }}</td>
                     <td class="license">{{ $licenseNo }}</td>
                     <td class="nowrap">{{ $periodLabel ?: '-' }}</td>
-                    <td class="nowrap">{{ $rank }}</td>
                     <td class="nowrap">{{ number_format($result->points ?? 0) }}</td>
                     <td class="nowrap">{{ number_format($result->total_pin ?? 0) }}</td>
                     <td class="nowrap">{{ $result->games ?? '-' }}</td>
