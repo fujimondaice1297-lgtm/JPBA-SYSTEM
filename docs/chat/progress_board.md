@@ -139,49 +139,100 @@
 - [ ] `0099 古川` のように見えている行を削除できないケースの最終修正は未完了
 - [ ] 下4桁ライセンス入力の共通化（速報以外の画面への横展開）は改善候補として後続へ送る
 
-#### 2026-04-27 メモ（シュートアウト方式 / 設計方針整理）
-- [✓] JPBA公式サンプル（シーズントライアル2026 ウィンターシリーズ C会場）のシュートアウト方式を確認した
-- [✓] シュートアウト方式は、シングルエリミネーションとは別方式として扱う方針を確認した
-- [✓] 標準形は以下の3段階として整理した
-  - 1stマッチ: 5位〜8位通過の4名で1G、最上位者のみ2ndマッチへ進出
-  - 2ndマッチ: 2位〜4位通過の3名 + 1stマッチ勝者の計4名で1G、最上位者のみ優勝決定戦へ進出
-  - 優勝決定戦: 1位通過者 + 2ndマッチ勝者の2名で1G、勝者を優勝とする
-- [✓] 順位決定の重要ルールを確認した
-  - 各回戦の1位通過者だけが次へ進む
-  - 1位通過者以外の順位は、その回戦のスコア順では決めない
-  - 各回戦で敗退した選手は、進出元成績（例: 準決勝通過順位 / seed順位）を引き継いで順位を決める
-  - 例: 5位〜8位通過の1stマッチで8位通過者が勝ち上がった場合、敗退した5位通過者・6位通過者・7位通過者は、それぞれ6位・7位・8位になる
-  - そのため、5位通過者が1stマッチで最もスコアが低くても、最下位にはならない
-  - 2ndマッチでも同様に、敗退者は2ndマッチのスコア順ではなく、進出元seed順で3位〜5位に並べる
-- [✓] スコアの役割を整理した
-  - シュートアウト各回戦のスコアは「その回戦の勝ち上がり者を決めるため」に使う
-  - 敗退者同士の順位付けには、原則としてシュートアウト当該回戦のスコアを使わない
-  - ただし同点で1位通過者を決められない場合は、タイブレーク方針を別途決める必要がある
-- [✓] 既存三層構造を崩さない方針を確認した
-  - `game_scores` = 速報入力の正本
-  - `tournament_result_snapshots` / `tournament_result_snapshot_rows` = 途中公開・確定スナップショット
-  - `tournament_results` = 最終成績の正本
-- [✓] 初期実装では `game_scores.stage = シュートアウト` を使う方針を確認した
-- [✓] 初期実装では `entry_number` に `SO:R1-SEED5` のような形式を使い、ラウンド番号と元seedを判別できるようにする方針を確認した
-- [✓] 正式成績反映では `result_code = shootout_final` を追加する方針を確認した
-- [ ] `tournaments.result_flow_type` にシュートアウト用フローを追加する
-  - 例: `prelim_to_shootout_to_final`
-  - 例: `prelim_to_quarterfinal_to_shootout_to_final`
-  - 例: `prelim_to_semifinal_to_shootout_to_final`
-- [ ] `tournaments` にシュートアウト用設定カラムを追加するか、既存設定で足りるかを確認する
-  - 候補: `shootout_qualifier_count`
-  - 候補: `shootout_seed_source_result_code`
-  - 候補: `shootout_round_settings`
-- [ ] `docs/db/data_dictionary.md` にシュートアウト方式の運用方針を追記する
-- [ ] `docs/db/ER.dbml` を辞書から再生成する
-- [ ] `ShootoutService` を追加する
-- [ ] `scores/shootout_result.blade.php` を追加する
-- [ ] シュートアウトスコア入力・勝ち上がり表示を実装する
-- [ ] `TournamentResultSnapshotController` に `shootout_final` 反映を追加する
-- [ ] `tournament_results` への同期確認を行う
-- [ ] 大会成績一覧 / PDF出力の整合確認を行う
-- [ ] 次回作業開始時は、まず既存ファイルを確認し、差分がない状態から migration / docs / ER をセットで進める
 
+#### 2026-04-27 メモ（トーナメント方式 / シングルエリミネーション実装完了）
+- [✓] `tournaments` に single elimination 用設定カラムを追加した
+  - `single_elimination_qualifier_count`
+  - `single_elimination_seed_source_result_code`
+  - `single_elimination_seed_policy`
+  - `single_elimination_seed_settings`
+- [✓] 成績持ち込み設定を追加した
+  - `result_carry_preset`
+  - `result_carry_settings`
+- [✓] `docs/db/data_dictionary.md` に single elimination 用設定・成績持ち込み設定・運用方針を追記した
+- [✓] `docs/db/ER.dbml` を辞書から再生成した
+- [✓] `SingleEliminationService` を追加し、可変人数ブラケットを生成できるようにした
+- [✓] 14人進出時は16枠 / 4ラウンド / BYE 2件として生成できることを確認した
+- [✓] 大会作成 / 編集画面でトーナメント進出人数・進出元成績・シード設定を保存できるようにした
+- [✓] 成績持ち込み設定は、コードを書けない運用者でも扱えるようにプリセット選択を基本にした
+- [✓] `scores/single_elimination_result.blade.php` を追加し、トーナメント表を表示できるようにした
+- [✓] トーナメント表上で試合ごとのスコア入力・保存・勝者表示ができるようにした
+- [✓] 勝者が次ラウンドへ自動反映されることを確認した
+- [✓] シード / BYE がある場合、前ラウンド未入力でも該当選手が次ラウンドへ進めることを確認した
+- [✓] 男子ライセンス番号の下4桁表示・照合が誤って下2桁扱いになる問題を修正した
+- [✓] `game_scores.stage = トーナメント`、`entry_number = SE:Rn-Mn:A/B` 形式でトーナメント試合スコアを保持する方針を確認した
+- [✓] BBBカップで14人トーナメントを実動確認した
+  - 1回戦 6試合 = 12行
+  - 準々決勝 4試合 = 8行
+  - 準決勝 2試合 = 4行
+  - 決勝 1試合 = 2行
+  - 合計 26行
+- [✓] BBBカップで決勝まで入力し、優勝者が確定することを確認した
+  - 優勝: 藤川大輔 / `M00001297`
+  - 準優勝: 髙田浩規 / `M00001288`
+  - 決勝スコア: 藤川大輔 300 - 298 髙田浩規
+- [✓] 正式成績反映ページから `single_elimination_final` を作成できるようにした
+- [✓] `single_elimination_final` を `tournament_results` へ同期できるようにした
+- [✓] 同じラウンドで負けた選手を同順位タイとして保存できることを確認した
+- [✓] 大会成績一覧PDFを調整した
+  - 大会別PDF `/tournaments/{tournament}/results/pdf` では対象大会だけを出力
+  - 全体PDF `/tournament_results/pdf` は全大会一覧として維持
+  - ライセンスNoの右に `期` 列を追加
+  - `¥10,000,000` などの賞金欄が折り返されないように調整
+- [✓] BBBカップ成績一覧画面の `PDF出力` ボタンを、大会別PDFルートへ修正した
+- [✓] 最終状態は `git status -sb` が `## main...origin/main`
+- [✓] 最終確認HEADは `a03493d`
+- [✓] 次の自然な後続としてシュートアウト方式へ着手し、速報入力・正式成績反映・PDF確認まで完了
+- [ ] ダブルエリミネーション方式は、敗者側ブラケット・リセット決勝・敗者側順位の論点が多いため後続に分離する
+
+#### 2026-04-28 メモ（シュートアウト方式 / 速報入力・正式成績反映・PDF整合 完了）
+- [✓] `tournaments` にシュートアウト用設定カラムを追加した
+  - `shootout_qualifier_count`
+  - `shootout_seed_source_result_code`
+  - `shootout_format`
+  - `shootout_settings`
+- [✓] `result_flow_type` にシュートアウト用フローを追加した
+  - `prelim_to_shootout_to_final`
+  - `prelim_to_quarterfinal_to_shootout_to_final`
+  - `prelim_to_semifinal_to_shootout_to_final`
+- [✓] `docs/db/data_dictionary.md` にシュートアウト方式の運用方針を追記した
+- [✓] `docs/db/ER.dbml` を辞書から再生成した
+- [✓] `ShootoutService` を追加し、標準8名シュートアウトを構築できるようにした
+- [✓] `scores/shootout_result.blade.php` を追加し、進出者seed一覧 / 1stマッチ / 2ndマッチ / 優勝決定戦を表示できるようにした
+- [✓] シュートアウト各マッチのスコア入力・保存・勝者表示を実装した
+- [✓] 1stマッチ勝者が2ndマッチへ、2ndマッチ勝者が優勝決定戦へ自動表示されることを確認した
+- [✓] 敗退者順位は当該マッチのスコア順ではなく、敗退ラウンドと元seed順で決定する方針を実装した
+- [✓] `TournamentResultSnapshotController` に `shootout_final` 反映を追加した
+- [✓] 正式成績反映ページに `シュートアウト最終成績 / shootout_final` ボタンを追加した
+- [✓] `shootout_final` を `tournament_result_snapshots` / `tournament_result_snapshot_rows` に保存し、`is_final = true` として `tournament_results` に同期できることを確認した
+- [✓] CCCカップで実動確認を行った
+  - 予選4G + 準決勝2Gの6G通算から8名をseed化
+  - 1stマッチ / 2ndマッチ / 優勝決定戦を入力
+  - 優勝: 鈴木洋子 / 準優勝: 志水薫
+- [✓] `shootout_final` 反映後、最終順位8名が `tournament_results` に同期されることを確認した
+  - 1位: 鈴木洋子 / F00000007 / total_pin=2176 / games=9 / avg=241.78
+  - 2位: 志水薫 / F0000 / total_pin=1708 / games=7 / avg=244.00
+  - 3位: 石井利枝 / F00000003 / total_pin=1694 / games=7 / avg=242.00
+  - 4位: 須田開代子 / F00000001 / total_pin=1698 / games=7 / avg=242.57
+  - 5位: 並木惠美子 / F00000005 / total_pin=1684 / games=7 / avg=240.57
+  - 6位: 海野房枝 / F00000004 / total_pin=1670 / games=7 / avg=238.57
+  - 7位: 中山律子 / F00000002 / total_pin=1673 / games=7 / avg=239.00
+  - 8位: 岩松八重子 / F00000006 / total_pin=1670 / games=7 / avg=238.57
+- [✓] 大会成績PDFでCCCカップのみ出力されることを確認した
+- [✓] `resources/views/tournament_results/pdf.blade.php` の列順を調整し、順位列を一番左に移動した
+- [✓] PDFの `期` 列は維持した
+- [ ] シュートアウトの公式PDF風の図式表示（線でつながるトーナメント図・下部スコアシート風表示）は未実装。現状はカード型の入力・勝者表示で運用可能な段階
+- [✓] 以下ファイルを含むシュートアウト実装一式を commit / push 済み
+  - `app/Http/Controllers/ScoreController.php`
+  - `app/Http/Controllers/TournamentResultSnapshotController.php`
+  - `app/Services/ShootoutService.php`
+  - `resources/views/scores/shootout_result.blade.php`
+  - `resources/views/tournament_result_snapshots/index.blade.php`
+  - `resources/views/tournament_results/pdf.blade.php`
+  - `routes/web.php`
+- [✓] 最終状態は `git status -sb` が `## main...origin/main`
+- [ ] 次の自然な後続は、ダブルエリミネーション方式の要件整理と設計ログ作成
+- [ ] ダブルエリミネーションでは、敗者側ブラケット / リセット決勝 / 敗者側順位 / 同順位扱い / 再戦条件を先に決める
 
 ## Phase 3：ProTest（後回し）
 - [ ] 要件整理
@@ -335,70 +386,4 @@
   - `de607e2` `fix: 正式成績反映と大会成績表示を調整`
 - [✓] ローカルに残っている `public/tournament_images/` は、テスト登録した大会写真の実ファイルであり、Git管理外。不要なら削除する
 - [ ] 次チャット開始時は、まず `git status -sb` で `public/tournament_images/` が残っているか確認する
-- [✓] 次の自然な後続としてトーナメント方式（シングルエリミネーション）へ着手し、速報入力・正式成績反映・PDF確認まで完了
-- [ ] 次の自然な後続は、ダブルエリミネーション / シュートアウト方式の速報・正式成績反映設計
-
-#### 2026-04-27 メモ（トーナメント方式 / シングルエリミネーション実装完了）
-- [✓] `tournaments` に single elimination 用設定カラムを追加した
-  - `single_elimination_qualifier_count`
-  - `single_elimination_seed_source_result_code`
-  - `single_elimination_seed_policy`
-  - `single_elimination_seed_settings`
-- [✓] 成績持ち込み設定を追加した
-  - `result_carry_preset`
-  - `result_carry_settings`
-- [✓] `docs/db/data_dictionary.md` に single elimination 用設定・成績持ち込み設定・運用方針を追記した
-- [✓] `docs/db/ER.dbml` を辞書から再生成した
-- [✓] `SingleEliminationService` を追加し、可変人数ブラケットを生成できるようにした
-  - 14人進出時は16枠 / 4ラウンド / BYE 2件として生成できることを確認
-  - 8人 / 16人 / 24人 / 32人など、次の2の累乗枠を基準にラウンド数を算出する方針で実装
-- [✓] 大会作成 / 編集画面でトーナメント進出人数・進出元成績・シード設定を保存できるようにした
-- [✓] 成績持ち込み設定は、コードを書けない運用者でも扱えるようにプリセット選択を基本にした
-  - 予選→準々決勝までは持ち込み、準決勝からリセット
-  - 予選から準々決勝へは持ち込まない
-  - 予選→準々決勝→準決勝までは持ち込み、ラウンドロビンからリセット
-  - 予選＋準決勝の通算でトーナメント進出者を決定
-  - カスタムJSON
-- [✓] `scores/single_elimination_result.blade.php` を追加し、トーナメント表を表示できるようにした
-- [✓] トーナメント表上で試合ごとのスコア入力・保存・勝者表示ができるようにした
-- [✓] 勝者が次ラウンドへ自動反映されることを確認した
-- [✓] シード / BYE がある場合、前ラウンド未入力でも該当選手が次ラウンドへ進めることを確認した
-- [✓] 男子ライセンス番号の下4桁表示・照合が誤って下2桁扱いになる問題を修正した
-- [✓] `game_scores.stage = トーナメント`、`entry_number = SE:Rn-Mn:A/B` 形式でトーナメント試合スコアを保持する方針を確認した
-- [✓] 14人トーナメントで実動確認を行った
-  - 1回戦 6試合 = 12行
-  - 準々決勝 4試合 = 8行
-  - 準決勝 2試合 = 4行
-  - 決勝 1試合 = 2行
-  - 合計 26行
-- [✓] BBBカップで決勝まで入力し、優勝者が確定することを確認した
-  - 優勝: 藤川大輔 / `M00001297`
-  - 準優勝: 髙田浩規 / `M00001288`
-  - 決勝スコア: 藤川大輔 300 - 298 髙田浩規
-- [✓] 正式成績反映ページから `single_elimination_final` を作成できるようにした
-- [✓] `single_elimination_final` を `tournament_results` へ同期できるようにした
-- [✓] 同じラウンドで負けた選手を同順位タイとして保存できることを確認した
-  - 1位: 藤川大輔
-  - 2位: 髙田浩規
-  - 3位タイ: 宮澤拓哉 / 藤井信人
-  - 5位タイ: 谷合貴志 / 御手洗彰彦 / 斉藤祐哉 / 甘糟翔太
-  - 9位タイ: 門川健一 / 神山匠 / 吉山将太 / 山迫 耕太 / 小林龍一 / 佐藤匡
-- [✓] `single_elimination_final` 反映後、`tournament_results` に14名が同期されることを確認した
-- [✓] 大会成績一覧PDFを調整した
-  - 大会別PDF `/tournaments/{tournament}/results/pdf` では対象大会だけを出力
-  - 全体PDF `/tournament_results/pdf` は全大会一覧として維持
-  - ライセンスNoの右に `期` 列を追加
-  - `¥10,000,000` などの賞金欄が折り返されないように調整
-- [✓] BBBカップ成績一覧画面の `PDF出力` ボタンを、大会別PDFルートへ修正した
-- [✓] 確認済みコマンド
-  - `php -l app/Http/Controllers/TournamentResultController.php`
-  - `php -l app/Http/Controllers/TournamentResultSnapshotController.php`
-  - `php -l app/Services/SingleEliminationService.php`
-  - `php artisan view:cache`
-  - `php artisan view:clear`
-  - `php artisan optimize:clear`
-- [✓] 最終状態は `git status -sb` が `## main...origin/main`
-- [✓] 最終確認HEADは `a03493d`
-- [ ] 次の自然な後続は、シュートアウト方式の速報・正式成績反映設計
-- [ ] ダブルエリミネーション方式は、敗者側ブラケット・リセット決勝・敗者側順位の論点が多いため後続に分離する
-- [ ] 将来的に必要なら、トーナメントの固定ブラケット保存用に `tournament_bracket_matches` のような専用テーブル追加を検討する
+- [✓] 次の自然な後続としてトーナメント方式（シングルエリミネーション）とシュートアウト方式は完了。残る大きな方式はダブルエリミネーション
