@@ -271,6 +271,8 @@ Route::middleware(['auth','role:editor,admin'])->group(function () {
     Route::get('/scores/result', [ScoreController::class, 'result'])->name('scores.result');
     Route::post('/scores/shootout/store', [ScoreController::class, 'storeShootoutMatch'])
         ->name('scores.shootout.store');
+    Route::post('/scores/single-elimination/store', [ScoreController::class, 'storeSingleEliminationMatch'])
+        ->name('scores.single_elimination.store');
     Route::get('/scores/board', [ScoreController::class, 'board']);
     Route::get('/scores/api/existing-ids', [ScoreController::class, 'apiExistingIds']);
     Route::post('/scores/update-one', [ScoreController::class, 'updateOne']);

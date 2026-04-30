@@ -403,6 +403,7 @@ class ShootoutService
                 'total_pin' => $entry['total_pin'] ?? null,
                 'games' => $entry['games'] ?? null,
                 'average' => $entry['average'] ?? null,
+                'term_label' => $entry['term_label'] ?? null,
                 'min_seed' => $seed,
                 'max_seed' => $seed,
             ];

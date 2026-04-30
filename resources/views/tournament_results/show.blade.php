@@ -1,6 +1,56 @@
 @extends('layouts.app')
 
 @section('content')
+@php
+    $flowType = (string) ($tournament->result_flow_type ?? '');
+
+    $finalScreen = null;
+
+    if (in_array($flowType, [
+        'prelim_to_rr_to_final',
+        'prelim_to_quarterfinal_to_rr_to_final',
+    ], true)) {
+        $finalScreen = [
+            'label' => '決勝ステップラダー画面へ',
+            'stage' => '決勝',
+            'class' => 'btn-dark',
+            'note' => 'この大会はラウンドロビン後の決勝ステップラダー方式です。決勝ステップラダー画面から決勝スコア・勝者線・写真枠を確認できます。',
+        ];
+    } elseif (in_array($flowType, [
+        'prelim_to_single_elimination_to_final',
+        'prelim_to_quarterfinal_to_single_elimination_to_final',
+        'prelim_to_semifinal_to_single_elimination_to_final',
+    ], true)) {
+        $finalScreen = [
+            'label' => 'トーナメント画面へ',
+            'stage' => 'トーナメント',
+            'class' => 'btn-dark',
+            'note' => 'この大会はシングルエリミネーション方式です。トーナメント画面から試合入力・勝ち上がり表示を確認できます。',
+        ];
+    } elseif (in_array($flowType, [
+        'prelim_to_shootout_to_final',
+        'prelim_to_quarterfinal_to_shootout_to_final',
+        'prelim_to_semifinal_to_shootout_to_final',
+    ], true)) {
+        $finalScreen = [
+            'label' => 'シュートアウト画面へ',
+            'stage' => 'シュートアウト',
+            'class' => 'btn-dark',
+            'note' => 'この大会はシュートアウト方式です。シュートアウト画面からスコア入力・勝ち上がり図式を確認できます。',
+        ];
+    }
+
+    $finalScreenUrl = $finalScreen
+        ? route('scores.result', [
+            'tournament_id' => $tournament->id,
+            'stage' => $finalScreen['stage'],
+            'upto_game' => 1,
+            'shifts' => '',
+            'gender_filter' => '',
+        ])
+        : null;
+@endphp
+
 <div class="container">
     <h2>{{ $tournament->year }}年 {{ $tournament->name }}：大会成績一覧</h2>
 
@@ -23,6 +73,12 @@
 
         <a href="{{ route('tournaments.prize_distributions.create', $tournament) }}"
            class="btn btn-outline-success">賞金配分</a>
+
+        @if($finalScreenUrl)
+            <a href="{{ $finalScreenUrl }}" class="btn {{ $finalScreen['class'] }}">
+                {{ $finalScreen['label'] }}
+            </a>
+        @endif
 
         <a href="{{ route('tournaments.results.pdf', $tournament) }}"
            class="btn btn-info"
@@ -49,6 +105,10 @@
         成績の<strong>新規登録・一括登録・編集時</strong>に、設定済みの<strong>ポイント配分</strong>と<strong>賞金配分</strong>が自動反映されます。<br>
         配分未設定の順位は 0 のままです。<br>
         ライセンス番号のないアマチュア選手は、プロフィールには反映せず、この大会成績上の表示名だけを保持します。
+        @if($finalScreen)
+            <br>
+            {{ $finalScreen['note'] }}
+        @endif
     </div>
 
     @if ($results->isEmpty())

@@ -200,6 +200,16 @@
         'gender' => $genderFilter !== '' ? $genderFilter : null,
         'shift'  => (string)(request('shifts') ?: ''),
     ], static fn ($v) => $v !== null && $v !== '');
+
+    $stageOptions = [
+        '予選' => '予選',
+        '準々決勝' => '準々決勝',
+        '準決勝' => '準決勝',
+        '決勝' => '決勝',
+        'ラウンドロビン' => 'ラウンドロビン',
+        'トーナメント' => 'トーナメント',
+        'シュートアウト' => 'シュートアウト',
+    ];
 @endphp
 
 @if($isPublic)
@@ -289,10 +299,18 @@
 
         <form method="GET" action="" style="display:inline-flex; gap:.5rem; align-items:center; flex-wrap:wrap;">
             @foreach(request()->query() as $k => $v)
-                @if(!in_array($k, ['border_type','border_value','upto_game']))
+                @if(!in_array($k, ['border_type','border_value','upto_game','stage']))
                     <input type="hidden" name="{{ $k }}" value="{{ $v }}">
                 @endif
             @endforeach
+
+            <label>表示ステージ：
+                <select name="stage">
+                    @foreach($stageOptions as $stageValue => $stageLabel)
+                        <option value="{{ $stageValue }}" {{ $stageValue === $stage ? 'selected' : '' }}>{{ $stageLabel }}</option>
+                    @endforeach
+                </select>
+            </label>
 
             <label>〇ゲーム目まで：
                 <select name="upto_game">
