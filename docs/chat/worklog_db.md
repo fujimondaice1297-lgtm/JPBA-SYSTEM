@@ -1,3 +1,41 @@
+## 2026-05-02 シュートアウト / スコアシート入力とPDF反映
+
+- 目的:
+  - 公式PDF下部にある1Gスコア表を、手入力したスコアシートからPDFへ自動反映できる土台を作る。
+
+- 実施内容:
+  - `tournament_match_score_sheets` 系テーブルに保存された公開スコアシートを、大会別PDF出力時に取得する処理を追加。
+  - `resources/views/tournament_results/pdf.blade.php` にスコアシート表示ブロックを追加。
+  - PDF構成は、1ページ目: 大会成績一覧、2ページ目: シュートアウト結果図、3ページ目以降: スコアシート表とした。
+
+- 次の確認:
+  - `/tournaments/{id}/match-score-sheets` でスコアシートを保存する。
+  - `/tournaments/{id}/results/pdf` でPDFへ反映されることを確認する。
+
+
+## 2026-05-01 公式PDF風スコアシート入力・自動計算の着手
+
+- 目的:
+  - JPBA公式PDFにある、優勝決定戦・シュートアウト各マッチのゲーム別スコアシートを、手作業画像ではなくDB入力からPDFへ自動反映できるようにする。
+  - スコア入力自体は人手で行うが、フレーム累計、最終スコア、勝者判定、PDF表示はアプリ側で自動化する。
+
+- 方針:
+  - `game_scores` は従来どおり、順位計算・勝ち上がり判定の正本として使う。
+  - 公式PDFに載せるフレーム別スコア表は、新規の `tournament_match_score_sheets` 系テーブルに分離して保持する。
+  - 大会、ステージ、マッチ、表示順、レーン、選手、1〜10フレームを保存し、PDF出力時に `is_published = true` のスコア表を表示する。
+
+- 追加予定テーブル:
+  - `tournament_match_score_sheets`
+  - `tournament_match_score_sheet_players`
+  - `tournament_match_score_frames`
+
+- 次にやること:
+  1. migration を追加する
+  2. `docs/db/data_dictionary.md` を更新する
+  3. `php tools/generate_er_from_dictionary.php` で `docs/db/ER.dbml` を再生成する
+  4. スコア入力画面・自動計算処理を追加する
+  5. PDFへスコアシートを表示する
+
 ## 2026-04-30 シュートアウト方式 / 公式PDF風トーナメント図表示の実装
 
 - 目的:

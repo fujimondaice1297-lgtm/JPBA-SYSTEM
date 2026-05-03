@@ -95,6 +95,208 @@
             white-space: nowrap;
             font-size: 8.8px;
         }
+
+        .page-break {
+            page-break-before: always;
+        }
+
+        .shootout-image-page {
+            page-break-before: always;
+        }
+
+        .shootout-image-title {
+            margin: 0 0 12px 0;
+            text-align: center;
+            font-family: ipaexg, sans-serif;
+            font-size: 20px;
+            font-weight: normal !important;
+        }
+
+        .shootout-image-wrap {
+            width: 100%;
+            text-align: center;
+        }
+
+        .shootout-image {
+            width: 100%;
+            max-width: 100%;
+            height: auto;
+        }
+
+        .shootout-image-note {
+            margin: 8px 0 0 0;
+            text-align: center;
+            font-size: 9px;
+            line-height: 1.35;
+        }
+
+
+        .match-score-page {
+            page-break-before: always;
+        }
+
+        .match-score-page.first-match-score-page {
+            page-break-before: always;
+        }
+
+        .match-score-header {
+            margin: 0 0 10px 0;
+            text-align: center;
+            font-size: 18px;
+            font-weight: normal !important;
+            line-height: 1.35;
+        }
+
+        .match-score-subtitle {
+            margin: 0 0 8px 0;
+            text-align: left;
+            font-size: 13px;
+            font-weight: normal !important;
+            line-height: 1.35;
+        }
+
+        .match-score-meta {
+            margin: 0 0 6px 0;
+            font-size: 9px;
+            line-height: 1.3;
+        }
+
+        .match-score-block {
+            margin: 0 0 14px 0;
+            page-break-inside: avoid;
+        }
+
+        .match-player-title {
+            margin: 0 0 3px 0;
+            text-align: center;
+            font-size: 14px;
+            font-weight: normal !important;
+            line-height: 1.25;
+        }
+
+        .match-score-table {
+            width: 100%;
+            table-layout: fixed;
+            border-collapse: collapse;
+            margin-bottom: 10px;
+            font-size: 9px;
+        }
+
+        .match-score-table th,
+        .match-score-table td {
+            border: 1px solid #111;
+            padding: 0;
+            text-align: center;
+            vertical-align: middle;
+            line-height: 1.1;
+            background: #fff;
+        }
+
+        .match-score-lane {
+            width: 44px;
+            font-size: 11px;
+            border-left: none !important;
+            border-top: none !important;
+            border-bottom: none !important;
+        }
+
+        .match-frame-header {
+            height: 14px;
+            font-size: 9px;
+            font-weight: normal !important;
+        }
+
+        .match-frame-marks {
+            height: 18px;
+        }
+
+        .match-frame-total {
+            height: 16px;
+            font-size: 9px;
+        }
+
+        .mark-wrap {
+            width: 100%;
+            height: 18px;
+            display: table;
+            table-layout: fixed;
+        }
+
+        .mark-box {
+            display: table-cell;
+            position: relative;
+            border-left: 1px solid #111;
+            width: 50%;
+            height: 18px;
+            line-height: 18px;
+            font-size: 10px;
+            vertical-align: middle;
+            overflow: hidden;
+        }
+
+        .mark-box:first-child {
+            border-left: none;
+        }
+
+        .mark-box.mark-10 {
+            width: 33.33%;
+        }
+
+        .mark-box .mark-icon {
+            display: block;
+            width: 100%;
+            height: 18px;
+            max-width: 100%;
+            max-height: 18px;
+            margin: 0 auto;
+            object-fit: fill;
+        }
+
+        .mark-box .mark-text {
+            position: relative;
+            z-index: 2;
+            display: inline-block;
+            width: 100%;
+            height: 18px;
+            line-height: 18px;
+            text-align: center;
+        }
+
+        .score-winner-label {
+            font-size: 10px;
+        }
+
+
+        .match-score-image-page {
+            page-break-before: always;
+        }
+
+        .match-score-image-title {
+            margin: 0 0 14px 0;
+            text-align: center;
+            font-size: 18px;
+            font-weight: normal !important;
+            line-height: 1.35;
+        }
+
+        .match-score-image-block {
+            margin: 0 0 18px 0;
+            page-break-inside: avoid;
+        }
+
+        .match-score-image-meta {
+            margin: 0 0 4px 0;
+            font-size: 9px;
+            line-height: 1.3;
+        }
+
+        .match-score-image {
+            width: 100%;
+            max-width: 100%;
+            height: auto;
+            display: block;
+        }
+
     </style>
 </head>
 <body>
@@ -188,5 +390,52 @@
             @endforeach
         </tbody>
     </table>
+
+    @if (isset($shootoutBracketImage) && is_string($shootoutBracketImage) && $shootoutBracketImage !== '')
+        <div class="shootout-image-page">
+            <h2 class="shootout-image-title">
+                @php
+                    $labelShootoutResult = $jp('&#x30B7;&#x30E5;&#x30FC;&#x30C8;&#x30A2;&#x30A6;&#x30C8;&#x7D50;&#x679C;');
+                @endphp
+                {{ $labelShootoutResult }}
+            </h2>
+
+            <div class="shootout-image-wrap">
+                <img class="shootout-image" src="{!! $shootoutBracketImage !!}" alt="シュートアウト結果図">
+            </div>
+
+            <p class="shootout-image-note">
+                ※赤字のスコアと太線は勝ち上がりを表します。
+            </p>
+        </div>
+    @endif
+
+
+    @if (isset($matchScoreSheetImages) && is_array($matchScoreSheetImages) && count($matchScoreSheetImages) > 0)
+        <div class="match-score-image-page">
+            <h2 class="match-score-image-title">
+                @php
+                    $labelScoreSheetTitle = $jp('&#x30B7;&#x30E5;&#x30FC;&#x30C8;&#x30A2;&#x30A6;&#x30C8;&#x30FB;&#x30B9;&#x30B3;&#x30A2;&#x8868;');
+                @endphp
+                {{ $labelScoreSheetTitle }}
+            </h2>
+
+            @foreach ($matchScoreSheetImages as $scoreSheetImage)
+                <div class="match-score-image-block">
+                    <div class="match-score-image-meta">
+                        {{ $scoreSheetImage['match_label'] ?? '' }}
+                        @if (!empty($scoreSheetImage['game_number']))
+                            / ゲーム: {{ $scoreSheetImage['game_number'] }}
+                        @endif
+                        @if (!empty($scoreSheetImage['lane_label']))
+                            / レーン: {{ $scoreSheetImage['lane_label'] }}
+                        @endif
+                    </div>
+                    <img class="match-score-image" src="{!! $scoreSheetImage['image'] ?? '' !!}" alt="スコア表">
+                </div>
+            @endforeach
+        </div>
+    @endif
+
 </body>
 </html>

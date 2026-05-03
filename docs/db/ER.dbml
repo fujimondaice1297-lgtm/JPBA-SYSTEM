@@ -1,5 +1,5 @@
 // Auto-generated from docs/db/data_dictionary.md
-// Generated at: 2026-04-27T15:51:51+09:00
+// Generated at: 2026-05-02T08:33:39+09:00
 
 Project JPBA_SYSTEM {
   database_type: 'PostgreSQL'
@@ -161,6 +161,18 @@ Table tournament_files {
   // columns omitted (see docs/db/columns_by_table.md)
 }
 
+Table tournament_match_score_frames {
+  // columns omitted (see docs/db/columns_by_table.md)
+}
+
+Table tournament_match_score_sheet_players {
+  // columns omitted (see docs/db/columns_by_table.md)
+}
+
+Table tournament_match_score_sheets {
+  // columns omitted (see docs/db/columns_by_table.md)
+}
+
 Table tournament_organizations {
   // columns omitted (see docs/db/columns_by_table.md)
 }
@@ -251,6 +263,10 @@ Ref: tournament_entries.tournament_id > tournaments.id
 Ref: tournament_entry_balls.tournament_entry_id > tournament_entries.id
 Ref: tournament_entry_balls.used_ball_id > used_balls.id
 Ref: tournament_files.tournament_id > tournaments.id
+Ref: tournament_match_score_frames.score_sheet_player_id > tournament_match_score_sheet_players.id
+Ref: tournament_match_score_sheet_players.pro_bowler_id > pro_bowlers.id
+Ref: tournament_match_score_sheet_players.score_sheet_id > tournament_match_score_sheets.id
+Ref: tournament_match_score_sheets.tournament_id > tournaments.id
 Ref: tournament_organizations.tournament_id > tournaments.id
 Ref: tournament_participants.pro_bowler_id > pro_bowlers.id
 Ref: tournament_participants.tournament_id > tournaments.id

@@ -280,6 +280,15 @@ Route::middleware(['auth','role:editor,admin'])->group(function () {
     Route::post('/scores/tournament-photos', [\App\Http\Controllers\TournamentPhotoController::class, 'store'])
     ->name('scores.tournament_photos.store');
 
+    Route::get('/tournaments/{tournament}/match-score-sheets', [\App\Http\Controllers\TournamentMatchScoreSheetController::class, 'index'])
+    ->name('tournaments.match_score_sheets.index');
+    Route::post('/tournaments/{tournament}/match-score-sheets', [\App\Http\Controllers\TournamentMatchScoreSheetController::class, 'store'])
+        ->name('tournaments.match_score_sheets.store');
+    Route::get('/tournaments/{tournament}/match-score-sheets/{scoreSheet}/edit', [\App\Http\Controllers\TournamentMatchScoreSheetController::class, 'edit'])
+        ->name('tournaments.match_score_sheets.edit');
+    Route::put('/tournaments/{tournament}/match-score-sheets/{scoreSheet}', [\App\Http\Controllers\TournamentMatchScoreSheetController::class, 'update'])
+        ->name('tournaments.match_score_sheets.update');
+
     Route::resource('organizations', \App\Http\Controllers\OrganizationMasterController::class)->except(['show']);
 
     Route::get('/api/organizations/search', [\App\Http\Controllers\OrganizationMasterController::class,'search'])

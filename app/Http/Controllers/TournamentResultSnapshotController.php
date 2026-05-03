@@ -1111,6 +1111,8 @@ final class TournamentResultSnapshotController extends Controller
         $maxShootoutGames = max(array_map(fn (array $standing) => (int) ($standing['shootout_games'] ?? 0), $standings));
 
         $finalRows = [];
+        $usedIdentityKeys = [];
+
         foreach ($standings as $standing) {
             $node = (array) ($standing['node'] ?? []);
             $key = $this->identityKeyFromShootoutNode($node);
@@ -1125,6 +1127,35 @@ final class TournamentResultSnapshotController extends Controller
                 gender: $gender,
                 shift: $shift,
             );
+
+            if ($key !== '') {
+                $usedIdentityKeys[$key] = true;
+            }
+        }
+
+        /*
+         * シュートアウト最終成績は、進出者8名だけで終わらせない。
+         * 進出元snapshotに残っている非進出者は、進出元順位のまま9位以降へ繰り下げて追加する。
+         */
+        $nextRank = count($finalRows) + 1;
+        foreach ($baseRows as $baseRow) {
+            $key = $this->identityKeyFromSnapshotArray($baseRow);
+            if ($key !== '' && isset($usedIdentityKeys[$key])) {
+                continue;
+            }
+
+            $finalRows[] = $this->makeSnapshotCarryForwardRowPayload(
+                row: $baseRow,
+                rank: $nextRank,
+                gender: $gender,
+                shift: $shift,
+            );
+
+            if ($key !== '') {
+                $usedIdentityKeys[$key] = true;
+            }
+
+            $nextRank++;
         }
 
         $calculationDefinition = (array) ($definition['calculation_definition'] ?? []);
@@ -1132,8 +1163,10 @@ final class TournamentResultSnapshotController extends Controller
             'format' => 'standard_8',
             'seed_source_result_code' => $seedSourceResultCode,
             'seed_snapshot_id' => (int) $seedSnapshot->id,
-            'ranking_policy' => 'winner advances; losers keep source seed order within losing match',
+            'ranking_policy' => 'winner advances; losers keep source seed order within losing match; non-qualifiers keep seed source order after rank 8',
             'match_summary' => $shootout['summary'] ?? [],
+            'qualifier_rows_count' => count($standings),
+            'carry_forward_rows_count' => max(0, count($finalRows) - count($standings)),
             'final_rows_count' => count($finalRows),
         ];
 

@@ -6,9 +6,13 @@ use App\Models\Tournament;
 use App\Models\ProBowler;
 use App\Models\TournamentResult;
 use App\Models\TournamentResultSnapshot;
+use App\Models\TournamentMatchScoreSheet;
 use App\Models\PointDistribution;
 use App\Models\PrizeDistribution;
 use App\Models\ProBowlerTitle;
+use App\Services\ShootoutService;
+use App\Services\ShootoutBracketImageService;
+use App\Services\MatchScoreSheetImageService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -499,9 +503,37 @@ class TournamentResultController extends Controller
         $results = $query->get();
         $this->attachBowlerPeriodLabels($results);
 
+        $shootoutPdf = $this->buildShootoutPdfData($tournament);
+        $shootoutBracketImage = null;
+
+        if (is_array($shootoutPdf) && !empty($shootoutPdf['seed_rows'])) {
+            try {
+                /** @var ShootoutBracketImageService $bracketImageService */
+                $bracketImageService = app(ShootoutBracketImageService::class);
+                $shootoutBracketImage = $bracketImageService->generateDataUri($tournament, $shootoutPdf);
+            } catch (\Throwable $e) {
+                report($e);
+                $shootoutBracketImage = null;
+            }
+        }
+
+        $matchScoreSheets = $this->loadPublishedMatchScoreSheets($tournament);
+        $matchScoreSheetImages = [];
+
+        if ($matchScoreSheets->isNotEmpty()) {
+            try {
+                /** @var MatchScoreSheetImageService $scoreSheetImageService */
+                $scoreSheetImageService = app(MatchScoreSheetImageService::class);
+                $matchScoreSheetImages = $scoreSheetImageService->generateDataUris($matchScoreSheets);
+            } catch (\Throwable $e) {
+                report($e);
+                $matchScoreSheetImages = [];
+            }
+        }
+
         return $this->makePdfWithJapaneseFont(
             'tournament_results.pdf',
-            compact('tournament', 'results'),
+            compact('tournament', 'results', 'shootoutPdf', 'shootoutBracketImage', 'matchScoreSheets', 'matchScoreSheetImages'),
             "{$tournament->year}_{$tournament->name}_results.pdf"
         );
     }
@@ -538,6 +570,224 @@ class TournamentResultController extends Controller
         return redirect()
             ->route('tournaments.results.index', $tournament) // モデルで渡すとキレイ
             ->with('success', '成績を削除しました。');
+    }
+
+    private function loadPublishedMatchScoreSheets(Tournament $tournament)
+    {
+        return TournamentMatchScoreSheet::query()
+            ->with([
+                'players' => function ($query) {
+                    $query->orderBy('sort_order')->orderBy('id');
+                },
+                'players.frames' => function ($query) {
+                    $query->orderBy('frame_no');
+                },
+            ])
+            ->where('tournament_id', $tournament->id)
+            ->where('is_published', true)
+            ->orderBy('match_order')
+            ->orderBy('game_number')
+            ->orderBy('id')
+            ->get();
+    }
+
+    private function buildShootoutPdfData(Tournament $tournament): ?array
+    {
+        $flowType = trim((string) ($tournament->result_flow_type ?? ''));
+        if (!in_array($flowType, [
+            'prelim_to_shootout_to_final',
+            'prelim_to_quarterfinal_to_shootout_to_final',
+            'prelim_to_semifinal_to_shootout_to_final',
+        ], true)) {
+            return null;
+        }
+
+        $seedSourceResultCode = trim((string) ($tournament->shootout_seed_source_result_code ?? ''))
+            ?: $this->defaultShootoutSeedSourceResultCode($flowType);
+
+        $seedSnapshot = $this->findCurrentSnapshotByCode((int) $tournament->id, $seedSourceResultCode);
+        if (!$seedSnapshot) {
+            return null;
+        }
+
+        $seedEntries = $this->buildShootoutSeedEntriesFromSnapshot((int) $seedSnapshot->id, 8);
+        if (count($seedEntries) < 8) {
+            return null;
+        }
+
+        /** @var ShootoutService $shootoutService */
+        $shootoutService = app(ShootoutService::class);
+        $shootout = $shootoutService->buildStandard8(
+            seedEntries: $seedEntries,
+            matchScores: $this->loadShootoutMatchScores((int) $tournament->id)
+        );
+
+        $finalRankBySeed = [];
+        try {
+            foreach ($shootoutService->buildFinalStandings($shootout) as $standing) {
+                $node = (array) ($standing['node'] ?? []);
+                $seed = (int) ($node['seed'] ?? $node['min_seed'] ?? 0);
+                if ($seed >= 1 && $seed <= 8) {
+                    $finalRankBySeed[$seed] = (int) ($standing['ranking'] ?? 0);
+                }
+            }
+        } catch (\Throwable) {
+            $finalRankBySeed = [];
+        }
+
+        return [
+            'seed_source_result_code' => $seedSourceResultCode,
+            'seed_snapshot_id' => (int) $seedSnapshot->id,
+            'seed_rows' => array_values((array) ($shootout['seed_rows'] ?? [])),
+            'matches' => array_values((array) ($shootout['matches'] ?? [])),
+            'summary' => (array) ($shootout['summary'] ?? []),
+            'final_rank_by_seed' => $finalRankBySeed,
+        ];
+    }
+
+    private function findCurrentSnapshotByCode(int $tournamentId, string $resultCode): ?object
+    {
+        return DB::table('tournament_result_snapshots')
+            ->where('tournament_id', $tournamentId)
+            ->where('result_code', $resultCode)
+            ->where('is_current', true)
+            ->whereNull('gender')
+            ->whereNull('shift')
+            ->orderByDesc('reflected_at')
+            ->orderByDesc('id')
+            ->first();
+    }
+
+    /**
+     * @return array<int,array<string,mixed>>
+     */
+    private function buildShootoutSeedEntriesFromSnapshot(int $snapshotId, int $qualifierCount): array
+    {
+        $rows = DB::table('tournament_result_snapshot_rows')
+            ->where('snapshot_id', $snapshotId)
+            ->orderBy('ranking')
+            ->orderByDesc('total_pin')
+            ->orderBy('id')
+            ->limit($qualifierCount)
+            ->get();
+
+        $entries = [];
+        foreach ($rows as $index => $row) {
+            $seed = $index + 1;
+            $displayName = trim((string) ($row->display_name ?? ''));
+            if ($displayName === '') {
+                $displayName = trim((string) ($row->amateur_name ?? ''));
+            }
+            if ($displayName === '') {
+                $displayName = trim((string) ($row->pro_bowler_license_no ?? ('seed' . $seed)));
+            }
+
+            $entries[] = [
+                'seed' => $seed,
+                'display_name' => $displayName,
+                'pro_bowler_id' => $row->pro_bowler_id ?? null,
+                'pro_bowler_license_no' => $row->pro_bowler_license_no ?? null,
+                'amateur_name' => $row->amateur_name ?? null,
+                'source_row_id' => $row->id ?? null,
+                'participant_key' => $this->shootoutParticipantKeyFromSnapshotRow($row, $seed),
+                'source_ranking' => $row->ranking ?? null,
+                'total_pin' => $row->total_pin ?? null,
+                'games' => $row->games ?? null,
+                'average' => $row->average ?? null,
+                'term_label' => $this->resolveBowlerPeriodLabelFromSnapshotRow($row),
+            ];
+        }
+
+        return $entries;
+    }
+
+    /**
+     * @return array<string,array<string,array<string,mixed>>>
+     */
+    private function loadShootoutMatchScores(int $tournamentId): array
+    {
+        $rows = DB::table('game_scores')
+            ->where('tournament_id', $tournamentId)
+            ->where('stage', 'シュートアウト')
+            ->where('entry_number', 'like', 'SO:%')
+            ->orderBy('game_number')
+            ->orderBy('entry_number')
+            ->get();
+
+        $scores = [];
+        foreach ($rows as $row) {
+            $entryNumber = trim((string) ($row->entry_number ?? ''));
+            if (!preg_match('/^SO:(SO[123]):([ABCD])$/', $entryNumber, $m)) {
+                continue;
+            }
+
+            $scores[$m[1]][$m[2]] = [
+                'score' => (int) ($row->score ?? 0),
+                'row_id' => (int) ($row->id ?? 0),
+                'license_number' => $row->license_number ?? null,
+                'name' => $row->name ?? null,
+                'pro_bowler_id' => $row->pro_bowler_id ?? null,
+            ];
+        }
+
+        return $scores;
+    }
+
+    private function shootoutParticipantKeyFromSnapshotRow(object $row, int $seed): string
+    {
+        $proBowlerId = (int) ($row->pro_bowler_id ?? 0);
+        if ($proBowlerId > 0) {
+            return 'pro_bowler:' . $proBowlerId;
+        }
+
+        $license = trim((string) ($row->pro_bowler_license_no ?? ''));
+        if ($license !== '') {
+            return 'license:' . strtoupper($license);
+        }
+
+        $displayName = preg_replace('/\s+/u', '', trim((string) ($row->display_name ?? $row->amateur_name ?? '')));
+        if (is_string($displayName) && $displayName !== '') {
+            return 'name:' . $displayName;
+        }
+
+        return 'seed:' . $seed;
+    }
+
+    private function resolveBowlerPeriodLabelFromSnapshotRow(object $row): ?string
+    {
+        $periodColumn = $this->detectProBowlerPeriodColumn();
+        if (!$periodColumn) {
+            return null;
+        }
+
+        $bowler = null;
+        $proBowlerId = (int) ($row->pro_bowler_id ?? 0);
+        if ($proBowlerId > 0) {
+            $bowler = ProBowler::query()
+                ->select(['id', 'license_no', $periodColumn])
+                ->find($proBowlerId);
+        }
+
+        if (!$bowler) {
+            $license = strtoupper(trim((string) ($row->pro_bowler_license_no ?? '')));
+            if ($license !== '') {
+                $bowler = ProBowler::query()
+                    ->select(['id', 'license_no', $periodColumn])
+                    ->whereRaw('upper(license_no) = ?', [$license])
+                    ->first();
+            }
+        }
+
+        return $bowler ? $this->formatBowlerPeriodLabel($bowler->{$periodColumn} ?? null) : null;
+    }
+
+    private function defaultShootoutSeedSourceResultCode(string $flowType): string
+    {
+        return match ($flowType) {
+            'prelim_to_quarterfinal_to_shootout_to_final' => 'quarterfinal_total',
+            'prelim_to_semifinal_to_shootout_to_final' => 'semifinal_total',
+            default => 'prelim_total',
+        };
     }
 
     private function attachBowlerPeriodLabels($results): void
@@ -677,8 +927,9 @@ class TournamentResultController extends Controller
         $options->set('fontDir', storage_path('fonts'));
         $options->set('fontCache', storage_path('fonts'));
         $options->set('defaultFont', 'ipaexg');
-        $options->set('isRemoteEnabled', false);
+        $options->set('isRemoteEnabled', true);
         $options->set('isHtml5ParserEnabled', true);
+        $options->set('chroot', base_path());
 
         $fontPath = storage_path('fonts/ipaexg.ttf');
 
