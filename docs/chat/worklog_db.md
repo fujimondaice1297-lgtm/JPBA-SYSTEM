@@ -1,3 +1,52 @@
+## 2026-05-03 シュートアウト / 公式PDF風スコアシートPNG生成と残りピン入力方針
+
+- 目的:
+  - JPBA公式PDFに近い最終成績PDFを目指し、HTML/CSSベースのスコア表ではなく、GDで生成したPNG画像をPDFへ貼り付ける方式へ切り替える。
+  - 公式PDF下部にある優勝決定戦・シュートアウト各マッチのゲーム別スコア表について、入力は人手、計算・勝者判定・PDF反映はアプリ側で自動化する方針を確定する。
+  - 今後、各フレーム下に表示される残りピン情報も、ピン配置図からクリック選択してPDFへ自動反映できる形へ拡張する。
+
+- 実施内容:
+  - スコアシート表示を、HTMLテーブル + CSS図形方式から、`MatchScoreSheetImageService` によるPNG生成方式へ変更した。
+  - `resources/views/tournament_results/pdf.blade.php` では、スコア表HTMLを直接描画せず、生成済みPNG DataURIをPDFへ貼り付ける方式へ整理した。
+  - `TournamentResultController` から、公開対象のスコアシートを取得し、PDF表示用のスコアシート画像DataURIを生成してBladeへ渡す構成にした。
+  - 入力値は従来どおり `X` / `/` / 数字 / `-` を使い、DB保存形式は変更しない方針とした。
+  - PDF表示時のみ、ストライクとスペアを公式PDF風の黒塗りマークへ変換する方式にした。
+  - ストライク表示は、単なる `X` 文字やCSS三角ではなく、サンプルに近い左右三角の砂時計型マークとして描画するように調整した。
+  - スペア表示は、公式PDFサンプルに近い右側斜め三角として描画できることを確認した。
+  - CCCカップPDFで、1ページ目に大会成績一覧、2ページ目にシュートアウト勝ち上がり図、3ページ目にスコアシート画像が表示されることを確認した。
+  - `git commit -m "feat: スコアシート入力とPDF画像出力を追加"` 相当の内容を commit / push 済み。
+  - push後の `git status -sb` は `## main...origin/main` のみで、差分なしを確認した。
+
+- 現時点で完了したこと:
+  - `tournament_match_score_sheets` 系テーブルの追加。
+  - `docs/db/data_dictionary.md` 更新。
+  - `php tools/generate_er_from_dictionary.php` による `docs/db/ER.dbml` 再生成。
+  - スコアシート入力画面の追加。
+  - フレーム入力値から累計スコア・最終スコア・勝者判定を行う処理の追加。
+  - PDF 3ページ目以降へのスコアシート反映。
+  - スコア表のHTML/CSS描画をやめ、PNG画像生成方式へ切り替え。
+  - ストライク・スペアの公式PDF風マーク表示。
+  - シュートアウト結果図とスコアシート表をPDFに同時掲載する基本構成。
+
+- 今後やること:
+  1. `tournament_match_score_frames` に残りピン情報を保存するカラムを追加する。
+     - 候補: `remaining_pins jsonb nullable`
+     - 表示用の `remaining_pins_label` は保存せず、PDF表示時に `3.5.6` のように生成する方針が第一候補。
+  2. `docs/db/data_dictionary.md` を更新し、`php tools/generate_er_from_dictionary.php` で `docs/db/ER.dbml` を再生成する。
+  3. スコアシート入力画面に、各フレームごとの「残ピン選択」UIを追加する。
+     - 10本ピン配置図を表示し、残ったピンをクリックして選択する。
+     - 選択結果を `3.5.6` のように画面上で確認できるようにする。
+  4. 保存時に、各フレームの残りピン情報を `tournament_match_score_frames.remaining_pins` へ保存する。
+  5. `MatchScoreSheetImageService` で、各フレーム下に残りピン表示を描画する。
+  6. JPBA公式PDFに近づけるため、必要に応じて以下を後続調整する。
+     - 大会名・会場名・開催日などの自動表示
+     - スコア表タイトルの表記
+     - レーン表記
+     - 選手名・投球左右の表示位置
+     - 複数スコアシートのページ分割
+     - JPBAロゴ表示
+     - 罫線の太さ・余白・フォントサイズ
+
 ## 2026-05-02 シュートアウト / スコアシート入力とPDF反映
 
 - 目的:

@@ -422,3 +422,43 @@
 - [✓] `tournament_match_score_sheets` 系テーブルを使ったスコアシート入力画面が表示できることを確認した
 - [✓] 大会別PDFで、公開対象のスコアシートを3ページ目以降に表示する処理を追加した
 - [ ] 公式PDFと同等の細かい罫線・ロゴ・会場情報・複数ページ分割は後続で調整する
+
+#### 2026-05-03 メモ（シュートアウト / 公式PDF風スコアシートPNG生成）
+
+- [✓] スコアシート入力・保存用の `tournament_match_score_sheets` 系テーブルを追加した
+  - `tournament_match_score_sheets`
+  - `tournament_match_score_sheet_players`
+  - `tournament_match_score_frames`
+- [✓] `docs/db/data_dictionary.md` を更新した
+- [✓] `php tools/generate_er_from_dictionary.php` で `docs/db/ER.dbml` を再生成した
+- [✓] `/tournaments/{tournament}/match-score-sheets` の入力画面を追加した
+- [✓] 入力した `X` / `/` / 数字 / `-` から、累計スコア・最終スコア・勝者判定を自動計算する処理を追加した
+- [✓] 大会成績PDFで、公開対象のスコアシートを3ページ目以降に表示する処理を追加した
+- [✓] HTML/CSSベースのスコア表表示をやめ、`MatchScoreSheetImageService` でPNG画像として生成してPDFへ貼る方式へ変更した
+- [✓] ストライク表示を公式PDF風の左右三角の砂時計型マークへ調整した
+- [✓] スペア表示を公式PDF風の右側三角マークへ調整した
+- [✓] CCCカップPDFで、以下の構成を確認した
+  - 1ページ目: 大会成績一覧
+  - 2ページ目: シュートアウト勝ち上がり図
+  - 3ページ目: スコアシート表
+- [✓] ここまでの作業を commit / push 済み
+- [✓] push後の `git status -sb` は `## main...origin/main` のみで差分なし
+
+##### 次にやること（残りピン入力・公式PDF再現度向上）
+
+- [ ] `tournament_match_score_frames` に残りピン保存用カラムを追加する
+  - 第一候補: `remaining_pins jsonb nullable`
+- [ ] DB変更に合わせて `docs/db/data_dictionary.md` を更新する
+- [ ] `php tools/generate_er_from_dictionary.php` で `docs/db/ER.dbml` を再生成する
+- [ ] スコアシート入力画面に、10本ピン配置図から残りピンをクリック選択するUIを追加する
+- [ ] 選択した残りピンを `3.5.6` のように表示できるようにする
+- [ ] 保存時に、各フレームの残りピン情報を `tournament_match_score_frames.remaining_pins` に保存する
+- [ ] PDF生成時に、各フレーム下へ残りピンを表示する
+- [ ] 公式PDFに近づけるため、必要に応じてレイアウトを追加調整する
+  - 大会名
+  - 会場名
+  - 開催日
+  - JPBAロゴ
+  - スコア表タイトル
+  - レーン表記
+  - 複数スコアシートのページ分割
