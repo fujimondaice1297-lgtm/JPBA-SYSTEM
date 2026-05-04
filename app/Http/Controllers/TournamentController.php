@@ -264,6 +264,104 @@ class TournamentController extends Controller
         };
     }
 
+    private function normalizeShootoutSettings(Request $request, bool $usesShootout, ?int $shootoutQualifierCount): ?array
+    {
+        if (!$usesShootout) {
+            return null;
+        }
+
+        $shootoutSettingsRaw = trim((string) $request->input('shootout_settings', ''));
+        $settings = [];
+
+        if ($shootoutSettingsRaw !== '') {
+            $decodedShootoutSettings = json_decode($shootoutSettingsRaw, true);
+
+            if (!is_array($decodedShootoutSettings)) {
+                throw ValidationException::withMessages([
+                    'shootout_settings' => 'シュートアウト詳細設定JSONの形式が正しくありません。',
+                ]);
+            }
+
+            $settings = $decodedShootoutSettings;
+        }
+
+        $stageProgress = $this->normalizeShootoutStageProgress($request, $shootoutQualifierCount);
+
+        if (!empty($stageProgress)) {
+            $settings['stage_progress'] = $stageProgress;
+        } else {
+            unset($settings['stage_progress']);
+        }
+
+        return !empty($settings) ? $settings : null;
+    }
+
+    private function normalizeShootoutStageProgress(Request $request, ?int $shootoutQualifierCount): array
+    {
+        $input = $request->input('shootout_stage_progress', []);
+
+        if (!is_array($input)) {
+            return [];
+        }
+
+        $keys = [
+            'prelim_player_count',
+            'prelim_game_count',
+            'prelim_qualifier_count',
+            'semifinal_game_count',
+            'semifinal_total_game_count',
+        ];
+
+        $stageProgress = [];
+
+        foreach ($keys as $key) {
+            $value = $input[$key] ?? null;
+
+            if ($value === null || trim((string) $value) === '') {
+                continue;
+            }
+
+            $stageProgress[$key] = (int) $value;
+        }
+
+        if ($shootoutQualifierCount !== null && $shootoutQualifierCount > 0) {
+            $stageProgress['semifinal_qualifier_count'] = $shootoutQualifierCount;
+        }
+
+        if (empty($stageProgress)) {
+            return [];
+        }
+
+        if (
+            isset($stageProgress['prelim_player_count'], $stageProgress['prelim_qualifier_count'])
+            && $stageProgress['prelim_qualifier_count'] > $stageProgress['prelim_player_count']
+        ) {
+            throw ValidationException::withMessages([
+                'shootout_stage_progress.prelim_qualifier_count' => '準決勝進出人数は、予選参加人数以下で指定してください。',
+            ]);
+        }
+
+        if (
+            isset($stageProgress['prelim_qualifier_count'], $stageProgress['semifinal_qualifier_count'])
+            && $stageProgress['semifinal_qualifier_count'] > $stageProgress['prelim_qualifier_count']
+        ) {
+            throw ValidationException::withMessages([
+                'shootout_qualifier_count' => 'SO進出人数は、準決勝進出人数以下で指定してください。',
+            ]);
+        }
+
+        if (
+            isset($stageProgress['prelim_game_count'], $stageProgress['semifinal_game_count'], $stageProgress['semifinal_total_game_count'])
+            && $stageProgress['semifinal_total_game_count'] < ($stageProgress['prelim_game_count'] + $stageProgress['semifinal_game_count'])
+        ) {
+            throw ValidationException::withMessages([
+                'shootout_stage_progress.semifinal_total_game_count' => '準決勝通算ゲーム数は、予選ゲーム数＋準決勝ゲーム数以上で指定してください。',
+            ]);
+        }
+
+        return $stageProgress;
+    }
+
     private function normalizeSingleEliminationSeedSettings($value): ?array
     {
         if (is_null($value) || $value === '') {
@@ -412,6 +510,12 @@ class TournamentController extends Controller
             'shootout_seed_source_result_code' => 'nullable|in:prelim_total,quarterfinal_total,semifinal_total',
             'shootout_format' => 'nullable|in:standard_8,custom',
             'shootout_settings' => 'nullable|string',
+            'shootout_stage_progress' => 'nullable|array',
+            'shootout_stage_progress.prelim_player_count' => 'nullable|integer|min:1|max:999',
+            'shootout_stage_progress.prelim_game_count' => 'nullable|integer|min:1|max:99',
+            'shootout_stage_progress.prelim_qualifier_count' => 'nullable|integer|min:1|max:999',
+            'shootout_stage_progress.semifinal_game_count' => 'nullable|integer|min:1|max:99',
+            'shootout_stage_progress.semifinal_total_game_count' => 'nullable|integer|min:1|max:199',
             'result_carry_preset' => 'nullable|in:default,no_carry,reset_after_quarterfinal,reset_from_quarterfinal,carry_to_semifinal_reset_rr,carry_prelim_to_semifinal_for_tournament,custom',
             'result_carry_settings' => 'nullable|string|max:20000',
             'entry_start'          => 'nullable|date',
@@ -588,21 +692,11 @@ class TournamentController extends Controller
             ? (trim((string) $request->input('shootout_format', 'standard_8')) ?: 'standard_8')
             : null;
 
-        $shootoutSettingsRaw = trim((string) $request->input('shootout_settings', ''));
-
-        if ($usesShootout && $shootoutSettingsRaw !== '') {
-            $decodedShootoutSettings = json_decode($shootoutSettingsRaw, true);
-
-            if (!is_array($decodedShootoutSettings)) {
-                throw ValidationException::withMessages([
-                    'shootout_settings' => 'シュートアウト詳細設定JSONの形式が正しくありません。',
-                ]);
-            }
-
-            $validated['shootout_settings'] = $decodedShootoutSettings;
-        } else {
-            $validated['shootout_settings'] = null;
-        }
+        $validated['shootout_settings'] = $this->normalizeShootoutSettings(
+            request: $request,
+            usesShootout: $usesShootout,
+            shootoutQualifierCount: $validated['shootout_qualifier_count']
+        );
 
         if ($usesShootout && $validated['shootout_qualifier_count'] < 2) {
             throw ValidationException::withMessages([
@@ -633,7 +727,8 @@ class TournamentController extends Controller
         unset(
             $validated['schedule'],
             $validated['awards'],
-            $validated['org']
+            $validated['org'],
+            $validated['shootout_stage_progress']
         );
         
         $validated['shift_draw_open_at'] = $useShiftDraw && $request->filled('shift_draw_open_at')
@@ -891,7 +986,7 @@ class TournamentController extends Controller
         return $out;
     }
 
-    private function buildGalleryAndResults(Request $request, Tournament $t = null): array
+    private function buildGalleryAndResults(Request $request, ?Tournament $t = null): array
     {
         $gallery = [];
         $results = [];
@@ -959,7 +1054,7 @@ class TournamentController extends Controller
         return [$gallery, $results];
     }
 
-    private function buildResultCards(Request $request, Tournament $t = null): array
+    private function buildResultCards(Request $request, ?Tournament $t = null): array
     {
         $rows = (array) $request->input('result_cards', []);
         $photoFiles = $request->file('result_card_photos', []);

@@ -348,6 +348,89 @@
       </small>
     </div>
 
+    <div class="col-12">
+      <div class="border rounded p-3 mb-3 bg-light">
+        <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-2">
+          <div>
+            <strong>シーズントライアル進行設定</strong>
+            <div class="text-muted small">
+              公式PDFの「予選◯名→準決勝◯名→決勝◯名」表記に使います。参加人数は大会直前・当日後でも、この編集画面から修正できます。
+            </div>
+          </div>
+          <span class="badge bg-secondary">PDF表示用</span>
+        </div>
+
+        @php
+          $shootoutStageProgress = old('shootout_stage_progress');
+          if (!is_array($shootoutStageProgress)) {
+              $rawShootoutStageSettings = $tournament->shootout_settings['stage_progress'] ?? [];
+              $shootoutStageProgress = is_array($rawShootoutStageSettings) ? $rawShootoutStageSettings : [];
+          }
+
+          $shootoutStageValue = function (string $key, $default = '') use ($shootoutStageProgress) {
+              return array_key_exists($key, $shootoutStageProgress) ? $shootoutStageProgress[$key] : $default;
+          };
+        @endphp
+
+        <div class="row">
+          <div class="col-md-2 mb-3">
+            <label class="form-label">予選参加人数</label>
+            <input type="number" name="shootout_stage_progress[prelim_player_count]"
+                   class="form-control @error('shootout_stage_progress.prelim_player_count') is-invalid @enderror"
+                   value="{{ $shootoutStageValue('prelim_player_count') }}" min="1" max="999">
+            @error('shootout_stage_progress.prelim_player_count')<div class="invalid-feedback">{{ $message }}</div>@enderror
+            <small class="text-muted d-block">例：34 / 70</small>
+          </div>
+
+          <div class="col-md-2 mb-3">
+            <label class="form-label">予選G数</label>
+            <input type="number" name="shootout_stage_progress[prelim_game_count]"
+                   class="form-control @error('shootout_stage_progress.prelim_game_count') is-invalid @enderror"
+                   value="{{ $shootoutStageValue('prelim_game_count', 8) }}" min="1" max="99">
+            @error('shootout_stage_progress.prelim_game_count')<div class="invalid-feedback">{{ $message }}</div>@enderror
+            <small class="text-muted d-block">通常は8G</small>
+          </div>
+
+          <div class="col-md-2 mb-3">
+            <label class="form-label">準決勝進出人数</label>
+            <input type="number" name="shootout_stage_progress[prelim_qualifier_count]"
+                   class="form-control @error('shootout_stage_progress.prelim_qualifier_count') is-invalid @enderror"
+                   value="{{ $shootoutStageValue('prelim_qualifier_count') }}" min="1" max="999">
+            @error('shootout_stage_progress.prelim_qualifier_count')<div class="invalid-feedback">{{ $message }}</div>@enderror
+            <small class="text-muted d-block">例：34名→18名 / 70名→36名</small>
+          </div>
+
+          <div class="col-md-2 mb-3">
+            <label class="form-label">準決勝G数</label>
+            <input type="number" name="shootout_stage_progress[semifinal_game_count]"
+                   class="form-control @error('shootout_stage_progress.semifinal_game_count') is-invalid @enderror"
+                   value="{{ $shootoutStageValue('semifinal_game_count', 4) }}" min="1" max="99">
+            @error('shootout_stage_progress.semifinal_game_count')<div class="invalid-feedback">{{ $message }}</div>@enderror
+            <small class="text-muted d-block">通常は4G</small>
+          </div>
+
+          <div class="col-md-2 mb-3">
+            <label class="form-label">準決勝通算G数</label>
+            <input type="number" name="shootout_stage_progress[semifinal_total_game_count]"
+                   class="form-control @error('shootout_stage_progress.semifinal_total_game_count') is-invalid @enderror"
+                   value="{{ $shootoutStageValue('semifinal_total_game_count', 12) }}" min="1" max="199">
+            @error('shootout_stage_progress.semifinal_total_game_count')<div class="invalid-feedback">{{ $message }}</div>@enderror
+            <small class="text-muted d-block">通常は12G</small>
+          </div>
+
+          <div class="col-md-2 mb-3">
+            <label class="form-label">決勝進出人数</label>
+            <input type="text" class="form-control" value="{{ old('shootout_qualifier_count', $tournament->shootout_qualifier_count ?? 8) }}名" readonly>
+            <small class="text-muted d-block">上の「SO進出人数」を使用</small>
+          </div>
+        </div>
+
+        <div class="small text-muted">
+          ※未確定の項目は空欄のまま保存できます。確定後にこの画面で再編集すると、PDFの競技内容表記へ反映されます。
+        </div>
+      </div>
+    </div>
+
     <div class="col-md-2 mb-3">
       <label class="form-label">進出人数</label>
       <input type="number" name="single_elimination_qualifier_count" class="form-control @error('single_elimination_qualifier_count') is-invalid @enderror"

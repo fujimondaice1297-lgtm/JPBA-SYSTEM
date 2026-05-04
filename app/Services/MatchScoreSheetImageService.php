@@ -50,10 +50,10 @@ class MatchScoreSheetImageService
             return null;
         }
 
-        $width = 1400;
-        $top = 28;
-        $blockHeight = 192;
-        $height = $top + ($players->count() * $blockHeight) + 28;
+        $width = 1420;
+        $top = 4;
+        $blockHeight = 132;
+        $height = $top + ($players->count() * $blockHeight) + 14;
 
         $image = imagecreatetruecolor($width, $height);
         imagealphablending($image, true);
@@ -64,38 +64,42 @@ class MatchScoreSheetImageService
         $dark = imagecolorallocate($image, 30, 30, 30);
         imagefilledrectangle($image, 0, 0, $width, $height, $white);
 
-        $tableLeft = 140;
-        $tableWidth = 1130;
+        $tableLeft = 210;
         $frameW = 102;
-        $tenthW = 212;
-        $headerH = 30;
-        $markH = 44;
-        $totalH = 34;
+        $tenthW = 206;
+        $tableWidth = ($frameW * 9) + $tenthW;
+        $headerH = 22;
+        $markH = 36;
+        $totalH = 28;
         $tableH = $headerH + $markH + $totalH;
+        $playerCount = $players->count();
 
         foreach ($players->values() as $index => $player) {
             $blockTop = $top + ($index * $blockHeight);
-            $tableTop = $blockTop + 54;
-            $frames = $player->frames instanceof Collection ? $player->frames->keyBy('frame_no') : collect($player->frames ?? [])->keyBy('frame_no');
+            $tableTop = $blockTop + 38;
+            $frames = $player->frames instanceof Collection
+                ? $player->frames->keyBy('frame_no')
+                : collect($player->frames ?? [])->keyBy('frame_no');
+
             $calculatedCumulativeScores = $this->calculateCumulativeScoresForPdf($frames);
 
             $name = trim((string) ($player->display_name ?? ''));
             $arm = $this->formatArm((string) ($player->dominant_arm ?? ''));
             $winner = !empty($player->is_winner) ? ' / 勝者' : '';
-            $title = $name . ($arm !== '' ? '（' . $arm . '）' : '') . $winner;
+            $title = $name . ($arm !== '' ? '（' . $arm . '投げ）' : '') . $winner;
 
-            $this->drawCenteredText($image, $title, $tableLeft, $blockTop + 6, $tableWidth, 30, 24, $black, true);
+            $this->drawCenteredText($image, $title, $tableLeft, $blockTop + 0, $tableWidth, 32, 22, $black, true);
 
-            $laneLabel = trim((string) ($player->lane_label ?: $scoreSheet->lane_label ?: ''));
-            $this->drawRightText($image, $laneLabel, 20, $tableTop + 44, 108, 34, 20, $black, false);
+            $laneLabel = $this->resolveLaneLabelForPlayer($player, $scoreSheet, $index, $playerCount);
+            $this->drawRightText($image, $laneLabel, 102, $tableTop + 40, 88, 28, 18, $black, false);
 
             $this->drawScoreTableFrame($image, $tableLeft, $tableTop, $frameW, $tenthW, $headerH, $markH, $totalH, $black);
 
             $x = $tableLeft;
-
             for ($frameNo = 1; $frameNo <= 10; $frameNo++) {
                 $w = $frameNo === 10 ? $tenthW : $frameW;
-                $this->drawCenteredText($image, (string) $frameNo, $x, $tableTop + 1, $w, $headerH - 3, 20, $black, true);
+
+                $this->drawCenteredText($image, (string) $frameNo, $x, $tableTop + 0, $w, $headerH, 17, $black, true);
 
                 $frame = $frames->get($frameNo);
                 $marks = $this->marksForFrame($frame, $frameNo);
@@ -113,11 +117,21 @@ class MatchScoreSheetImageService
                 }
 
                 $total = $calculatedCumulativeScores[$frameNo] ?? null;
-                $this->drawCenteredText($image, $total !== null ? (string) $total : '', $x, $tableTop + $headerH + $markH, $w, $totalH, 20, $black, false);
+                $this->drawCenteredText(
+                    $image,
+                    $total !== null ? (string) $total : '',
+                    $x,
+                    $tableTop + $headerH + $markH,
+                    $w,
+                    $totalH,
+                    18,
+                    $black,
+                    false
+                );
 
                 $remainingPinsLabel = $this->remainingPinsLabel($frame?->remaining_pins ?? null);
                 if ($remainingPinsLabel !== '') {
-                    $this->drawCenteredText($image, $remainingPinsLabel, $x, $tableTop + $tableH + 5, $w, 20, 12, $dark, true);
+                    $this->drawCenteredText($image, $remainingPinsLabel, $x, $tableTop + $tableH + 4, $w, 18, 11, $dark, true);
                 }
 
                 $x += $w;
@@ -141,15 +155,14 @@ class MatchScoreSheetImageService
         $height = $headerH + $markH + $totalH;
         $width = ($frameW * 9) + $tenthW;
 
-        imagesetthickness($image, 3);
+        imagesetthickness($image, 2);
         imagerectangle($image, $left, $top, $left + $width, $top + $height, $color);
 
-        imagesetthickness($image, 2);
+        imagesetthickness($image, 1);
         imageline($image, $left, $top + $headerH, $left + $width, $top + $headerH, $color);
         imageline($image, $left, $top + $headerH + $markH, $left + $width, $top + $headerH + $markH, $color);
 
         $x = $left;
-
         for ($frameNo = 1; $frameNo <= 10; $frameNo++) {
             $w = $frameNo === 10 ? $tenthW : $frameW;
 
@@ -158,7 +171,6 @@ class MatchScoreSheetImageService
             }
 
             $markTop = $top + $headerH;
-
             if ($frameNo < 10) {
                 $half = (int) floor($w / 2);
                 imageline($image, $x + $half, $markTop, $x + $half, $markTop + $markH, $color);
@@ -176,9 +188,7 @@ class MatchScoreSheetImageService
 
     private function drawMarkCell($image, string $mark, int $x, int $y, int $w, int $h, int $black): void
     {
-        $mark = strtoupper(trim($mark));
-        $mark = str_replace(['×', 'Ｘ', 'ｘ'], 'X', $mark);
-        $mark = str_replace(['ー', '－', '―'], '-', $mark);
+        $mark = $this->normalizeMark($mark);
 
         if ($mark === '') {
             return;
@@ -194,7 +204,7 @@ class MatchScoreSheetImageService
             return;
         }
 
-        $this->drawCenteredText($image, $mark, $x, $y, $w, $h, 21, $black, false);
+        $this->drawCenteredText($image, $mark, $x, $y, $w, $h, 18, $black, false);
     }
 
     private function drawStrikeMark($image, int $x, int $y, int $w, int $h, int $black): void
@@ -210,22 +220,22 @@ class MatchScoreSheetImageService
             $left, $top,
             $left, $bottom,
             $middleX, $middleY,
-        ], $black);
+        ], 3, $black);
 
         imagefilledpolygon($image, [
             $right, $top,
             $right, $bottom,
             $middleX, $middleY,
-        ], $black);
+        ], 3, $black);
     }
 
     private function drawSpareMark($image, int $x, int $y, int $w, int $h, int $black): void
     {
         imagefilledpolygon($image, [
-            $x + $w, $y,
-            $x + $w, $y + $h,
-            $x, $y + $h,
-        ], $black);
+            $x + $w - 1, $y + 1,
+            $x + $w - 1, $y + $h - 1,
+            $x + 1, $y + $h - 1,
+        ], 3, $black);
     }
 
     private function calculateCumulativeScoresForPdf(Collection $frames): array
@@ -452,23 +462,89 @@ class MatchScoreSheetImageService
 
         $marks = is_array($frame->display_marks ?? null) ? $frame->display_marks : [];
         $value = $marks[$key] ?? $frame->{$key} ?? '';
-        $value = strtoupper(trim((string) $value));
-        $value = str_replace(['×', 'Ｘ', 'ｘ'], 'X', $value);
-        $value = str_replace(['ー', '－', '―'], '-', $value);
 
-        if ($value === '.' || $value === null) {
+        return $this->normalizeMark($value);
+    }
+
+    private function normalizeMark(mixed $value): string
+    {
+        $mark = strtoupper(trim((string) ($value ?? '')));
+        $mark = str_replace(['×', 'Ｘ', 'ｘ'], 'X', $mark);
+        $mark = str_replace(['ー', '－', '―'], '-', $mark);
+
+        if ($mark === '' || $mark === '.') {
             return '';
         }
 
-        if (in_array($value, ['X', '/', '-', 'F'], true)) {
-            return $value;
+        if (in_array($mark, ['X', '/', '-', 'F'], true)) {
+            return $mark;
         }
 
-        if (preg_match('/^[0-9]$/', $value)) {
-            return $value;
+        if (preg_match('/^[0-9]$/', $mark)) {
+            return $mark;
         }
 
         return '';
+    }
+
+    private function resolveLaneLabelForPlayer($player, TournamentMatchScoreSheet $scoreSheet, int $playerIndex, int $playerCount): string
+    {
+        $playerLane = trim((string) ($player->lane_label ?? ''));
+
+        if ($playerLane !== '') {
+            return $this->normalizeLaneLabel($playerLane);
+        }
+
+        $sheetLane = trim((string) ($scoreSheet->lane_label ?? ''));
+
+        if ($sheetLane === '') {
+            return '';
+        }
+
+        $lanes = $this->extractLaneNumbers($sheetLane);
+
+        if ($playerCount === 2 && count($lanes) >= 2) {
+            return (string) ($playerIndex === 0 ? $lanes[1] : $lanes[0]);
+        }
+
+        if (isset($lanes[$playerIndex])) {
+            return (string) $lanes[$playerIndex];
+        }
+
+        return $this->normalizeLaneLabel($sheetLane);
+    }
+
+    /**
+     * @return array<int,int>
+     */
+    private function extractLaneNumbers(string $laneLabel): array
+    {
+        preg_match_all('/\d+/', $laneLabel, $matches);
+
+        return array_map('intval', $matches[0] ?? []);
+    }
+
+    private function normalizeLaneLabel(string $laneLabel): string
+    {
+        $laneLabel = trim($laneLabel);
+
+        if ($laneLabel === '') {
+            return '';
+        }
+
+        $laneLabel = str_replace(['Ｌ', 'ｌ'], 'L', $laneLabel);
+
+        if (preg_match('/^\s*(\d+)\s*L?\s*$/i', $laneLabel, $matches)) {
+            return (string) (int) $matches[1];
+        }
+
+        $lanes = $this->extractLaneNumbers($laneLabel);
+
+        if (count($lanes) === 1) {
+            return (string) $lanes[0];
+        }
+
+        return $laneLabel;
     }
 
     private function drawCenteredText($image, string $text, int $x, int $y, int $w, int $h, int $size, int $color, bool $bold = false): void
