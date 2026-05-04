@@ -8,7 +8,41 @@
             ? route('tournaments.match_score_sheets.update', [$tournament, $editingSheet])
             : route('tournaments.match_score_sheets.store', $tournament);
 
-        $defaultPlayers = collect(range(0, 3))->map(function ($i) use ($editingSheet) {
+        $normalizeRemainingPinsForView = function ($value) {
+            if ($value === null || $value === '') {
+                return [];
+            }
+
+            if (is_string($value)) {
+                $decoded = json_decode($value, true);
+                $value = json_last_error() === JSON_ERROR_NONE && is_array($decoded)
+                    ? $decoded
+                    : preg_split('/[^0-9]+/', $value, -1, PREG_SPLIT_NO_EMPTY);
+            }
+
+            if (!is_array($value)) {
+                return [];
+            }
+
+            $pins = [];
+            foreach ($value as $pin) {
+                $pinNumber = filter_var($pin, FILTER_VALIDATE_INT);
+                if ($pinNumber === false || $pinNumber < 1 || $pinNumber > 10) {
+                    continue;
+                }
+                $pins[] = $pinNumber;
+            }
+
+            $pins = array_values(array_unique($pins));
+            sort($pins, SORT_NUMERIC);
+
+            return $pins;
+        };
+
+        $remainingPinsValueForView = fn ($value) => implode(',', $normalizeRemainingPinsForView($value));
+        $remainingPinsLabelForView = fn ($value) => implode('.', $normalizeRemainingPinsForView($value));
+
+        $defaultPlayers = collect(range(0, 3))->map(function ($i) use ($editingSheet, $normalizeRemainingPinsForView) {
             $player = $editingSheet?->players?->get($i);
 
             return [
@@ -27,6 +61,7 @@
                         'throw2' => $frame->throw2,
                         'throw3' => $frame->throw3,
                         'cumulative_score' => $frame->cumulative_score,
+                        'remaining_pins' => $normalizeRemainingPinsForView($frame->remaining_pins),
                     ])->all()
                     : [],
             ];
@@ -121,8 +156,45 @@
                 </div>
 
                 <div class="alert alert-info small">
-                    入力記号：ストライクは <strong>X</strong>、スペアは <strong>/</strong>、ミスは <strong>-</strong>、ファールは <strong>F</strong>、ピン数は <strong>0〜9</strong> で入力してください。保存時にサーバー側でも再計算します。
+                    入力記号：ストライクは <strong>X</strong>、スペアは <strong>/</strong>、ミスは <strong>-</strong>、ファールは <strong>F</strong>、ピン数は <strong>0〜9</strong> で入力してください。保存時にサーバー側でも再計算します。<br>
+                    残りピンは、各フレーム下のピン配置図から残ったピンをクリックしてください。PDFでは <strong>3.5.6</strong> のように表示します。
                 </div>
+
+                <style>
+                    .pin-picker {
+                        min-width: 88px;
+                    }
+                    .pin-row {
+                        display: flex;
+                        justify-content: center;
+                        gap: 3px;
+                        margin-top: 3px;
+                    }
+                    .pin-button {
+                        width: 20px;
+                        height: 20px;
+                        border-radius: 999px;
+                        border: 1px solid #6c757d;
+                        background: #fff;
+                        color: #212529;
+                        font-size: 10px;
+                        line-height: 18px;
+                        padding: 0;
+                        text-align: center;
+                    }
+                    .pin-button.is-selected {
+                        background: #212529;
+                        color: #fff;
+                        border-color: #212529;
+                        font-weight: 700;
+                    }
+                    .remaining-pins-label {
+                        min-height: 18px;
+                        font-size: 12px;
+                        font-weight: 700;
+                        color: #212529;
+                    }
+                </style>
 
                 @foreach ($defaultPlayers as $playerIndex => $player)
                     <div class="score-player-block border rounded p-3 mb-4" data-player-index="{{ $playerIndex }}">
@@ -194,6 +266,41 @@
                                                     @endif
                                                 </div>
                                                 <div class="small text-muted mt-1 cumulative-preview" data-player-index="{{ $playerIndex }}" data-frame="{{ $frameNo }}">{{ $frame['cumulative_score'] ?? '' }}</div>
+
+                                                @php
+                                                    $remainingPinsRaw = old("players.$playerIndex.frames.$frameNo.remaining_pins", $frame['remaining_pins'] ?? []);
+                                                    $remainingPinsValue = $remainingPinsValueForView($remainingPinsRaw);
+                                                    $remainingPinsLabel = $remainingPinsLabelForView($remainingPinsRaw);
+                                                    $selectedRemainingPins = $normalizeRemainingPinsForView($remainingPinsRaw);
+                                                @endphp
+
+                                                <div class="pin-picker mt-2" data-remaining-picker>
+                                                    <input
+                                                        type="hidden"
+                                                        name="players[{{ $playerIndex }}][frames][{{ $frameNo }}][remaining_pins]"
+                                                        value="{{ $remainingPinsValue }}"
+                                                        data-remaining-input
+                                                    >
+                                                    <div class="remaining-pins-label" data-remaining-label>{{ $remainingPinsLabel }}</div>
+                                                    <div class="pin-row">
+                                                        @foreach ([7, 8, 9, 10] as $pinNo)
+                                                            <button type="button" class="pin-button @if(in_array($pinNo, $selectedRemainingPins, true)) is-selected @endif" data-pin-number="{{ $pinNo }}">{{ $pinNo }}</button>
+                                                        @endforeach
+                                                    </div>
+                                                    <div class="pin-row">
+                                                        @foreach ([4, 5, 6] as $pinNo)
+                                                            <button type="button" class="pin-button @if(in_array($pinNo, $selectedRemainingPins, true)) is-selected @endif" data-pin-number="{{ $pinNo }}">{{ $pinNo }}</button>
+                                                        @endforeach
+                                                    </div>
+                                                    <div class="pin-row">
+                                                        @foreach ([2, 3] as $pinNo)
+                                                            <button type="button" class="pin-button @if(in_array($pinNo, $selectedRemainingPins, true)) is-selected @endif" data-pin-number="{{ $pinNo }}">{{ $pinNo }}</button>
+                                                        @endforeach
+                                                    </div>
+                                                    <div class="pin-row">
+                                                        <button type="button" class="pin-button @if(in_array(1, $selectedRemainingPins, true)) is-selected @endif" data-pin-number="1">1</button>
+                                                    </div>
+                                                </div>
                                             </td>
                                         @endfor
                                         <td>
@@ -365,10 +472,59 @@
         if (totalPreview) totalPreview.textContent = total;
     }
 
+    function normalizePins(value) {
+        return String(value || '')
+            .split(/[^0-9]+/)
+            .map(pin => parseInt(pin, 10))
+            .filter(pin => Number.isInteger(pin) && pin >= 1 && pin <= 10)
+            .filter((pin, index, pins) => pins.indexOf(pin) === index)
+            .sort((a, b) => a - b);
+    }
+
+    function refreshPinPicker(picker) {
+        const input = picker.querySelector('[data-remaining-input]');
+        const label = picker.querySelector('[data-remaining-label]');
+        const selectedPins = normalizePins(input ? input.value : '');
+
+        if (input) input.value = selectedPins.join(',');
+        if (label) label.textContent = selectedPins.join('.');
+
+        picker.querySelectorAll('[data-pin-number]').forEach(button => {
+            const pin = parseInt(button.dataset.pinNumber || '0', 10);
+            button.classList.toggle('is-selected', selectedPins.includes(pin));
+        });
+    }
+
     document.querySelectorAll('.frame-input').forEach(input => {
         input.addEventListener('input', function () {
             this.value = normalizeMark(this.value);
             calculatePlayer(this.dataset.playerIndex);
+        });
+    });
+
+    document.querySelectorAll('[data-remaining-picker]').forEach(picker => {
+        refreshPinPicker(picker);
+
+        picker.querySelectorAll('[data-pin-number]').forEach(button => {
+            button.addEventListener('click', function () {
+                const input = picker.querySelector('[data-remaining-input]');
+                if (!input) return;
+
+                const pin = parseInt(this.dataset.pinNumber || '0', 10);
+                if (!Number.isInteger(pin) || pin < 1 || pin > 10) return;
+
+                const pins = normalizePins(input.value);
+                const index = pins.indexOf(pin);
+
+                if (index >= 0) {
+                    pins.splice(index, 1);
+                } else {
+                    pins.push(pin);
+                }
+
+                input.value = pins.sort((a, b) => a - b).join(',');
+                refreshPinPicker(picker);
+            });
         });
     });
 

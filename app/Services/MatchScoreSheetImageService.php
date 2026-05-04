@@ -52,7 +52,7 @@ class MatchScoreSheetImageService
 
         $width = 1400;
         $top = 28;
-        $blockHeight = 164;
+        $blockHeight = 192;
         $height = $top + ($players->count() * $blockHeight) + 28;
 
         $image = imagecreatetruecolor($width, $height);
@@ -77,6 +77,7 @@ class MatchScoreSheetImageService
             $blockTop = $top + ($index * $blockHeight);
             $tableTop = $blockTop + 54;
             $frames = $player->frames instanceof Collection ? $player->frames->keyBy('frame_no') : collect($player->frames ?? [])->keyBy('frame_no');
+            $calculatedCumulativeScores = $this->calculateCumulativeScoresForPdf($frames);
 
             $name = trim((string) ($player->display_name ?? ''));
             $arm = $this->formatArm((string) ($player->dominant_arm ?? ''));
@@ -91,6 +92,7 @@ class MatchScoreSheetImageService
             $this->drawScoreTableFrame($image, $tableLeft, $tableTop, $frameW, $tenthW, $headerH, $markH, $totalH, $black);
 
             $x = $tableLeft;
+
             for ($frameNo = 1; $frameNo <= 10; $frameNo++) {
                 $w = $frameNo === 10 ? $tenthW : $frameW;
                 $this->drawCenteredText($image, (string) $frameNo, $x, $tableTop + 1, $w, $headerH - 3, 20, $black, true);
@@ -110,8 +112,13 @@ class MatchScoreSheetImageService
                     $this->drawMarkCell($image, $marks[2] ?? '', $x + ($third * 2), $markTop, $w - ($third * 2), $markH, $black);
                 }
 
-                $total = $frame && $frame->cumulative_score !== null ? (string) $frame->cumulative_score : '';
-                $this->drawCenteredText($image, $total, $x, $tableTop + $headerH + $markH, $w, $totalH, 20, $black, false);
+                $total = $calculatedCumulativeScores[$frameNo] ?? null;
+                $this->drawCenteredText($image, $total !== null ? (string) $total : '', $x, $tableTop + $headerH + $markH, $w, $totalH, 20, $black, false);
+
+                $remainingPinsLabel = $this->remainingPinsLabel($frame?->remaining_pins ?? null);
+                if ($remainingPinsLabel !== '') {
+                    $this->drawCenteredText($image, $remainingPinsLabel, $x, $tableTop + $tableH + 5, $w, 20, 12, $dark, true);
+                }
 
                 $x += $w;
             }
@@ -142,6 +149,7 @@ class MatchScoreSheetImageService
         imageline($image, $left, $top + $headerH + $markH, $left + $width, $top + $headerH + $markH, $color);
 
         $x = $left;
+
         for ($frameNo = 1; $frameNo <= 10; $frameNo++) {
             $w = $frameNo === 10 ? $tenthW : $frameW;
 
@@ -150,6 +158,7 @@ class MatchScoreSheetImageService
             }
 
             $markTop = $top + $headerH;
+
             if ($frameNo < 10) {
                 $half = (int) floor($w / 2);
                 imageline($image, $x + $half, $markTop, $x + $half, $markTop + $markH, $color);
@@ -190,9 +199,6 @@ class MatchScoreSheetImageService
 
     private function drawStrikeMark($image, int $x, int $y, int $w, int $h, int $black): void
     {
-        // JPBA公式PDFのストライク表記は、アルファベットのXではなく、
-        // 右側投球欄いっぱいに左右2つの黒三角を向かい合わせた「砂時計型」です。
-        // 枠線を潰さないよう、1pxだけ内側に寄せて描画します。
         $left = $x + 1;
         $right = $x + $w - 1;
         $top = $y + 1;
@@ -200,14 +206,12 @@ class MatchScoreSheetImageService
         $middleX = (int) round($x + ($w / 2));
         $middleY = (int) round($y + ($h / 2));
 
-        // 左三角：左辺全体から中央へ向かう黒塗り
         imagefilledpolygon($image, [
             $left, $top,
             $left, $bottom,
             $middleX, $middleY,
         ], $black);
 
-        // 右三角：右辺全体から中央へ向かう黒塗り
         imagefilledpolygon($image, [
             $right, $top,
             $right, $bottom,
@@ -217,12 +221,214 @@ class MatchScoreSheetImageService
 
     private function drawSpareMark($image, int $x, int $y, int $w, int $h, int $black): void
     {
-        // 公式PDFのスペアは、右側投球欄を対角線で切る黒三角。
         imagefilledpolygon($image, [
             $x + $w, $y,
             $x + $w, $y + $h,
             $x, $y + $h,
-        ], 3, $black);
+        ], $black);
+    }
+
+    private function calculateCumulativeScoresForPdf(Collection $frames): array
+    {
+        $rolls = [];
+        $frameStartIndexes = [];
+        $normalizedFrames = [];
+
+        for ($frameNo = 1; $frameNo <= 10; $frameNo++) {
+            $frame = $frames->get($frameNo);
+
+            $throw1 = $this->markText($frame, 'throw1');
+            $throw2 = $this->markText($frame, 'throw2');
+            $throw3 = $this->markText($frame, 'throw3');
+
+            if ($frameNo < 10 && ($throw1 === 'X' || $throw2 === 'X')) {
+                $throw1 = 'X';
+                $throw2 = '';
+            }
+
+            $normalizedFrames[$frameNo] = [
+                'throw1' => $throw1,
+                'throw2' => $throw2,
+                'throw3' => $throw3,
+            ];
+
+            $frameStartIndexes[$frameNo] = count($rolls);
+
+            if ($frameNo < 10) {
+                if ($throw1 === '') {
+                    continue;
+                }
+
+                if ($throw1 === 'X') {
+                    $rolls[] = 10;
+                    continue;
+                }
+
+                $firstPins = $this->pinsForFirstThrow($throw1);
+                $rolls[] = $firstPins;
+
+                if ($throw2 === '') {
+                    continue;
+                }
+
+                $rolls[] = $throw2 === '/'
+                    ? max(0, 10 - $firstPins)
+                    : $this->pinsForNormalThrow($throw2);
+
+                continue;
+            }
+
+            if ($throw1 === '') {
+                continue;
+            }
+
+            $firstPins = $this->pinsForFirstThrow($throw1);
+            $rolls[] = $firstPins;
+
+            if ($throw2 === '') {
+                continue;
+            }
+
+            $secondPins = $throw2 === '/'
+                ? max(0, 10 - $firstPins)
+                : $this->pinsForNormalThrow($throw2);
+
+            $rolls[] = $secondPins;
+
+            if ($throw3 === '') {
+                continue;
+            }
+
+            $rolls[] = $throw3 === '/'
+                ? max(0, 10 - $secondPins)
+                : $this->pinsForNormalThrow($throw3);
+        }
+
+        $total = 0;
+        $cumulative = [];
+
+        for ($frameNo = 1; $frameNo <= 10; $frameNo++) {
+            $frame = $normalizedFrames[$frameNo] ?? [
+                'throw1' => '',
+                'throw2' => '',
+                'throw3' => '',
+            ];
+
+            $start = $frameStartIndexes[$frameNo] ?? count($rolls);
+            $frameScore = null;
+
+            if ($frameNo < 10) {
+                if ($frame['throw1'] === '') {
+                    $frameScore = null;
+                } elseif ($frame['throw1'] === 'X') {
+                    if (isset($rolls[$start], $rolls[$start + 1], $rolls[$start + 2])) {
+                        $frameScore = 10 + $rolls[$start + 1] + $rolls[$start + 2];
+                    }
+                } elseif ($frame['throw2'] === '/') {
+                    if (isset($rolls[$start], $rolls[$start + 1], $rolls[$start + 2])) {
+                        $frameScore = 10 + $rolls[$start + 2];
+                    }
+                } elseif ($frame['throw2'] !== '') {
+                    if (isset($rolls[$start], $rolls[$start + 1])) {
+                        $frameScore = $rolls[$start] + $rolls[$start + 1];
+                    }
+                }
+            } else {
+                $requiredRollCount = $this->requiredTenthFrameRollCount($frame);
+                $tenthRolls = array_slice($rolls, $start);
+
+                if ($requiredRollCount > 0 && count($tenthRolls) >= $requiredRollCount) {
+                    $frameScore = array_sum($tenthRolls);
+                }
+            }
+
+            if ($frameScore !== null) {
+                $total += $frameScore;
+                $cumulative[$frameNo] = $total;
+            } else {
+                $cumulative[$frameNo] = null;
+            }
+        }
+
+        return $cumulative;
+    }
+
+    private function requiredTenthFrameRollCount(array $frame): int
+    {
+        if (($frame['throw1'] ?? '') === '') {
+            return 0;
+        }
+
+        if (($frame['throw2'] ?? '') === '') {
+            return 1;
+        }
+
+        if (($frame['throw1'] ?? '') === 'X' || ($frame['throw2'] ?? '') === '/') {
+            return 3;
+        }
+
+        return 2;
+    }
+
+    private function pinsForFirstThrow(string $mark): int
+    {
+        if ($mark === 'X') {
+            return 10;
+        }
+
+        return $this->pinsForNormalThrow($mark);
+    }
+
+    private function pinsForNormalThrow(string $mark): int
+    {
+        if ($mark === 'X') {
+            return 10;
+        }
+
+        if ($mark === '-' || $mark === 'F' || $mark === '') {
+            return 0;
+        }
+
+        if (preg_match('/^[0-9]$/', $mark)) {
+            return max(0, min(9, (int) $mark));
+        }
+
+        return 0;
+    }
+
+    private function remainingPinsLabel(mixed $value): string
+    {
+        if ($value === null || $value === '') {
+            return '';
+        }
+
+        if (is_string($value)) {
+            $decoded = json_decode($value, true);
+            $value = json_last_error() === JSON_ERROR_NONE && is_array($decoded)
+                ? $decoded
+                : preg_split('/[^0-9]+/', $value, -1, PREG_SPLIT_NO_EMPTY);
+        }
+
+        if (!is_array($value)) {
+            return '';
+        }
+
+        $pins = [];
+
+        foreach ($value as $pin) {
+            $pinNumber = filter_var($pin, FILTER_VALIDATE_INT);
+
+            if ($pinNumber === false || $pinNumber < 1 || $pinNumber > 10) {
+                continue;
+            }
+
+            $pins[] = $pinNumber;
+        }
+
+        $pins = array_values(array_unique($pins));
+        sort($pins, SORT_NUMERIC);
+
+        return implode('.', $pins);
     }
 
     private function marksForFrame($frame, int $frameNo): array
@@ -231,7 +437,7 @@ class MatchScoreSheetImageService
         $throw2 = $this->markText($frame, 'throw2');
         $throw3 = $this->markText($frame, 'throw3');
 
-        if ($frameNo < 10 && $throw1 === 'X') {
+        if ($frameNo < 10 && ($throw1 === 'X' || $throw2 === 'X')) {
             return ['', 'X', ''];
         }
 
@@ -250,18 +456,32 @@ class MatchScoreSheetImageService
         $value = str_replace(['×', 'Ｘ', 'ｘ'], 'X', $value);
         $value = str_replace(['ー', '－', '―'], '-', $value);
 
-        return $value;
+        if ($value === '.' || $value === null) {
+            return '';
+        }
+
+        if (in_array($value, ['X', '/', '-', 'F'], true)) {
+            return $value;
+        }
+
+        if (preg_match('/^[0-9]$/', $value)) {
+            return $value;
+        }
+
+        return '';
     }
 
     private function drawCenteredText($image, string $text, int $x, int $y, int $w, int $h, int $size, int $color, bool $bold = false): void
     {
         $text = $this->normalizeText($text);
+
         if ($text === '') {
             return;
         }
 
         $font = $this->font;
         $box = @imagettfbbox($size, 0, $font, $text);
+
         if ($box === false) {
             imagestring($image, 5, $x + 2, $y + 2, $text, $color);
             return;
@@ -273,6 +493,7 @@ class MatchScoreSheetImageService
         $ty = (int) round($y + (($h + $textH) / 2) - 2);
 
         imagettftext($image, $size, 0, $tx, $ty, $color, $font, $text);
+
         if ($bold) {
             imagettftext($image, $size, 0, $tx + 1, $ty, $color, $font, $text);
         }
@@ -281,12 +502,14 @@ class MatchScoreSheetImageService
     private function drawRightText($image, string $text, int $x, int $y, int $w, int $h, int $size, int $color, bool $bold = false): void
     {
         $text = $this->normalizeText($text);
+
         if ($text === '') {
             return;
         }
 
         $font = $this->font;
         $box = @imagettfbbox($size, 0, $font, $text);
+
         if ($box === false) {
             imagestring($image, 5, $x + 2, $y + 2, $text, $color);
             return;
@@ -298,6 +521,7 @@ class MatchScoreSheetImageService
         $ty = (int) round($y + (($h + $textH) / 2) - 2);
 
         imagettftext($image, $size, 0, $tx, $ty, $color, $font, $text);
+
         if ($bold) {
             imagettftext($image, $size, 0, $tx + 1, $ty, $color, $font, $text);
         }
@@ -306,12 +530,15 @@ class MatchScoreSheetImageService
     private function formatArm(string $arm): string
     {
         $arm = trim($arm);
+
         if ($arm === '') {
             return '';
         }
+
         if (in_array($arm, ['right', '右', 'R', 'r'], true)) {
             return '右';
         }
+
         if (in_array($arm, ['left', '左', 'L', 'l'], true)) {
             return '左';
         }
@@ -322,6 +549,7 @@ class MatchScoreSheetImageService
     private function normalizeText(string $text): string
     {
         $text = trim($text);
+
         if ($text === '') {
             return '';
         }
@@ -345,9 +573,11 @@ class MatchScoreSheetImageService
 
         foreach ($candidates as $candidate) {
             $path = str_replace('\\', '/', (string) $candidate);
+
             if (!is_file($path)) {
                 continue;
             }
+
             if (@imagettfbbox(12, 0, $path, '日本語') !== false) {
                 return $path;
             }

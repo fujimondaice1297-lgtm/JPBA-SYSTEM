@@ -19,6 +19,7 @@ class TournamentMatchScoreFrame extends Model
         'frame_score',
         'cumulative_score',
         'display_marks',
+        'remaining_pins',
     ];
 
     protected $casts = [
@@ -26,6 +27,7 @@ class TournamentMatchScoreFrame extends Model
         'frame_score' => 'integer',
         'cumulative_score' => 'integer',
         'display_marks' => 'array',
+        'remaining_pins' => 'array',
     ];
 
     public function player(): BelongsTo
