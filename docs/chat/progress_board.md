@@ -222,7 +222,7 @@
 - [✓] `resources/views/tournament_results/pdf.blade.php` の列順を調整し、順位列を一番左に移動した
 - [✓] PDFの `期` 列は維持した
 - [✓] シュートアウトの公式PDF風の図式表示（線でつながるトーナメント図）はテンプレート画像重ね方式で実装した
-- [ ] 公式PDF下部のスコアシート風表示は未実装。必要なら後続で別途対応する
+- [✓] 公式PDF下部のスコアシート風表示は、2026-05-03〜2026-05-05 の対応で実装済み
 - [✓] 以下ファイルを含むシュートアウト実装一式を commit / push 済み
   - `app/Http/Controllers/ScoreController.php`
   - `app/Http/Controllers/TournamentResultSnapshotController.php`
@@ -250,8 +250,51 @@
 - [✓] 勝ち上がった選手のスコアだけを赤文字・太字・少し大きめで表示するようにした
 - [✓] CCCカップの画面表示で、鈴木洋子の勝ち上がりルートと `279 / 249 / 258` の勝者スコアが強調表示されることを確認した
 - [✓] 公式PDF風の「線でつながるシュートアウト図」は実装完了扱い
-- [ ] 公式PDF下部にあるゲーム別スコアシート風表示は未実装。必要なら後続で別途対応する
-- [ ] 今回の図式表示調整は未コミットのため、次回は必ず `git status -sb` / `git rev-parse --short HEAD` / `git diff --name-only` を確認してから commit 対象を確定する
+- [✓] 公式PDF下部にあるゲーム別スコアシート風表示は、PNG生成方式でPDF掲載まで実装済み
+- [✓] 図式表示調整は後続のシュートアウトPDF整備とあわせて commit / push 済み
+
+
+#### 2026-05-05 メモ（シュートアウト / 残りピン入力・公式PDF様式・進行設定 完了）
+- [✓] `tournament_match_score_frames.remaining_pins jsonb nullable` を追加し、既存データを壊さず残りピンを保存できるようにした
+- [✓] `docs/db/data_dictionary.md` を更新し、`php tools/generate_er_from_dictionary.php` で `docs/db/ER.dbml` を再生成した
+- [✓] `TournamentMatchScoreFrame` の `fillable` / `casts` に `remaining_pins` を反映した
+- [✓] `/tournaments/{tournament}/match-score-sheets` の入力画面に、10本ピン配置図から残りピンをクリック選択するUIを追加した
+- [✓] 選択結果を `3.5.6` 形式で画面表示し、保存時は `[3,5,6]` のような配列として保持する方針にした
+- [✓] `TournamentMatchScoreSheetController` で残りピン番号を 1〜10 に制限し、重複除去・昇順保存する処理を追加した
+- [✓] 残りピン対応後に一時的に崩れたスコア計算を修正し、累計スコア・最終スコア・勝者判定が再び正しく出ることを確認した
+- [✓] `MatchScoreSheetImageService` で各フレーム下へ残りピンを `3.5.6` 形式で描画できるようにした
+- [✓] レーン表記を公式PDF寄せに修正し、同一ページ内の表記揺れを解消した
+- [✓] `public/images/jpba_logo.png` を使い、PDF 1ページ目へJPBAロゴを表示できるようにした
+- [✓] 大会別PDF 1ページ目を公式PDF風に再構成した
+  - 大会名
+  - シーズントライアル名
+  - 会場名
+  - 成績表タイトル
+  - 主催 / 公認 / 主管運営 / 開催日 / 会場 / 競技内容
+  - 入賞者リスト
+- [✓] ライセンスNoはPDF上で下4桁表示に統一し、枠からはみ出す問題を解消した
+- [✓] 大会編集画面のシュートアウト設定内に「シーズントライアル進行設定」を追加した
+- [✓] 予選参加人数 / 予選G数 / 準決勝進出人数 / 準決勝G数 / 準決勝通算G数 / 決勝進出人数を後から編集できるようにした
+- [✓] `tournaments.shootout_settings.stage_progress` を使い、PDFの競技内容文言を大会ごとの設定値から動的生成するようにした
+- [✓] 34名→18名、70名→36名のように参加人数が変わるケースへ対応できることを確認した
+- [✓] `docs/db/data_dictionary.md` に `shootout_settings.stage_progress` の運用説明を追記した
+- [✓] `php -l` / `optimize:clear` / `view:clear` / `view:cache` を実行し、構文とBladeキャッシュを確認した
+- [✓] 今回分は commit / push 済みで、push後に差分なしを確認した
+
+##### 次に詰める候補
+- [ ] PDF 1ページ目の入賞者リストを実データ寄せする
+  - 所属 / 用品契約
+  - 獲得合計ポイント
+  - 入賞ポイント
+  - ステップポイント
+  - 賞金
+- [ ] シュートアウトPDFの細部を必要に応じて微調整する
+  - 公式PDFとの余白差
+  - 文字太さ
+  - 表罫線の太さ
+  - JPBAロゴの表示サイズ
+- [ ] `tournament_awards` / `tournament_points` と `prize_distributions` / `point_distributions` の役割整理、および辞書・現物スキーマ整合を進める
+- [ ] ダブルエリミネーション方式の要件整理に入る
 
 ## Phase 3：ProTest（後回し）
 - [ ] 要件整理
@@ -413,15 +456,15 @@
   - `tournament_match_score_sheets`
   - `tournament_match_score_sheet_players`
   - `tournament_match_score_frames`
-- [ ] migration / data_dictionary.md / ER.dbml をセットで更新する
-- [ ] スコアシート入力画面を追加する
-- [ ] 入力したフレーム記号から累計スコアと勝者を自動計算する
-- [ ] PDF出力で `is_published = true` のスコアシートを表示する
+- [✓] migration / data_dictionary.md / ER.dbml をセットで更新する
+- [✓] スコアシート入力画面を追加する
+- [✓] 入力したフレーム記号から累計スコアと勝者を自動計算する
+- [✓] PDF出力で `is_published = true` のスコアシートを表示する
 
 #### 2026-05-02 メモ（シュートアウト / スコアシートPDF反映）
 - [✓] `tournament_match_score_sheets` 系テーブルを使ったスコアシート入力画面が表示できることを確認した
 - [✓] 大会別PDFで、公開対象のスコアシートを3ページ目以降に表示する処理を追加した
-- [ ] 公式PDFと同等の細かい罫線・ロゴ・会場情報・複数ページ分割は後続で調整する
+- [✓] 公式PDFに近づける主要調整（罫線・JPBAロゴ・会場情報・複数ページ分割）は実施済み。細部の微調整は必要に応じて後続で対応する
 
 #### 2026-05-03 メモ（シュートアウト / 公式PDF風スコアシートPNG生成）
 
@@ -446,15 +489,15 @@
 
 ##### 次にやること（残りピン入力・公式PDF再現度向上）
 
-- [ ] `tournament_match_score_frames` に残りピン保存用カラムを追加する
-  - 第一候補: `remaining_pins jsonb nullable`
-- [ ] DB変更に合わせて `docs/db/data_dictionary.md` を更新する
-- [ ] `php tools/generate_er_from_dictionary.php` で `docs/db/ER.dbml` を再生成する
-- [ ] スコアシート入力画面に、10本ピン配置図から残りピンをクリック選択するUIを追加する
-- [ ] 選択した残りピンを `3.5.6` のように表示できるようにする
-- [ ] 保存時に、各フレームの残りピン情報を `tournament_match_score_frames.remaining_pins` に保存する
-- [ ] PDF生成時に、各フレーム下へ残りピンを表示する
-- [ ] 公式PDFに近づけるため、必要に応じてレイアウトを追加調整する
+- [✓] `tournament_match_score_frames` に残りピン保存用カラムを追加した
+  - `remaining_pins jsonb nullable`
+- [✓] DB変更に合わせて `docs/db/data_dictionary.md` を更新する
+- [✓] `php tools/generate_er_from_dictionary.php` で `docs/db/ER.dbml` を再生成する
+- [✓] スコアシート入力画面に、10本ピン配置図から残りピンをクリック選択するUIを追加する
+- [✓] 選択した残りピンを `3.5.6` のように表示できるようにする
+- [✓] 保存時に、各フレームの残りピン情報を `tournament_match_score_frames.remaining_pins` に保存する
+- [✓] PDF生成時に、各フレーム下へ残りピンを表示する
+- [✓] 公式PDFに近づけるため、主要レイアウトを追加調整した
   - 大会名
   - 会場名
   - 開催日
@@ -462,3 +505,6 @@
   - スコア表タイトル
   - レーン表記
   - 複数スコアシートのページ分割
+  - 1ページ目の公式PDF風成績表
+  - 2ページ目の公式PDF風シュートアウト表
+  - 3ページ目以降のスコア表

@@ -1,3 +1,110 @@
+## 2026-05-05 シュートアウト / 残りピン入力・公式PDF様式・進行設定 完了
+
+- 目的:
+  - JPBA公式PDFに近い最終成績PDFへ寄せるため、公式PDF下部のスコアシートにある「各フレーム下の残りピン表示」をDB入力から自動反映できるようにする。
+  - 1ページ目の成績表、2ページ目のシュートアウト表、3ページ目以降のスコア表を、公式PDFに近い構成へ調整する。
+  - 予選参加人数や準決勝進出人数は大会当日まで確定しないため、大会編集画面から後で修正できるようにする。
+
+- 作業開始時の前提:
+  - 直前のスコアシート入力・PDF画像出力までは commit / push 済み。
+  - 作業開始時点では `git status -sb` が `## main...origin/main` で差分なし。
+  - ProTest は今回の対象外。
+  - 既存データがあるため、破壊的変更は行わず、追加カラムと既存 `shootout_settings` の拡張で対応した。
+
+- DB / 辞書:
+  - `database/migrations/2025_09_01_000086_add_remaining_pins_to_tournament_match_score_frames_table.php` を追加した。
+  - `tournament_match_score_frames` に `remaining_pins jsonb nullable` を追加した。
+  - 表示用の `remaining_pins_label` は保存せず、PDF表示時に `[3,5,6]` から `3.5.6` のように生成する方針にした。
+  - `docs/db/data_dictionary.md` を更新した。
+  - `php tools/generate_er_from_dictionary.php` で `docs/db/ER.dbml` を再生成した。
+  - `TournamentMatchScoreFrame` モデルの `fillable` / `casts` に `remaining_pins` を追加した。
+
+- 残りピン入力UI:
+  - `resources/views/tournament_match_score_sheets/index.blade.php` に、各フレームごとの残りピン選択UIを追加した。
+  - 10本ピン配置図から残ったピンをクリックして選択 / 解除できるようにした。
+  - 選択結果は画面上で `3.5.6` のように確認できるようにした。
+  - 保存値は hidden input 経由で送信し、Controller 側で配列として受け取る方針にした。
+
+- 保存処理 / スコア計算:
+  - `TournamentMatchScoreSheetController` で、各フレームの `remaining_pins` を保存できるようにした。
+  - 不正なピン番号は除外し、1〜10 のみを許可した。
+  - 重複は除外し、昇順に並べて保存するようにした。
+  - 残りピン対応後に一時的にスコア計算が崩れたため、フレーム入力値と計算処理の受け渡しを修正した。
+  - 修正後、累計スコア・最終スコア・勝者判定が再び表示されることを確認した。
+
+- PDFスコア表:
+  - `MatchScoreSheetImageService` で、各フレーム下に残りピンを `3.5.6` 形式で描画するようにした。
+  - ストライクは公式PDF風の左右三角の砂時計型マーク、スペアは右側三角マークとして描画する方針を維持した。
+  - レーン表記がページ内で揺れていたため、公式PDF寄せの表記へ統一した。
+  - 複数スコアシートの表示で余分な空白ページが出る問題を修正した。
+  - 3ページ目以降のスコア表ページは、必要なスコアシートだけが表示される構成にした。
+
+- PDF 1ページ目 / 2ページ目の公式PDF寄せ:
+  - `resources/views/tournament_results/pdf.blade.php` を調整し、1ページ目を公式PDF風の成績表レイアウトへ寄せた。
+  - `public/images/jpba_logo.png` を配置し、PDF 1ページ目へJPBAロゴを表示できるようにした。
+  - 日本語文字化けが発生したため、フォント指定・太字表現・Blade内文字列の扱いを調整し、見出し・表内文字・選手名が表示される状態に戻した。
+  - ライセンスNoはPDF上で下4桁表示に統一し、枠からはみ出す問題を解消した。
+  - 1ページ目には以下を表示する構成にした。
+    - 大会名
+    - JPBAシーズントライアル2026
+    - ウィンターシリーズ
+    - 会場名
+    - 成績表
+    - 主催 / 公認 / 主管運営 / 開催日 / 会場 / 競技内容
+    - 入賞者リスト
+  - 2ページ目のシュートアウト表には、公式PDFに近いタイトル・説明文・勝ち上がり図・優勝決定戦スコアを表示する構成にした。
+
+- シーズントライアル進行設定:
+  - 参加人数は大会当日まで確定しないため、Tinker固定ではなく大会編集画面から後で修正できるようにした。
+  - `resources/views/tournaments/edit.blade.php` のシュートアウト方式設定ブロック内に「シーズントライアル進行設定」を追加した。
+  - 入力できる項目は以下。
+    - 予選参加人数
+    - 予選G数
+    - 準決勝進出人数
+    - 準決勝G数
+    - 準決勝通算G数
+    - 決勝進出人数
+  - 保存先は既存の `tournaments.shootout_settings.stage_progress` とした。
+  - `TournamentController` で、個別入力欄から `stage_progress` を組み立てて保存するようにした。
+  - `Tournament` モデルでは `shootout_settings` が既に `array` cast 済みだったため、DBカラム追加は不要と判断した。
+  - `docs/db/data_dictionary.md` に `shootout_settings.stage_progress` の運用説明を追記した。
+  - PDFの競技内容文言は、`shootout_settings.stage_progress` を読んで動的に生成するようにした。
+  - 34名なら `予選･･･34名にて8G投球し上位18名を準決勝へ選出。`、70名なら `予選･･･70名にて8G投球し上位36名を準決勝へ選出。` のように変わることを確認した。
+
+- 確認済み:
+  - `php artisan migrate`
+  - `php tools/generate_er_from_dictionary.php`
+  - `php artisan tinker --execute="dump(Schema::hasColumn('tournament_match_score_frames', 'remaining_pins'));"`
+  - `php -l app/Models/TournamentMatchScoreFrame.php`
+  - `php -l app/Http/Controllers/TournamentMatchScoreSheetController.php`
+  - `php -l app/Services/MatchScoreSheetImageService.php`
+  - `php -l app/Http/Controllers/TournamentController.php`
+  - `php artisan optimize:clear`
+  - `php artisan view:clear`
+  - `php artisan view:cache`
+  - `/tournaments/5/match-score-sheets` で残りピン選択・保存を確認
+  - `/tournaments/5/results/pdf` でPDF表示を確認
+  - 大会編集画面で `stage_progress` の設定値を保存し、PDF 1ページ目の競技内容へ反映されることを確認
+
+- コミット / Push:
+  - 残りピン入力・PDF様式調整・進行設定UI・JPBAロゴ反映を含む一連の変更は commit / push 済み。
+  - push後、ユーザー側で差分なしを確認済み。
+
+- 現時点の判断:
+  - **シュートアウト方式は、速報入力 → 正式成績反映 → 公式PDF風トーナメント図 → 公式PDF風スコアシート → 残りピン表示 → 1ページ目公式様式 → 大会編集画面での進行設定まで一通り完了。**
+  - PDFの公式再現度は主要構成まで到達したが、完全一致ではなく、必要に応じて細部の余白・文字太さ・罫線などは後続で微調整する。
+
+- 次に詰める候補:
+  1. PDF 1ページ目の入賞者リストを実データ寄せする。
+     - 所属 / 用品契約
+     - 獲得合計ポイント
+     - 入賞ポイント
+     - ステップポイント
+     - 賞金
+  2. `tournament_awards` / `tournament_points` と `prize_distributions` / `point_distributions` の役割整理、および辞書・現物スキーマ整合を進める。
+  3. ダブルエリミネーション方式の要件整理へ進む。
+
+
 ## 2026-05-03 シュートアウト / 公式PDF風スコアシートPNG生成と残りピン入力方針
 
 - 目的:
