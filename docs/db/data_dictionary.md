@@ -931,15 +931,6 @@ SNS等リンク集を保持するテーブル。
   - 例: `["予選","準決勝"]` は、予選を carry、準決勝を scratch として `semifinal_total` を作る。
 - 過去に反映済みの snapshot は、その時点の `calculation_definition` を保持するため、後から大会設定を変えても過去snapshotの計算根拠は維持される。
 - シュートアウト方式は、標準では8名進出として扱う。
-- `shootout_settings` はシュートアウト方式の内部設定JSONとして使う。
-  - `stage_progress` は公式PDFの競技内容文言を生成するための進行人数・ゲーム数設定を保持する。
-  - `stage_progress.prelim_player_count` = 予選参加人数（大会開催直前・当日後に確定するため編集画面で後から修正可能）
-  - `stage_progress.prelim_game_count` = 予選ゲーム数
-  - `stage_progress.prelim_qualifier_count` = 準決勝進出人数
-  - `stage_progress.semifinal_game_count` = 準決勝ゲーム数
-  - `stage_progress.semifinal_total_game_count` = 準決勝終了時点の通算ゲーム数
-  - `stage_progress.semifinal_qualifier_count` = 決勝進出人数。画面上は `shootout_qualifier_count` を正として保存時に同期する。
-  - 未確定項目はNULL相当（未保存）を許容し、PDF表示時は保存済み値または既定値・自動計算値を使う。
 - シュートアウト進出者は、`shootout_seed_source_result_code` で指定した current snapshot の順位を seed 順として抽出する。
 - 標準8名シュートアウトは以下の構成とする。
   - 1stマッチ: 5位〜8位通過の4名で1Gを投球し、最上位者のみ2ndマッチへ進出
@@ -1130,11 +1121,14 @@ SNS等リンク集を保持するテーブル。
 - pro_bowler_license_no（誰の結果か：文字列：既存互換のため保持）
 - pro_bowler_id（誰の結果か：pro_bowlers.id：nullable。埋められる行はIDで紐付ける）
 - ranking（順位）
-- points（ポイント）
+- points（獲得合計ポイント）
+- award_points（入賞ポイント：nullable。公式PDF表示用）
+- step_points（ステップポイント：nullable。公式PDF表示用）
 - total_pin（合計ピン）
 - games（ゲーム数）
 - average（アベレージ）
 - prize_money（賞金）
+- affiliation_display（所属 / 用品契約の大会時点表示スナップショット：nullable）
 - ranking_year（年度：NOT NULL）
 - amateur_name（アマ参加者名：nullable）
 
@@ -1142,6 +1136,8 @@ SNS等リンク集を保持するテーブル。
 - 既存データは `pro_bowler_license_no` のままでも壊れない。
 - アマ参加者は `amateur_name`（および `pro_bowler_id` NULL）で保持する。
 - `tournament_results` は **最終成績の正本** として扱う。
+- `points` は獲得合計ポイント、`award_points` は入賞ポイント、`step_points` はステップポイントとして扱う。
+- `affiliation_display` は大会PDF再出力時に当時表記を維持するための表示用スナップショットとする。原則は `pro_bowlers.organization_name` と `pro_bowlers.equipment_contract` から生成するが、大会時点表記が必要な場合はこの列を優先する。
 - 予選前半 / 予選通算 / 準々決勝通算 / 準決勝通算などの途中公開単位は、`tournament_result_snapshots` / `tournament_result_snapshot_rows` に保存し、`is_final = true` の反映単位だけを `tournament_results` に同期する。
 - `tournament_results` への自動同期は、`tournament_result_snapshots` の `final_total` から行う。
 - 同期時には、snapshot row 側で解決済みの `pro_bowler_id` / 正式ライセンス番号 / 表示名を優先して保持する。

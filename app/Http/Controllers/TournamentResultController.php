@@ -502,6 +502,9 @@ class TournamentResultController extends Controller
 
         $results = $query->get();
         $this->attachBowlerPeriodLabels($results);
+        $this->attachResultPdfDisplayFields($results);
+
+        $scoreSnapshots = $this->loadPdfScoreSnapshots($tournament);
 
         $shootoutPdf = $this->buildShootoutPdfData($tournament);
         $shootoutBracketImage = null;
@@ -533,7 +536,7 @@ class TournamentResultController extends Controller
 
         return $this->makePdfWithJapaneseFont(
             'tournament_results.pdf',
-            compact('tournament', 'results', 'shootoutPdf', 'shootoutBracketImage', 'matchScoreSheets', 'matchScoreSheetImages'),
+            compact('tournament', 'results', 'scoreSnapshots', 'shootoutPdf', 'shootoutBracketImage', 'matchScoreSheets', 'matchScoreSheetImages'),
             "{$tournament->year}_{$tournament->name}_results.pdf"
         );
     }
@@ -551,6 +554,7 @@ class TournamentResultController extends Controller
             ->get();
 
         $this->attachBowlerPeriodLabels($results);
+        $this->attachResultPdfDisplayFields($results);
 
         return $this->makePdfWithJapaneseFont(
             'tournament_results.pdf',
@@ -789,6 +793,117 @@ class TournamentResultController extends Controller
             default => 'prelim_total',
         };
     }
+
+private function loadPdfScoreSnapshots(Tournament $tournament): array
+{
+    $snapshotRows = DB::table('tournament_result_snapshots')
+        ->where('tournament_id', $tournament->id)
+        ->where('is_current', true)
+        ->whereIn('result_code', ['prelim_total', 'semifinal_total'])
+        ->orderByRaw("case result_code when 'prelim_total' then 1 when 'semifinal_total' then 2 else 9 end")
+        ->orderBy('id')
+        ->get();
+
+    $snapshots = [];
+    foreach ($snapshotRows as $snapshot) {
+        $rows = DB::table('tournament_result_snapshot_rows')
+            ->where('snapshot_id', $snapshot->id)
+            ->orderBy('ranking')
+            ->orderByDesc('total_pin')
+            ->orderBy('id')
+            ->get();
+
+        $snapshots[] = [
+            'snapshot' => $snapshot,
+            'rows' => $rows,
+        ];
+    }
+
+    return $snapshots;
+}
+
+private function attachResultPdfDisplayFields($results): void
+{
+    $licenses = $results
+        ->map(fn ($result) => $result->pro_bowler_license_no
+            ?? optional($result->player)->license_no
+            ?? optional($result->bowler)->license_no
+            ?? null)
+        ->filter()
+        ->map(fn ($license) => strtoupper(trim((string) $license)))
+        ->unique()
+        ->values();
+
+    $ids = $results
+        ->map(fn ($result) => $result->pro_bowler_id ?? optional($result->player)->id ?? optional($result->bowler)->id ?? null)
+        ->filter()
+        ->map(fn ($id) => (int) $id)
+        ->unique()
+        ->values();
+
+    if ($licenses->isEmpty() && $ids->isEmpty()) {
+        return;
+    }
+
+    $proBowlers = ProBowler::query()
+        ->select(['id', 'license_no', 'organization_name', 'equipment_contract'])
+        ->where(function ($q) use ($licenses, $ids) {
+            if ($licenses->isNotEmpty()) {
+                $q->orWhereIn(DB::raw('upper(license_no)'), $licenses->all());
+            }
+
+            if ($ids->isNotEmpty()) {
+                $q->orWhereIn('id', $ids->all());
+            }
+        })
+        ->get();
+
+    $byId = $proBowlers->keyBy('id');
+    $byLicense = $proBowlers->keyBy(fn ($bowler) => strtoupper(trim((string) $bowler->license_no)));
+
+    foreach ($results as $result) {
+        $existingAffiliation = trim((string) ($result->affiliation_display ?? ''));
+        if ($existingAffiliation !== '') {
+            $result->setAttribute('pdf_affiliation_display', $existingAffiliation);
+            continue;
+        }
+
+        $bowler = null;
+        $proBowlerId = $result->pro_bowler_id ?? optional($result->player)->id ?? optional($result->bowler)->id ?? null;
+        if ($proBowlerId && $byId->has((int) $proBowlerId)) {
+            $bowler = $byId->get((int) $proBowlerId);
+        }
+
+        if (!$bowler) {
+            $license = strtoupper(trim((string) (
+                $result->pro_bowler_license_no
+                ?? optional($result->player)->license_no
+                ?? optional($result->bowler)->license_no
+                ?? ''
+            )));
+
+            if ($license !== '' && $byLicense->has($license)) {
+                $bowler = $byLicense->get($license);
+            }
+        }
+
+        $parts = [];
+        if ($bowler) {
+            $organization = trim((string) ($bowler->organization_name ?? ''));
+            $equipment = trim((string) ($bowler->equipment_contract ?? ''));
+
+            if ($organization !== '') {
+                $parts[] = $organization;
+            }
+
+            if ($equipment !== '') {
+                $parts[] = $equipment;
+            }
+        }
+
+        $result->setAttribute('pdf_affiliation_display', !empty($parts) ? implode('/', $parts) : '-');
+    }
+}
 
     private function attachBowlerPeriodLabels($results): void
     {
