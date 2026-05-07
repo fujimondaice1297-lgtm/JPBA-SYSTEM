@@ -502,7 +502,7 @@ class TournamentResultController extends Controller
 
         $results = $query->get();
         $this->attachBowlerPeriodLabels($results);
-        $this->attachResultPdfDisplayFields($results);
+        $this->attachResultPdfDisplayFields($results, $tournament);
 
         $scoreSnapshots = $this->loadPdfScoreSnapshots($tournament);
 
@@ -688,7 +688,7 @@ class TournamentResultController extends Controller
 
             $entries[] = [
                 'seed' => $seed,
-                'display_name' => $displayName,
+                'display_name' => $this->normalizePdfPlayerName($displayName),
                 'pro_bowler_id' => $row->pro_bowler_id ?? null,
                 'pro_bowler_license_no' => $row->pro_bowler_license_no ?? null,
                 'amateur_name' => $row->amateur_name ?? null,
@@ -822,7 +822,7 @@ private function loadPdfScoreSnapshots(Tournament $tournament): array
     return $snapshots;
 }
 
-private function attachResultPdfDisplayFields($results): void
+private function attachResultPdfDisplayFields($results, ?Tournament $tournament = null): void
 {
     $licenses = $results
         ->map(fn ($result) => $result->pro_bowler_license_no
@@ -840,6 +840,28 @@ private function attachResultPdfDisplayFields($results): void
         ->map(fn ($id) => (int) $id)
         ->unique()
         ->values();
+
+    $pdfDisplayNamesByLicense = collect();
+
+    if ($tournament && !$licenses->isEmpty() && Schema::hasTable('game_scores')) {
+        $pdfDisplayNamesByLicense = DB::table('game_scores')
+            ->where('tournament_id', $tournament->id)
+            ->whereIn(DB::raw('upper(license_number)'), $licenses->all())
+            ->whereNotNull('name')
+            ->orderByRaw("case when stage = 'シュートアウト' then 1 when stage = '準決勝' then 2 when stage = '予選' then 3 else 9 end")
+            ->orderBy('game_number')
+            ->get(['license_number', 'name'])
+            ->reduce(function ($carry, $row) {
+                $licenseKey = strtoupper(trim((string) ($row->license_number ?? '')));
+                $name = $this->normalizePdfPlayerName((string) ($row->name ?? ''));
+
+                if ($licenseKey !== '' && $name !== '' && !$carry->has($licenseKey)) {
+                    $carry->put($licenseKey, $name);
+                }
+
+                return $carry;
+            }, collect());
+    }
 
     if ($licenses->isEmpty() && $ids->isEmpty()) {
         return;
@@ -862,6 +884,17 @@ private function attachResultPdfDisplayFields($results): void
     $byLicense = $proBowlers->keyBy(fn ($bowler) => strtoupper(trim((string) $bowler->license_no)));
 
     foreach ($results as $result) {
+        $licenseForName = strtoupper(trim((string) (
+            $result->pro_bowler_license_no
+            ?? optional($result->player)->license_no
+            ?? optional($result->bowler)->license_no
+            ?? ''
+        )));
+
+        if ($licenseForName !== '' && $pdfDisplayNamesByLicense->has($licenseForName)) {
+            $result->setAttribute('pdf_display_name', $pdfDisplayNamesByLicense->get($licenseForName));
+        }
+
         $existingAffiliation = trim((string) ($result->affiliation_display ?? ''));
         if ($existingAffiliation !== '') {
             $result->setAttribute('pdf_affiliation_display', $existingAffiliation);
@@ -1030,6 +1063,45 @@ private function attachResultPdfDisplayFields($results): void
         }
 
         return $label . '期';
+    }
+
+
+    private function normalizePdfPlayerName(string $name): string
+    {
+        $name = trim($name);
+
+        if ($name === '') {
+            return '';
+        }
+
+        $name = preg_replace('/\s+/u', '　', $name) ?? $name;
+
+        if (str_contains($name, '　')) {
+            return trim($name);
+        }
+
+        if (preg_match('/[A-Za-z0-9ｦ-ﾟァ-ヶー]/u', $name)) {
+            return trim($name);
+        }
+
+        $length = mb_strlen($name);
+        if ($length < 3) {
+            return trim($name);
+        }
+
+        foreach (['野々山'] as $surname) {
+            if (str_starts_with($name, $surname) && $length > mb_strlen($surname)) {
+                return $surname . '　' . mb_substr($name, mb_strlen($surname));
+            }
+        }
+
+        foreach (['辻'] as $surname) {
+            if (str_starts_with($name, $surname) && $length > 1) {
+                return $surname . '　' . mb_substr($name, 1);
+            }
+        }
+
+        return mb_substr($name, 0, 2) . '　' . mb_substr($name, 2);
     }
 
     private function makePdfWithJapaneseFont(string $view, array $data, string $downloadName)

@@ -51,9 +51,11 @@ class MatchScoreSheetImageService
         }
 
         $width = 1420;
-        $top = 4;
-        $blockHeight = 132;
-        $height = $top + ($players->count() * $blockHeight) + 14;
+        $top = 6;
+        // 選手名・スコア表・残ピン表示が次の選手名へ被らないよう、
+        // 1人分の縦幅を公式PDF寄せの範囲で少し広げる。
+        $blockHeight = 150;
+        $height = $top + ($players->count() * $blockHeight) + 24;
 
         $image = imagecreatetruecolor($width, $height);
         imagealphablending($image, true);
@@ -76,7 +78,7 @@ class MatchScoreSheetImageService
 
         foreach ($players->values() as $index => $player) {
             $blockTop = $top + ($index * $blockHeight);
-            $tableTop = $blockTop + 38;
+            $tableTop = $blockTop + 42;
             $frames = $player->frames instanceof Collection
                 ? $player->frames->keyBy('frame_no')
                 : collect($player->frames ?? [])->keyBy('frame_no');
@@ -88,7 +90,7 @@ class MatchScoreSheetImageService
             $winner = !empty($player->is_winner) ? ' / 勝者' : '';
             $title = $name . ($arm !== '' ? '（' . $arm . '投げ）' : '') . $winner;
 
-            $this->drawCenteredText($image, $title, $tableLeft, $blockTop + 0, $tableWidth, 32, 22, $black, true);
+            $this->drawCenteredText($image, $title, $tableLeft, $blockTop + 0, $tableWidth, 34, 21, $black, true);
 
             $laneLabel = $this->resolveLaneLabelForPlayer($player, $scoreSheet, $index, $playerCount);
             $this->drawRightText($image, $laneLabel, 102, $tableTop + 40, 88, 28, 18, $black, false);
@@ -131,7 +133,7 @@ class MatchScoreSheetImageService
 
                 $remainingPinsLabel = $this->remainingPinsLabel($frame?->remaining_pins ?? null);
                 if ($remainingPinsLabel !== '') {
-                    $this->drawCenteredText($image, $remainingPinsLabel, $x, $tableTop + $tableH + 4, $w, 18, 11, $dark, true);
+                    $this->drawCenteredText($image, $remainingPinsLabel, $x, $tableTop + $tableH + 7, $w, 18, 10, $dark, true);
                 }
 
                 $x += $w;
@@ -611,12 +613,40 @@ class MatchScoreSheetImageService
             return '';
         }
 
+        $arm = str_replace(['（', '）', '(', ')'], '', $arm);
+        $arm = preg_replace('/\s+/u', '', $arm) ?? $arm;
+        $arm = preg_replace('/投げ$/u', '', $arm) ?? $arm;
+
         if (in_array($arm, ['right', '右', 'R', 'r'], true)) {
             return '右';
         }
 
         if (in_array($arm, ['left', '左', 'L', 'l'], true)) {
             return '左';
+        }
+
+        if (str_contains($arm, '左') && str_contains($arm, '両手')) {
+            return '左両手';
+        }
+
+        if (str_contains($arm, '右') && str_contains($arm, '両手')) {
+            return '右両手';
+        }
+
+        if (str_contains($arm, '左') && str_contains($arm, 'サムレス')) {
+            return '左サムレス';
+        }
+
+        if (str_contains($arm, '右') && str_contains($arm, 'サムレス')) {
+            return '右サムレス';
+        }
+
+        if (str_contains($arm, '左')) {
+            return '左';
+        }
+
+        if (str_contains($arm, '右')) {
+            return '右';
         }
 
         return $arm;

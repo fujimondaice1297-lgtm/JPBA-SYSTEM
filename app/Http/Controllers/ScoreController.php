@@ -580,6 +580,10 @@ final class ScoreController extends Controller
 
     public function storeShootoutMatch(Request $r)
     {
+        if ($r->boolean('winner_note_only')) {
+            return $this->storeShootoutWinnerNote($r);
+        }
+
         $validated = $r->validate([
             'tournament_id' => 'required|integer|exists:tournaments,id',
             'match_no' => 'required|integer|min:1|max:3',
@@ -673,6 +677,49 @@ final class ScoreController extends Controller
             'shifts' => (string) $r->input('shifts', ''),
             'gender_filter' => (string) $r->input('gender_filter', ''),
         ])->with('success', 'シュートアウト ' . $matchKey . ' のスコアを保存しました。');
+    }
+
+    private function storeShootoutWinnerNote(Request $r)
+    {
+        $validated = $r->validate([
+            'tournament_id' => 'required|integer|exists:tournaments,id',
+            'winner_note' => 'nullable|string|max:1000',
+            'upto_game' => 'nullable|integer|min:1|max:99',
+            'shifts' => 'nullable|string|max:50',
+            'gender_filter' => 'nullable|string|max:10',
+        ]);
+
+        $tournament = Tournament::findOrFail((int) $validated['tournament_id']);
+        $settings = $tournament->shootout_settings ?? [];
+
+        if (is_string($settings) && trim($settings) !== '') {
+            $decoded = json_decode($settings, true);
+            $settings = is_array($decoded) ? $decoded : [];
+        }
+
+        if (!is_array($settings)) {
+            $settings = [];
+        }
+
+        $winnerNote = str_replace(["\r\n", "\r"], "\n", (string) ($validated['winner_note'] ?? ''));
+        $winnerNote = trim($winnerNote);
+
+        if ($winnerNote === '') {
+            unset($settings['winner_note']);
+        } else {
+            $settings['winner_note'] = $winnerNote;
+        }
+
+        $tournament->shootout_settings = $settings;
+        $tournament->save();
+
+        return redirect()->route('scores.result', [
+            'tournament_id' => (int) $tournament->id,
+            'stage' => 'シュートアウト',
+            'upto_game' => (int) $r->input('upto_game', 1),
+            'shifts' => (string) $r->input('shifts', ''),
+            'gender_filter' => (string) $r->input('gender_filter', ''),
+        ])->with('success', '優勝者コメントを保存しました。');
     }
 
     public function board(
@@ -1541,6 +1588,7 @@ final class ScoreController extends Controller
         $resultCode = match ($stage) {
             '準々決勝' => 'quarterfinal_total',
             '準決勝' => 'semifinal_total',
+            '決勝' => 'final_total',
             default => null,
         };
 
@@ -1555,17 +1603,31 @@ final class ScoreController extends Controller
             $settings = is_array($decoded) ? $decoded : [];
         }
 
-        if (!is_array($settings) || empty($settings[$resultCode]) || !is_array($settings[$resultCode])) {
+        if (!is_array($settings)) {
+            $settings = [];
+        }
+
+        $sourceStages = [];
+
+        if (!empty($settings[$resultCode]) && is_array($settings[$resultCode])) {
+            $configuredStages = $settings[$resultCode]['source_stages'] ?? [];
+            if (is_array($configuredStages)) {
+                $sourceStages = $configuredStages;
+            }
+        }
+
+        if (empty($sourceStages)) {
+            $sourceStages = $this->defaultSourceStagesForRanking($tournament, $resultCode, $stage);
+        }
+
+        if (!is_array($sourceStages) || empty($sourceStages)) {
             return;
         }
 
-        $sourceStages = $settings[$resultCode]['source_stages'] ?? [];
-
-        if (!is_array($sourceStages)) {
-            return;
-        }
-
-        $sourceStages = array_values(array_map(fn ($value) => $this->normalizeStageLabel((string) $value), $sourceStages));
+        $sourceStages = array_values(array_unique(array_map(
+            fn ($value) => $this->normalizeStageLabel((string) $value),
+            $sourceStages
+        )));
 
         if (in_array('予選', $sourceStages, true) && $stage !== '予選') {
             $opt['carry_prelim'] = 1;
@@ -1574,6 +1636,56 @@ final class ScoreController extends Controller
         if (in_array('準決勝', $sourceStages, true) && $stage === '決勝') {
             $opt['carry_semifinal'] = 1;
         }
+    }
+
+    private function defaultSourceStagesForRanking(Tournament $tournament, string $resultCode, string $stage): array
+    {
+        $flowType = trim((string) ($tournament->result_flow_type ?? ''));
+        $preset = trim((string) ($tournament->result_carry_preset ?? ''));
+
+        if ($preset === 'no_carry') {
+            return [];
+        }
+
+        if ($resultCode === 'quarterfinal_total') {
+            if (str_contains($flowType, 'quarterfinal')) {
+                return ['予選', '準々決勝'];
+            }
+
+            return [];
+        }
+
+        if ($resultCode === 'semifinal_total') {
+            $seedSource = trim((string) ($tournament->shootout_seed_source_result_code ?? ''));
+            $singleEliminationSeedSource = trim((string) ($tournament->single_elimination_seed_source_result_code ?? ''));
+
+            if (
+                $seedSource === 'semifinal_total'
+                || $singleEliminationSeedSource === 'semifinal_total'
+                || str_contains($flowType, 'prelim_to_semifinal')
+                || str_contains($flowType, 'quarterfinal_to_semifinal')
+                || $preset === 'carry_prelim_to_semifinal_for_tournament'
+                || $preset === 'carry_to_semifinal_reset_rr'
+            ) {
+                if (str_contains($flowType, 'quarterfinal')) {
+                    return ['予選', '準々決勝', '準決勝'];
+                }
+
+                return ['予選', '準決勝'];
+            }
+
+            return [];
+        }
+
+        if ($resultCode === 'final_total') {
+            if ($preset === 'carry_all') {
+                return ['予選', '準々決勝', '準決勝', '決勝'];
+            }
+
+            return [];
+        }
+
+        return [];
     }
 
     private function buildSingleEliminationResultPayload(Tournament $tournament, SingleEliminationService $singleEliminationService, array $opt): array

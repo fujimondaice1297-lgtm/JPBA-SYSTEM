@@ -129,6 +129,7 @@ class ScoreService
             // 同点時は差の少ない方を上位
             $p['tie_break_spread'] = $this->scoreSpread($countedScores);
             $p['counted_scores']   = $countedScores;
+            $p['games_counted']    = $gamesCount;
         }
         unset($p);
 
@@ -177,7 +178,16 @@ class ScoreService
         foreach ($carryStages as $cs) {
             $carryBaseG += (int)($stageSettings[$cs] ?? 0);
         }
-        $headerBaseGames = $uptoGame + $carryBaseG;
+
+        $maxCountedGames = 0;
+        foreach ($players as $p) {
+            $maxCountedGames = max($maxCountedGames, (int)($p['games_counted'] ?? count((array)($p['counted_scores'] ?? []))));
+        }
+
+        $headerBaseGames = max($uptoGame + $carryBaseG, $maxCountedGames);
+        if ($headerBaseGames <= 0) {
+            $headerBaseGames = $uptoGame;
+        }
 
         $currentStageTotalGames = (int)($stageSettings[$stage] ?? 0);
         if ($currentStageTotalGames <= 0) {

@@ -378,10 +378,27 @@
         }
 
         .official-next-score-main-title {
-            margin: 26px 0 24px 0;
+            margin: 8px 0 16px 0;
             text-align: center;
-            font-size: 21px;
-            line-height: 1.4;
+            line-height: 1.25;
+        }
+
+        .official-next-score-title-line-1 {
+            font-size: 20px;
+            letter-spacing: 1px;
+            margin-top: 0;
+        }
+
+        .official-next-score-title-line-2 {
+            font-size: 24px;
+            letter-spacing: 3px;
+            margin-top: 4px;
+        }
+
+        .official-next-score-title-line-3 {
+            font-size: 18px;
+            letter-spacing: 0.5px;
+            margin-top: 4px;
         }
 
         .official-next-score-block {
@@ -678,10 +695,61 @@
         $officialSeasonTitle = 'ウィンターシリーズ';
         $officialVenueTitle = $venueText !== '' ? $venueText : '会場';
 
-        $resolveName = function ($result) use ($valueOf) {
-            return optional($result->player)->name_kanji
-                ?? optional($result->bowler)->name_kanji
-                ?? $valueOf($result, ['player_name', 'name', 'display_name', 'amateur_name'], '-');
+        $formatPlayerName = function ($name): string {
+            $name = trim((string) $name);
+
+            if ($name === '') {
+                return '-';
+            }
+
+            $name = preg_replace('/\s+/u', '　', $name) ?: $name;
+
+            if (str_contains($name, '　')) {
+                return $name;
+            }
+
+            if (preg_match('/[A-Za-z0-9ｦ-ﾟァ-ヶー]/u', $name)) {
+                return $name;
+            }
+
+            $length = mb_strlen($name);
+            if ($length < 3) {
+                return $name;
+            }
+
+            foreach (['野々山'] as $surname) {
+                if (str_starts_with($name, $surname) && $length > mb_strlen($surname)) {
+                    return $surname . '　' . mb_substr($name, mb_strlen($surname));
+                }
+            }
+
+            foreach (['辻'] as $surname) {
+                if (str_starts_with($name, $surname) && $length > 1) {
+                    return $surname . '　' . mb_substr($name, 1);
+                }
+            }
+
+            return mb_substr($name, 0, 2) . '　' . mb_substr($name, 2);
+        };
+
+        $resolveName = function ($result) use ($valueOf, $formatPlayerName) {
+            $name = '';
+
+            if (is_object($result) && method_exists($result, 'getAttribute')) {
+                $name = trim((string) ($result->getAttribute('pdf_display_name') ?? ''));
+            }
+
+            if ($name === '') {
+                $name = $valueOf($result, ['pdf_display_name', 'player_name', 'name', 'display_name', 'amateur_name'], '');
+            }
+
+            if ($name === '') {
+                $name = optional($result->player)->name_kanji
+                    ?? optional($result->bowler)->name_kanji
+                    ?? '-';
+            }
+
+            return $formatPlayerName($name);
         };
 
         $resolveLicense = function ($result) use ($valueOf) {
@@ -743,7 +811,15 @@
                     ?? '';
             }
 
-            return trim((string) $period) !== '' ? trim((string) $period) : '-';
+            $period = trim((string) $period);
+
+            if ($period === '') {
+                return '-';
+            }
+
+            $digits = preg_replace('/[^0-9]+/u', '', $period);
+
+            return $digits !== '' ? $digits : $period;
         };
 
         $resolveBelong = function ($result) use ($valueOf) {
@@ -915,6 +991,7 @@
         }
 
         $gameScoreMap = [];
+        $gameScoreNameByLicense = [];
         $gameScoreRowsForPdf = collect();
         if (isset($tournament) && isset($tournament->id)) {
             try {
@@ -935,10 +1012,15 @@
                     }
 
                     $licenseKey = strtoupper(trim((string) ($gameScoreRow->license_number ?? '')));
-                    $nameKey = preg_replace('/\s+/u', '', trim((string) ($gameScoreRow->name ?? '')));
+                    $rawGameScoreName = trim((string) ($gameScoreRow->name ?? ''));
+                    $nameKey = preg_replace('/\s+/u', '', $rawGameScoreName);
 
                     if ($licenseKey !== '') {
                         $gameScoreMap[$stage]['license'][$licenseKey][$gameNumber] = (int) ($gameScoreRow->score ?? 0);
+
+                        if ($rawGameScoreName !== '' && !isset($gameScoreNameByLicense[$licenseKey])) {
+                            $gameScoreNameByLicense[$licenseKey] = $formatPlayerName($rawGameScoreName);
+                        }
                     }
 
                     if (is_string($nameKey) && $nameKey !== '') {
@@ -1111,8 +1193,14 @@
             return mb_substr($license, -4);
         };
 
-        $snapshotName = function ($row) use ($snapshotValue) {
-            return $snapshotValue($row, ['display_name', 'name', 'amateur_name'], '-');
+        $snapshotName = function ($row) use ($snapshotValue, $snapshotLicenseRaw, $normalizeLicenseKey, $gameScoreNameByLicense, $formatPlayerName) {
+            $licenseKey = $normalizeLicenseKey($snapshotLicenseRaw($row));
+
+            if ($licenseKey !== '' && isset($gameScoreNameByLicense[$licenseKey])) {
+                return $gameScoreNameByLicense[$licenseKey];
+            }
+
+            return $formatPlayerName($snapshotValue($row, ['display_name', 'name', 'amateur_name'], '-'));
         };
 
         $snapshotInfo = function ($row) use ($snapshotValue, $snapshotLicenseRaw, $normalizeLicenseKey, $licenseTailKey, $proBowlerInfoById, $proBowlerInfoByLicense, $proBowlerInfoByTail) {
@@ -1501,8 +1589,9 @@
     @if (count($remainingScoreImages) > 0)
         <div class="official-next-score-page">
             <div class="official-next-score-main-title">
-                {{ $seriesTitle }}<br>
-                決勝（8名によるシュートアウト方式）
+                <div class="official-next-score-title-line-1 jpba-extra-heavy">{{ $officialMainTitle }}</div>
+                <div class="official-next-score-title-line-2 jpba-extra-heavy">{{ $officialSeriesTitle }} {{ $officialSeasonTitle }}</div>
+                <div class="official-next-score-title-line-3 jpba-heavy">決勝（{{ $stageNumber($semifinalQualifierCount) }}名によるシュートアウト方式） ／ 会場：{{ $officialVenueTitle }}</div>
             </div>
 
             @foreach ($remainingScoreImages as $index => $scoreSheetImage)
@@ -1518,7 +1607,11 @@
         </div>
     @elseif (!isset($shootoutBracketImage) && count($scoreImages) > 0)
         <div class="official-plain-score-page">
-            <h2 class="official-plain-score-title">シュートアウト・スコア表</h2>
+            <div class="official-next-score-main-title">
+                <div class="official-next-score-title-line-1 jpba-extra-heavy">{{ $officialMainTitle }}</div>
+                <div class="official-next-score-title-line-2 jpba-extra-heavy">{{ $officialSeriesTitle }} {{ $officialSeasonTitle }}</div>
+                <div class="official-next-score-title-line-3 jpba-heavy">決勝（{{ $stageNumber($semifinalQualifierCount) }}名によるシュートアウト方式） ／ 会場：{{ $officialVenueTitle }}</div>
+            </div>
 
             @foreach ($scoreImages as $index => $scoreSheetImage)
                 <div class="official-next-score-block">

@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Services\BowlingScoreCalculatorService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -27,7 +28,7 @@ class SeedStWinter2026CResultCommand extends Command
 
                 DB::table('game_scores')
                     ->where('tournament_id', $tournamentId)
-                    ->whereIn('stage', ['予選', '準決勝'])
+                    ->whereIn('stage', ['予選', '準決勝', 'シュートアウト'])
                     ->delete();
 
                 $this->deleteCurrentSnapshots($tournamentId);
@@ -35,6 +36,8 @@ class SeedStWinter2026CResultCommand extends Command
                 DB::table('tournament_results')
                     ->where('tournament_id', $tournamentId)
                     ->delete();
+
+                $this->deleteCurrentMatchScoreSheets($tournamentId);
 
                 $prelimRows = $this->prelimRows();
                 $semiRows = $this->semiRows();
@@ -90,6 +93,8 @@ class SeedStWinter2026CResultCommand extends Command
                     DB::table('game_scores')->insert($chunk);
                 }
 
+                $shootoutGameScoreCount = $this->insertShootoutGameScores($tournamentId, $now);
+
                 $this->insertResultSnapshots($tournamentId, $prelimRows, $semiRows, $now);
 
                 $resultInserts = [];
@@ -131,10 +136,16 @@ class SeedStWinter2026CResultCommand extends Command
 
                 DB::table('tournament_results')->insert($resultInserts);
 
+                $scoreSheetCounts = $this->insertShootoutMatchScoreSheets($tournamentId, $now);
+
                 $this->info('Seed completed.');
                 $this->line('予選 game_scores: ' . (count($prelimRows) * 8));
                 $this->line('準決勝 game_scores: ' . (count($semiRows) * 4));
+                $this->line('シュートアウト game_scores: ' . $shootoutGameScoreCount);
                 $this->line('tournament_results: ' . count($resultInserts));
+                $this->line('match_score_sheets: ' . $scoreSheetCounts['sheets']);
+                $this->line('match_score_sheet_players: ' . $scoreSheetCounts['players']);
+                $this->line('match_score_frames: ' . $scoreSheetCounts['frames']);
                 $this->line('snapshots: prelim_total / semifinal_total');
                 $this->line('PDF URL: /tournaments/' . $tournamentId . '/results/pdf?reload=st2026c');
             });
@@ -284,7 +295,7 @@ private function insertResultSnapshots(int $tournamentId, array $prelimRows, arr
             $row['rank'],
             $proBowlerId,
             $licenseNo,
-            $bowler->name_kanji ?? str_replace(' ', '', $row['name']),
+            $this->normalizePdfPlayerName((string) $row['name']),
             0,
             $row['total'],
             $row['total'],
@@ -329,7 +340,7 @@ private function insertResultSnapshots(int $tournamentId, array $prelimRows, arr
             $row['rank'],
             $proBowlerId,
             $licenseNo,
-            $bowler->name_kanji ?? str_replace(' ', '', $row['name']),
+            $this->normalizePdfPlayerName((string) $row['name']),
             $row['semi_total'],
             $row['prelim_total'],
             $row['total_12g'],
@@ -525,6 +536,582 @@ private function stepPointsByRank(int $rank, int $qualifierCount): ?int
 
     return $qualifierCount - $rank + 1;
 }
+
+
+private function deleteCurrentMatchScoreSheets(int $tournamentId): void
+{
+    if (
+        !Schema::hasTable('tournament_match_score_sheets') ||
+        !Schema::hasTable('tournament_match_score_sheet_players') ||
+        !Schema::hasTable('tournament_match_score_frames')
+    ) {
+        return;
+    }
+
+    $sheetIds = DB::table('tournament_match_score_sheets')
+        ->where('tournament_id', $tournamentId)
+        ->where('sheet_type', 'shootout')
+        ->pluck('id');
+
+    if ($sheetIds->isEmpty()) {
+        return;
+    }
+
+    $playerIds = DB::table('tournament_match_score_sheet_players')
+        ->whereIn('score_sheet_id', $sheetIds->all())
+        ->pluck('id');
+
+    if ($playerIds->isNotEmpty()) {
+        DB::table('tournament_match_score_frames')
+            ->whereIn('score_sheet_player_id', $playerIds->all())
+            ->delete();
+    }
+
+    DB::table('tournament_match_score_sheet_players')
+        ->whereIn('score_sheet_id', $sheetIds->all())
+        ->delete();
+
+    DB::table('tournament_match_score_sheets')
+        ->whereIn('id', $sheetIds->all())
+        ->delete();
+}
+
+private function insertShootoutGameScores(int $tournamentId, $now): int
+{
+    $rows = [];
+
+    foreach ($this->shootoutGameScoreRows() as $row) {
+        $licenseNo = $this->normalizeMaleLicense($row['license']);
+        $proBowlerId = $this->findProBowlerId($licenseNo);
+
+        $rows[] = [
+            'tournament_id' => $tournamentId,
+            'stage' => 'シュートアウト',
+            'license_number' => $licenseNo,
+            'name' => $row['name'],
+            'entry_number' => $row['entry_number'],
+            'game_number' => 1,
+            'score' => $row['score'],
+            'shift' => null,
+            'gender' => 'M',
+            'pro_bowler_id' => $proBowlerId,
+            'created_at' => $now,
+            'updated_at' => $now,
+        ];
+    }
+
+    if ($rows !== []) {
+        DB::table('game_scores')->insert($rows);
+    }
+
+    return count($rows);
+}
+
+/**
+ * @return array{sheets:int,players:int,frames:int}
+ */
+private function insertShootoutMatchScoreSheets(int $tournamentId, $now): array
+{
+    if (
+        !Schema::hasTable('tournament_match_score_sheets') ||
+        !Schema::hasTable('tournament_match_score_sheet_players') ||
+        !Schema::hasTable('tournament_match_score_frames')
+    ) {
+        return ['sheets' => 0, 'players' => 0, 'frames' => 0];
+    }
+
+    $calculator = app(BowlingScoreCalculatorService::class);
+    $sheetCount = 0;
+    $playerCount = 0;
+    $frameCount = 0;
+
+    foreach ($this->shootoutScoreSheets() as $sheet) {
+        $sheetId = (int) DB::table('tournament_match_score_sheets')->insertGetId([
+            'tournament_id' => $tournamentId,
+            'sheet_type' => 'shootout',
+            'stage_code' => 'shootout',
+            'match_code' => $sheet['match_code'],
+            'match_label' => $sheet['match_label'],
+            'match_order' => $sheet['match_order'],
+            'game_number' => 1,
+            'lane_label' => $sheet['lane_label'],
+            'is_published' => true,
+            'confirmed_at' => $now,
+            'notes' => 'JPBA公式PDF（ST Winter 2026 C 最終成績）をもとに投入',
+            'created_at' => $now,
+            'updated_at' => $now,
+        ]);
+
+        $sheetCount++;
+
+        foreach ($sheet['players'] as $player) {
+            $licenseNo = $this->normalizeMaleLicense($player['license']);
+            $proBowlerId = $this->findProBowlerId($licenseNo);
+            $calculated = $calculator->calculate($player['frames']);
+            $finalScore = (int) $calculated['total'];
+
+            if ($finalScore !== (int) $player['final_score']) {
+                throw new \RuntimeException(
+                    sprintf(
+                        '%s %s のスコア計算結果が公式値と一致しません。calculated=%d official=%d',
+                        $sheet['match_label'],
+                        $player['name'],
+                        $finalScore,
+                        (int) $player['final_score']
+                    )
+                );
+            }
+
+            $playerId = (int) DB::table('tournament_match_score_sheet_players')->insertGetId([
+                'score_sheet_id' => $sheetId,
+                'sort_order' => $player['sort_order'],
+                'player_slot' => $player['player_slot'],
+                'pro_bowler_id' => $proBowlerId,
+                'pro_bowler_license_no' => $licenseNo,
+                'display_name' => $player['name'],
+                'name_kana' => $player['name_kana'] ?? null,
+                'dominant_arm' => $player['dominant_arm'],
+                'lane_label' => $player['lane_label'],
+                'final_score' => $finalScore,
+                'is_winner' => (bool) $player['is_winner'],
+                'score_summary' => json_encode([
+                    'official_pdf_total' => (int) $player['final_score'],
+                    'calculated_total' => $finalScore,
+                    'cumulative_scores' => collect($calculated['frames'])
+                        ->mapWithKeys(fn (array $frame): array => [
+                            (string) $frame['frame_no'] => $frame['cumulative_score'],
+                        ])
+                        ->all(),
+                ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+                'created_at' => $now,
+                'updated_at' => $now,
+            ]);
+
+            $playerCount++;
+
+            $frameRows = [];
+
+            foreach ($calculated['frames'] as $frameNo => $frame) {
+                $frameRows[] = [
+                    'score_sheet_player_id' => $playerId,
+                    'frame_no' => (int) $frameNo,
+                    'throw1' => $frame['throw1'],
+                    'throw2' => $frame['throw2'],
+                    'throw3' => $frame['throw3'],
+                    'frame_score' => $frame['frame_score'],
+                    'cumulative_score' => $frame['cumulative_score'],
+                    'display_marks' => json_encode($frame['display_marks'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+                    'remaining_pins' => json_encode($player['remaining_pins'][$frameNo] ?? [], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ];
+            }
+
+            DB::table('tournament_match_score_frames')->insert($frameRows);
+            $frameCount += count($frameRows);
+        }
+    }
+
+    return [
+        'sheets' => $sheetCount,
+        'players' => $playerCount,
+        'frames' => $frameCount,
+    ];
+}
+
+private function shootoutGameScoreRows(): array
+{
+    return [
+        ['entry_number' => 'SO:SO1:A', 'license' => '1492', 'name' => '横地 優輝', 'score' => 190],
+        ['entry_number' => 'SO:SO1:B', 'license' => '1471', 'name' => '千葉 幸太', 'score' => 178],
+        ['entry_number' => 'SO:SO1:C', 'license' => '1394', 'name' => '藤村 隆史', 'score' => 256],
+        ['entry_number' => 'SO:SO1:D', 'license' => '1023', 'name' => '岡野 秀幸', 'score' => 205],
+        ['entry_number' => 'SO:SO2:A', 'license' => '1384', 'name' => '水野 耕佑', 'score' => 220],
+        ['entry_number' => 'SO:SO2:B', 'license' => '1448', 'name' => '木村 謙太', 'score' => 255],
+        ['entry_number' => 'SO:SO2:C', 'license' => '1307', 'name' => '播摩 友和', 'score' => 189],
+        ['entry_number' => 'SO:SO2:D', 'license' => '1394', 'name' => '藤村 隆史', 'score' => 218],
+        ['entry_number' => 'SO:SO3:A', 'license' => '1443', 'name' => '藤永 北斗', 'score' => 207],
+        ['entry_number' => 'SO:SO3:B', 'license' => '1448', 'name' => '木村 謙太', 'score' => 191],
+    ];
+}
+
+private function shootoutScoreSheets(): array
+{
+    return [
+        [
+            'match_code' => 'SO:SO3',
+            'match_label' => '優勝決定戦',
+            'match_order' => 1,
+            'lane_label' => '21L-22L',
+            'players' => [
+                $this->scoreSheetPlayer(
+                    1,
+                    'A',
+                    '1443',
+                    '藤永 北斗',
+                    'フジナガ ホクト',
+                    '左投げ',
+                    '21L',
+                    207,
+                    true,
+                    [
+                        1 => $this->frame('X'),
+                        2 => $this->frame('9', '/'),
+                        3 => $this->frame('9', '/'),
+                        4 => $this->frame('9', '/'),
+                        5 => $this->frame('X'),
+                        6 => $this->frame('7', '/'),
+                        7 => $this->frame('X'),
+                        8 => $this->frame('X'),
+                        9 => $this->frame('9', '/'),
+                        10 => $this->frame('X', '8', '/'),
+                    ],
+                    [
+                        2 => [10],
+                        3 => [10],
+                        4 => [8],
+                        6 => [3, 5, 6],
+                        9 => [7],
+                        10 => [2, 4],
+                    ]
+                ),
+                $this->scoreSheetPlayer(
+                    2,
+                    'B',
+                    '1448',
+                    '木村 謙太',
+                    null,
+                    '右投げ',
+                    '22L',
+                    191,
+                    false,
+                    [
+                        1 => $this->frame('7', '/'),
+                        2 => $this->frame('9', '/'),
+                        3 => $this->frame('9', '/'),
+                        4 => $this->frame('X'),
+                        5 => $this->frame('X'),
+                        6 => $this->frame('8', '/'),
+                        7 => $this->frame('8', '/'),
+                        8 => $this->frame('9', '/'),
+                        9 => $this->frame('X'),
+                        10 => $this->frame('8', '1'),
+                    ],
+                    [
+                        1 => [3, 6, 10],
+                        2 => [4],
+                        3 => [3],
+                        6 => [6, 10],
+                        7 => [3, 6],
+                        8 => [10],
+                        10 => [4, 9],
+                    ]
+                ),
+            ],
+        ],
+        [
+            'match_code' => 'SO:SO2',
+            'match_label' => 'シュートアウト2ndマッチ（3〜5位決定戦）',
+            'match_order' => 2,
+            'lane_label' => '21L-22L',
+            'players' => [
+                $this->scoreSheetPlayer(
+                    1,
+                    'D',
+                    '1394',
+                    '藤村 隆史',
+                    null,
+                    '右投げ',
+                    '21L-1',
+                    218,
+                    false,
+                    [
+                        1 => $this->frame('9', '/'),
+                        2 => $this->frame('X'),
+                        3 => $this->frame('9', '/'),
+                        4 => $this->frame('X'),
+                        5 => $this->frame('9', '/'),
+                        6 => $this->frame('X'),
+                        7 => $this->frame('X'),
+                        8 => $this->frame('9', '/'),
+                        9 => $this->frame('X'),
+                        10 => $this->frame('X', '9', '/'),
+                    ],
+                    [
+                        1 => [10],
+                        3 => [9],
+                        5 => [7],
+                        8 => [2],
+                        10 => [5],
+                    ]
+                ),
+                $this->scoreSheetPlayer(
+                    2,
+                    'C',
+                    '1307',
+                    '播摩 友和',
+                    null,
+                    '右投げ',
+                    '21L-2',
+                    189,
+                    false,
+                    [
+                        1 => $this->frame('X'),
+                        2 => $this->frame('X'),
+                        3 => $this->frame('9', '/'),
+                        4 => $this->frame('X'),
+                        5 => $this->frame('8', '1'),
+                        6 => $this->frame('X'),
+                        7 => $this->frame('9', '-'),
+                        8 => $this->frame('7', '/'),
+                        9 => $this->frame('X'),
+                        10 => $this->frame('X', '6', '2'),
+                    ],
+                    [
+                        3 => [10],
+                        5 => [3, 6],
+                        7 => [10],
+                        8 => [3, 6, 9],
+                        10 => [3, 4, 6, 7],
+                    ]
+                ),
+                $this->scoreSheetPlayer(
+                    3,
+                    'A',
+                    '1384',
+                    '水野 耕佑',
+                    null,
+                    '右投げ',
+                    '22L-1',
+                    220,
+                    false,
+                    [
+                        1 => $this->frame('9', '/'),
+                        2 => $this->frame('8', '-'),
+                        3 => $this->frame('9', '/'),
+                        4 => $this->frame('X'),
+                        5 => $this->frame('X'),
+                        6 => $this->frame('X'),
+                        7 => $this->frame('X'),
+                        8 => $this->frame('X'),
+                        9 => $this->frame('7', '2'),
+                        10 => $this->frame('X', 'X', '9'),
+                    ],
+                    [
+                        1 => [10],
+                        2 => [4, 10],
+                        3 => [10],
+                        9 => [4, 6, 7],
+                        10 => [9],
+                    ]
+                ),
+                $this->scoreSheetPlayer(
+                    4,
+                    'B',
+                    '1448',
+                    '木村 謙太',
+                    null,
+                    '右投げ',
+                    '22L-2',
+                    255,
+                    true,
+                    [
+                        1 => $this->frame('9', '/'),
+                        2 => $this->frame('X'),
+                        3 => $this->frame('X'),
+                        4 => $this->frame('X'),
+                        5 => $this->frame('X'),
+                        6 => $this->frame('X'),
+                        7 => $this->frame('X'),
+                        8 => $this->frame('X'),
+                        9 => $this->frame('X'),
+                        10 => $this->frame('7', '2'),
+                    ],
+                    [
+                        1 => [10],
+                        10 => [3, 4, 10],
+                    ]
+                ),
+            ],
+        ],
+        [
+            'match_code' => 'SO:SO1',
+            'match_label' => 'シュートアウト1stマッチ（6〜8位決定戦）',
+            'match_order' => 3,
+            'lane_label' => '21L-22L',
+            'players' => [
+                $this->scoreSheetPlayer(
+                    1,
+                    'D',
+                    '1023',
+                    '岡野 秀幸',
+                    null,
+                    '右投げ',
+                    '21L-1',
+                    205,
+                    false,
+                    [
+                        1 => $this->frame('7', '/'),
+                        2 => $this->frame('X'),
+                        3 => $this->frame('8', '1'),
+                        4 => $this->frame('X'),
+                        5 => $this->frame('X'),
+                        6 => $this->frame('X'),
+                        7 => $this->frame('9', '-'),
+                        8 => $this->frame('X'),
+                        9 => $this->frame('9', '/'),
+                        10 => $this->frame('X', 'X', 'X'),
+                    ],
+                    [
+                        1 => [1, 2, 4],
+                        3 => [7, 10],
+                        7 => [10],
+                        9 => [10],
+                    ]
+                ),
+                $this->scoreSheetPlayer(
+                    2,
+                    'A',
+                    '1492',
+                    '横地 優輝',
+                    null,
+                    '左両手投げ',
+                    '21L-2',
+                    190,
+                    false,
+                    [
+                        1 => $this->frame('X'),
+                        2 => $this->frame('8', '-'),
+                        3 => $this->frame('X'),
+                        4 => $this->frame('X'),
+                        5 => $this->frame('9', '/'),
+                        6 => $this->frame('9', '/'),
+                        7 => $this->frame('8', '/'),
+                        8 => $this->frame('9', '/'),
+                        9 => $this->frame('9', '/'),
+                        10 => $this->frame('X', '9', '/'),
+                    ],
+                    [
+                        2 => [4, 10],
+                        5 => [6],
+                        6 => [6],
+                        7 => [6, 8],
+                        8 => [7],
+                        9 => [10],
+                        10 => [9],
+                    ]
+                ),
+                $this->scoreSheetPlayer(
+                    3,
+                    'C',
+                    '1394',
+                    '藤村 隆史',
+                    null,
+                    '右投げ',
+                    '22L-1',
+                    256,
+                    true,
+                    [
+                        1 => $this->frame('5', '4'),
+                        2 => $this->frame('X'),
+                        3 => $this->frame('X'),
+                        4 => $this->frame('X'),
+                        5 => $this->frame('X'),
+                        6 => $this->frame('X'),
+                        7 => $this->frame('X'),
+                        8 => $this->frame('7', '/'),
+                        9 => $this->frame('X'),
+                        10 => $this->frame('X', 'X', 'X'),
+                    ],
+                    [
+                        1 => [3, 4, 6, 9, 10],
+                        8 => [3, 6, 10],
+                    ]
+                ),
+                $this->scoreSheetPlayer(
+                    4,
+                    'B',
+                    '1471',
+                    '千葉 幸太',
+                    null,
+                    '右投げ',
+                    '22L-2',
+                    178,
+                    false,
+                    [
+                        1 => $this->frame('X'),
+                        2 => $this->frame('5', '3'),
+                        3 => $this->frame('X'),
+                        4 => $this->frame('7', '/'),
+                        5 => $this->frame('4', '5'),
+                        6 => $this->frame('X'),
+                        7 => $this->frame('9', '/'),
+                        8 => $this->frame('X'),
+                        9 => $this->frame('X'),
+                        10 => $this->frame('9', '/', 'X'),
+                    ],
+                    [
+                        2 => [3, 4, 6, 7, 10],
+                        4 => [3, 6, 10],
+                        5 => [3, 4, 6, 7, 9, 10],
+                        7 => [2],
+                        10 => [3],
+                    ]
+                ),
+            ],
+        ],
+    ];
+}
+
+private function scoreSheetPlayer(
+    int $sortOrder,
+    string $playerSlot,
+    string $license,
+    string $name,
+    ?string $nameKana,
+    string $dominantArm,
+    string $laneLabel,
+    int $finalScore,
+    bool $isWinner,
+    array $frames,
+    array $remainingPins
+): array {
+    return [
+        'sort_order' => $sortOrder,
+        'player_slot' => $playerSlot,
+        'license' => $license,
+        'name' => $name,
+        'name_kana' => $nameKana,
+        'dominant_arm' => $dominantArm,
+        'lane_label' => $laneLabel,
+        'final_score' => $finalScore,
+        'is_winner' => $isWinner,
+        'frames' => $frames,
+        'remaining_pins' => $remainingPins,
+    ];
+}
+
+
+private function normalizePdfPlayerName(string $name): string
+{
+    $name = trim($name);
+
+    if ($name === '') {
+        return '';
+    }
+
+    return trim(preg_replace('/\s+/u', '　', $name) ?? $name);
+}
+
+private function frame(string $throw1, ?string $throw2 = null, ?string $throw3 = null): array
+{
+    return [
+        'throw1' => $throw1,
+        'throw2' => $throw2,
+        'throw3' => $throw3,
+    ];
+}
+
 
     private function prelimRows(): array
     {

@@ -79,6 +79,7 @@ class TournamentMatchScoreSheetController extends Controller
             'is_published' => ['nullable', 'boolean'],
             'confirmed' => ['nullable', 'boolean'],
             'notes' => ['nullable', 'string'],
+            'winner_note' => ['nullable', 'string', 'max:500'],
             'players' => ['required', 'array', 'min:1', 'max:4'],
             'players.*.player_slot' => ['nullable', 'string', 'max:20'],
             'players.*.pro_bowler_id' => ['nullable', 'integer', 'exists:pro_bowlers,id'],
@@ -95,6 +96,8 @@ class TournamentMatchScoreSheetController extends Controller
         ]);
 
         return DB::transaction(function () use ($validated, $tournament, $scoreSheet) {
+            $this->saveShootoutWinnerNote($tournament, $validated['winner_note'] ?? null);
+
             $sheet = $scoreSheet ?: new TournamentMatchScoreSheet();
 
             $sheet->fill([
@@ -182,6 +185,52 @@ class TournamentMatchScoreSheetController extends Controller
 
             return $sheet->fresh(['players.frames']);
         });
+    }
+
+    private function saveShootoutWinnerNote(Tournament $tournament, mixed $value): void
+    {
+        $settings = $tournament->shootout_settings ?? [];
+
+        if (is_string($settings)) {
+            $decoded = json_decode($settings, true);
+            $settings = is_array($decoded) ? $decoded : [];
+        }
+
+        if (!is_array($settings)) {
+            $settings = [];
+        }
+
+        $winnerNote = $this->normalizeWinnerNote($value);
+
+        if ($winnerNote === '') {
+            unset($settings['winner_note']);
+        } else {
+            $settings['winner_note'] = $winnerNote;
+        }
+
+        $tournament->forceFill([
+            'shootout_settings' => $settings,
+        ])->save();
+    }
+
+    private function normalizeWinnerNote(mixed $value): string
+    {
+        $text = trim((string) ($value ?? ''));
+
+        if ($text === '') {
+            return '';
+        }
+
+        $text = str_replace(["\r\n", "\r"], "\n", $text);
+
+        $lines = array_map(
+            fn (string $line): string => trim(preg_replace('/\s+/u', ' ', $line) ?? $line),
+            explode("\n", $text)
+        );
+
+        $lines = array_values(array_filter($lines, fn (string $line): bool => $line !== ''));
+
+        return mb_substr(implode("\n", $lines), 0, 500);
     }
 
     /**

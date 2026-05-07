@@ -8,6 +8,16 @@
             ? route('tournaments.match_score_sheets.update', [$tournament, $editingSheet])
             : route('tournaments.match_score_sheets.store', $tournament);
 
+        $shootoutSettings = $tournament->shootout_settings ?? [];
+        if (is_string($shootoutSettings)) {
+            $decodedShootoutSettings = json_decode($shootoutSettings, true);
+            $shootoutSettings = is_array($decodedShootoutSettings) ? $decodedShootoutSettings : [];
+        }
+        if (!is_array($shootoutSettings)) {
+            $shootoutSettings = [];
+        }
+        $winnerNote = (string) ($shootoutSettings['winner_note'] ?? '');
+
         $normalizeRemainingPinsForView = function ($value) {
             if ($value === null || $value === '') {
                 return [];
@@ -152,6 +162,11 @@
                     <div class="col-12">
                         <label class="form-label">メモ</label>
                         <textarea name="notes" class="form-control" rows="2">{{ old('notes', $editingSheet->notes ?? '') }}</textarea>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">優勝者コメント（シュートアウト図右下表示）</label>
+                        <textarea name="winner_note" class="form-control" rows="2" placeholder="例：シーズントライアル３勝目&#10;（2023スプリングS、2025サマーSに続き）">{{ old('winner_note', $winnerNote) }}</textarea>
+                        <div class="form-text">大会ごとに任意で入力できます。空欄の場合、PDFのシュートアウト図には表示しません。</div>
                     </div>
                 </div>
 

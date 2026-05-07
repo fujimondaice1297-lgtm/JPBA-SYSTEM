@@ -426,12 +426,68 @@ class ShootoutBracketImageService
 
         $this->drawTextBox($canvas, $championName !== '' ? $championName : '—', 712, 240, 262, 36, 21, $black, 'center', true);
 
+        $this->drawWinnerNote($canvas, $tournament, $black);
+
         ob_start();
         imagepng($canvas);
         $pngBinary = (string) ob_get_clean();
         imagedestroy($canvas);
 
         return $pngBinary;
+    }
+
+    private function drawWinnerNote($image, Tournament $tournament, int $color): void
+    {
+        $settings = $tournament->shootout_settings ?? [];
+
+        if (is_string($settings) && trim($settings) !== '') {
+            $decoded = json_decode($settings, true);
+            $settings = is_array($decoded) ? $decoded : [];
+        }
+
+        if (!is_array($settings)) {
+            $settings = [];
+        }
+
+        $note = str_replace(["\r\n", "\r"], "\n", (string) ($settings['winner_note'] ?? ''));
+        $note = trim($note);
+
+        if ($note === '') {
+            return;
+        }
+
+        $lines = preg_split('/\n/u', $note) ?: [];
+        $lines = array_values(array_filter(array_map(
+            fn ($line) => trim((string) $line),
+            $lines
+        ), fn ($line) => $line !== ''));
+
+        if (empty($lines)) {
+            return;
+        }
+
+        $lines = array_slice($lines, 0, 4);
+        $left = 696;
+        $top = 315;
+        $width = 350;
+        $lineHeight = 28;
+
+        foreach ($lines as $index => $line) {
+            $fontSize = $index === 0 ? 17 : 12;
+            $height = $index === 0 ? 28 : 22;
+            $this->drawTextBox(
+                $image,
+                $line,
+                $left,
+                $top + ($index * $lineHeight),
+                $width,
+                $height,
+                $fontSize,
+                $color,
+                'center',
+                $index === 0
+            );
+        }
     }
 
     private function buildFinalRankBySeed(?int $firstWinnerSeed, ?int $secondWinnerSeed, ?int $finalWinnerSeed): array

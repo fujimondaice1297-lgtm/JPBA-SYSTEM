@@ -13,15 +13,18 @@
     $STAGE_ORDER = ['予選','準々決勝','準決勝','決勝'];
     $carryStages = array_values((array)($meta['carryStages'] ?? []));
 
-    $headerBaseGames = $uptoGame;
-    if (!empty($rows)) {
-        $firstBk = (array)($rows[0]['breakdown'] ?? []);
-        $headerBaseGames = min($uptoGame, count($firstBk[$stage] ?? []));
-        foreach ($carryStages as $cs) {
-            $headerBaseGames += count($firstBk[$cs] ?? []);
-        }
-        if ($headerBaseGames <= 0) {
-            $headerBaseGames = $uptoGame;
+    $headerBaseGames = (int)($meta['baseline_games'] ?? 0);
+    if ($headerBaseGames <= 0) {
+        $headerBaseGames = $uptoGame;
+        if (!empty($rows)) {
+            $firstBk = (array)($rows[0]['breakdown'] ?? []);
+            $headerBaseGames = min($uptoGame, count($firstBk[$stage] ?? []));
+            foreach ($carryStages as $cs) {
+                $headerBaseGames += count($firstBk[$cs] ?? []);
+            }
+            if ($headerBaseGames <= 0) {
+                $headerBaseGames = $uptoGame;
+            }
         }
     }
     $baseTextHdr = $headerBaseGames . 'G × 200 = ' . number_format($headerBaseGames * $perPoint) . ' pin';

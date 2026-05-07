@@ -14,6 +14,19 @@
     $shiftValue = (string) ($shifts ?? request('shifts', ''));
     $genderValue = (string) ($gender_filter ?? request('gender_filter', ''));
 
+    $shootoutSettings = [];
+    if (isset($tournament) && $tournament) {
+        $shootoutSettings = $tournament->shootout_settings ?? [];
+        if (is_string($shootoutSettings) && trim($shootoutSettings) !== '') {
+            $decodedShootoutSettings = json_decode($shootoutSettings, true);
+            $shootoutSettings = is_array($decodedShootoutSettings) ? $decodedShootoutSettings : [];
+        }
+        if (!is_array($shootoutSettings)) {
+            $shootoutSettings = [];
+        }
+    }
+    $winnerNote = (string) old('winner_note', $shootoutSettings['winner_note'] ?? '');
+
     $snapshotIndexUrl = null;
     if (!empty($meta['tournament_id'])) {
         $snapshotIndexUrl = route('tournaments.result_snapshots.index', ['tournament' => $meta['tournament_id']]);
@@ -732,6 +745,46 @@
         font-weight: 800;
     }
 
+    .so-winner-note-form {
+        border: 1px solid #dbeafe;
+        background: #f8fbff;
+        border-radius: .9rem;
+        padding: .85rem;
+        margin: .75rem 0 1rem;
+    }
+
+    .so-winner-note-form label {
+        display: block;
+        font-weight: 800;
+        margin-bottom: .35rem;
+        color: #111827;
+    }
+
+    .so-winner-note-form textarea {
+        width: 100%;
+        min-height: 74px;
+        resize: vertical;
+        border: 1px solid #d1d5db;
+        border-radius: .55rem;
+        padding: .55rem .65rem;
+        font-size: .95rem;
+        line-height: 1.5;
+    }
+
+    .so-winner-note-help {
+        color: #6b7280;
+        font-size: .84rem;
+        margin-top: .3rem;
+    }
+
+    .so-winner-note-actions {
+        margin-top: .55rem;
+        display: flex;
+        gap: .5rem;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+
     .so-table-wrap {
         overflow-x: auto;
         margin-top: 1rem;
@@ -1303,6 +1356,26 @@
             <div class="so-summary-value">{{ $summary['winner_name'] ?? '—' }}</div>
         </div>
     </div>
+
+    @unless($isPublic)
+        <form method="POST" action="{{ route('scores.shootout.store') }}" class="so-winner-note-form">
+            @csrf
+            <input type="hidden" name="winner_note_only" value="1">
+            <input type="hidden" name="tournament_id" value="{{ $meta['tournament_id'] ?? request('tournament_id') }}">
+            <input type="hidden" name="upto_game" value="{{ $upto_game ?? request('upto_game', 1) }}">
+            <input type="hidden" name="shifts" value="{{ $shiftValue }}">
+            <input type="hidden" name="gender_filter" value="{{ $genderValue }}">
+
+            <label for="winner_note">優勝者コメント（PDF右下表示）</label>
+            <textarea id="winner_note" name="winner_note" placeholder="例：シーズントライアル３勝目&#10;（2023スプリングS、2025サマーSに続き）">{{ $winnerNote }}</textarea>
+            <div class="so-winner-note-help">
+                優勝回数・過去優勝大会など、自動判別しづらい補足を大会ごとに自由入力できます。空欄で保存するとPDFには表示しません。
+            </div>
+            <div class="so-winner-note-actions">
+                <button type="submit" class="btn btn-sm btn-primary">優勝者コメントを保存</button>
+            </div>
+        </form>
+    @endunless
 
     @if($missingSeedSnapshot)
         <div class="alert alert-warning">
