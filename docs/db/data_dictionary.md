@@ -815,8 +815,13 @@ SNS等リンク集を保持するテーブル。
   - `standard` = 標準配置
   - `higher_seed_bye` = 2の累乗に満たない場合、上位seedへBYEを優先
   - `custom` = `single_elimination_seed_settings` のJSON指定を使う
-- single_elimination_seed_settings（トーナメントseed/BYE詳細設定：json nullable）
+- single_elimination_seed_settings（トーナメントseed/BYE詳細設定・レーン表示設定：json nullable）
   - 例: `{"seed_overrides":[{"seed":1,"entry_round":2},{"seed":2,"entry_round":2}]}`
+  - 例: `{"lane_settings":{"rounds":{"1":{"start_lane":3,"step":2,"width":2},"2":{"start_lane":19,"step":2,"width":2}}}}`
+  - `lane_settings.rounds.{round_no}.start_lane` は、その回戦の一番上の対戦開始レーンを表す。
+  - `lane_settings.rounds.{round_no}.step` は、次の試合へ進むときに増やすレーン数を表す。通常は2。
+  - `lane_settings.rounds.{round_no}.width` は、1試合で使用するレーン幅を表す。通常は2で、`3-4L` のように表示する。
+  - `lane_settings.matches.{match_key}` は、必要になった場合の試合単位のレーン表示上書きに使う。例: `{"SE:R1-M1":"3-4L"}`。
 - result_carry_preset（成績持ち込みプリセット：nullable）
   - `default` = 標準（現行どおり）
   - `no_carry` = 全ステージ持ち込みなし
@@ -916,6 +921,10 @@ SNS等リンク集を保持するテーブル。
   - `entry_round = 1` は1回戦から出場
   - `entry_round = 2` は1回戦シード
   - `entry_round = 3` は2回戦シード
+- トーナメント表のレーン表示は、`single_elimination_seed_settings.lane_settings` で大会ごとに管理する。
+  - `rounds` は回戦単位の自動採番設定であり、`start_lane` / `step` / `width` を保持する。
+  - `matches` は `SE:Rn-Mn` 形式の試合単位上書き用であり、特別なレーン割当がある場合のみ使う。
+  - 速報入力・公開速報・PDF用トーナメント表は、このJSONを参照して同じレーン表記を出す。
 - トーナメント方式では敗者ラウンドを作らない。
 - 同じラウンドで負けた選手は同順位タイとして扱う。
   - 準決勝敗退者は3位タイ

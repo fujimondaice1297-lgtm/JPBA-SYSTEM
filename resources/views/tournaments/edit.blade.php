@@ -468,15 +468,99 @@
     <div class="col-md-4 mb-3">
       <label class="form-label">シード詳細設定（JSON任意）</label>
       @php
-        $singleSeedSettings = old('single_elimination_seed_settings', $tournament->single_elimination_seed_settings ?? '');
-        if (is_array($singleSeedSettings)) {
-            $singleSeedSettings = json_encode($singleSeedSettings, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+        $singleSeedSettingsRaw = old('single_elimination_seed_settings', $tournament->single_elimination_seed_settings ?? '');
+        $singleSeedSettingsArray = [];
+
+        if (is_array($singleSeedSettingsRaw)) {
+            $singleSeedSettingsArray = $singleSeedSettingsRaw;
+            $singleSeedSettings = json_encode($singleSeedSettingsRaw, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+        } else {
+            $singleSeedSettings = (string) $singleSeedSettingsRaw;
+            $decodedSingleSeedSettings = json_decode($singleSeedSettings, true);
+            if (json_last_error() === JSON_ERROR_NONE && is_array($decodedSingleSeedSettings)) {
+                $singleSeedSettingsArray = $decodedSingleSeedSettings;
+                $singleSeedSettings = json_encode($decodedSingleSeedSettings, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+            }
         }
       @endphp
       <textarea name="single_elimination_seed_settings" rows="4" class="form-control @error('single_elimination_seed_settings') is-invalid @enderror"
                 placeholder='例: {"seed_overrides":[{"seed":1,"entry_round":2},{"seed":2,"entry_round":2}] }'>{{ $singleSeedSettings }}</textarea>
       @error('single_elimination_seed_settings')<div class="invalid-feedback">{{ $message }}</div>@enderror
       <small class="text-muted d-block">空欄なら標準配置。1回戦シードは entry_round=2、2回戦シードは entry_round=3。</small>
+    </div>
+
+    <div class="col-md-12 mb-3">
+      <div class="border rounded p-3 bg-white">
+        <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">
+          <div>
+            <strong>トーナメント表レーン表示設定</strong>
+            <div class="small text-muted">
+              各回戦の一番上の対戦開始レーンを指定すると、速報トーナメント表に <code>3-4L</code> のように自動表示します。
+              空欄の回戦はレーン表示しません。
+            </div>
+          </div>
+          <div class="small text-muted">保存先：single_elimination_seed_settings.lane_settings</div>
+        </div>
+
+        @php
+          $laneRounds = old('single_elimination_lane_rounds', $singleSeedSettingsArray['lane_settings']['rounds'] ?? []);
+          if (!is_array($laneRounds)) {
+              $laneRounds = [];
+          }
+        @endphp
+
+        <div class="table-responsive">
+          <table class="table table-sm align-middle mb-2">
+            <thead>
+              <tr>
+                <th style="width: 18%;">回戦</th>
+                <th style="width: 26%;">一番上の対戦開始レーン</th>
+                <th style="width: 20%;">次試合への増分</th>
+                <th style="width: 20%;">使用レーン幅</th>
+                <th>表示例</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for($roundNo = 1; $roundNo <= 6; $roundNo++)
+                @php
+                  $roundLane = $laneRounds[(string) $roundNo] ?? $laneRounds[$roundNo] ?? [];
+                  $startLane = old('single_elimination_lane_rounds.' . $roundNo . '.start_lane', is_array($roundLane) ? ($roundLane['start_lane'] ?? '') : '');
+                  $step = old('single_elimination_lane_rounds.' . $roundNo . '.step', is_array($roundLane) ? ($roundLane['step'] ?? 2) : 2);
+                  $width = old('single_elimination_lane_rounds.' . $roundNo . '.width', is_array($roundLane) ? ($roundLane['width'] ?? 2) : 2);
+                  $example = '';
+                  if ((int) $startLane > 0) {
+                      $laneTo = (int) $startLane + max(1, (int) $width) - 1;
+                      $example = ((int) $startLane === $laneTo) ? ((int) $startLane . 'L') : ((int) $startLane . '-' . $laneTo . 'L');
+                  }
+                @endphp
+                <tr>
+                  <td class="fw-bold">{{ $roundNo }}回戦</td>
+                  <td>
+                    <input type="number" min="1" max="999" name="single_elimination_lane_rounds[{{ $roundNo }}][start_lane]" class="form-control form-control-sm @error('single_elimination_lane_rounds.' . $roundNo . '.start_lane') is-invalid @enderror" value="{{ $startLane }}" placeholder="例：3">
+                    @error('single_elimination_lane_rounds.' . $roundNo . '.start_lane')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                  </td>
+                  <td>
+                    <input type="number" min="1" max="50" name="single_elimination_lane_rounds[{{ $roundNo }}][step]" class="form-control form-control-sm @error('single_elimination_lane_rounds.' . $roundNo . '.step') is-invalid @enderror" value="{{ $step }}">
+                    <small class="text-muted">通常は2</small>
+                    @error('single_elimination_lane_rounds.' . $roundNo . '.step')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                  </td>
+                  <td>
+                    <input type="number" min="1" max="20" name="single_elimination_lane_rounds[{{ $roundNo }}][width]" class="form-control form-control-sm @error('single_elimination_lane_rounds.' . $roundNo . '.width') is-invalid @enderror" value="{{ $width }}">
+                    <small class="text-muted">2なら3-4L</small>
+                    @error('single_elimination_lane_rounds.' . $roundNo . '.width')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                  </td>
+                  <td class="text-muted small">{{ $example !== '' ? $example : '未表示' }}</td>
+                </tr>
+              @endfor
+            </tbody>
+          </table>
+        </div>
+
+        <div class="small text-muted">
+          例：1回戦を3、2回戦を19、準決勝を25のように設定すると、各回戦の第1試合から順に <code>3-4L</code>、<code>5-6L</code> のように表示します。
+          個別試合だけ例外にしたい場合は、後続フェーズで <code>SE:Rn-Mn</code> 単位の上書きUIを追加します。
+        </div>
+      </div>
     </div>
 
     <div class="col-md-12">

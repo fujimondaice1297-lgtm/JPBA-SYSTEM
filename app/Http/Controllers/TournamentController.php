@@ -383,6 +383,70 @@ class TournamentController extends Controller
         return empty($decoded) ? null : $decoded;
     }
 
+
+    private function normalizeSingleEliminationLaneSettings(Request $request): array
+    {
+        $settings = [];
+        $rounds = [];
+
+        $roundInputs = $request->input('single_elimination_lane_rounds', []);
+        if (!is_array($roundInputs)) {
+            $roundInputs = [];
+        }
+
+        foreach ($roundInputs as $roundNo => $row) {
+            if (!is_array($row)) {
+                continue;
+            }
+
+            $roundNo = (int) $roundNo;
+            if ($roundNo <= 0) {
+                continue;
+            }
+
+            $startLane = (int) ($row['start_lane'] ?? 0);
+            if ($startLane <= 0) {
+                continue;
+            }
+
+            $step = (int) ($row['step'] ?? 2);
+            $width = (int) ($row['width'] ?? 2);
+
+            $rounds[(string) $roundNo] = [
+                'start_lane' => $startLane,
+                'step' => max(1, $step),
+                'width' => max(1, $width),
+            ];
+        }
+
+        if (!empty($rounds)) {
+            $settings['rounds'] = $rounds;
+        }
+
+        $matchInputs = $request->input('single_elimination_match_lanes', []);
+        if (!is_array($matchInputs)) {
+            $matchInputs = [];
+        }
+
+        $matches = [];
+        foreach ($matchInputs as $matchKey => $laneLabel) {
+            $matchKey = trim((string) $matchKey);
+            $laneLabel = trim((string) $laneLabel);
+
+            if ($matchKey === '' || $laneLabel === '') {
+                continue;
+            }
+
+            $matches[$matchKey] = $laneLabel;
+        }
+
+        if (!empty($matches)) {
+            $settings['matches'] = $matches;
+        }
+
+        return $settings;
+    }
+
     private function normalizeResultCarrySettings(string $preset, $customJson): array
     {
         $preset = trim($preset) ?: 'default';
@@ -506,6 +570,12 @@ class TournamentController extends Controller
             'single_elimination_seed_source_result_code' => 'nullable|in:prelim_total,quarterfinal_total,semifinal_total',
             'single_elimination_seed_policy' => 'nullable|in:standard,higher_seed_bye,custom',
             'single_elimination_seed_settings' => 'nullable|string|max:10000',
+            'single_elimination_lane_rounds' => 'nullable|array',
+            'single_elimination_lane_rounds.*.start_lane' => 'nullable|integer|min:1|max:999',
+            'single_elimination_lane_rounds.*.step' => 'nullable|integer|min:1|max:50',
+            'single_elimination_lane_rounds.*.width' => 'nullable|integer|min:1|max:20',
+            'single_elimination_match_lanes' => 'nullable|array',
+            'single_elimination_match_lanes.*' => 'nullable|string|max:50',
             'shootout_qualifier_count' => 'nullable|integer|min:2|max:32',
             'shootout_seed_source_result_code' => 'nullable|in:prelim_total,quarterfinal_total,semifinal_total',
             'shootout_format' => 'nullable|in:standard_8,custom',
@@ -661,24 +731,46 @@ class TournamentController extends Controller
             default => 'prelim_total',
         };
 
-        $validated['single_elimination_qualifier_count'] = $usesSingleElimination
+        $singleEliminationSeedSettings = $this->normalizeSingleEliminationSeedSettings(
+            $request->input('single_elimination_seed_settings')
+        ) ?? [];
+        $singleEliminationLaneSettings = $this->normalizeSingleEliminationLaneSettings($request);
+        $hasSingleEliminationSettingInput = $usesSingleElimination
+            || !empty($singleEliminationSeedSettings)
+            || !empty($singleEliminationLaneSettings)
+            || $request->filled('single_elimination_qualifier_count')
+            || $request->filled('single_elimination_seed_policy');
+
+        $validated['single_elimination_qualifier_count'] = $hasSingleEliminationSettingInput
             ? (int) ($request->input('single_elimination_qualifier_count', 8) ?: 8)
             : null;
 
         // 進出元成績は result_flow_type と矛盾しないよう、Controller側で固定する。
-        // 画面入力値をそのまま信用すると「準決勝通算→トーナメント」なのに
-        // quarterfinal_total を参照するような不整合が起きるため。
+        // ただし、既存のテスト大会など result_flow_type が未設定でもトーナメント速報を使うケースがあるため、
+        // レーン設定やseed設定が入力されている場合は single_elimination_* 系設定を消さずに保持する。
         $validated['single_elimination_seed_source_result_code'] = $usesSingleElimination
             ? $fixedSeedSource
-            : null;
+            : ($hasSingleEliminationSettingInput
+                ? (trim((string) $request->input('single_elimination_seed_source_result_code', '')) ?: 'prelim_total')
+                : null);
 
-        $validated['single_elimination_seed_policy'] = $usesSingleElimination
+        $validated['single_elimination_seed_policy'] = $hasSingleEliminationSettingInput
             ? ($request->input('single_elimination_seed_policy') ?: 'standard')
             : null;
 
-        $validated['single_elimination_seed_settings'] = $usesSingleElimination
-            ? $this->normalizeSingleEliminationSeedSettings($request->input('single_elimination_seed_settings'))
-            : null;
+        if ($hasSingleEliminationSettingInput) {
+            if (!empty($singleEliminationLaneSettings)) {
+                $singleEliminationSeedSettings['lane_settings'] = $singleEliminationLaneSettings;
+            } elseif ($request->has('single_elimination_lane_rounds') || $request->has('single_elimination_match_lanes')) {
+                unset($singleEliminationSeedSettings['lane_settings']);
+            }
+
+            $validated['single_elimination_seed_settings'] = empty($singleEliminationSeedSettings)
+                ? null
+                : $singleEliminationSeedSettings;
+        } else {
+            $validated['single_elimination_seed_settings'] = null;
+        }
 
         $validated['shootout_qualifier_count'] = $usesShootout
             ? (int) ($request->input('shootout_qualifier_count', 8) ?: 8)
@@ -793,6 +885,14 @@ class TournamentController extends Controller
                 }
             }
         }
+
+        // 画面入力専用の配列キーは tournaments テーブルの実カラムではないため、
+        // forceFill()/save() 前に必ず除外する。
+        // レーン設定は single_elimination_seed_settings.lane_settings に統合済み。
+        unset(
+            $validated['single_elimination_lane_rounds'],
+            $validated['single_elimination_match_lanes']
+        );
 
         return $validated;
     }

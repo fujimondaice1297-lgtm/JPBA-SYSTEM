@@ -1714,6 +1714,11 @@ final class ScoreController extends Controller
             $seedSettings = [];
         }
 
+        $singleEliminationLaneSettings = $seedSettings['lane_settings'] ?? [];
+        if (!is_array($singleEliminationLaneSettings)) {
+            $singleEliminationLaneSettings = [];
+        }
+
         $seedSnapshot = $this->findCurrentSnapshotForSingleElimination(
             tournamentId: $tournamentId,
             resultCode: $seedSourceResultCode,
@@ -1750,7 +1755,11 @@ final class ScoreController extends Controller
                 'seed_policy' => $seedPolicy,
                 'seed_policy_name' => $this->singleEliminationSeedPolicyName($seedPolicy),
                 'ranking_policy' => SingleEliminationService::RANKING_POLICY_SAME_LOST_ROUND,
+                'lane_settings' => $singleEliminationLaneSettings,
+                'single_elimination_lane_settings' => $singleEliminationLaneSettings,
             ],
+            'lane_settings' => $singleEliminationLaneSettings,
+            'single_elimination_lane_settings' => $singleEliminationLaneSettings,
             'missing_seed_snapshot' => !$seedSnapshot,
             'seed_rows' => $seedRows,
             'bracket' => $bracket,

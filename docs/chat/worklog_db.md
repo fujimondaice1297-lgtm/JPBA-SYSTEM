@@ -1,125 +1,173 @@
-## 2026-05-06 ST Winter 2026 C シュートアウト実スコア・通算表示・優勝者コメント調整
+## 2026-05-08 トーナメント方式 / 公式PDF風トーナメント表自動生成ロードマップ記録
 
 - 目的:
-  - ST Winter 2026 C の公式PDFに掲載されているシュートアウト1st / 2nd / 優勝決定戦のスコアシートを、PDFへ実データとして反映する。
-  - 大会別PDFのページ順・見出し・氏名表記・投球表記・勝ち上がり図を公式PDFにさらに寄せる。
-  - 優勝者コメント（例: 生涯何勝目、どの大会以来か）を大会ごとに自由入力し、シュートアウト図右下へ表示できるようにする。
-  - シーズントライアルの準決勝表示が、準決勝単体4Gではなく、予選8G + 準決勝4G = 通算12Gとして扱われる状態へ戻す。
+  - ステップラダー方式・シュートアウト方式の速報画面が整ってきたため、未整理だったトーナメント方式（シングルエリミネーション）の速報ページを、公式PDF風のトーナメント表として整備する。
+  - 24名以下の小型トーナメント表と、48名級の左右分割型トーナメント表の両方に対応できる自動生成システムを作る。
+  - 大会詳細の設定を変えるだけで、進出人数・シード人数・BYE・勝ち上がり線・成績反映が自動で切り替わる状態を目指す。
+  - 中途半端な固定実装にせず、今後100大会、200大会、500大会と増えても運用できる設計にする。
 
-- 作業開始時の前提:
-  - 直前までに、ST Winter 2026 C の予選34名×8G、準決勝18名×4G、最終8名の投入と、PDF 1ページ目・予選/準決勝成績表の公式PDF寄せは進んでいた。
-  - `app/Console/Commands/SeedStWinter2026CResultCommand.php` は1000行超の実データ投入ファイルになっており、安易な全文差し替えは禁止とした。
-  - 今回は画面・PDF・既存JSON設定を使った拡張であり、DBスキーマ変更は行わない方針とした。
-  - ProTest は今回の対象外。
+- 作業開始時の現状:
+  - 直前の作業は commit / push 済みで、コード差分なしの状態から次作業を検討した。
+  - その後、トーナメント速報ページの表示整理として `resources/views/scores/single_elimination_result.blade.php` に差分が発生している。
+  - 現在確認済みの状態:
+    - `git status -sb`: `## main...origin/main` かつ `resources/views/scores/single_elimination_result.blade.php` のみ変更
+    - `git rev-parse --short HEAD`: `80bace6`
+    - `git diff --name-only`: `resources/views/scores/single_elimination_result.blade.php`
+  - この差分は、次回実装開始前に必ず中身を確認し、残すのか作り直すのかを明確にする。
 
-- シュートアウト実スコアシート投入:
-  - 公式PDFの1stマッチ / 2ndマッチ / 優勝決定戦を基準に、`SeedStWinter2026CResultCommand.php` へスコアシート実データを追加した。
-  - 追加対象は既存のスコアシート系テーブル。
-    - `tournament_match_score_sheets`
-    - `tournament_match_score_sheet_players`
-    - `tournament_match_score_frames`
-  - 投入件数の想定は以下。
-    - `tournament_match_score_sheets`: 3件
-    - `tournament_match_score_sheet_players`: 10件
-    - `tournament_match_score_frames`: 100件
-  - 各フレームには、公式PDFの残りピン表示に合わせて `remaining_pins` も投入する方針にした。
-  - `BowlingScoreCalculatorService` による検証を通し、フレーム別入力から計算した最終スコアが公式PDFのスコアと一致しない場合は例外で止める方針にした。
+- 既存の土台:
+  - `SingleEliminationService` は既に追加済みで、進出人数に応じた可変人数ブラケットを生成できる。
+  - 14名進出時は16枠 / 4ラウンド / BYE 2件として生成できることを確認済み。
+  - `game_scores.stage = トーナメント`、`entry_number = SE:Rn-Mn:A/B` 形式で、各試合のA/Bスロットのスコアを保持する方針は確定済み。
+  - トーナメント表上で試合ごとのスコア入力・保存・勝者表示ができる。
+  - 勝者が次ラウンドへ自動反映されることを確認済み。
+  - シード / BYE がある場合でも、前ラウンド未入力で該当選手が次ラウンドへ進めることを確認済み。
+  - `single_elimination_final` を正式成績反映し、`tournament_results` へ同期できることも確認済み。
+  - ただし、現状の速報画面はカード型の実用表示に近く、公式PDF風のトーナメント表としては未完成。
 
-- PDFページ順・表示順の修正:
-  - 当初、2ページ目のシュートアウト図直下に1stマッチが表示されていたが、公式PDFに合わせて優勝決定戦を表示するよう修正した。
-  - 3ページ目は、上から2ndマッチ → 1stマッチの順で表示するよう修正した。
-  - 現時点の大会別PDF構成は以下。
-    - 1ページ目: 大会概要 + 入賞者リスト
-    - 2ページ目: シュートアウト勝ち上がり図 + 優勝決定戦スコアシート
-    - 3ページ目: シュートアウト2ndマッチ + シュートアウト1stマッチ
-    - 4ページ目: 準決勝4G・通算12Gトータルピン成績
-    - 5ページ目: 予選8Gトータルピン成績
+- 参考にする見た目:
+  - 添付画像1: 24名以下のトーナメント表例。
+    - 比較的コンパクトに1ページへ収める構成。
+    - 上位シード・準決勝・決勝枠などを中央寄せで見せる。
+  - 添付画像2: 48名級のトーナメント表例。
+    - 左右分割型。
+    - 左右の山から中央の決勝へ勝ち上がる形式。
+    - ライセンスNo、氏名、順位、レーン、回戦、スコアを限られたスペースに載せる必要がある。
+  - JPBA公式ページでも、決勝トーナメント表・勝者ゾーン・敗者ゾーン・各回戦結果PDF・最終成績PDFが分かれて公開されているため、JPBA-systemでも「速報入力」「トーナメント表表示」「正式成績PDF」を分ける設計にする。
 
-- シュートアウト勝ち上がり図:
-  - 優勝者枠に優勝者が表示されない問題を修正した。
-  - `SO:FINAL` ではなく既存ロジックに合わせた `SO:SO3` を使うよう整理した。
-  - 一度、`ShootoutBracketImageService.php` の差し替えで未定義の `formatPlayerName()` 呼び出しが入り、シュートアウト図PNG生成が落ちる事故があった。
-  - その結果、PDF上からトーナメント図が消え、スコア表だけが前に詰まる状態になった。
-  - 復旧後は、前回までに調整済みだったトーナメント図・太線・優勝者枠を維持したうえで、必要な差分だけ追加する方針へ戻した。
-  - 1位通過から優勝決定戦へ進む太線は、テンプレート線と重なるよう再調整した。
+- 重要な判断:
+  - これは「Bladeを少し整える作業」ではない。
+  - トーナメント表を自動生成する小さなサブシステムとして作る。
+  - 背景画像固定方式だけでは、進出人数・BYE数・シード位置・48名級の左右分割に耐えない。
+  - そのため、座標計算サービスで選手枠・線・スコア・勝ち上がり太線を生成する。
+  - 画面表示はSVGまたはHTML/SVGを使う。
+  - PDF出力ではPNG生成またはDataURI貼り付け方式を使い、Dompdf上での崩れを避ける。
+  - シュートアウトと同じく、勝ち上がった選手のルートは太線で見えるようにする。
+  - スコア入力は既存の速報ページで行い、入力された `game_scores` からすべて自動反映する。
 
-- 氏名・期・投球表記:
-  - 入賞者リスト、シュートアウト表、スコアシート、予選成績表、準決勝成績表で、氏名を「藤永　北斗」のようなスペース入り表記へ統一した。
-  - PDF 1ページ目の `期` 欄は、`61期` ではなく公式PDFに合わせて数字だけを表示する方針にした。
-  - スコアシートの投球表記が `右投げ投げ` / `左投げ投げ` になっていたため、`右投げ` / `左投げ` などに正規化した。
-  - 両手投げ・サムレス系の表記は、既存の `右両手` / `左サムレス` 等の方針と矛盾しないようにした。
+- 最終的に目指す仕様:
+  1. 大会詳細でトーナメント設定を保存する。
+  2. 進出元成績を選ぶ。
+  3. 進出人数を設定する。
+  4. シードポリシーを選ぶ。
+  5. トーナメント表が自動生成される。
+  6. 速報ページでスコア入力する。
+  7. 勝者が次ラウンドへ自動反映される。
+  8. 勝ち上がり線が太線になる。
+  9. 公開速報ページにも反映される。
+  10. 正式成績反映へ進められる。
+  11. 大会別PDFにもトーナメント表を出力できる。
 
-- スコアシートPNGの表示調整:
-  - 各スコアシートの選手名・スコア表・残りピン表示の間隔を調整した。
-  - 残りピン表示が次の選手名と被らないよう、1人あたりの縦幅と文字サイズを調整した。
-  - 3ページ目の2nd / 1stマッチについても、4名表示時に名前・残りピン・スコア表が重ならないようにした。
+- 対応対象:
+  - 8名
+  - 12名
+  - 14名
+  - 16名
+  - 24名
+  - 32名
+  - 48名
+  - 64名
+  - BYEあり
+  - 1回戦シード / 2回戦シード
+  - 左右分割型トーナメント表
+  - 1ページ収め
+  - 勝者ルート太線
+  - 勝者スコア強調
+  - 公開速報表示
+  - 管理者入力表示
+  - PDF出力
 
-- スコアシートページ見出し:
-  - スコアシート単独ページの見出しが固定文言になっていたため、シュートアウト図ページと同じく大会情報から表示するよう修正した。
-  - 表示対象は以下。
-    - 大会名
-    - シリーズ名
-    - 決勝方式
-    - 会場名
-  - 大会ごと・会場ごとに文言が変わっても、固定文言ではなく大会情報から出る方針にした。
+- Phase 1: ブラケットデータ正規化
+  - 現在の `SingleEliminationService` が返している `rounds / matches / slot_a / slot_b / winner_node` を、画面用・PDF用で共通利用できる形へ整理する。
+  - 既存のスコア入力保存処理、勝者判定、次ラウンド反映は壊さない。
+  - まずはDB変更なしで進める。
+  - 次回実装時は、現在差分がある `resources/views/scores/single_elimination_result.blade.php` を必ず確認し、前回の暫定表示変更を残すか、公式PDF風実装に置き換えるか決める。
 
-- 優勝者コメント:
-  - 公式PDFでは、優勝者枠の右下に「シーズントライアル３勝目」「（2023スプリングS、2025サマーSに続き）」のような任意コメントが表示される。
-  - これは自動判定が難しいため、大会ごとに自由入力できる項目として扱う方針にした。
-  - 保存先は既存の `tournaments.shootout_settings.winner_note`。
-  - 新規DBカラムは追加せず、既存のJSON設定を使うため、DBスキーマ変更は不要。
-  - 空欄の場合はPDFへ表示しない。
-  - 当初、`/tournaments/{tournament}/match-score-sheets` 側の `TournamentMatchScoreSheetController` / `tournament_match_score_sheets/index.blade.php` に入力欄を入れたが、実際に運用者が使う決勝スコア入力画面は `scores/shootout_result.blade.php` 側だった。
-  - 最終的に、シュートアウト勝敗入力画面に「優勝者コメント」欄を追加し、`ScoreController` から `tournaments.shootout_settings.winner_note` を保存する形へ整理した。
-  - `ShootoutBracketImageService` では `winner_note` を読み取り、シュートアウト図右下の余白へ最大4行程度で描画するようにした。
+- Phase 2: `SingleEliminationBracketLayoutService` の追加
+  - 新規サービス候補: `app/Services/SingleEliminationBracketLayoutService.php`
+  - 役割:
+    - 進出人数を見る。
+    - `bracket_size` を見る。
+    - round数を見る。
+    - BYE数を見る。
+    - 24名以下ならコンパクトレイアウト。
+    - 48名以上なら左右分割レイアウト。
+    - 各選手枠の座標を計算する。
+    - 各試合線の座標を計算する。
+    - 勝者ルート太線の座標を計算する。
 
-- 準決勝速報ランキングの通算表示:
-  - 修正途中で、準決勝速報ランキングが準決勝4G単体表示に戻っていた。
-  - シーズントライアルでは、準決勝は予選8Gを持ち込んだ通算12Gで表示する必要があるため、設定を読み込んで通算表示に戻した。
-  - `ScoreController` / `ScoreService` / `scores.result` を調整し、ST系の `semifinal_total` では予選8G + 準決勝4Gを通算として扱う方針にした。
-  - `resources/views/scores/result.blade.php` では、`4G × 200 = 800 pin` のような単体基準ではなく、meta の `baseline_games` を優先して `12G × 200 = 2,400 pin` のように表示できるようにした。
+- Phase 3: 画面用トーナメント表の実装
+  - 対象候補: `resources/views/scores/single_elimination_result.blade.php`
+  - 公式PDF風のトーナメント表へ寄せる。
+  - 管理者画面では既存の試合スコア入力を維持する。
+  - 公開URLでは入力欄を非表示にする。
+  - 勝者 / 敗退 / 未確定 / BYE / 同点要確認を見分けやすくする。
+  - 24名以下と48名級で見た目を自動切替する。
 
-- 今回触ったファイル:
-  - `app/Console/Commands/SeedStWinter2026CResultCommand.php`
-  - `app/Http/Controllers/ScoreController.php`
-  - `app/Http/Controllers/TournamentMatchScoreSheetController.php`
-  - `app/Http/Controllers/TournamentResultController.php`
-  - `app/Services/MatchScoreSheetImageService.php`
-  - `app/Services/ScoreService.php`
-  - `app/Services/ShootoutBracketImageService.php`
-  - `resources/views/scores/result.blade.php`
-  - `resources/views/scores/shootout_result.blade.php`
-  - `resources/views/tournament_match_score_sheets/index.blade.php`
-  - `resources/views/tournament_results/pdf.blade.php`
+- Phase 4: PDF用PNG生成サービスの追加
+  - 新規サービス候補: `app/Services/SingleEliminationBracketImageService.php`
+  - 役割:
+    - レイアウトサービスの座標を使う。
+    - GDでPNG生成する。
+    - 日本語フォントで選手名を表示する。
+    - 勝者ルート太線を描く。
+    - スコアを表示する。
+    - 大会名、会場、日付、部門名を表示する。
+    - PDFへDataURIで渡す。
+  - 既存の `MatchScoreSheetImageService` や `ShootoutBracketImageService` と同じ系統の実装として扱う。
+
+- Phase 5: 大会詳細の設定欄整理
+  - まずは既存の `single_elimination_seed_settings` JSON で足りるか確認する。
+  - 既存JSONで足りる場合はDB変更なしで進める。
+  - 足りない場合のみ、`migration` / `docs/db/data_dictionary.md` / `docs/db/ER.dbml` をセットで更新する。
+  - 設定候補:
+    - `layout_type`
+    - `title`
+    - `division_name`
+    - `final_label`
+    - `match_game_label`
+    - `show_license_no`
+    - `show_seed_rank`
+    - `show_lanes`
+    - `title_note`
+
+- Phase 6: 正式成績反映とPDFまで接続
+  - 優勝 / 準優勝 / 同ラウンド敗退者順位を作る。
+  - `single_elimination_final` と `tournament_results` への同期を維持する。
+  - PDFへ公式風トーナメント表を出す。
+  - 14名 / 16名 / 24名 / 48名で回帰確認する。
+  - ステップラダー・シュートアウト・トータルピン方式に影響しないことを確認する。
+
+- やらないこと:
+  - 24名用だけの固定画像実装にしない。
+  - 48名用だけの固定画像実装にしない。
+  - 大会ごとにBladeを手修正しない。
+  - スコア入力とは別に勝者を手入力しない。
+  - PDFだけを手作業で作らない。
+  - 背景テンプレートに文字を置くだけで全人数対応したことにしない。
 
 - DB / 辞書:
-  - 今回は既存の `tournaments.shootout_settings`、`game_scores`、`tournament_match_score_sheets` 系、`tournament_results`、PDF描画サービスを使った表示・保存調整であり、DBスキーマ変更は行っていない。
-  - そのため、`migrations` / `docs/db/data_dictionary.md` / `docs/db/ER.dbml` の追加更新は不要と判断した。
-  - ただし、今回の作業ログと進捗ボードは更新対象とした。
+  - 今回はロードマップ記録のみ。
+  - この記録時点ではDBスキーマ変更は行わない。
+  - よって `migrations` / `docs/db/data_dictionary.md` / `docs/db/ER.dbml` は更新しない。
+  - 実装フェーズで新カラムや新テーブルが必要になった場合のみ、必ず3点セットで更新する。
 
-- 現時点で完了したこと:
-  - ST Winter 2026 C のシュートアウト実スコアシートをseed投入できる形にした。
-  - 2ページ目にシュートアウト図 + 優勝決定戦、3ページ目に2ndマッチ + 1stマッチを表示する構成にした。
-  - シュートアウト図の優勝者枠・太線・氏名・フリガナ表示を維持した。
-  - 氏名スペース、期表示、投球表記、スコア表余白を調整した。
-  - スコアシートページの見出しを大会情報連動にした。
-  - 優勝者コメントをシュートアウト入力画面から大会ごとに保存し、PDF右下へ出せるようにした。
-  - 準決勝速報ランキングを通算12G表示へ戻した。
-
-- 残タスク / 次に詰める候補:
-  1. 今回差分の `php -l` / `optimize:clear` / 画面確認を完了し、commit / push する。
-  2. シードプロ識別の `S` 表示ルールを設計・実装する。
-  3. ST Winter 2026 C の実データ投入コマンドを、テスト用として残すか、dev seed 専用として整理するかを決める。
-  4. 他大会・人数違い・男女違いでも、入賞者リスト・予選成績・準決勝成績・シュートアウト表PDFが崩れないか回帰確認する。
-  5. `tournament_awards` / `tournament_points` と `prize_distributions` / `point_distributions` の役割整理を進める。
-  6. ダブルエリミネーション方式の要件整理へ進む。
+- 次にやること:
+  1. 現在差分がある `resources/views/scores/single_elimination_result.blade.php` を確認する。
+  2. Phase 1として、既存入力保存を壊さずに描画用データ正規化から始める。
+  3. 必要ファイルはまず以下に限定する。
+     - `app/Services/SingleEliminationService.php`
+     - `app/Http/Controllers/ScoreController.php`
+     - `resources/views/scores/single_elimination_result.blade.php`
+  4. DB変更が必要になった時点で初めて、`data_dictionary.md` / `ER.dbml` / migration のセット更新へ切り替える。
 
 - 現時点の判断:
-  - **ST Winter 2026 C の公式PDF風出力は、実データ投入・入賞者リスト・予選/準決勝成績・シュートアウト図・実スコアシート・優勝者コメントまで主要構成が通った。**
-  - 残る大きな確認は、今回差分の構文確認・画面確認・コミット、および他大会/人数違いでの回帰確認。
-  - シードプロ `S` 表示や配分系テーブル整理は、今回のPDF仕上げとは別タスクとして後続へ送る。
+  - **トーナメント方式の速報ページは、既存の入力・勝者反映ロジックを活かしながら、公式PDF風トーナメント表自動生成サブシステムとして進める。**
+  - ロードマップは見えているため、次回から Phase 1 に着手してよい。
+  - ただし、現在の差分を放置せず、最初に `single_elimination_result.blade.php` の状態確認を行う。
 
 ---
+
 ## 2026-05-05 ST Winter 2026 C 実データ投入・公式PDF成績表調整
 
 - 目的:
