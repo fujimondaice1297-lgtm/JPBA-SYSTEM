@@ -527,4 +527,67 @@
         .official-prize-table.non-season-prize-table .belong-col { width: 42%; }
         .official-prize-table.non-season-prize-table .prize-col { width: 15%; }
 
-    </style>
+    
+
+        .official-single-elimination-page {
+            page-break-before: always;
+            page-break-after: auto;
+        }
+
+        .official-single-elimination-title {
+            text-align: center;
+            line-height: 1.08;
+            margin: 22px 0 10px 0;
+        }
+
+        .official-single-elimination-title-line-1 {
+            font-size: 26px;
+            letter-spacing: 1px;
+            margin-bottom: 4px;
+        }
+
+        .official-single-elimination-title-line-2 {
+            font-size: 23px;
+            letter-spacing: 1px;
+            margin-bottom: 4px;
+        }
+
+        .official-single-elimination-title-line-3 {
+            font-size: 20px;
+            letter-spacing: 1px;
+            margin-bottom: 2px;
+        }
+
+        .official-single-elimination-title-line-4 {
+            font-size: 14px;
+            letter-spacing: 0.5px;
+            margin: 8px auto 0 auto;
+            width: 88%;
+            text-align: left;
+            border-bottom: 1.5px solid #111;
+            padding-bottom: 3px;
+        }
+
+        .official-single-elimination-meta {
+            width: 88%;
+            margin: 6px auto 8px auto;
+            font-size: 11.5px;
+            line-height: 1.35;
+            text-align: left;
+        }
+
+        .official-single-elimination-wrap {
+            width: 100%;
+            text-align: center;
+            margin: 0;
+        }
+
+        .official-single-elimination-image {
+            width: 96%;
+            max-width: 96%;
+            height: auto;
+            display: block;
+            margin: 0 auto;
+        }
+
+</style>

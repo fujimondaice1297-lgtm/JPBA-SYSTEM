@@ -564,6 +564,8 @@
         'shootoutBracketImage' => $shootoutBracketImage ?? null,
         'matchScoreSheets' => $matchScoreSheets ?? collect(),
         'matchScoreSheetImages' => $matchScoreSheetImages ?? [],
+        'singleEliminationPdf' => $singleEliminationPdf ?? null,
+        'singleEliminationBracketImage' => $singleEliminationBracketImage ?? null,
         'scoreImages' => $scoreImages,
         'firstScoreImage' => $firstScoreImage,
         'remainingScoreImages' => $remainingScoreImages,
