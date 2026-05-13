@@ -1,3 +1,107 @@
+
+## 2026-05-13 大会別PDF Blade分割・シュートアウト復旧・シングルエリミネーションPDF追加
+
+- 目的:
+  - 大会別PDFを1枚の巨大な `resources/views/tournament_results/pdf.blade.php` に集約する構成をやめ、今後300件、500件規模の大会PDFでも方式ごとの表示が混ざらない構成へ移行する。
+  - シーズントライアル、シュートアウト、シングルエリミネーション、通常成績表の表示責務を分け、方式別専用表示が他方式へ漏れないようにする。
+  - PDF分割後も、既存のシュートアウトPDF表示を壊さず、さらにシングルエリミネーション方式のトーナメント表をPDFへ表示できるようにする。
+
+- 作業開始時の前提:
+  - PDF分割方針と回帰事故防止ルールは、事前に `docs/chat/progress_board.md` と `docs/chat/worklog_db.md` へ記録済み。
+  - PDF修正途中差分が残っている状態では作業を重ねず、クリーン状態を基準にした。
+  - DBスキーマ変更は行わない方針とした。
+  - ProTest は今回の対象外。
+
+- PDF Blade分割:
+  - `resources/views/tournament_results/pdf.blade.php` を大会別PDFの入口Bladeとして整理した。
+  - `resources/views/tournament_results/pdfs/` 配下に方式別Bladeを配置する構成にした。
+  - 主な分割先は以下。
+    - `resources/views/tournament_results/pdfs/season_trial.blade.php`
+    - `resources/views/tournament_results/pdfs/shootout.blade.php`
+    - `resources/views/tournament_results/pdfs/single_elimination.blade.php`
+    - `resources/views/tournament_results/pdfs/standard.blade.php`
+    - `resources/views/tournament_results/pdfs/partials/*.blade.php`
+  - PDF本文を方式別Bladeへ寄せ、入口Bladeへ大量の方式別HTMLを置かない方針にした。
+
+- PDF判定の2軸整理:
+  - 当初、`season_trial` と `shootout` を排他のPDFモードとして扱いかけたが、これは誤りと判断した。
+  - 正しくは以下の2軸で扱う。
+    - 大会カテゴリ: `season_trial` / `standard`
+    - 決勝方式: `shootout` / `single_elimination` / `step_ladder` など
+  - シュートアウトはシーズントライアルで使う決勝方式でもあるため、`season_trial` と `shootout` を排他にしない。
+  - 例として、ST Winter 2026 C / メリーランドカップは、シーズントライアルPDFの外枠の中にシュートアウト図とスコアシートを表示する。
+
+- シュートアウトPDF回帰の復旧:
+  - PDF分割途中で、メリーランドカップ ID 8 のシュートアウト図が表示されなくなる回帰が発生した。
+  - Tinkerで `ShootoutBracketImageService` がPNG DataURIを生成できていることを確認した。
+  - 原因は画像生成ではなく、PDF入口から `context`、`season_trial`、`shootout_pages` へ渡る呼び出し構造の整理不足だった。
+  - 2軸判定に戻し、シーズントライアルPDF内でシュートアウト図、優勝決定戦スコア表、残りスコア表を表示できる構成に復旧した。
+  - Blade内で画像を再生成する処理は採用しない方針とした。
+  - 画像生成はController / Service側、Bladeは表示のみとするルールを維持した。
+
+- シングルエリミネーションPDF追加:
+  - シングルエリミネーション方式の速報画面で作ったトーナメント表を、大会別PDFにも表示できるようにした。
+  - `app/Services/SingleEliminationBracketImageService.php` を追加し、PDF用のトーナメント表PNG DataURIを生成する構成にした。
+  - `resources/views/tournament_results/pdfs/partials/single_elimination_pages.blade.php` を追加し、生成済みPNGをPDF上に表示する構成にした。
+  - `app/Http/Controllers/TournamentResultController.php` で `SingleEliminationService` と `SingleEliminationBracketImageService` を接続した。
+  - `singleEliminationPdf` / `singleEliminationBracketImage` をPDF Bladeへ渡すようにした。
+  - `resources/views/tournament_results/pdfs/single_elimination.blade.php` で `single_elimination_pages` を呼ぶようにした。
+  - `resources/views/tournament_results/pdfs/partials/context.blade.php` と `styles.blade.php` も、シングルエリミネーションPDF表示に必要な変数共有とCSSを追加した。
+  - BBBカップPDFで、シングルエリミネーションのトーナメント表PNGが表示されることを確認した。
+
+- 確認済みコマンド:
+  - `php -l app/Http/Controllers/TournamentResultController.php`
+  - `php -l app/Services/SingleEliminationBracketImageService.php`
+  - `php artisan optimize:clear`
+  - `php artisan view:cache`
+
+- コミット / Push:
+  - `refactor: PDF出力を大会カテゴリと決勝方式で分割`
+  - `feat: シングルエリミネーション表をPDF出力に追加`
+  - push後の `git status -sb` は `## main...origin/main` で差分なし。
+
+- DB / 辞書:
+  - 今回はPDF Blade分割、Controller / Service接続、表示用PNG生成の追加であり、DBスキーマ変更は行っていない。
+  - そのため、`migrations` / `docs/db/data_dictionary.md` / `docs/db/ER.dbml` の追加更新は不要と判断した。
+
+- 固定ルール:
+  - PDF修正時は、部分partialだけを推測で触らない。
+  - 必ず以下の流れを確認してから修正する。
+    1. `resources/views/tournament_results/pdf.blade.php`
+    2. `resources/views/tournament_results/pdfs/partials/context.blade.php`
+    3. 方式別Blade
+    4. partial
+    5. Controller / Service
+  - 氏名はPDF全体で「姓　名」の全角スペース入りに統一する。
+  - `期` は数字のみを表示する。
+  - ライセンスNoはPDF上では下4桁表示を基本にする。
+  - シーズントライアル専用表示を通常大会へ漏らさない。
+  - シングルエリミネーションPDFに、シーズントライアル文言、ST専用ライン、STポイント表を出さない。
+  - シュートアウトはシーズントライアルで使う決勝方式でもあるため、`season_trial` と `shootout` を排他にしない。
+
+- 次に進める候補:
+  1. PDF分割後の回帰確認
+     - ST Winter 2026 C
+     - CCCカップ / シュートアウト
+     - BBBカップ / シングルエリミネーション
+     - 通常トータルピン方式
+  2. シードプロ識別の `S` 表示ルール設計
+     - どのテーブル / どの設定画面でシード対象を管理するか。
+     - PDFのライセンスNo欄に `S 1443` のように出すか。
+     - DB変更が必要なら `migrations` / `docs/db/data_dictionary.md` / `docs/db/ER.dbml` をセットで更新する。
+  3. ST Winter 2026 C の実データ投入コマンド整理
+     - テスト用として残すか、dev seed 専用へ移すかを決める。
+  4. 配分系テーブル整理
+     - `tournament_awards` / `tournament_points`
+     - `prize_distributions` / `point_distributions`
+  5. ダブルエリミネーション方式の要件整理
+     - 敗者側ブラケット
+     - リセット決勝
+     - 敗者側順位
+     - 同順位扱い
+     - 再戦条件
+
+
 ## 2026-05-09 大会別PDF Blade分割方針 / 回帰事故防止ルール
 
 - 目的:

@@ -656,3 +656,39 @@
 - [ ] `TournamentResultController.php` / `resources/views/tournament_results/pdf.blade.php` の現行全文を確認する
 - [ ] PDF分割の第1段階として、入口Blade + 方式別Blade作成だけを行う
 
+
+#### 2026-05-13 メモ（大会別PDF Blade分割・シュートアウト復旧・シングルエリミネーションPDF追加 完了）
+- [✓] 大会別PDFの入口を `resources/views/tournament_results/pdf.blade.php` に整理し、本文を方式別Bladeへ分離する方針を実装した
+- [✓] `resources/views/tournament_results/pdfs/` 配下に、PDF方式別Bladeと共通partialを配置する構成へ移行した
+- [✓] PDF判定を2軸で整理した
+  - 大会カテゴリ: `season_trial` / `standard`
+  - 決勝方式: `shootout` / `single_elimination` / `step_ladder` など
+- [✓] `season_trial` と `shootout` を排他扱いしないことを固定した
+  - 例: ST Winter 2026 C / メリーランドカップは、シーズントライアルPDFの中にシュートアウト決勝図を表示する
+- [✓] PDF分割途中で消えたシュートアウト図を復旧し、シーズントライアルPDF内でシュートアウト図・優勝決定戦スコア表・残りスコア表が表示される構成へ戻した
+- [✓] Blade内で画像を再生成せず、Controller / Service 側で生成したPNG DataURIをBladeで表示するルールを維持した
+- [✓] シングルエリミネーション方式のトーナメント表をPDFへ追加した
+  - `app/Services/SingleEliminationBracketImageService.php` を追加
+  - `resources/views/tournament_results/pdfs/partials/single_elimination_pages.blade.php` を追加
+  - `TournamentResultController` から `singleEliminationPdf` / `singleEliminationBracketImage` を渡す構成にした
+  - `single_elimination.blade.php` で `single_elimination_pages` を呼ぶ構成にした
+- [✓] BBBカップPDFで、シングルエリミネーションのトーナメント表PNG表示を確認した
+- [✓] `php -l app/Http/Controllers/TournamentResultController.php` を確認済み
+- [✓] `php -l app/Services/SingleEliminationBracketImageService.php` を確認済み
+- [✓] `php artisan optimize:clear` / `php artisan view:cache` を確認済み
+- [✓] PDF分割分とシングルエリミネーションPDF追加分は commit / push 済み
+- [✓] push後の `git status -sb` は `## main...origin/main` で差分なし
+- [ ] 次の候補は、PDF分割後の回帰確認、シードプロ識別 `S` 表示ルール設計、ST Winter 2026 C seed整理、配分系テーブル整理、ダブルエリミネーション要件整理
+
+##### PDF分割後の固定ルール（追記）
+- [ ] PDFを修正する場合は、部分partialだけを推測で触らず、必ず以下の流れで確認する
+  - `resources/views/tournament_results/pdf.blade.php`
+  - `resources/views/tournament_results/pdfs/partials/context.blade.php`
+  - 方式別Blade
+  - partial
+  - Controller / Service
+- [ ] 氏名はPDF全体で「姓　名」の全角スペース入りに統一する
+- [ ] `期` は数字のみ表示する
+- [ ] シーズントライアル専用表示を通常大会へ漏らさない
+- [ ] シングルエリミネーションPDFにシーズントライアル文言・ST専用ライン・STポイント表を出さない
+- [ ] シュートアウトはシーズントライアルで使う決勝方式でもあるため、`season_trial` と `shootout` を排他にしない
