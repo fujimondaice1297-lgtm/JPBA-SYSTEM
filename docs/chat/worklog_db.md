@@ -4672,3 +4672,147 @@ User::where('email','domaine-d@i.softbank.jp')->exists(); // true
   - 「①スコア順位速報」は、単なる方針段階から、実際に手入力・速報表示・過去点数確認まで通る段階へ前進した。
   - 一方で、削除ロジックと `ScoreController.php` のローカル最新版差分確認が残っているため、次チャットの最初はこの切り分けから再開するのが安全。
   - DB辞書の正本整理より前に、まずは現行速報実装の安定化（特に `ScoreController.php` の最新版基準化）を優先すべき段階に入った。
+
+## 2026-05-15 決勝ステップラダーPDF追加・回帰確認
+
+- 目的:
+  - PDF分割後の回帰確認として、ラウンドロビン → 決勝ステップラダー方式の大会を確認する。
+  - AAAカップの大会別PDFに、画面で表示済みの決勝ステップラダー対戦表を追加する。
+  - 既存のステップラダー画面と同じテンプレ画像方式を使い、PDFでも方式別表示が欠けない状態にする。
+
+- 作業開始時の前提:
+  - 直前までに、大会別PDF Blade分割、シュートアウトPDF復旧、シングルエリミネーションPDF追加は完了済み。
+  - 作業開始時の確認結果は以下。
+    - `git status -sb`: `## main...origin/main`
+    - `git rev-parse --short HEAD`: `38794f5`
+    - `git diff --name-only`: 空
+  - DBスキーマ変更は行わない方針。
+  - ProTest は対象外。
+
+- ステップラダー対象大会の確認:
+  - `tournaments.result_flow_type` を確認し、ステップラダー確認対象は AAAカップ（`tournament_id = 3`）と判断した。
+  - `result_flow_type = prelim_to_rr_to_final`
+  - `round_robin_qualifier_count = 8`
+  - 勝ちボーナス30P、引き分けボーナス15P。
+
+- DB状態確認:
+  - `tournament_result_snapshots` を確認し、以下の current snapshot があることを確認した。
+    - `round_robin_total`: snapshot_id=34
+    - `step_ladder_final`: snapshot_id=35
+  - `game_scores` では以下を確認した。
+    - `ラウンドロビン`: 64行（8名×8G）
+    - `決勝`: 4行（2試合分）
+  - 決勝ステップラダーの入力内容は以下。
+    - 1試合目: 山田幸 258 - 224 桑藤美樹
+    - 2試合目: 山田幸 245 - 222 三浦美里
+  - `tournament_result_snapshot_rows` の `step_ladder_final` と `tournament_results` の最終順位8名が一致していることを確認した。
+    - 1位: 山田幸 / F00000524 / total_pin=3445 / games=14 / avg=246.07
+    - 2位: 三浦美里 / F00000520 / total_pin=3186 / games=13 / avg=245.08
+    - 3位: 桑藤美樹 / F00000494 / total_pin=3117 / games=13 / avg=239.77
+    - 4位: 渡辺けあき / F00000488 / total_pin=2734 / games=12 / avg=217.83
+    - 5位: 山田弥佳 / F00000498 / total_pin=2614 / games=12 / avg=206.58
+    - 6位: 廣崎彩子 / F00000500 / total_pin=2432 / games=12 / avg=193.92
+    - 7位: RRテストA / amateur_name保持
+    - 8位: RRテストB / amateur_name保持
+
+- 画面確認:
+  - `scores/result?tournament_id=3&stage=ラウンドロビン&upto_game=8` で、ラウンドロビン対戦表・8G成績・決勝ステップラダー進出者3名を確認した。
+  - `scores/result?tournament_id=3&stage=決勝&upto_game=2` で、決勝ステップラダー表示がDB内容と一致することを確認した。
+  - 表示上は、山田幸が桑藤美樹に勝ち、優勝決定戦で三浦美里に勝って優勝する構成になっていた。
+  - 氏名、スコア、線の大きな重なりはなく、とりあえずOKと判断した。
+
+- PDF確認で見つかった問題:
+  - `/tournaments/3/results/pdf` では、1ページ目の成績表は出ていた。
+  - ただし、決勝ステップラダー対戦表ページが出ていなかった。
+  - `context.blade.php` の修正により、競技内容の文言は「3名によるステップラダー方式」に変わったが、対戦表ページ自体は未出力だった。
+
+- 実装方針:
+  - DB変更ではなく、PDF表示追加として対応した。
+  - 一時的にHTML/CSSでPDF用ステップラダー図を組む案を検討したが、これは既存方針と合わないため中止した。
+  - 既存画面の `resources/views/scores/step_ladder_result.blade.php` は、`public/images/step_ladder_tournament_bracket_template.png` を土台に、選手名・スコア・勝者線を重ねる方式だった。
+  - そのためPDF側も、シュートアウト / シングルエリミネーションと同じく、Service側でPNG DataURIを生成してBladeでは表示のみ行う方針にした。
+
+- 追加 / 修正した主な内容:
+  - `app/Services/StepLadderBracketImageService.php`
+    - 新規追加。
+    - `public/images/step_ladder_tournament_bracket_template.png` を `imagecreatefrompng()` で読み込み、選手名・スコア・勝者ルート・優勝者名を合成する。
+    - `generateDataUri()` でPDF貼り付け用のPNG DataURIを返す。
+    - 日本語フォントは `JPBA_PDF_FONT_PATH`、`C:/PHP/fonts/ipaexg.ttf`、Windows標準フォント、`storage/fonts` などから解決するようにした。
+  - `app/Http/Controllers/TournamentResultController.php`
+    - `StepLadderService` / `StepLadderBracketImageService` をPDF出力処理に接続。
+    - `buildStepLadderPdfData()` で `prelim_to_rr_to_final` / `prelim_to_quarterfinal_to_rr_to_final` のときにステップラダーデータを作る。
+    - `stepLadderPdf` / `stepLadderBracketImage` をPDF Bladeへ渡す。
+  - `resources/views/tournament_results/pdfs/partials/context.blade.php`
+    - `step_ladder` を決勝方式として扱うようにした。
+    - `finalFormatLabel` に「ステップラダー方式」を追加。
+    - `stepLadderPdf` / `stepLadderBracketImage` を共有変数へ追加。
+  - `resources/views/tournament_results/pdfs/standard.blade.php`
+    - `partials.step_ladder_pages` を読み込むようにした。
+  - `resources/views/tournament_results/pdfs/partials/step_ladder_pages.blade.php`
+    - 新規追加。
+    - Controller / Service側で生成済みのPNG DataURIをPDF上に表示する。
+    - 下部にステップラダー最終順位の簡易表を表示する。
+
+- 確認済み:
+  - `php -l app/Http/Controllers/TournamentResultController.php`
+  - `php -l app/Services/StepLadderBracketImageService.php`
+  - `php artisan optimize:clear`
+  - `StepLadderBracketImageService::generateDataUri()` が `data:image/png;base64,` を返すこと。
+  - AAAカップPDFで、2ページ目にテンプレ画像ベースの決勝ステップラダー対戦表が表示されること。
+  - PDFは4ページ構成になり、2ページ目に決勝ステップラダー図、3ページ目以降に準決勝 / 予選成績が続くこと。
+
+- コミット / Push:
+  - 差分対象は以下5ファイル。
+    - `app/Http/Controllers/TournamentResultController.php`
+    - `app/Services/StepLadderBracketImageService.php`
+    - `resources/views/tournament_results/pdfs/partials/context.blade.php`
+    - `resources/views/tournament_results/pdfs/partials/step_ladder_pages.blade.php`
+    - `resources/views/tournament_results/pdfs/standard.blade.php`
+  - コミットメッセージ案は `feat: ステップラダー対戦表を大会別PDFに追加` を採用。
+  - commit / push 済み。
+  - push後の最終確認結果は以下。
+    - `git status -sb`: `## main...origin/main`
+    - `git rev-parse --short HEAD`: `f1f0419`
+    - `git diff --name-only`: 空
+
+- DB / 辞書:
+  - 今回はPDF表示・Controller / Service接続のみであり、DBスキーマ変更は行っていない。
+  - そのため、`migrations` / `docs/db/data_dictionary.md` / `docs/db/ER.dbml` は更新不要と判断した。
+
+- 反省 / 固定事項:
+  - ステップラダーPDFは、HTML/CSSで新しく組むのではなく、既存のテンプレ画像方式に合わせる。
+  - PDFで複雑な図を出す場合は、Blade内で生成・描画せず、Controller / Service側でPNG DataURIを作り、Bladeでは表示だけにする。
+  - `git diff --name-only` は未追跡ファイルを出さないため、新規ファイルがある場合は `git status -sb` も必ず確認する。
+  - 必要なら `git add -N` で未追跡ファイルをdiff確認対象に載せる。
+
+- 残タスク / 次に進める候補:
+  1. PDF分割後の残り回帰確認
+     - ST Winter 2026 C / シーズントライアル + シュートアウト
+     - CCCカップ / シュートアウト
+     - BBBカップ / シングルエリミネーション
+     - 通常トータルピン方式
+  2. シードプロ識別の `S` 表示ルール設計
+     - どのテーブル / どの設定画面でシード対象を管理するか。
+     - PDFのライセンスNo欄に `S 1443` のように出すか。
+     - DB変更が必要なら `migrations` / `docs/db/data_dictionary.md` / `docs/db/ER.dbml` をセットで更新する。
+  3. ST Winter 2026 C の実データ投入コマンド整理
+     - テスト用として残すか、dev seed 専用へ移すかを決める。
+  4. 配分系テーブル整理
+     - `tournament_awards` / `tournament_points`
+     - `prize_distributions` / `point_distributions`
+  5. ダブルエリミネーション方式の要件整理
+     - 敗者側ブラケット
+     - リセット決勝
+     - 敗者側順位
+     - 同順位扱い
+     - 再戦条件
+
+- 次チャットへの引き継ぎ:
+  - 最初に必ず以下を確認する。
+    1. `git status -sb`
+    2. `git rev-parse --short HEAD`
+    3. `git diff --name-only`
+  - 現時点の最終HEADは `f1f0419`。
+  - 差分なしから始める想定。
+  - 次に進むなら、まずPDF分割後の残り回帰確認を行うのが自然。
+

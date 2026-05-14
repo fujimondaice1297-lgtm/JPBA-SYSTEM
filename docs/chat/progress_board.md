@@ -692,3 +692,46 @@
 - [ ] シーズントライアル専用表示を通常大会へ漏らさない
 - [ ] シングルエリミネーションPDFにシーズントライアル文言・ST専用ライン・STポイント表を出さない
 - [ ] シュートアウトはシーズントライアルで使う決勝方式でもあるため、`season_trial` と `shootout` を排他にしない
+
+#### 2026-05-15 メモ（決勝ステップラダーPDF追加・回帰確認 完了）
+- [✓] 作業開始時に `git status -sb` / `git rev-parse --short HEAD` / `git diff --name-only` を確認し、開始時HEAD `38794f5`、差分なしから作業を開始した
+- [✓] AAAカップ（`tournament_id = 3`）をステップラダー確認対象として特定した
+- [✓] `tournament_result_snapshots` で current の `round_robin_total` / `step_ladder_final` が存在することを確認した
+  - `round_robin_total`: snapshot_id=34
+  - `step_ladder_final`: snapshot_id=35
+- [✓] `game_scores` にラウンドロビン64行（8名×8G）と決勝4行（2試合分）が保存されていることを確認した
+- [✓] `step_ladder_final` snapshot と `tournament_results` の最終順位8名が一致していることを確認した
+  - 1位: 山田幸 / total_pin=3445 / games=14 / avg=246.07
+  - 2位: 三浦美里 / total_pin=3186 / games=13 / avg=245.08
+  - 3位: 桑藤美樹 / total_pin=3117 / games=13 / avg=239.77
+  - 7位・8位は `RRテストA` / `RRテストB` としてアマチュア名が保持されている
+- [✓] ラウンドロビン画面で `upto_game=8`、決勝ステップラダー画面で `upto_game=2` を指定し、画面表示がDB内容と一致することを確認した
+  - 3位決定戦側: 山田幸 258 - 224 桑藤美樹
+  - 優勝決定戦側: 山田幸 245 - 222 三浦美里
+  - 優勝: 山田幸 / 準優勝: 三浦美里 / 3位: 桑藤美樹
+- [✓] 大会別PDF `/tournaments/3/results/pdf` では成績表は出ていたが、当初は決勝ステップラダー対戦表ページが未出力だった
+- [✓] `standard.blade.php` から `step_ladder_pages` を読み込み、`TournamentResultController` から `stepLadderPdf` / `stepLadderBracketImage` を渡す構成へ接続した
+- [✓] `StepLadderBracketImageService` を追加し、既存の `public/images/step_ladder_tournament_bracket_template.png` を土台に、選手名・スコア・勝者ルート・優勝者名を合成したPNG DataURIを生成する方式にした
+- [✓] 一時的にHTML/CSSでPDF用ステップラダー図を組む案を検討したが、既存の画面表示と同じテンプレ画像方式を正とし、HTML方式は採用しないことに戻した
+- [✓] PDFの2ページ目に、テンプレ画像ベースの決勝ステップラダー対戦表が表示されることを確認した
+- [✓] `php -l app/Http/Controllers/TournamentResultController.php` が通ることを確認した
+- [✓] `php -l app/Services/StepLadderBracketImageService.php` が通ることを確認した
+- [✓] `php artisan optimize:clear` 後にPDF再表示を確認した
+- [✓] 以下ファイルを commit / push 済み
+  - `app/Http/Controllers/TournamentResultController.php`
+  - `app/Services/StepLadderBracketImageService.php`
+  - `resources/views/tournament_results/pdfs/partials/context.blade.php`
+  - `resources/views/tournament_results/pdfs/partials/step_ladder_pages.blade.php`
+  - `resources/views/tournament_results/pdfs/standard.blade.php`
+- [✓] コミット後の最終HEADは `f1f0419`
+- [✓] push後の `git status -sb` は `## main...origin/main`、`git diff --name-only` は空で差分なし
+- [✓] 今回はPDF表示・Controller / Service接続のみであり、DBスキーマ変更はなし
+- [✓] そのため `migrations` / `docs/db/data_dictionary.md` / `docs/db/ER.dbml` は更新不要と判断した
+- [ ] 次チャットでは、まず `git status -sb` / `git rev-parse --short HEAD` / `git diff --name-only` を確認する
+- [ ] 次に進める自然な候補は、PDF分割後の残り回帰確認
+  - ST Winter 2026 C / シーズントライアル + シュートアウト
+  - CCCカップ / シュートアウト
+  - BBBカップ / シングルエリミネーション
+  - 通常トータルピン方式
+- [ ] その後の候補は、シードプロ識別の `S` 表示ルール設計、ST Winter 2026 C 実データ投入コマンド整理、配分系テーブル整理、ダブルエリミネーション要件整理
+
