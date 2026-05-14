@@ -14,6 +14,8 @@ use App\Services\ShootoutService;
 use App\Services\ShootoutBracketImageService;
 use App\Services\SingleEliminationService;
 use App\Services\SingleEliminationBracketImageService;
+use App\Services\StepLadderService;
+use App\Services\StepLadderBracketImageService;
 use App\Services\MatchScoreSheetImageService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
@@ -536,6 +538,23 @@ class TournamentResultController extends Controller
             }
         }
 
+        $stepLadderPdf = $this->buildStepLadderPdfData($tournament);
+        $stepLadderBracketImage = null;
+
+        if (is_array($stepLadderPdf)
+            && empty($stepLadderPdf['missing_seed_snapshot'])
+            && !empty($stepLadderPdf['seeds'] ?? [])
+        ) {
+            try {
+                /** @var StepLadderBracketImageService $stepLadderBracketImageService */
+                $stepLadderBracketImageService = app(StepLadderBracketImageService::class);
+                $stepLadderBracketImage = $stepLadderBracketImageService->generateDataUri($tournament, $stepLadderPdf);
+            } catch (\Throwable $e) {
+                report($e);
+                $stepLadderBracketImage = null;
+            }
+        }
+
         $matchScoreSheets = $this->loadPublishedMatchScoreSheets($tournament);
         $matchScoreSheetImages = [];
 
@@ -552,7 +571,7 @@ class TournamentResultController extends Controller
 
         return $this->makePdfWithJapaneseFont(
             'tournament_results.pdf',
-            compact('tournament', 'results', 'scoreSnapshots', 'singleEliminationPdf', 'singleEliminationBracketImage', 'shootoutPdf', 'shootoutBracketImage', 'matchScoreSheets', 'matchScoreSheetImages'),
+            compact('tournament', 'results', 'scoreSnapshots', 'singleEliminationPdf', 'singleEliminationBracketImage', 'shootoutPdf', 'shootoutBracketImage', 'stepLadderPdf', 'stepLadderBracketImage', 'matchScoreSheets', 'matchScoreSheetImages'),
             "{$tournament->year}_{$tournament->name}_results.pdf"
         );
     }
@@ -591,6 +610,31 @@ class TournamentResultController extends Controller
             ->route('tournaments.results.index', $tournament) // モデルで渡すとキレイ
             ->with('success', '成績を削除しました。');
     }
+
+    private function buildStepLadderPdfData(Tournament $tournament): ?array
+    {
+        $flowType = trim((string) ($tournament->result_flow_type ?? ''));
+        if (!in_array($flowType, ['prelim_to_rr_to_final', 'prelim_to_quarterfinal_to_rr_to_final'], true)) {
+            return null;
+        }
+
+        try {
+            /** @var StepLadderService $stepLadderService */
+            $stepLadderService = app(StepLadderService::class);
+
+            return $stepLadderService->build([
+                'tournament_id' => (int) $tournament->id,
+                'upto_game' => 2,
+                'shift' => '',
+                'gender' => '',
+            ]);
+        } catch (\Throwable $e) {
+            report($e);
+
+            return null;
+        }
+    }
+
 
     private function loadPublishedMatchScoreSheets(Tournament $tournament)
     {

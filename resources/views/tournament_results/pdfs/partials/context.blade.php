@@ -159,10 +159,13 @@
         'prelim_to_semifinal_to_shootout_to_final',
     ], true);
     $isSingleEliminationFlow = str_contains($flowType, 'single_elimination');
+    $isStepLadderFlow = in_array($flowType, ['prelim_to_rr_to_final', 'prelim_to_quarterfinal_to_rr_to_final'], true);
 
     // PDFは「大会カテゴリ」と「決勝方式」を分けて扱う。
     // 例：シーズントライアル大会カテゴリ + シュートアウト決勝方式。
-    $finalFormat = $isSingleEliminationFlow ? 'single_elimination' : ($isShootoutFlow ? 'shootout' : 'standard');
+    $finalFormat = $isSingleEliminationFlow
+        ? 'single_elimination'
+        : ($isShootoutFlow ? 'shootout' : ($isStepLadderFlow ? 'step_ladder' : 'standard'));
 
     $seasonTrialFlag = false;
     $settingsText = json_encode($shootoutSettings, JSON_UNESCAPED_UNICODE) ?: '';
@@ -189,12 +192,14 @@
 
     $finalQualifierCount = $isSingleEliminationFlow
         ? (int) ($tournament->single_elimination_qualifier_count ?? $semifinalQualifierCount ?? 0)
-        : (int) ($semifinalQualifierCount ?? 0);
+        : ($isStepLadderFlow ? 3 : (int) ($semifinalQualifierCount ?? 0));
     if ($finalQualifierCount <= 0) {
         $finalQualifierCount = (int) ($semifinalQualifierCount ?: 8);
     }
 
-    $finalFormatLabel = $finalFormat === 'single_elimination' ? 'トーナメント方式' : ($finalFormat === 'shootout' ? 'シュートアウト方式' : 'トータルピン方式');
+    $finalFormatLabel = $finalFormat === 'single_elimination'
+        ? 'トーナメント方式'
+        : ($finalFormat === 'shootout' ? 'シュートアウト方式' : ($finalFormat === 'step_ladder' ? 'ステップラダー方式' : 'トータルピン方式'));
 
     $seriesTitle = trim(implode(' ', array_filter([$officialMainTitle, $officialSeriesTitle, $officialSeasonTitle])));
 
@@ -564,6 +569,8 @@
         'shootoutBracketImage' => $shootoutBracketImage ?? null,
         'matchScoreSheets' => $matchScoreSheets ?? collect(),
         'matchScoreSheetImages' => $matchScoreSheetImages ?? [],
+        'stepLadderPdf' => $stepLadderPdf ?? null,
+        'stepLadderBracketImage' => $stepLadderBracketImage ?? null,
         'singleEliminationPdf' => $singleEliminationPdf ?? null,
         'singleEliminationBracketImage' => $singleEliminationBracketImage ?? null,
         'scoreImages' => $scoreImages,
@@ -580,6 +587,7 @@
         'isSeasonTrialPdf' => $isSeasonTrialPdf,
         'isShootoutFlow' => $isShootoutFlow,
         'isSingleEliminationFlow' => $isSingleEliminationFlow,
+        'isStepLadderFlow' => $isStepLadderFlow,
         'stageNumber' => $stageNumber,
         'officialMainTitle' => $officialMainTitle,
         'officialSeriesTitle' => $officialSeriesTitle,
