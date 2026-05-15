@@ -49,6 +49,52 @@
             'gender_filter' => '',
         ])
         : null;
+
+    $seedService = app(\App\Services\ProBowlerSeedService::class);
+    $seedMap = [];
+
+    try {
+        $seedMap = $seedService->seedMapForTournament((int) $tournament->id);
+    } catch (\Throwable $e) {
+        $seedMap = [];
+    }
+
+    $seedLicenseKey = function ($license): string {
+        return strtoupper(preg_replace('/\s+/u', '', trim((string) $license)) ?? trim((string) $license));
+    };
+
+    $isSeedResult = function ($result, ?string $licenseNo = null) use ($seedMap, $seedLicenseKey): bool {
+        $proBowlerId = $result->pro_bowler_id
+            ?? optional($result->player)->id
+            ?? optional($result->bowler)->id
+            ?? null;
+
+        if ($proBowlerId !== null && isset($seedMap['pro_bowler:' . (int) $proBowlerId])) {
+            return true;
+        }
+
+        $licenseCandidates = [
+            $licenseNo,
+            $result->pro_bowler_license_no ?? null,
+            optional($result->player)->license_no ?? null,
+            optional($result->bowler)->license_no ?? null,
+        ];
+
+        foreach ($licenseCandidates as $candidate) {
+            $key = $seedLicenseKey($candidate);
+            if ($key !== '' && isset($seedMap['license:' . $key])) {
+                return true;
+            }
+        }
+
+        return false;
+    };
+
+    $formatSeedLicense = function (?string $licenseNo, bool $isSeed = false) use ($seedService): string {
+        $display = $seedService->formatLicenseForPdf($licenseNo, $isSeed);
+
+        return $display === '' ? '-' : $display;
+    };
 @endphp
 
 <div class="container">
@@ -119,6 +165,7 @@
                 <tr>
                     <th>年度</th>
                     <th>選手名</th>
+                    <th>ライセンスNo</th>
                     <th>順位</th>
                     <th>ポイント</th>
                     <th>トータルピン</th>
@@ -143,11 +190,19 @@
                         ?? $result->result_rank
                         ?? $result->order_no
                         ?? '-';
+
+                    $rawLicense = $result->pro_bowler_license_no
+                        ?? optional($result->player)->license_no
+                        ?? optional($result->bowler)->license_no
+                        ?? null;
+
+                    $licenseDisplay = $formatSeedLicense($rawLicense, $isSeedResult($result, $rawLicense));
                 @endphp
 
                 <tr>
                     <td>{{ $result->ranking_year }}</td>
                     <td>{{ $name }}</td>
+                    <td>{{ $licenseDisplay }}</td>
                     <td>{{ $rank }}</td>
                     <td>{{ number_format($result->points ?? 0) }}</td>
                     <td>{{ number_format($result->total_pin ?? 0) }}</td>

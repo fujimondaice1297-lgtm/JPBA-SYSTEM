@@ -32,6 +32,49 @@
             $presetGroups['その他'][] = $preset;
         }
     }
+
+    $seedService = app(\App\Services\ProBowlerSeedService::class);
+    $seedMap = [];
+
+    try {
+        $seedMap = $seedService->seedMapForTournament((int) $tournament->id);
+    } catch (\Throwable $e) {
+        $seedMap = [];
+    }
+
+    $seedLicenseKey = function ($license): string {
+        return strtoupper(preg_replace('/\s+/u', '', trim((string) $license)) ?? trim((string) $license));
+    };
+
+    $isSeedRow = function ($row, ?string $licenseNo = null) use ($seedMap, $seedLicenseKey): bool {
+        $proBowlerId = $row->pro_bowler_id ?? null;
+
+        if ($proBowlerId !== null && isset($seedMap['pro_bowler:' . (int) $proBowlerId])) {
+            return true;
+        }
+
+        $licenseCandidates = [
+            $licenseNo,
+            $row->pro_bowler_license_no ?? null,
+            $row->license_number ?? null,
+            $row->license_no ?? null,
+        ];
+
+        foreach ($licenseCandidates as $candidate) {
+            $key = $seedLicenseKey($candidate);
+            if ($key !== '' && isset($seedMap['license:' . $key])) {
+                return true;
+            }
+        }
+
+        return false;
+    };
+
+    $formatSeedLicense = function (?string $licenseNo, bool $isSeed = false) use ($seedService): string {
+        $display = $seedService->formatLicenseForPdf($licenseNo, $isSeed);
+
+        return $display === '' ? '-' : $display;
+    };
 @endphp
 
 <div class="container py-4">
@@ -166,10 +209,16 @@
                     </thead>
                     <tbody>
                         @forelse($rows as $row)
+                            @php
+                                $licenseDisplay = $formatSeedLicense(
+                                    $row->pro_bowler_license_no ?? null,
+                                    $isSeedRow($row, $row->pro_bowler_license_no ?? null)
+                                );
+                            @endphp
                             <tr>
                                 <td>{{ $row->ranking }}</td>
                                 <td>{{ $row->display_name }}</td>
-                                <td>{{ $row->pro_bowler_license_no ?: '-' }}</td>
+                                <td>{{ $licenseDisplay }}</td>
 
                                 @foreach($stageColumns as $stageColumn)
                                     @php

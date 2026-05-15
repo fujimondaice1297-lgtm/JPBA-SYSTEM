@@ -203,20 +203,76 @@
 
     $seriesTitle = trim(implode(' ', array_filter([$officialMainTitle, $officialSeriesTitle, $officialSeasonTitle])));
 
+    $seedService = app(\App\Services\ProBowlerSeedService::class);
+    $pdfTournamentId = isset($tournament) && isset($tournament->id) ? (int) $tournament->id : 0;
+    $pdfSeedMap = [];
+
+    if ($pdfTournamentId > 0) {
+        try {
+            $pdfSeedMap = $seedService->seedMapForTournament($pdfTournamentId);
+        } catch (\Throwable $e) {
+            $pdfSeedMap = [];
+        }
+    }
+
+    $seedLicenseKey = function ($license): string {
+        return strtoupper(preg_replace('/\s+/u', '', trim((string) $license)) ?? trim((string) $license));
+    };
+
+    $isPdfSeedPlayer = function ($source, ?string $licenseNo = null) use ($valueOf, $pdfSeedMap, $seedLicenseKey): bool {
+        $rawId = $valueOf($source, ['pro_bowler_id'], '');
+        $proBowlerId = ($rawId !== '' && is_numeric($rawId)) ? (int) $rawId : null;
+
+        if ($proBowlerId === null && is_object($source)) {
+            $proBowlerId = optional($source->player ?? null)->id ?? optional($source->bowler ?? null)->id ?? null;
+            $proBowlerId = $proBowlerId ? (int) $proBowlerId : null;
+        }
+
+        if ($proBowlerId !== null && isset($pdfSeedMap['pro_bowler:' . $proBowlerId])) {
+            return true;
+        }
+
+        $licenseCandidates = [
+            $licenseNo,
+            $valueOf($source, ['pro_bowler_license_no', 'license_number', 'license_no'], ''),
+        ];
+
+        if (is_object($source)) {
+            $licenseCandidates[] = optional($source->player ?? null)->license_no ?? null;
+            $licenseCandidates[] = optional($source->bowler ?? null)->license_no ?? null;
+        }
+
+        foreach ($licenseCandidates as $candidate) {
+            $key = $seedLicenseKey($candidate);
+            if ($key !== '' && isset($pdfSeedMap['license:' . $key])) {
+                return true;
+            }
+        }
+
+        return false;
+    };
+
+    $formatSeedLicenseForPdf = function (?string $licenseNo, bool $isSeed = false) use ($seedService): string {
+        $display = $seedService->formatLicenseForPdf($licenseNo, $isSeed);
+
+        return $display === '' ? '-' : $display;
+    };
+
     $resolveName = function ($result) use ($valueOf, $formatPersonName) {
-        $rawName = optional($result->player)->name_kanji
-            ?? optional($result->bowler)->name_kanji
+        $rawName = optional($result->player ?? null)->name_kanji
+            ?? optional($result->bowler ?? null)->name_kanji
             ?? $valueOf($result, ['player_name', 'name', 'display_name', 'amateur_name'], '-');
         return $formatPersonName($rawName);
     };
 
-    $resolveLicense = function ($result) use ($valueOf) {
+    $resolveLicense = function ($result) use ($valueOf, $isPdfSeedPlayer, $formatSeedLicenseForPdf) {
         $raw = $valueOf($result, ['pro_bowler_license_no', 'license_no'], '');
         if ($raw === '') {
-            $raw = optional($result->player)->license_no ?? optional($result->bowler)->license_no ?? '';
+            $raw = optional($result->player ?? null)->license_no ?? optional($result->bowler ?? null)->license_no ?? '';
         }
         $license = preg_replace('/\s+/', '', trim((string) $raw)) ?? trim((string) $raw);
-        return $license === '' ? '-' : mb_substr($license, -4);
+
+        return $formatSeedLicenseForPdf($license, $isPdfSeedPlayer($result, $license));
     };
 
     $resolveRank = function ($result) use ($valueOf) {
@@ -241,10 +297,10 @@
     $resolvePeriod = function ($result) use ($valueOf, $formatPeriodDigits) {
         $period = $valueOf($result, ['bowler_period_label', 'period_label', 'period', 'generation'], '');
         if ($period === '') {
-            $period = optional($result->player)->period_label
-                ?? optional($result->bowler)->period_label
-                ?? optional($result->player)->period
-                ?? optional($result->bowler)->period
+            $period = optional($result->player ?? null)->period_label
+                ?? optional($result->bowler ?? null)->period_label
+                ?? optional($result->player ?? null)->period
+                ?? optional($result->bowler ?? null)->period
                 ?? '';
         }
         return $formatPeriodDigits($period);
@@ -384,9 +440,9 @@
         $proBowlerIds = [];
         $licenseCandidates = [];
         foreach ($resultRows as $result) {
-            $id = $result->pro_bowler_id ?? optional($result->player)->id ?? optional($result->bowler)->id ?? null;
+            $id = $result->pro_bowler_id ?? optional($result->player ?? null)->id ?? optional($result->bowler ?? null)->id ?? null;
             if ($id) $proBowlerIds[] = (int) $id;
-            $licenseCandidates[] = $result->pro_bowler_license_no ?? optional($result->player)->license_no ?? optional($result->bowler)->license_no ?? null;
+            $licenseCandidates[] = $result->pro_bowler_license_no ?? optional($result->player ?? null)->license_no ?? optional($result->bowler ?? null)->license_no ?? null;
         }
         foreach ($pdfScoreSnapshots as $snapshotSet) {
             foreach (($snapshotSet['rows'] ?? []) as $row) {
@@ -441,9 +497,10 @@
         return [];
     };
 
-    $snapshotLicense = function ($row) use ($snapshotLicenseRaw) {
+    $snapshotLicense = function ($row) use ($snapshotLicenseRaw, $isPdfSeedPlayer, $formatSeedLicenseForPdf) {
         $license = preg_replace('/\s+/u', '', trim((string) $snapshotLicenseRaw($row))) ?? trim((string) $snapshotLicenseRaw($row));
-        return $license === '' ? '-' : mb_substr($license, -4);
+
+        return $formatSeedLicenseForPdf($license, $isPdfSeedPlayer($row, $license));
     };
 
     $snapshotName = function ($row) use ($snapshotValue, $formatPersonName) {
