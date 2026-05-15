@@ -1,5 +1,5 @@
 // Auto-generated from docs/db/data_dictionary.md
-// Generated at: 2026-05-09T09:09:14+09:00
+// Generated at: 2026-05-15T16:39:09+09:00
 
 Project JPBA_SYSTEM {
   database_type: 'PostgreSQL'
@@ -105,6 +105,22 @@ Table pro_bowler_profiles {
   // columns omitted (see docs/db/columns_by_table.md)
 }
 
+Table pro_bowler_ranking_rows {
+  // columns omitted (see docs/db/columns_by_table.md)
+}
+
+Table pro_bowler_ranking_snapshots {
+  // columns omitted (see docs/db/columns_by_table.md)
+}
+
+Table pro_bowler_seed_list_players {
+  // columns omitted (see docs/db/columns_by_table.md)
+}
+
+Table pro_bowler_seed_lists {
+  // columns omitted (see docs/db/columns_by_table.md)
+}
+
 Table pro_bowler_sponsors {
   // columns omitted (see docs/db/columns_by_table.md)
 }
@@ -197,6 +213,10 @@ Table tournament_results {
   // columns omitted (see docs/db/columns_by_table.md)
 }
 
+Table tournament_seed_players {
+  // columns omitted (see docs/db/columns_by_table.md)
+}
+
 Table tournaments {
   // columns omitted (see docs/db/columns_by_table.md)
 }
@@ -242,6 +262,14 @@ Ref: prize_distributions.pattern_id > distribution_patterns.id
 Ref: prize_distributions.tournament_id > tournaments.id
 Ref: pro_bowler_links.pro_bowler_id > pro_bowlers.id
 Ref: pro_bowler_profiles.pro_bowler_id > pro_bowlers.id
+Ref: pro_bowler_ranking_rows.pro_bowler_id > pro_bowlers.id
+Ref: pro_bowler_ranking_rows.ranking_snapshot_id > pro_bowler_ranking_snapshots.id
+Ref: pro_bowler_seed_list_players.pro_bowler_id > pro_bowlers.id
+Ref: pro_bowler_seed_list_players.pro_bowler_title_id > pro_bowler_titles.id
+Ref: pro_bowler_seed_list_players.ranking_snapshot_id > pro_bowler_ranking_snapshots.id
+Ref: pro_bowler_seed_list_players.seed_list_id > pro_bowler_seed_lists.id
+Ref: pro_bowler_seed_list_players.source_tournament_id > tournaments.id
+Ref: pro_bowler_seed_lists.source_ranking_snapshot_id > pro_bowler_ranking_snapshots.id
 Ref: pro_bowler_sponsors.pro_bowler_id > pro_bowlers.id
 Ref: pro_bowler_titles.pro_bowler_id > pro_bowlers.id
 Ref: pro_bowler_titles.tournament_id > tournaments.id
@@ -277,5 +305,11 @@ Ref: tournament_result_snapshots.reflected_by > users.id
 Ref: tournament_result_snapshots.tournament_id > tournaments.id
 Ref: tournament_results.pro_bowler_id > pro_bowlers.id
 Ref: tournament_results.tournament_id > tournaments.id
+Ref: tournament_seed_players.pro_bowler_id > pro_bowlers.id
+Ref: tournament_seed_players.pro_bowler_title_id > pro_bowler_titles.id
+Ref: tournament_seed_players.ranking_snapshot_id > pro_bowler_ranking_snapshots.id
+Ref: tournament_seed_players.seed_list_player_id > pro_bowler_seed_list_players.id
+Ref: tournament_seed_players.source_tournament_id > tournaments.id
+Ref: tournament_seed_players.tournament_id > tournaments.id
 Ref: tournaments.venue_id > venues.id
 Ref: users.pro_bowler_id > pro_bowlers.id

@@ -40,6 +40,11 @@ JPBA SYSTEM Database Data Dictionary
   - [pro_bowler_biographies](#pro_bowler_biographies)
   - [pro_bowler_instructor_info](#pro_bowler_instructor_info)
   - [pro_bowler_links](#pro_bowler_links)
+  - [pro_bowler_ranking_snapshots](#pro_bowler_ranking_snapshots)
+  - [pro_bowler_ranking_rows](#pro_bowler_ranking_rows)
+  - [pro_bowler_seed_lists](#pro_bowler_seed_lists)
+  - [pro_bowler_seed_list_players](#pro_bowler_seed_list_players)
+  - [tournament_seed_players](#tournament_seed_players)
   - [pro_bowler_profiles](#pro_bowler_profiles)
   - [pro_bowler_sponsors](#pro_bowler_sponsors)
   - [pro_bowler_titles](#pro_bowler_titles)
@@ -724,6 +729,220 @@ SNS等リンク集を保持するテーブル。
 
 ### 外部キー（FK）
 - pro_bowler_id -> pro_bowlers.id
+
+---
+
+## pro_bowler_ranking_snapshots
+
+### 役割
+プロボウラーの年度別ランキングを、年度・性別・集計時点ごとに保持するヘッダテーブル。
+
+JPBA公式サイトの当該年度ランキング、前年度最終ランキング、全日本選手権開催時点ランキングなどを、あとから再現できるようにスナップショットとして保存する。
+
+### 主キー
+- id (bigint)
+
+### 主要カラム
+- ranking_year（ランキング年度）
+- gender（M / F / X など）
+- ranking_type（ランキング種別）
+  - `point` = ポイントランキング
+  - 将来必要になれば別種別を追加する
+- ranking_scope（集計範囲）
+  - `annual` = 年度ランキング
+  - `current` = 当該年度途中ランキング
+  - `annual_final` = 前年度最終ランキング
+  - `all_japan_cutoff` = 全日本選手権開催時点ランキング
+- as_of_date（集計時点日付：nullable）
+- is_final（最終ランキングかどうか）
+- source_url（参照元URL：nullable）
+- notes（備考：nullable）
+
+### 注意（運用方針）
+- ランキングは `pro_bowlers` の現在値だけで再計算せず、公式発表時点の情報をスナップショットとして保持する。
+- 通常大会のトーナメントシード抽出では、前年度最終ランキングを使う。
+- 全日本選手権では、前年度ランキングではなく開催時点の当該年度ランキングを使うため、`as_of_date` を保持する。
+- ランキング行の詳細は `pro_bowler_ranking_rows` に保持する。
+- `source_url` は公式ページやPDFなど、取り込み元確認用として保持する。
+
+### 外部キー（FK）
+- なし
+
+---
+
+## pro_bowler_ranking_rows
+
+### 役割
+`pro_bowler_ranking_snapshots` にぶら下がるランキング明細。
+
+順位、ライセンスNo、氏名、期、所属 / 用品契約、ポイント、AVG、獲得賞金額など、公式ランキング表の1行分を保持する。
+
+### 主キー
+- id (bigint)
+
+### 主要カラム
+- ranking_snapshot_id（どのランキングスナップショットか）
+- ranking_rank（ランキング順位）
+- pro_bowler_id（対象プロボウラー：nullable）
+- license_no（ライセンスNoスナップショット：nullable）
+- name_kanji（氏名スナップショット：nullable）
+- name_kana（フリガナスナップショット：nullable）
+- kibetsu（期：nullable）
+- organization_name（所属スナップショット：nullable）
+- equipment_contract（用品契約スナップショット：nullable）
+- points（ランキングポイント：nullable）
+- games（ゲーム数：nullable）
+- total_pin（トータルピン：nullable）
+- average（AVG：nullable）
+- prize_money（獲得賞金額：nullable）
+- sort_order（表示順：nullable）
+
+### 注意（運用方針）
+- `pro_bowler_id` が解決できる場合は紐づける。
+- ただし、公式ランキング表の当時表示を再現するため、`license_no` / `name_kanji` / `kibetsu` / `organization_name` / `equipment_contract` はスナップショットとして保持する。
+- `ranking_rank` は同一 `ranking_snapshot_id` 内で一意にする。
+- 前年度ランキング上位24名のトーナメントシード抽出では、このテーブルの `ranking_rank` を使う。
+
+### 外部キー（FK）
+- ranking_snapshot_id -> pro_bowler_ranking_snapshots.id（ON DELETE CASCADE）
+- pro_bowler_id -> pro_bowlers.id（nullable, ON DELETE SET NULL）
+
+---
+
+## pro_bowler_seed_lists
+
+### 役割
+年度・性別ごとのトーナメントシード一覧ヘッダ。
+
+前年度最終ランキング上位者、永久シード、準永久シード、全日本選手権者シード、当該年度優勝者シード、前年度優勝者シードなどをまとめ、公式サイト左メニューの「トーナメントシード」相当の一覧を再現するために使う。
+
+### 主キー
+- id (bigint)
+
+### 主要カラム
+- seed_year（シード年度）
+- gender（M / F / X など）
+- seed_list_type（シードリスト種別）
+  - `tournament_seed` = トーナメントシード一覧
+- source_ranking_snapshot_id（元ランキング：nullable）
+- base_ranking_year（元ランキング年度：nullable）
+- base_top_count（ランキングから自動抽出する人数。通常24）
+- as_of_date（作成 / 集計時点日付：nullable）
+- is_active（有効フラグ）
+- source_url（参照元URL：nullable）
+- notes（備考：nullable）
+
+### 注意（運用方針）
+- 通常大会では、前年度最終ランキング上位24名をトーナメントシードとして扱う。
+- その年度のシード一覧は、`pro_bowler_seed_list_players` に明細として保持する。
+- 前年度ランキング上位24名は `seed_category = TS` として登録する。
+- 永久シード、準永久シード、全日本選手権者シード、当該年度優勝者シード、前年度優勝者シードなどは、ランキング上位24名とは別根拠として追加できるようにする。
+- 全日本選手権の出場優先順位では、必要に応じて当該年度途中ランキングの `pro_bowler_ranking_snapshots` を参照する。
+
+### 外部キー（FK）
+- source_ranking_snapshot_id -> pro_bowler_ranking_snapshots.id（nullable, ON DELETE SET NULL）
+
+---
+
+## pro_bowler_seed_list_players
+
+### 役割
+`pro_bowler_seed_lists` にぶら下がるシード対象選手明細。
+
+年度共通のトーナメントシード、永久シード、準永久シード、全日本選手権者シード、当該年度優勝者シード、前年度優勝者シードなどを選手単位で保持する。
+
+### 主キー
+- id (bigint)
+
+### 主要カラム
+- seed_list_id（どのシードリストか）
+- pro_bowler_id（対象プロボウラー：nullable）
+- license_no（ライセンスNoスナップショット：nullable）
+- seed_category（シード区分）
+  - `TS` = トーナメントシード
+  - `V20` = 永久シード
+  - `V10` = 準永久シード
+  - `JS` = 全日本選手権者シード
+  - `CS1` = 当該年度公認トーナメント優勝者シード
+  - `CS2` = 前年度公認トーナメント優勝者シード
+  - `PAST_CHAMPION` = 歴代優勝者シード
+  - `MANUAL` = 手動追加
+- seed_rank（シード一覧上の順位：nullable）
+- ranking_snapshot_id（根拠ランキング：nullable）
+- ranking_rank（根拠ランキング順位：nullable）
+- source_tournament_id（根拠大会：nullable）
+- pro_bowler_title_id（根拠タイトル：nullable）
+- priority_order（出場優先順位：nullable）
+- note（備考：nullable）
+- is_active（有効フラグ）
+
+### 注意（運用方針）
+- 前年度ランキング上位24名は、`seed_category = TS` として自動生成する。
+- 永久シードや準永久シードは、`pro_bowlers.permanent_seed_date` などの既存情報を参照しつつ、最終的にはこのテーブルに年度別のシード対象として保持する。
+- 歴代優勝者・優勝者シードは、`pro_bowler_titles` を根拠として登録できるようにする。
+- `license_no` はPDF表示や取り込み時の照合に使うため、`pro_bowler_id` が後から変わっても当時値を残す。
+- 同一シードリスト内で、同じ `license_no + seed_category` は重複登録しない。
+
+### 外部キー（FK）
+- seed_list_id -> pro_bowler_seed_lists.id（ON DELETE CASCADE）
+- pro_bowler_id -> pro_bowlers.id（nullable, ON DELETE SET NULL）
+- ranking_snapshot_id -> pro_bowler_ranking_snapshots.id（nullable, ON DELETE SET NULL）
+- source_tournament_id -> tournaments.id（nullable, ON DELETE SET NULL）
+- pro_bowler_title_id -> pro_bowler_titles.id（nullable, ON DELETE SET NULL）
+
+---
+
+## tournament_seed_players
+
+### 役割
+大会ごとの追加シード対象選手を保持するテーブル。
+
+年度共通のトーナメントシードだけでなく、東海オープンの歴代優勝者枠のような大会別シード、手動追加シード、大会ごとの特別扱いを保持する。
+
+### 主キー
+- id (bigint)
+
+### 主要カラム
+- tournament_id（どの大会か）
+- pro_bowler_id（対象プロボウラー：nullable）
+- license_no（ライセンスNoスナップショット：nullable）
+- seed_source_type（大会別シード根拠）
+  - `seed_list` = 年度別シードリスト由来
+  - `previous_year_ranking_top24` = 前年度ランキング上位24名
+  - `current_year_ranking` = 当該年度ランキング
+  - `permanent_seed` = 永久シード
+  - `semi_permanent_seed` = 準永久シード
+  - `all_japan_champion` = 全日本選手権者シード
+  - `current_year_winner` = 当該年度優勝者シード
+  - `previous_year_winner` = 前年度優勝者シード
+  - `past_champion` = 歴代優勝者
+  - `manual` = 手動追加
+- seed_list_player_id（年度別シード明細：nullable）
+- ranking_snapshot_id（根拠ランキング：nullable）
+- ranking_rank（根拠ランキング順位：nullable）
+- source_tournament_id（根拠大会：nullable）
+- pro_bowler_title_id（根拠タイトル：nullable）
+- priority_order（出場優先順位：nullable）
+- display_label（PDFや管理画面で表示するラベル：nullable）
+- note（備考：nullable）
+- is_active（有効フラグ）
+
+### 注意（運用方針）
+- 大会PDFで `S 1443` のように表示するかどうかは、このテーブルと年度別シードリストを統合して判定する。
+- `tournament_entries` へ単純な `is_seed` を持たせるのではなく、シード根拠をこのテーブルで保持する。
+- `tournament_entries` は引き続き、申込・抽選・waitlist・チェックインの正本とする。
+- 大会別に歴代優勝者、永久シード、手動追加などを設定する場合は、このテーブルに登録する。
+- 通常大会では年度別シードリスト由来の対象を取り込みつつ、大会別追加シードを上乗せする。
+- 全日本選手権では、前年度ランキングではなく当該年度開催時点ランキングを根拠にする場合があるため、`ranking_snapshot_id` を nullable で保持する。
+- PDF上のライセンスNoは既存方針どおり下4桁表示を基本とし、シード対象の場合のみ先頭に `S` を付ける。
+
+### 外部キー（FK）
+- tournament_id -> tournaments.id（ON DELETE CASCADE）
+- pro_bowler_id -> pro_bowlers.id（nullable, ON DELETE SET NULL）
+- seed_list_player_id -> pro_bowler_seed_list_players.id（nullable, ON DELETE SET NULL）
+- ranking_snapshot_id -> pro_bowler_ranking_snapshots.id（nullable, ON DELETE SET NULL）
+- source_tournament_id -> tournaments.id（nullable, ON DELETE SET NULL）
+- pro_bowler_title_id -> pro_bowler_titles.id（nullable, ON DELETE SET NULL）
 
 ---
 
