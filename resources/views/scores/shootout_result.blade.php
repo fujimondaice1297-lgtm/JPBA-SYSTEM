@@ -10,6 +10,53 @@
     $matches = array_values((array) ($shootoutBody['matches'] ?? []));
     $missingSeedSnapshot = (bool) ($data['missing_seed_snapshot'] ?? false);
 
+    $seedTournamentId = (int) ($meta['tournament_id'] ?? ((isset($tournament) && $tournament) ? $tournament->id : request('tournament_id', 0)));
+    $seedDisplayService = app(\App\Services\ProBowlerSeedService::class);
+    $seedDisplayMap = $seedTournamentId > 0 ? $seedDisplayService->seedMapForTournament($seedTournamentId) : [];
+    $seedLicenseTailMap = [];
+    foreach ($seedDisplayMap as $seedMapKey => $seedPlayer) {
+        $seedLicense = trim((string) ($seedPlayer->license_no ?? ''));
+        $seedDigits = preg_replace('/\D+/u', '', $seedLicense) ?: '';
+        if ($seedDigits !== '') {
+            $seedLicenseTailMap[substr($seedDigits, -4)] = true;
+        }
+    }
+
+    $isSeedDisplayTarget = function ($proBowlerId = null, $licenseNo = null) use ($seedDisplayMap, $seedLicenseTailMap): bool {
+        $proBowlerId = is_numeric($proBowlerId) ? (int) $proBowlerId : null;
+        if ($proBowlerId !== null && isset($seedDisplayMap['pro_bowler:' . $proBowlerId])) {
+            return true;
+        }
+
+        $licenseKey = strtoupper(preg_replace('/\s+/u', '', trim((string) $licenseNo)) ?? trim((string) $licenseNo));
+        if ($licenseKey !== '' && isset($seedDisplayMap['license:' . $licenseKey])) {
+            return true;
+        }
+
+        $digits = preg_replace('/\D+/u', '', $licenseKey) ?: '';
+        if ($digits !== '') {
+            $tail = substr($digits, -4);
+            return isset($seedLicenseTailMap[$tail]);
+        }
+
+        return false;
+    };
+
+    $formatSeedLicenseDisplay = function ($licenseNo, $proBowlerId = null, string $fallback = '—') use ($seedDisplayService, $isSeedDisplayTarget): string {
+        $licenseNo = trim((string) $licenseNo);
+        if ($licenseNo === '') {
+            return $fallback;
+        }
+
+        $display = $seedDisplayService->formatLicenseForPdf(
+            licenseNo: $licenseNo,
+            isSeed: $isSeedDisplayTarget($proBowlerId, $licenseNo)
+        );
+
+        return $display !== '' ? $display : $fallback;
+    };
+
+
     $isPublic = ((int) request('public', 0) === 1);
     $shiftValue = (string) ($shifts ?? request('shifts', ''));
     $genderValue = (string) ($gender_filter ?? request('gender_filter', ''));
@@ -46,7 +93,7 @@
         return (string) ($slot['display_name'] ?? $slot['label'] ?? '—');
     };
 
-    $slotSub = function (array $slot): string {
+    $slotSub = function (array $slot) use ($formatSeedLicenseDisplay): string {
         $parts = [];
 
         if (!empty($slot['source_ranking'])) {
@@ -56,7 +103,7 @@
         }
 
         if (!empty($slot['pro_bowler_license_no'])) {
-            $parts[] = (string) $slot['pro_bowler_license_no'];
+            $parts[] = $formatSeedLicenseDisplay($slot['pro_bowler_license_no'], $slot['pro_bowler_id'] ?? null);
         }
 
         if (!empty($slot['total_pin'])) {
@@ -144,10 +191,10 @@
         return (string) ($row['display_name'] ?? $row['name'] ?? '—');
     };
 
-    $seedLicense = function (int $seed) use ($seedByNumber): string {
+    $seedLicense = function (int $seed) use ($seedByNumber, $formatSeedLicenseDisplay): string {
         $row = (array) ($seedByNumber[$seed] ?? []);
 
-        return (string) ($row['pro_bowler_license_no'] ?? '—');
+        return $formatSeedLicenseDisplay($row['pro_bowler_license_no'] ?? null, $row['pro_bowler_id'] ?? null);
     };
 
     $seedTermLabel = function (int $seed) use ($seedByNumber): string {
@@ -1556,7 +1603,7 @@
                             <td>{{ $seed > 0 ? $finalRankLabel($seed) : '—' }}</td>
                             <td>{{ $row['source_ranking'] ?? $row['seed'] ?? '—' }}</td>
                             <td class="so-left">{{ $row['display_name'] ?? '—' }}</td>
-                            <td>{{ $row['pro_bowler_license_no'] ?? '—' }}</td>
+                            <td>{{ $formatSeedLicenseDisplay($row['pro_bowler_license_no'] ?? null, $row['pro_bowler_id'] ?? null) }}</td>
                             <td>{{ isset($row['total_pin']) && $row['total_pin'] !== null ? number_format((int) $row['total_pin']) : '—' }}</td>
                             <td>{{ $row['games'] ?? '—' }}</td>
                             <td>{{ isset($row['average']) && $row['average'] !== null ? number_format((float) $row['average'], 2) : '—' }}</td>

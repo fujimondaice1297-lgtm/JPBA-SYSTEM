@@ -49,6 +49,53 @@
 
     $genderFilter = strtoupper((string)(request('gender_filter') ?: ''));
 
+    $seedTournamentId = (int) ($meta['tournament_id'] ?? ($meta['tournament']['id'] ?? request('tournament_id', 0)));
+    $seedDisplayService = app(\App\Services\ProBowlerSeedService::class);
+    $seedDisplayMap = $seedTournamentId > 0 ? $seedDisplayService->seedMapForTournament($seedTournamentId) : [];
+    $seedLicenseTailMap = [];
+    foreach ($seedDisplayMap as $seedMapKey => $seedPlayer) {
+        $seedLicense = trim((string) ($seedPlayer->license_no ?? ''));
+        $seedDigits = preg_replace('/\D+/u', '', $seedLicense) ?: '';
+        if ($seedDigits !== '') {
+            $seedLicenseTailMap[substr($seedDigits, -4)] = true;
+        }
+    }
+
+    $isSeedDisplayTarget = function ($proBowlerId = null, $licenseNo = null) use ($seedDisplayMap, $seedLicenseTailMap): bool {
+        $proBowlerId = is_numeric($proBowlerId) ? (int) $proBowlerId : null;
+        if ($proBowlerId !== null && isset($seedDisplayMap['pro_bowler:' . $proBowlerId])) {
+            return true;
+        }
+
+        $licenseKey = strtoupper(preg_replace('/\s+/u', '', trim((string) $licenseNo)) ?? trim((string) $licenseNo));
+        if ($licenseKey !== '' && isset($seedDisplayMap['license:' . $licenseKey])) {
+            return true;
+        }
+
+        $digits = preg_replace('/\D+/u', '', $licenseKey) ?: '';
+        if ($digits !== '') {
+            $tail = substr($digits, -4);
+            return isset($seedLicenseTailMap[$tail]);
+        }
+
+        return false;
+    };
+
+    $formatSeedLicenseDisplay = function ($licenseNo, $proBowlerId = null, string $fallback = '—') use ($seedDisplayService, $isSeedDisplayTarget): string {
+        $licenseNo = trim((string) $licenseNo);
+        if ($licenseNo === '') {
+            return $fallback;
+        }
+
+        $display = $seedDisplayService->formatLicenseForPdf(
+            licenseNo: $licenseNo,
+            isSeed: $isSeedDisplayTarget($proBowlerId, $licenseNo)
+        );
+
+        return $display !== '' ? $display : $fallback;
+    };
+
+
     $extractLicenseInfo = function(array $r): array {
         $candidates = [];
 
@@ -394,6 +441,8 @@
 
         $rawIds = (array)($p['raw_ids'] ?? []);
         $fallbackName = (string)($rawIds['name'] ?? $p['name'] ?? $p['display_name'] ?? $p['display_license'] ?? $digits4 ?? '—');
+        $proBowlerIdForSeed = $p['pro_bowler_id'] ?? $p['bowler_id'] ?? ($rawIds['pro_bowler_id'] ?? null);
+        $licenseDisplay = $formatSeedLicenseDisplay($info['full'] ?? ($digits4 ?? ($p['display_license'] ?? null)), $proBowlerIdForSeed);
 
         $name  = $prof['name'] ?? $fallbackName;
         $photo = $prof['portrait_url'] ?? null;
@@ -467,7 +516,7 @@
             <div class="body">
                 <div>
                     <div class="name">{{ $name }}</div>
-                    <div class="lic">Lic: {{ $digits4 ?? ($p['display_license'] ?? '—') }}</div>
+                    <div class="lic">Lic: {{ $licenseDisplay }}</div>
                 </div>
                 @if($stagesInline)
                     <div class="stages">{!! implode('<span class="sep">｜</span>', array_map('e', $stagesInline)) !!}</div>

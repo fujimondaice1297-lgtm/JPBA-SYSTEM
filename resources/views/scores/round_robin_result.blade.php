@@ -16,6 +16,101 @@
         ? route('tournaments.result_snapshots.index', ['tournament' => request('tournament_id')])
         : null;
 
+
+    $seedService = app(\App\Services\ProBowlerSeedService::class);
+    $seedTournamentId = (int) request('tournament_id');
+    $seedMapForTournament = $seedTournamentId > 0
+        ? $seedService->seedMapForTournament($seedTournamentId)
+        : [];
+
+    $normalizeLicenseForSeed = function ($license): string {
+        return strtoupper(preg_replace('/\s+/u', '', trim((string) $license)) ?? trim((string) $license));
+    };
+
+    $licenseTailForSeed = function ($license): string {
+        $digits = preg_replace('/\D+/u', '', trim((string) $license)) ?? '';
+        return $digits === '' ? '' : mb_substr($digits, -4);
+    };
+
+    $valueFromPlayer = function (array $player, array $keys, $default = null) {
+        foreach ($keys as $key) {
+            if (array_key_exists($key, $player) && $player[$key] !== null && $player[$key] !== '') {
+                return $player[$key];
+            }
+        }
+
+        return $default;
+    };
+
+    $resolvePlayerProBowlerId = function (array $player) use ($valueFromPlayer): ?int {
+        $id = $valueFromPlayer($player, [
+            'pro_bowler_id',
+            'bowler_id',
+            'player_id',
+            'pro_id',
+        ]);
+
+        return is_numeric($id) ? (int) $id : null;
+    };
+
+    $resolvePlayerLicenseRaw = function (array $player) use ($valueFromPlayer, $normalizeLicenseForSeed): ?string {
+        $license = $valueFromPlayer($player, [
+            'pro_bowler_license_no',
+            'license_no',
+            'license_number',
+            'license',
+            'player_license_no',
+        ]);
+
+        if ($license === null) {
+            $participantKey = $valueFromPlayer($player, ['participant_key']);
+            $participantKeyNormalized = $normalizeLicenseForSeed($participantKey);
+            if ($participantKeyNormalized !== '' && preg_match('/\d{3,}$/', $participantKeyNormalized)) {
+                $license = $participantKeyNormalized;
+            }
+        }
+
+        $license = $normalizeLicenseForSeed($license);
+
+        return $license !== '' ? $license : null;
+    };
+
+    $seedPlayerForRoundRobinPlayer = function (array $player) use ($seedMapForTournament, $resolvePlayerProBowlerId, $resolvePlayerLicenseRaw, $normalizeLicenseForSeed, $licenseTailForSeed) {
+        $proBowlerId = $resolvePlayerProBowlerId($player);
+        if ($proBowlerId !== null && isset($seedMapForTournament['pro_bowler:' . $proBowlerId])) {
+            return $seedMapForTournament['pro_bowler:' . $proBowlerId];
+        }
+
+        $license = $resolvePlayerLicenseRaw($player);
+        $licenseKey = $normalizeLicenseForSeed($license);
+        if ($licenseKey !== '' && isset($seedMapForTournament['license:' . $licenseKey])) {
+            return $seedMapForTournament['license:' . $licenseKey];
+        }
+
+        $tail = $licenseTailForSeed($license);
+        if ($tail !== '') {
+            foreach ($seedMapForTournament as $key => $seedPlayer) {
+                if (!str_starts_with((string) $key, 'license:')) {
+                    continue;
+                }
+
+                if ($licenseTailForSeed($seedPlayer->license_no ?? '') === $tail) {
+                    return $seedPlayer;
+                }
+            }
+        }
+
+        return null;
+    };
+
+    $roundRobinLicenseDisplay = function (array $player) use ($seedService, $resolvePlayerLicenseRaw, $seedPlayerForRoundRobinPlayer): string {
+        $seedPlayer = $seedPlayerForRoundRobinPlayer($player);
+        $license = $resolvePlayerLicenseRaw($player) ?? ($seedPlayer->license_no ?? null);
+        $display = $seedService->formatLicenseForPdf($license, $seedPlayer !== null);
+
+        return $display !== '' ? $display : '-';
+    };
+
     $stepLadderEntrants = array_values(array_slice($players, 0, 3));
 
     $stepLadderLabels = [
@@ -85,10 +180,32 @@
     .rr-title { font-size:1.5rem; font-weight:800; }
     .rr-sub { color:#6b7280; margin-top:.25rem; }
     .rr-table-wrap { overflow-x:auto; }
-    .rr-table { width:100%; border-collapse:collapse; min-width:980px; }
+    .rr-table { width:100%; border-collapse:collapse; min-width:940px; }
     .rr-table th, .rr-table td { border:1px solid #d1d5db; padding:.45rem .5rem; text-align:center; vertical-align:middle; }
     .rr-table th { background:#f3f4f6; font-weight:700; white-space:nowrap; }
     .rr-left { text-align:left !important; white-space:nowrap; }
+    .rr-table th.rr-license,
+    .rr-table td.rr-license {
+        width: 4.4rem;
+        min-width: 4.4rem;
+        max-width: 4.4rem;
+        white-space: nowrap;
+        font-variant-numeric: tabular-nums;
+        padding-left: .25rem;
+        padding-right: .35rem;
+    }
+    .rr-table th.rr-license {
+        text-align: center !important;
+        font-size: .78rem;
+        line-height: 1.1;
+    }
+    .rr-table td.rr-license {
+        text-align: right !important;
+    }
+    .rr-license-heading {
+        display: inline-block;
+        line-height: 1.05;
+    }
     .rr-chip { display:inline-block; min-width:1.8rem; padding:.15rem .45rem; border-radius:999px; background:#eff6ff; margin:.1rem; font-size:.82rem; }
     .rr-mini { font-size:.82rem; color:#6b7280; }
     .rr-cell-line { display:block; line-height:1.35; }
@@ -259,6 +376,7 @@
                     <tr>
                         <th>Seed</th>
                         <th class="rr-left">選手名</th>
+                        <th class="rr-license"><span class="rr-license-heading">ﾗｲｾﾝｽ<br>No</span></th>
                         @foreach($players as $col)
                             <th>{{ $col['seed'] }}</th>
                         @endforeach
@@ -269,6 +387,7 @@
                         <tr>
                             <td>{{ $row['seed'] }}</td>
                             <td class="rr-left">{{ $row['display_name'] }}</td>
+                            <td class="rr-license">{{ $roundRobinLicenseDisplay($row) }}</td>
                             @foreach($players as $col)
                                 @php $entries = $matrix[$row['seed']][$col['seed']] ?? []; @endphp
                                 <td>
@@ -354,6 +473,7 @@
                         <th>RR順位</th>
                         <th>Seed</th>
                         <th class="rr-left">選手名</th>
+                        <th class="rr-license"><span class="rr-license-heading">ﾗｲｾﾝｽ<br>No</span></th>
                         <th>持込ピン</th>
                         <th>W-L-T</th>
                         <th>Bonus</th>
@@ -372,6 +492,7 @@
                             <td>{{ $player['rank'] }}</td>
                             <td>{{ $player['seed'] }}</td>
                             <td class="rr-left">{{ $player['display_name'] }}</td>
+                            <td class="rr-license">{{ $roundRobinLicenseDisplay($player) }}</td>
                             <td>{{ number_format($player['carry_pin']) }}</td>
                             <td>{{ $player['record'] }}</td>
                             <td>{{ number_format($player['bonus_points']) }}</td>

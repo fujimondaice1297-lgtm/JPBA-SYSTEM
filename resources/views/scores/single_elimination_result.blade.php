@@ -24,6 +24,52 @@
         ? route('tournaments.result_snapshots.index', ['tournament' => $tournamentId])
         : null;
 
+
+    $seedDisplayService = app(\App\Services\ProBowlerSeedService::class);
+    $seedDisplayMap = $tournamentId > 0 ? $seedDisplayService->seedMapForTournament($tournamentId) : [];
+    $seedLicenseTailMap = [];
+    foreach ($seedDisplayMap as $seedMapKey => $seedPlayer) {
+        $seedLicense = trim((string) ($seedPlayer->license_no ?? ''));
+        $seedDigits = preg_replace('/\D+/u', '', $seedLicense) ?: '';
+        if ($seedDigits !== '') {
+            $seedLicenseTailMap[substr($seedDigits, -4)] = true;
+        }
+    }
+
+    $isSeedDisplayTarget = function ($proBowlerId = null, $licenseNo = null) use ($seedDisplayMap, $seedLicenseTailMap): bool {
+        $proBowlerId = is_numeric($proBowlerId) ? (int) $proBowlerId : null;
+        if ($proBowlerId !== null && isset($seedDisplayMap['pro_bowler:' . $proBowlerId])) {
+            return true;
+        }
+
+        $licenseKey = strtoupper(preg_replace('/\s+/u', '', trim((string) $licenseNo)) ?? trim((string) $licenseNo));
+        if ($licenseKey !== '' && isset($seedDisplayMap['license:' . $licenseKey])) {
+            return true;
+        }
+
+        $digits = preg_replace('/\D+/u', '', $licenseKey) ?: '';
+        if ($digits !== '') {
+            $tail = substr($digits, -4);
+            return isset($seedLicenseTailMap[$tail]);
+        }
+
+        return false;
+    };
+
+    $formatSeedLicenseDisplay = function ($licenseNo, $proBowlerId = null, string $fallback = '') use ($seedDisplayService, $isSeedDisplayTarget): string {
+        $licenseNo = trim((string) $licenseNo);
+        if ($licenseNo === '') {
+            return $fallback;
+        }
+
+        $display = $seedDisplayService->formatLicenseForPdf(
+            licenseNo: $licenseNo,
+            isSeed: $isSeedDisplayTarget($proBowlerId, $licenseNo)
+        );
+
+        return $display !== '' ? $display : $fallback;
+    };
+
     $publicUrl = $tournamentId > 0
         ? route('scores.result', array_filter([
             'tournament_id' => $tournamentId,
@@ -116,16 +162,11 @@
         return trim((string) ($slot['display_name'] ?? $slot['label'] ?? '—')) ?: '—';
     };
 
-    $formatLicenseShort = static function ($license): string {
-        $license = trim((string) $license);
-        if ($license === '') {
-            return '';
-        }
-
-        return mb_strlen($license) > 4 ? mb_substr($license, -4) : $license;
+    $formatLicenseShort = function ($license, $proBowlerId = null) use ($formatSeedLicenseDisplay): string {
+        return $formatSeedLicenseDisplay($license, $proBowlerId, '');
     };
 
-    $slotSub = static function (array $slot) use ($formatLicenseShort): string {
+    $slotSub = function (array $slot) use ($formatLicenseShort): string {
         $type = (string) ($slot['type'] ?? '');
 
         if ($type === 'bye') {
@@ -143,7 +184,7 @@
             $parts[] = (int) $slot['seed'] . '位通過';
         }
 
-        $license = $formatLicenseShort($slot['pro_bowler_license_no'] ?? '');
+        $license = $formatLicenseShort($slot['pro_bowler_license_no'] ?? '', $slot['pro_bowler_id'] ?? null);
         if ($license !== '') {
             $parts[] = 'Lic.' . $license;
         }
@@ -1738,7 +1779,7 @@
                                 <span class="se-seed-name">{{ $row['display_name'] ?? '—' }}</span>
                             </div>
                             <div class="se-mini">
-                                {{ $formatLicenseShort($row['pro_bowler_license_no'] ?? '') ?: '—' }}
+                                {{ $formatLicenseShort($row['pro_bowler_license_no'] ?? '', $row['pro_bowler_id'] ?? null) ?: '—' }}
                                 @if(isset($row['source_ranking']) && $row['source_ranking'] !== null)
                                     ／ 元順位 {{ (int) $row['source_ranking'] }}位
                                 @endif
