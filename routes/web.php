@@ -372,6 +372,8 @@ Route::middleware(['auth','role:editor,admin'])->group(function () {
         ->name('pro_bowler_seed_lists.generate');
     Route::post('/pro-bowler-seed-lists', [\App\Http\Controllers\ProBowlerSeedListController::class, 'store'])
         ->name('pro_bowler_seed_lists.store');
+    Route::get('/pro-bowler-seed-lists/{seedList}', [\App\Http\Controllers\ProBowlerSeedListController::class, 'show'])
+        ->name('pro_bowler_seed_lists.show');
     Route::delete('/pro-bowler-seed-lists/{seedList}', [\App\Http\Controllers\ProBowlerSeedListController::class, 'destroy'])
         ->name('pro_bowler_seed_lists.destroy');
 

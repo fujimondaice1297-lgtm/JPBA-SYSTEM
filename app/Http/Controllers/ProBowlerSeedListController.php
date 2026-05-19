@@ -53,6 +53,44 @@ class ProBowlerSeedListController extends Controller
         ]);
     }
 
+    public function show(ProBowlerSeedList $seedList)
+    {
+        $seedList->load(['players.bowler']);
+
+        $players = $seedList->players
+            ->sortBy(function (ProBowlerSeedListPlayer $player) {
+                return sprintf(
+                    '%08d-%08d-%08d',
+                    (int) ($player->priority_order ?? 999999),
+                    (int) ($player->seed_rank ?? 999999),
+                    (int) $player->id
+                );
+            })
+            ->values()
+            ->map(function (ProBowlerSeedListPlayer $player) {
+                return [
+                    'id' => $player->id,
+                    'seed_rank' => $player->seed_rank,
+                    'priority_order' => $player->priority_order,
+                    'license_no' => $player->license_no,
+                    'name_kanji' => $player->bowler?->name_kanji,
+                    'name_kana' => $player->bowler?->name_kana,
+                    'seed_category' => $player->seed_category,
+                    'ranking_rank' => $player->ranking_rank,
+                    'point_text' => $this->pointTextFromNote($player->note),
+                    'note' => $player->note,
+                    'is_active' => (bool) $player->is_active,
+                ];
+            });
+
+        return view('pro_bowler_seed_lists.show', [
+            'seedList' => $seedList,
+            'players' => $players,
+            'genderLabels' => $this->genderLabels(),
+            'seedCategoryLabels' => $this->seedCategoryLabels(),
+        ]);
+    }
+
     /**
      * 前年度ポイントランキングから、翌年度の年度別シード一覧を自動生成する。
      *
@@ -393,6 +431,35 @@ class ProBowlerSeedListController extends Controller
             'F' => [2, '2', 'F', 'f', 'female', '女性', '女子', '女'],
             default => [],
         };
+    }
+
+    private function pointTextFromNote(?string $note): string
+    {
+        $note = trim((string) $note);
+
+        if ($note === '') {
+            return '-';
+        }
+
+        if (preg_match('/points=([0-9]+)/', $note, $matches)) {
+            return number_format((int) $matches[1]);
+        }
+
+        return $note;
+    }
+
+    private function seedCategoryLabels(): array
+    {
+        return [
+            ProBowlerSeedService::SEED_CATEGORY_TOURNAMENT_SEED => 'トーナメントシード',
+            ProBowlerSeedService::SEED_CATEGORY_PERMANENT => '永久シード',
+            ProBowlerSeedService::SEED_CATEGORY_SEMI_PERMANENT => '準永久シード',
+            ProBowlerSeedService::SEED_CATEGORY_ALL_JAPAN => '全日本枠',
+            ProBowlerSeedService::SEED_CATEGORY_CURRENT_YEAR_WINNER => '当年優勝者',
+            ProBowlerSeedService::SEED_CATEGORY_PREVIOUS_YEAR_WINNER => '前年優勝者',
+            ProBowlerSeedService::SEED_CATEGORY_PAST_CHAMPION => '歴代優勝者',
+            ProBowlerSeedService::SEED_CATEGORY_MANUAL => '手動',
+        ];
     }
 
     private function genderLabels(): array

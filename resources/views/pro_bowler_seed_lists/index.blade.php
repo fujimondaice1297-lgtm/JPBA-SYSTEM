@@ -254,36 +254,42 @@
                                 <th style="width: 70px;">性別</th>
                                 <th style="width: 120px;">元ランキング</th>
                                 <th style="width: 90px;">上位人数</th>
-                                <th>登録選手</th>
+                                <th>登録状況</th>
                                 <th>備考</th>
-                                <th style="width: 90px;">操作</th>
+                                <th style="width: 150px;">操作</th>
                             </tr>
                         </thead>
                         <tbody>
                             @foreach ($seedLists as $seedList)
+                                @php
+                                    $sortedPlayers = $seedList->players
+                                        ->sortBy(fn ($player) => sprintf(
+                                            '%08d-%08d-%08d',
+                                            (int) ($player->priority_order ?? 999999),
+                                            (int) ($player->seed_rank ?? 999999),
+                                            (int) $player->id
+                                        ))
+                                        ->values();
+                                @endphp
                                 <tr>
                                     <td>{{ $seedList->seed_year }}</td>
                                     <td>{{ $genderLabels[$seedList->gender] ?? $seedList->gender }}</td>
                                     <td>{{ $seedList->base_ranking_year }}</td>
                                     <td>{{ $seedList->base_top_count }}</td>
                                     <td>
-                                        @if ($seedList->players->isEmpty())
+                                        @if ($sortedPlayers->isEmpty())
                                             <span class="text-muted">未登録</span>
                                         @else
-                                            <div class="small">
-                                                @foreach ($seedList->players->sortBy('priority_order')->take(30) as $player)
-                                                    <div>
+                                            <div class="fw-bold">{{ $sortedPlayers->count() }}名登録済み</div>
+                                            <div class="small text-muted mt-1">
+                                                @foreach ($sortedPlayers->take(3) as $player)
+                                                    <span class="me-2">
                                                         {{ $player->seed_rank }}.
                                                         {{ $player->bowler?->name_kanji ?? '選手未特定' }}
-                                                        <span class="text-muted">({{ $player->license_no }})</span>
-                                                        @if ($player->note)
-                                                            <span class="text-muted">/ {{ $player->note }}</span>
-                                                        @endif
-                                                    </div>
+                                                    </span>
                                                 @endforeach
-
-                                                @if ($seedList->players->count() > 30)
-                                                    <div class="text-muted">ほか {{ $seedList->players->count() - 30 }} 名</div>
+                                                @if ($sortedPlayers->count() > 3)
+                                                    <span>ほか {{ $sortedPlayers->count() - 3 }}名</span>
                                                 @endif
                                             </div>
                                         @endif
@@ -293,19 +299,26 @@
                                         @if ($seedList->source_url)
                                             <div>
                                                 <a href="{{ $seedList->source_url }}" target="_blank" rel="noopener">
-                                                    参照
+                                                    元ランキングを開く
                                                 </a>
                                             </div>
                                         @endif
                                     </td>
                                     <td>
-                                        <form method="POST"
-                                              action="{{ route('pro_bowler_seed_lists.destroy', $seedList) }}"
-                                              onsubmit="return confirm('この年度別シード一覧を削除しますか？');">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="btn btn-sm btn-outline-danger">削除</button>
-                                        </form>
+                                        <div class="d-flex flex-wrap gap-2">
+                                            <a href="{{ route('pro_bowler_seed_lists.show', $seedList) }}"
+                                               class="btn btn-sm btn-outline-primary">
+                                                詳細
+                                            </a>
+
+                                            <form method="POST"
+                                                  action="{{ route('pro_bowler_seed_lists.destroy', $seedList) }}"
+                                                  onsubmit="return confirm('この年度別シード一覧を削除しますか？');">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="btn btn-sm btn-outline-danger">削除</button>
+                                            </form>
+                                        </div>
                                     </td>
                                 </tr>
                             @endforeach
