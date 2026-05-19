@@ -9,7 +9,6 @@ use App\Models\ProBowlerSeedList;
 use App\Models\ProBowlerSeedListPlayer;
 use App\Models\Tournament;
 use App\Models\TournamentSeedPlayer;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 
@@ -171,19 +170,30 @@ class ProBowlerSeedService
 
     /**
      * 大会内で対象選手がシード扱いか判定する。
+     *
+     * 判定順:
+     * 1. 大会別シード tournament_seed_players
+     * 2. 年度別シード pro_bowler_seed_lists / pro_bowler_seed_list_players
+     *
+     * 年度別シードは大会の gender ではなく、選手本人の sex / ライセンス接頭辞を優先する。
+     * 大会マスタの gender が誤っていても、女子選手は女子シード一覧で判定できるようにする。
      */
     public function isSeedPlayer(
         int $tournamentId,
         ?int $proBowlerId = null,
         ?string $licenseNo = null
     ): bool {
-        return $this->queryActiveTournamentSeedPlayer($tournamentId, $proBowlerId, $licenseNo)->exists();
+        if ($this->queryActiveTournamentSeedPlayer($tournamentId, $proBowlerId, $licenseNo)->exists()) {
+            return true;
+        }
+
+        return $this->queryActiveAnnualSeedListPlayer($tournamentId, $proBowlerId, $licenseNo)->exists();
     }
 
     /**
      * 大会内のシード対象を、pro_bowler_id / license_no の両方で引けるmapにする。
      *
-     * @return array<string,TournamentSeedPlayer>
+     * @return array<string,mixed>
      */
     public function seedMapForTournament(int $tournamentId): array
     {
@@ -205,6 +215,17 @@ class ProBowlerSeedService
                     $map['license:' . $licenseNo] = $seedPlayer;
                 }
             });
+
+        foreach ($this->annualSeedListPlayersForTournament($tournamentId) as $seedListPlayer) {
+            if ($seedListPlayer->pro_bowler_id) {
+                $map['pro_bowler:' . $seedListPlayer->pro_bowler_id] = $seedListPlayer;
+            }
+
+            $licenseNo = $this->normalizeLicenseNo($seedListPlayer->license_no);
+            if ($licenseNo !== null) {
+                $map['license:' . $licenseNo] = $seedListPlayer;
+            }
+        }
 
         return $map;
     }
@@ -246,6 +267,10 @@ class ProBowlerSeedService
 
     /**
      * 大会内のシード情報を1件返す。
+     *
+     * 注意:
+     * ここは大会別シード設定画面など、tournament_seed_players の実体が必要な場面用。
+     * 年度別シードは tournament_seed_players に展開しない限り、この戻り値には含めない。
      */
     public function findActiveSeedPlayer(
         int $tournamentId,
@@ -397,6 +422,203 @@ class ProBowlerSeedService
         }
 
         return $query->whereRaw('1 = 0');
+    }
+
+    private function queryActiveAnnualSeedListPlayer(
+        int $tournamentId,
+        ?int $proBowlerId,
+        ?string $licenseNo
+    ) {
+        $licenseNo = $this->normalizeLicenseNo($licenseNo);
+        $tournament = Tournament::query()->find($tournamentId);
+
+        if (!$tournament) {
+            return ProBowlerSeedListPlayer::query()->whereRaw('1 = 0');
+        }
+
+        $seedYear = $this->resolveSeedYear($tournament);
+        if ($seedYear === null) {
+            return ProBowlerSeedListPlayer::query()->whereRaw('1 = 0');
+        }
+
+        $bowler = $this->resolveBowler($proBowlerId, $licenseNo);
+        $genderCandidates = $this->genderCandidatesForAnnualSeed($tournament, $bowler, $licenseNo);
+
+        if (empty($genderCandidates)) {
+            return ProBowlerSeedListPlayer::query()->whereRaw('1 = 0');
+        }
+
+        $seedListIds = ProBowlerSeedList::query()
+            ->where('seed_year', $seedYear)
+            ->where('seed_list_type', 'tournament_seed')
+            ->where('is_active', true)
+            ->where(function ($q) use ($genderCandidates) {
+                $q->whereIn('gender', $genderCandidates)
+                    ->orWhereNull('gender');
+            })
+            ->pluck('id');
+
+        if ($seedListIds->isEmpty()) {
+            return ProBowlerSeedListPlayer::query()->whereRaw('1 = 0');
+        }
+
+        $query = ProBowlerSeedListPlayer::query()
+            ->whereIn('seed_list_id', $seedListIds)
+            ->where('is_active', true);
+
+        if ($proBowlerId !== null && $licenseNo !== null) {
+            return $query->where(function ($q) use ($proBowlerId, $licenseNo) {
+                $q->where('pro_bowler_id', $proBowlerId)
+                    ->orWhere('license_no', $licenseNo);
+            });
+        }
+
+        if ($proBowlerId !== null) {
+            return $query->where('pro_bowler_id', $proBowlerId);
+        }
+
+        if ($licenseNo !== null) {
+            return $query->where('license_no', $licenseNo);
+        }
+
+        return $query->whereRaw('1 = 0');
+    }
+
+    private function annualSeedListPlayersForTournament(int $tournamentId)
+    {
+        $tournament = Tournament::query()->find($tournamentId);
+
+        if (!$tournament) {
+            return collect();
+        }
+
+        $seedYear = $this->resolveSeedYear($tournament);
+        if ($seedYear === null) {
+            return collect();
+        }
+
+        $seedListIds = ProBowlerSeedList::query()
+            ->where('seed_year', $seedYear)
+            ->where('seed_list_type', 'tournament_seed')
+            ->where('is_active', true)
+            ->pluck('id');
+
+        if ($seedListIds->isEmpty()) {
+            return collect();
+        }
+
+        return ProBowlerSeedListPlayer::query()
+            ->whereIn('seed_list_id', $seedListIds)
+            ->where('is_active', true)
+            ->orderBy('priority_order')
+            ->orderBy('seed_rank')
+            ->orderBy('id')
+            ->get();
+    }
+
+    private function resolveBowler(?int $proBowlerId, ?string $licenseNo): ?ProBowler
+    {
+        if ($proBowlerId !== null) {
+            $bowler = ProBowler::query()->find($proBowlerId);
+            if ($bowler) {
+                return $bowler;
+            }
+        }
+
+        $licenseNo = $this->normalizeLicenseNo($licenseNo);
+        if ($licenseNo === null) {
+            return null;
+        }
+
+        $last4 = mb_substr($licenseNo, -4);
+
+        return ProBowler::query()
+            ->where('license_no', $licenseNo)
+            ->when($last4 !== '', function ($query) use ($last4) {
+                $numeric = (int) $last4;
+
+                $query->orWhere('license_no_num', $numeric);
+            })
+            ->orderBy('id')
+            ->first();
+    }
+
+    private function resolveSeedYear(Tournament $tournament): ?int
+    {
+        if (isset($tournament->year) && $tournament->year !== null && $tournament->year !== '') {
+            return (int) $tournament->year;
+        }
+
+        if (isset($tournament->start_date) && $tournament->start_date !== null && $tournament->start_date !== '') {
+            return (int) mb_substr((string) $tournament->start_date, 0, 4);
+        }
+
+        return null;
+    }
+
+    private function genderCandidatesForAnnualSeed(
+        Tournament $tournament,
+        ?ProBowler $bowler,
+        ?string $licenseNo
+    ): array {
+        $candidates = [];
+
+        $fromBowler = $this->genderCodeFromSex($bowler?->sex ?? null);
+        if ($fromBowler !== null) {
+            $candidates[] = $fromBowler;
+        }
+
+        $fromLicense = $this->genderCodeFromLicense($licenseNo);
+        if ($fromLicense !== null) {
+            $candidates[] = $fromLicense;
+        }
+
+        $fromTournament = $this->normalizeGenderCode($tournament->gender ?? null);
+        if ($fromTournament !== null) {
+            $candidates[] = $fromTournament;
+        }
+
+        return array_values(array_unique(array_filter($candidates)));
+    }
+
+    private function genderCodeFromSex($sex): ?string
+    {
+        $sex = trim((string) $sex);
+
+        return match ($sex) {
+            '1', 'M', 'm', 'male', 'Male', '男子', '男' => 'M',
+            '2', 'F', 'f', 'female', 'Female', '女子', '女' => 'F',
+            default => null,
+        };
+    }
+
+    private function genderCodeFromLicense(?string $licenseNo): ?string
+    {
+        $licenseNo = $this->normalizeLicenseNo($licenseNo);
+        if ($licenseNo === null) {
+            return null;
+        }
+
+        if (str_starts_with($licenseNo, 'M')) {
+            return 'M';
+        }
+
+        if (str_starts_with($licenseNo, 'F')) {
+            return 'F';
+        }
+
+        return null;
+    }
+
+    private function normalizeGenderCode($gender): ?string
+    {
+        $gender = trim((string) $gender);
+
+        return match ($gender) {
+            '1', 'M', 'm', 'male', 'Male', '男子', '男' => 'M',
+            '2', 'F', 'f', 'female', 'Female', '女子', '女' => 'F',
+            default => null,
+        };
     }
 
     private function sourceTypeFromSeedCategory(string $seedCategory): string

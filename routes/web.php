@@ -318,13 +318,6 @@ Route::middleware(['auth','role:editor,admin'])->group(function () {
         ->name('tournaments.waitlist.store');
     Route::post('/tournament_entries/{entry}/promote-waitlist', [\App\Http\Controllers\TournamentEntryAdminController::class, 'promoteWaitlist'])
         ->name('tournaments.waitlist.promote');
-    Route::get('/tournaments/{tournament}/seed-players', [\App\Http\Controllers\TournamentSeedPlayerController::class, 'index'])
-        ->name('tournaments.seed_players.index');
-    Route::post('/tournaments/{tournament}/seed-players', [\App\Http\Controllers\TournamentSeedPlayerController::class, 'store'])
-        ->name('tournaments.seed_players.store');
-    Route::delete('/tournaments/{tournament}/seed-players/{seedPlayer}', [\App\Http\Controllers\TournamentSeedPlayerController::class, 'destroy'])
-        ->name('tournaments.seed_players.destroy');
-
     Route::get('/api/venues/search', [VenuePageController::class, 'search'])
         ->name('api.venues.search');
     Route::get('/api/venues/{id}', [VenuePageController::class, 'showJson'])
@@ -365,6 +358,22 @@ Route::middleware(['auth','role:editor,admin'])->group(function () {
         ->name('tournaments.result_snapshots.index');
     Route::post('/tournaments/{tournament}/result-snapshots/reflect', [\App\Http\Controllers\TournamentResultSnapshotController::class, 'reflect'])
         ->name('tournaments.result_snapshots.reflect');
+
+    Route::get('/tournaments/{tournament}/seed-players', [\App\Http\Controllers\TournamentSeedPlayerController::class, 'index'])
+        ->name('tournaments.seed_players.index');
+    Route::post('/tournaments/{tournament}/seed-players', [\App\Http\Controllers\TournamentSeedPlayerController::class, 'store'])
+        ->name('tournaments.seed_players.store');
+    Route::delete('/tournaments/{tournament}/seed-players/{seedPlayer}', [\App\Http\Controllers\TournamentSeedPlayerController::class, 'destroy'])
+        ->name('tournaments.seed_players.destroy');
+
+    Route::get('/pro-bowler-seed-lists', [\App\Http\Controllers\ProBowlerSeedListController::class, 'index'])
+        ->name('pro_bowler_seed_lists.index');
+    Route::post('/pro-bowler-seed-lists/generate-from-point-ranking', [\App\Http\Controllers\ProBowlerSeedListController::class, 'generateFromPointRanking'])
+        ->name('pro_bowler_seed_lists.generate');
+    Route::post('/pro-bowler-seed-lists', [\App\Http\Controllers\ProBowlerSeedListController::class, 'store'])
+        ->name('pro_bowler_seed_lists.store');
+    Route::delete('/pro-bowler-seed-lists/{seedList}', [\App\Http\Controllers\ProBowlerSeedListController::class, 'destroy'])
+        ->name('pro_bowler_seed_lists.destroy');
 
     Route::prefix('tournaments/{tournament}')->name('tournaments.')->group(function () {
         Route::resource('prize_distributions', PrizeDistributionController::class)->except(['destroy']);
