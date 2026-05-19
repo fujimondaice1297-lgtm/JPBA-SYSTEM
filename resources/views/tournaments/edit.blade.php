@@ -1163,9 +1163,10 @@
     </div>
   </div>
 
-  <div class="mt-4 d-flex gap-2">
+  <div class="mt-4 d-flex flex-wrap gap-2">
     <button type="submit" class="btn btn-primary">更新</button>
     <a href="{{ route('tournaments.show', $tournament->id) }}" class="btn btn-secondary">詳細へ戻る</a>
+    <a href="{{ route('tournaments.seed_players.index', $tournament->id) }}" class="btn btn-outline-primary">シード設定</a>
   </div>
 </form>
 
