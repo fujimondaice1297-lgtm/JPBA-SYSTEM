@@ -361,6 +361,8 @@ Route::middleware(['auth','role:editor,admin'])->group(function () {
 
     Route::get('/tournaments/{tournament}/seed-players', [\App\Http\Controllers\TournamentSeedPlayerController::class, 'index'])
         ->name('tournaments.seed_players.index');
+    Route::get('/tournaments/{tournament}/seed-players/pdf', [\App\Http\Controllers\TournamentSeedPlayerController::class, 'pdf'])
+        ->name('tournaments.seed_players.pdf');
     Route::post('/tournaments/{tournament}/seed-players', [\App\Http\Controllers\TournamentSeedPlayerController::class, 'store'])
         ->name('tournaments.seed_players.store');
     Route::delete('/tournaments/{tournament}/seed-players/{seedPlayer}', [\App\Http\Controllers\TournamentSeedPlayerController::class, 'destroy'])

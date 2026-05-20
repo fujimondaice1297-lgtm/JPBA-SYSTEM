@@ -6,6 +6,7 @@ use App\Models\ProBowler;
 use App\Models\Tournament;
 use App\Models\TournamentSeedPlayer;
 use App\Services\ProBowlerSeedService;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -15,21 +16,7 @@ class TournamentSeedPlayerController extends Controller
 {
     public function index(Tournament $tournament)
     {
-        $seedPlayers = TournamentSeedPlayer::query()
-            ->with([
-                'bowler',
-                'seedListPlayer',
-                'rankingSnapshot',
-                'sourceTournament',
-                'title',
-            ])
-            ->where('tournament_id', $tournament->id)
-            ->where('is_active', true)
-            ->orderByRaw('priority_order is null')
-            ->orderBy('priority_order')
-            ->orderBy('id')
-            ->get();
-
+        $seedPlayers = $this->activeSeedPlayers($tournament);
         $priorityPlayers = $this->buildTournamentPriorityPlayers($tournament, $seedPlayers);
 
         return view('tournament_seed_players.index', [
@@ -38,6 +25,20 @@ class TournamentSeedPlayerController extends Controller
             'priorityPlayers' => $priorityPlayers,
             'seedSourceOptions' => $this->seedSourceOptions(),
         ]);
+    }
+
+    public function pdf(Tournament $tournament)
+    {
+        $seedPlayers = $this->activeSeedPlayers($tournament);
+        $priorityPlayers = $this->buildTournamentPriorityPlayers($tournament, $seedPlayers);
+
+        $pdf = Pdf::loadView('tournament_seed_players.pdf', [
+            'tournament' => $tournament,
+            'priorityPlayers' => $priorityPlayers,
+            'seedPlayers' => $seedPlayers,
+        ])->setPaper('a4', 'portrait');
+
+        return $pdf->stream($this->pdfFileName($tournament));
     }
 
     public function store(Request $request, Tournament $tournament, ProBowlerSeedService $seedService)
@@ -86,6 +87,24 @@ class TournamentSeedPlayerController extends Controller
             ->with('success', '大会別シードを解除しました。');
     }
 
+    private function activeSeedPlayers(Tournament $tournament)
+    {
+        return TournamentSeedPlayer::query()
+            ->with([
+                'bowler',
+                'seedListPlayer',
+                'rankingSnapshot',
+                'sourceTournament',
+                'title',
+            ])
+            ->where('tournament_id', $tournament->id)
+            ->where('is_active', true)
+            ->orderByRaw('priority_order is null')
+            ->orderBy('priority_order')
+            ->orderBy('id')
+            ->get();
+    }
+
     private function buildTournamentPriorityPlayers(Tournament $tournament, $seedPlayers): array
     {
         $rows = [];
@@ -102,6 +121,7 @@ class TournamentSeedPlayerController extends Controller
                 'license_no' => $this->displayLicenseNo($row->license_no ?? null),
                 'name' => $row->name_kanji ?? $row->name ?? $row->display_name ?? '-',
                 'kana' => $row->name_kana ?? '',
+                'period_label' => $this->formatPeriodLabel($row->bowler_period ?? null),
                 'source_label' => '年度別シード',
                 'seed_label' => $this->seedCategoryLabel($row->seed_category ?? null),
                 'ranking_rank' => $row->ranking_rank ?? null,
@@ -122,8 +142,12 @@ class TournamentSeedPlayerController extends Controller
                 ?? $seedPlayer->bowler->display_name
                 ?? '-';
             $bowlerKana = $seedPlayer->bowler->name_kana ?? '';
+            $bowlerPeriod = $this->formatPeriodLabel($seedPlayer->bowler->kibetsu ?? null);
 
             if (isset($rows[$key])) {
+                if (($rows[$key]['period_label'] ?? '') === '' && $bowlerPeriod !== '') {
+                    $rows[$key]['period_label'] = $bowlerPeriod;
+                }
                 $rows[$key]['source_label'] .= ' / 大会別追加';
                 $rows[$key]['seed_label'] = $seedPlayer->display_label ?: $rows[$key]['seed_label'];
                 $rows[$key]['note'] = trim(($rows[$key]['note'] ?? '') . ' ' . ($seedPlayer->note ?? ''));
@@ -140,6 +164,7 @@ class TournamentSeedPlayerController extends Controller
                 'license_no' => $this->displayLicenseNo($seedPlayer->license_no),
                 'name' => $bowlerName,
                 'kana' => $bowlerKana,
+                'period_label' => $bowlerPeriod,
                 'source_label' => '大会別追加',
                 'seed_label' => $seedPlayer->display_label ?: $sourceLabel,
                 'ranking_rank' => $seedPlayer->ranking_rank,
@@ -173,6 +198,9 @@ class TournamentSeedPlayerController extends Controller
         }
 
         $gender = $this->normalizeGenderCode($tournament->gender ?? null);
+        $periodSelect = Schema::hasColumn('pro_bowlers', 'kibetsu')
+            ? 'b.kibetsu as bowler_period'
+            : DB::raw('null as bowler_period');
 
         $query = DB::table('pro_bowler_seed_list_players as p')
             ->join('pro_bowler_seed_lists as l', 'l.id', '=', 'p.seed_list_id')
@@ -194,6 +222,7 @@ class TournamentSeedPlayerController extends Controller
                 'l.gender',
                 'b.name_kanji',
                 'b.name_kana',
+                $periodSelect,
             ]);
 
         if ($gender !== null) {
@@ -210,6 +239,27 @@ class TournamentSeedPlayerController extends Controller
             ->orderBy('p.ranking_rank')
             ->orderBy('p.id')
             ->get();
+    }
+
+    private function formatPeriodLabel($value): string
+    {
+        if ($value === null) {
+            return '';
+        }
+
+        $label = trim((string) $value);
+
+        if ($label === '') {
+            return '';
+        }
+
+        $digits = preg_replace('/[^0-9０-９]+/u', '', $label) ?? '';
+
+        if ($digits !== '') {
+            return mb_convert_kana($digits, 'n', 'UTF-8');
+        }
+
+        return $label;
     }
 
     private function seedSourceOptions(): array
@@ -315,6 +365,19 @@ class TournamentSeedPlayerController extends Controller
     private function normalizeLicenseNo(?string $licenseNo): string
     {
         return strtoupper(trim((string) $licenseNo));
+    }
+
+    private function pdfFileName(Tournament $tournament): string
+    {
+        $year = $this->resolveTournamentYear($tournament) ?: date('Y');
+        $name = trim((string) ($tournament->name ?? 'tournament'));
+        $name = $name !== '' ? $name : 'tournament';
+
+        $fileName = $year . '_' . $name . '_大会優先出場者一覧.pdf';
+        $fileName = str_replace(['\\', '/', ':', '*', '?', '"', '<', '>', '|'], '_', $fileName);
+        $fileName = trim($fileName, " \t\n\r\0\x0B._");
+
+        return $fileName !== '' ? $fileName : 'priority_list.pdf';
     }
 
     private function last4(?string $licenseNo): ?string

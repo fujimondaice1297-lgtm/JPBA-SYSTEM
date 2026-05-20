@@ -9,6 +9,7 @@
             <div class="text-muted">{{ $tournament->year ?? '' }}年 {{ $tournament->name }}</div>
         </div>
         <div class="d-flex flex-wrap gap-2">
+            <a href="{{ route('tournaments.seed_players.pdf', $tournament) }}" class="btn btn-info text-white" target="_blank" rel="noopener">優先出場者PDF</a>
             <a href="{{ route('tournaments.show', $tournament) }}" class="btn btn-outline-secondary">大会詳細へ戻る</a>
             <a href="{{ route('tournaments.results.index', $tournament) }}" class="btn btn-outline-secondary">大会成績一覧へ</a>
         </div>
