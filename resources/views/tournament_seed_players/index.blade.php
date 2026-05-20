@@ -33,8 +33,9 @@
         <div class="fw-bold">この画面の役割</div>
         <div>
             この大会だけでシード扱いにする選手を設定します。
-            ここで登録した選手は、成績表・速報・PDFのライセンスNo欄で <strong>S 0524</strong> のように表示されます。
-            ライセンスNoのDB値そのものは変更しません。
+            年度別シード一覧に登録済みの選手と、この画面で追加した大会別シードを合わせて、
+            下の「大会優先出場者一覧」で確認できます。
+            S表示はライセンスNoのDB値を変更せず、画面・成績表・PDF上だけで <strong>S 0524</strong> のように表示します。
         </div>
     </div>
 
@@ -135,11 +136,58 @@
         </div>
     </div>
 
+    <div class="card mb-4">
+        <div class="card-header fw-bold">大会優先出場者一覧（自動生成）</div>
+        <div class="card-body p-0">
+            @if(empty($priorityPlayers))
+                <div class="p-4 text-muted">
+                    この大会の年度別シード、または大会別追加シードがまだありません。
+                    年度別シード一覧を作成するか、この画面で大会別シードを追加してください。
+                </div>
+            @else
+                <div class="table-responsive">
+                    <table class="table table-sm table-bordered align-middle mb-0 priority-player-table">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="text-end">出場<br>優先</th>
+                                <th class="text-end">元順位</th>
+                                <th class="seed-license">ライセンスNo</th>
+                                <th>氏名</th>
+                                <th>フリガナ</th>
+                                <th>シード種別</th>
+                                <th>由来</th>
+                                <th>備考</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($priorityPlayers as $player)
+                                <tr>
+                                    <td class="text-end fw-bold">{{ $player['priority_no'] }}</td>
+                                    <td class="text-end">{{ $player['ranking_rank'] ?? '-' }}</td>
+                                    <td class="seed-license">{{ $player['license_no'] ?? '-' }}</td>
+                                    <td>{{ $player['name'] ?? '-' }}</td>
+                                    <td class="small text-muted">{{ $player['kana'] ?? '' }}</td>
+                                    <td>{{ $player['seed_label'] ?? '-' }}</td>
+                                    <td class="small">{{ $player['source_label'] ?? '-' }}</td>
+                                    <td class="small">{{ $player['note'] ?? '-' }}</td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+                <div class="p-3 small text-muted border-top">
+                    年度別シードと大会別追加シードを合わせた確認用一覧です。
+                    公式PDFの完全再現には、会場別出場枠・スポンサー推薦・プロテスト枠などの追加データが必要です。
+                </div>
+            @endif
+        </div>
+    </div>
+
     <div class="card">
         <div class="card-header fw-bold">現在の大会別シード</div>
         <div class="card-body p-0">
             @if($seedPlayers->isEmpty())
-                <div class="p-4 text-muted">この大会にシード選手はまだ登録されていません。</div>
+                <div class="p-4 text-muted">この大会に大会別追加シードはまだ登録されていません。</div>
             @else
                 <div class="table-responsive">
                     <table class="table table-sm table-bordered align-middle mb-0 seed-player-table">
@@ -193,14 +241,22 @@
 
 <style>
     .seed-player-table th,
-    .seed-player-table td {
+    .seed-player-table td,
+    .priority-player-table th,
+    .priority-player-table td {
         white-space: nowrap;
     }
 
-    .seed-player-table .seed-license {
-        width: 6.5rem;
+    .seed-player-table .seed-license,
+    .priority-player-table .seed-license {
+        width: 7.5rem;
         text-align: right;
         font-variant-numeric: tabular-nums;
+    }
+
+    .priority-player-table th,
+    .priority-player-table td {
+        vertical-align: middle;
     }
 </style>
 @endsection
