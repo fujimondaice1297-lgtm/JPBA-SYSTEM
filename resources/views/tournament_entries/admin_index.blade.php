@@ -9,6 +9,7 @@
     </div>
     <div class="d-flex gap-2 flex-wrap">
       <a href="{{ route('tournaments.index') }}" class="btn btn-secondary">大会一覧へ戻る</a>
+      <a href="{{ route('tournaments.seed_players.index', $tournament->id) }}" class="btn btn-outline-success">優先出場者一覧</a>
       <a href="{{ route('tournaments.draws.index', $tournament->id) }}" class="btn btn-outline-dark">抽選一覧</a>
       <a href="{{ route('tournaments.draws.index', ['tournament' => $tournament->id, 'pending_draw' => 1]) }}" class="btn btn-outline-secondary">未抽選一覧</a>
       <a href="{{ route('member.tournaments.entries.index', $tournament->id) }}" class="btn btn-outline-primary">参加選手向け一覧</a>
@@ -34,6 +35,11 @@
     </div>
   @endif
 
+  <div class="alert alert-info small">
+    優先出場者一覧に登録済みの選手は、この画面の「優先出場」列に表示します。
+    表示順も優先出場順位を先に見ます。参加/ウェイティングの状態は自動変更せず、必要に応じて管理者が繰り上げ操作を行います。
+  </div>
+
   <div class="row g-3 mb-4">
     <div class="col-md-2">
       <div class="card"><div class="card-body">
@@ -45,6 +51,18 @@
       <div class="card"><div class="card-body">
         <div class="text-muted small">ウェイティング</div>
         <div class="fs-4 fw-bold">{{ $summary['waitlist_count'] }}</div>
+      </div></div>
+    </div>
+    <div class="col-md-2">
+      <div class="card border-success"><div class="card-body">
+        <div class="text-muted small">優先出場 参加</div>
+        <div class="fs-4 fw-bold text-success">{{ $summary['priority_entry_count'] ?? 0 }}</div>
+      </div></div>
+    </div>
+    <div class="col-md-2">
+      <div class="card border-warning"><div class="card-body">
+        <div class="text-muted small">優先出場 待機</div>
+        <div class="fs-4 fw-bold text-warning">{{ $summary['priority_waitlist_count'] ?? 0 }}</div>
       </div></div>
     </div>
     <div class="col-md-2">
@@ -81,11 +99,13 @@
         <div class="row g-3 align-items-end">
           <div class="col-md-3">
             <label class="form-label">ライセンスNo</label>
-            <input type="text" name="license_no" value="{{ old('license_no') }}" class="form-control" placeholder="例: F00000003">
+            <input type="text" name="license_no" value="{{ old('license_no') }}" class="form-control" placeholder="例: M00001297 / 1297">
+            <div class="form-text">下4桁入力時は、大会の対象性別を優先して照合します。</div>
           </div>
           <div class="col-md-2">
             <label class="form-label">優先順</label>
             <input type="number" name="waitlist_priority" value="{{ old('waitlist_priority') }}" class="form-control" min="1" max="9999">
+            <div class="form-text">空欄なら優先出場設定から補完します。</div>
           </div>
           <div class="col-md-5">
             <label class="form-label">備考</label>
@@ -126,7 +146,8 @@
       <thead>
         <tr>
           <th>状態</th>
-          <th>優先順</th>
+          <th>優先出場</th>
+          <th>待機順</th>
           <th>ライセンスNo</th>
           <th>氏名</th>
           <th>参加権利</th>
@@ -144,7 +165,7 @@
           @php
             $bowler = $entry->bowler;
           @endphp
-          <tr>
+          <tr class="{{ $entry->is_priority_entry ? 'table-success' : '' }}">
             <td>
               @if ($entry->status === 'entry')
                 <span class="badge bg-primary">参加</span>
@@ -152,6 +173,24 @@
                 <span class="badge bg-warning text-dark">ウェイティング</span>
               @else
                 <span class="badge bg-secondary">{{ $entry->status_label }}</span>
+              @endif
+            </td>
+            <td>
+              @if ($entry->is_priority_entry)
+                <div class="d-flex flex-column gap-1">
+                  <div>
+                    <span class="badge {{ $entry->priority_badge_class }}">
+                      優先 {{ $entry->priority_order_label }}
+                    </span>
+                  </div>
+                  <div class="small fw-bold">{{ $entry->priority_label }}</div>
+                  <div class="small text-muted">{{ $entry->priority_source_label }}</div>
+                  @if ($entry->priority_note)
+                    <div class="small text-muted">{{ $entry->priority_note }}</div>
+                  @endif
+                </div>
+              @else
+                <span class="text-muted">-</span>
               @endif
             </td>
             <td>{{ $entry->waitlist_priority ?? '-' }}</td>
@@ -186,7 +225,7 @@
           </tr>
         @empty
           <tr>
-            <td colspan="12" class="text-center text-muted">該当データはありません。</td>
+            <td colspan="13" class="text-center text-muted">該当データはありません。</td>
           </tr>
         @endforelse
       </tbody>

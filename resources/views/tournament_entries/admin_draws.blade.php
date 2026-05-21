@@ -9,6 +9,7 @@
     </div>
     <div class="d-flex gap-2 flex-wrap">
       <a href="{{ route('tournaments.index') }}" class="btn btn-secondary">大会一覧へ戻る</a>
+      <a href="{{ route('tournaments.seed_players.index', $tournament->id) }}" class="btn btn-outline-success">優先出場者一覧</a>
       <a href="{{ route('tournaments.entries.index', $tournament->id) }}" class="btn btn-outline-dark">エントリー一覧</a>
       <a href="{{ route('member.tournaments.draws.index', $tournament->id) }}" class="btn btn-outline-primary">参加選手向け抽選結果</a>
       <a href="{{ route('tournaments.operation_logs.index', $tournament->id) }}" class="btn btn-outline-info">運用ログ</a>
@@ -25,6 +26,11 @@
     <div class="alert alert-danger">{{ session('error') }}</div>
   @endif
 
+  <div class="alert alert-info small">
+    抽選一覧では、優先出場者一覧に登録済みの参加者を上位に表示します。
+    抽選ロジック自体は変更せず、運用者が未抽選者・優先出場者を確認しやすい表示にしています。
+  </div>
+
   <div class="row g-3 mb-4">
     <div class="col-md-2">
       <div class="card"><div class="card-body">
@@ -33,18 +39,24 @@
       </div></div>
     </div>
     <div class="col-md-2">
+      <div class="card border-success"><div class="card-body">
+        <div class="text-muted small">優先出場 参加</div>
+        <div class="fs-4 fw-bold text-success">{{ $summary['priority_entry_count'] ?? 0 }}</div>
+      </div></div>
+    </div>
+    <div class="col-md-2">
       <div class="card"><div class="card-body">
         <div class="text-muted small">希望シフトあり</div>
         <div class="fs-4 fw-bold">{{ $summary['preferred_shift_count'] }}</div>
       </div></div>
     </div>
-    <div class="col-md-3">
+    <div class="col-md-2">
       <div class="card"><div class="card-body">
         <div class="text-muted small">シフト未抽選</div>
         <div class="fs-4 fw-bold">{{ $summary['pending_shift_count'] }}</div>
       </div></div>
     </div>
-    <div class="col-md-3">
+    <div class="col-md-2">
       <div class="card"><div class="card-body">
         <div class="text-muted small">レーン未抽選</div>
         <div class="fs-4 fw-bold">{{ $summary['pending_lane_count'] }}</div>
@@ -127,6 +139,7 @@
         <tr>
           <th>ライセンスNo</th>
           <th>氏名</th>
+          <th>優先出場</th>
           <th>希望シフト</th>
           <th>シフト</th>
           <th>レーン</th>
@@ -138,9 +151,24 @@
       <tbody>
         @forelse ($entries as $entry)
           @php $bowler = $entry->bowler; @endphp
-          <tr>
+          <tr class="{{ $entry->is_priority_entry ? 'table-success' : '' }}">
             <td>{{ $bowler->license_no ?? '-' }}</td>
             <td>{{ $bowler->name_kanji ?? '-' }}</td>
+            <td>
+              @if ($entry->is_priority_entry)
+                <div class="d-flex flex-column gap-1">
+                  <div>
+                    <span class="badge {{ $entry->priority_badge_class }}">
+                      優先 {{ $entry->priority_order_label }}
+                    </span>
+                  </div>
+                  <div class="small fw-bold">{{ $entry->priority_label }}</div>
+                  <div class="small text-muted">{{ $entry->priority_source_label }}</div>
+                </div>
+              @else
+                <span class="text-muted">-</span>
+              @endif
+            </td>
             <td>{{ $entry->preferred_shift_code ?? '-' }}</td>
             <td>
               @if ($tournament->use_shift_draw)
@@ -183,7 +211,7 @@
           </tr>
         @empty
           <tr>
-            <td colspan="8" class="text-center text-muted">該当データはありません。</td>
+            <td colspan="9" class="text-center text-muted">該当データはありません。</td>
           </tr>
         @endforelse
       </tbody>
