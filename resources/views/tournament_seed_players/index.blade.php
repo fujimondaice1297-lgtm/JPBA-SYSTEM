@@ -19,6 +19,10 @@
         <div class="alert alert-success">{{ session('success') }}</div>
     @endif
 
+    @if(session('info'))
+        <div class="alert alert-info">{{ session('info') }}</div>
+    @endif
+
     @if($errors->any())
         <div class="alert alert-danger">
             <div class="fw-bold mb-1">入力内容を確認してください。</div>
@@ -56,7 +60,7 @@
                             name="license_no"
                             value="{{ old('license_no') }}"
                             class="form-control @error('license_no') is-invalid @enderror"
-                            placeholder="例：0524 / F00000524"
+                            placeholder="例：0524 / M00000524 / F00000524"
                             required
                         >
                         @error('license_no')
@@ -82,7 +86,8 @@
                             <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
                         <div class="form-text">
-                            PDF右側の②〜⑪枠へ自動振り分けします。TSは左側の①に表示します。
+                            PDF右側の②〜⑪枠へ自動振り分けします。TSは左側の①に表示します。<br>
+                            ライセンスNoを4桁で入力した場合は、この大会の対象性別（男子/女子）を優先して照合します。
                         </div>
                     </div>
 
@@ -217,8 +222,9 @@
                                         ?? $seedPlayer->bowler->display_name
                                         ?? '-';
                                     $displayLicenseNo = $seedPlayer->license_no ? mb_substr(strtoupper(trim($seedPlayer->license_no)), -4) : '-';
+                                    $isAlsoAnnualSeed = $annualSeedOverlapMap[$seedPlayer->id] ?? false;
                                 @endphp
-                                <tr>
+                                <tr @class(['table-warning' => $isAlsoAnnualSeed])>
                                     <td class="text-end seed-priority-cell">
                                         <form id="{{ $updateFormId }}" method="POST" action="{{ route('tournaments.seed_players.store', $tournament) }}">
                                             @csrf
@@ -238,6 +244,12 @@
                                     <td>
                                         <div class="fw-semibold">{{ $bowlerName }}</div>
                                         <div class="small text-muted">表示：{{ $displayLicenseNo }}</div>
+                                        @if($isAlsoAnnualSeed)
+                                            <div class="mt-1">
+                                                <span class="badge text-bg-warning">年度別TSにも該当</span>
+                                            </div>
+                                            <div class="small text-muted mt-1">PDFでは左側①を優先表示</div>
+                                        @endif
                                     </td>
                                     <td class="seed-license-edit">
                                         <input
@@ -304,6 +316,9 @@
                 </div>
                 <div class="p-3 small text-muted border-top">
                     行内の内容を修正して「保存」を押すと、大会別追加シードをその場で更新できます。
+                    同一大会内で同じ選手を重複登録しないようにしています。
+                    ライセンスNoを4桁で入力した場合は、この大会の対象性別（男子/女子）を優先して照合します。
+                    年度別TSにも該当する選手は、PDFでは左側①のトーナメントシード枠を優先表示します。
                     ライセンスNoのDB値は保持しつつ、一覧やPDFでは下4桁表示を基本にします。
                 </div>
             @endif

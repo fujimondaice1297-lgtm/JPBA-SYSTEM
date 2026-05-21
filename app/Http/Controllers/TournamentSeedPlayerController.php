@@ -18,12 +18,14 @@ class TournamentSeedPlayerController extends Controller
     {
         $seedPlayers = $this->activeSeedPlayers($tournament);
         $priorityPlayers = $this->buildTournamentPriorityPlayers($tournament, $seedPlayers);
+        $annualSeedOverlapMap = $this->annualSeedOverlapMap($tournament, $seedPlayers);
 
         return view('tournament_seed_players.index', [
             'tournament' => $tournament,
             'seedPlayers' => $seedPlayers,
             'priorityPlayers' => $priorityPlayers,
             'seedSourceOptions' => $this->seedSourceOptions(),
+            'annualSeedOverlapMap' => $annualSeedOverlapMap,
         ]);
     }
 
@@ -52,13 +54,35 @@ class TournamentSeedPlayerController extends Controller
             'note' => ['nullable', 'string', 'max:1000'],
         ]);
 
-        $licenseNo = $this->normalizeLicenseNo($validated['license_no']);
-        $bowler = $this->findBowlerByLicenseNo($licenseNo);
+        $inputLicenseNo = $this->normalizeLicenseNo($validated['license_no']);
+        $tournamentGender = $this->normalizeGenderCode($tournament->gender ?? null);
+        $inputGender = $this->genderFromLicenseNo($inputLicenseNo);
 
-        if (!empty($validated['seed_player_id'])) {
+        if ($tournamentGender !== null && $inputGender !== null && $inputGender !== $tournamentGender) {
+            return back()
+                ->withErrors([
+                    'license_no' => '入力されたライセンスNoの性別記号が、この大会の対象性別と一致しません。',
+                ])
+                ->withInput();
+        }
+
+        $bowler = $this->findBowlerByLicenseNo($inputLicenseNo, $tournament);
+        $licenseNo = $this->canonicalLicenseNo($inputLicenseNo, $bowler);
+        $seedPlayerId = !empty($validated['seed_player_id']) ? (int) $validated['seed_player_id'] : null;
+        $duplicateSeedPlayer = $this->findDuplicateActiveSeedPlayer($tournament, $licenseNo, $bowler, $seedPlayerId);
+
+        if ($duplicateSeedPlayer !== null) {
+            return back()
+                ->withErrors([
+                    'license_no' => 'この選手はすでに大会別シードに登録されています。既存行を編集してください。',
+                ])
+                ->withInput();
+        }
+
+        if ($seedPlayerId !== null) {
             $seedPlayer = TournamentSeedPlayer::query()
                 ->where('tournament_id', $tournament->id)
-                ->where('id', $validated['seed_player_id'])
+                ->where('id', $seedPlayerId)
                 ->where('is_active', true)
                 ->firstOrFail();
 
@@ -280,6 +304,63 @@ class TournamentSeedPlayerController extends Controller
             ->get();
     }
 
+    private function annualSeedOverlapMap(Tournament $tournament, $seedPlayers): array
+    {
+        $annualSeedKeys = [];
+
+        foreach ($this->annualSeedRowsForTournament($tournament) as $row) {
+            $annualSeedKeys[$this->priorityKey(
+                proBowlerId: $row->pro_bowler_id ? (int) $row->pro_bowler_id : null,
+                licenseNo: $row->license_no ?? null
+            )] = true;
+        }
+
+        $overlapMap = [];
+        foreach ($seedPlayers as $seedPlayer) {
+            $key = $this->priorityKey(
+                proBowlerId: $seedPlayer->pro_bowler_id ? (int) $seedPlayer->pro_bowler_id : null,
+                licenseNo: $seedPlayer->license_no
+            );
+            $overlapMap[(int) $seedPlayer->id] = isset($annualSeedKeys[$key]);
+        }
+
+        return $overlapMap;
+    }
+
+    private function findDuplicateActiveSeedPlayer(
+        Tournament $tournament,
+        string $licenseNo,
+        ?ProBowler $bowler,
+        ?int $ignoreSeedPlayerId = null
+    ): ?TournamentSeedPlayer {
+        $last4 = $this->last4($licenseNo);
+
+        $query = TournamentSeedPlayer::query()
+            ->where('tournament_id', $tournament->id)
+            ->where('is_active', true);
+
+        if ($ignoreSeedPlayerId !== null) {
+            $query->where('id', '<>', $ignoreSeedPlayerId);
+        }
+
+        $query->where(function ($q) use ($licenseNo, $last4, $bowler) {
+            if ($bowler !== null) {
+                $q->orWhere('pro_bowler_id', $bowler->id);
+                $q->orWhereRaw("UPPER(TRIM(COALESCE(license_no, ''))) = ?", [$licenseNo]);
+
+                return;
+            }
+
+            $q->orWhereRaw("UPPER(TRIM(COALESCE(license_no, ''))) = ?", [$licenseNo]);
+
+            if ($last4 !== null) {
+                $q->orWhereRaw("RIGHT(UPPER(TRIM(COALESCE(license_no, ''))), 4) = ?", [$last4]);
+            }
+        });
+
+        return $query->orderBy('id')->first();
+    }
+
     private function formatPeriodLabel($value): string
     {
         if ($value === null) {
@@ -336,32 +417,89 @@ class TournamentSeedPlayerController extends Controller
         };
     }
 
-    private function findBowlerByLicenseNo(string $licenseNo): ?ProBowler
+    private function findBowlerByLicenseNo(string $licenseNo, Tournament $tournament): ?ProBowler
     {
-        $candidates = array_values(array_filter([
+        $licenseNo = $this->normalizeLicenseNo($licenseNo);
+        $last4 = $this->last4($licenseNo);
+        $gender = $this->normalizeGenderCode($tournament->gender ?? null);
+        $candidates = array_values(array_unique(array_filter([
             $licenseNo,
-            $this->last4($licenseNo),
-        ]));
+            $last4,
+        ])));
 
         $licenseColumns = collect(['license_no', 'license_number', 'pro_bowler_license_no'])
             ->filter(fn (string $column) => Schema::hasColumn('pro_bowlers', $column))
             ->values();
 
-        if ($licenseColumns->isEmpty()) {
+        if ($licenseColumns->isEmpty() || empty($candidates)) {
             return null;
         }
 
-        return ProBowler::query()
+        $query = ProBowler::query()
             ->where(function ($query) use ($licenseColumns, $candidates) {
                 foreach ($licenseColumns as $column) {
                     foreach ($candidates as $candidate) {
-                        $query->orWhere($column, $candidate);
-                        $query->orWhere($column, 'like', '%' . $candidate);
+                        $query->orWhereRaw('UPPER(TRIM(COALESCE(' . $column . ", ''))) = ?", [$candidate]);
+                        $query->orWhereRaw('RIGHT(UPPER(TRIM(COALESCE(' . $column . ", ''))), 4) = ?", [$candidate]);
                     }
                 }
-            })
+            });
+
+        $this->applyTournamentGenderFilter($query, $gender, $licenseColumns);
+
+        return $query
             ->orderBy('id')
             ->first();
+    }
+
+    private function canonicalLicenseNo(string $inputLicenseNo, ?ProBowler $bowler): string
+    {
+        if ($bowler === null) {
+            return $inputLicenseNo;
+        }
+
+        foreach (['license_no', 'license_number', 'pro_bowler_license_no'] as $column) {
+            if (isset($bowler->{$column}) && trim((string) $bowler->{$column}) !== '') {
+                return $this->normalizeLicenseNo($bowler->{$column});
+            }
+        }
+
+        return $inputLicenseNo;
+    }
+
+    private function applyTournamentGenderFilter($query, ?string $gender, $licenseColumns): void
+    {
+        if ($gender === null) {
+            return;
+        }
+
+        $sexId = $gender === 'M' ? 1 : 2;
+        $prefix = $gender . '%';
+
+        $query->where(function ($genderQuery) use ($sexId, $prefix, $licenseColumns) {
+            if (Schema::hasColumn('pro_bowlers', 'sex')) {
+                $genderQuery->orWhere('sex', $sexId);
+            }
+
+            foreach ($licenseColumns as $column) {
+                $genderQuery->orWhereRaw('UPPER(TRIM(COALESCE(' . $column . ", ''))) LIKE ?", [$prefix]);
+            }
+        });
+    }
+
+    private function genderFromLicenseNo(?string $licenseNo): ?string
+    {
+        $licenseNo = $this->normalizeLicenseNo($licenseNo);
+
+        if (str_starts_with($licenseNo, 'M')) {
+            return 'M';
+        }
+
+        if (str_starts_with($licenseNo, 'F')) {
+            return 'F';
+        }
+
+        return null;
     }
 
     private function resolveTournamentYear(Tournament $tournament): ?int
