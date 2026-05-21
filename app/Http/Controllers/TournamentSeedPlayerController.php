@@ -44,6 +44,7 @@ class TournamentSeedPlayerController extends Controller
     public function store(Request $request, Tournament $tournament, ProBowlerSeedService $seedService)
     {
         $validated = $request->validate([
+            'seed_player_id' => ['nullable', 'integer'],
             'license_no' => ['required', 'string', 'max:50'],
             'seed_source_type' => ['required', 'string', Rule::in(array_keys($this->seedSourceOptions()))],
             'priority_order' => ['nullable', 'integer', 'min:1', 'max:9999'],
@@ -53,6 +54,28 @@ class TournamentSeedPlayerController extends Controller
 
         $licenseNo = $this->normalizeLicenseNo($validated['license_no']);
         $bowler = $this->findBowlerByLicenseNo($licenseNo);
+
+        if (!empty($validated['seed_player_id'])) {
+            $seedPlayer = TournamentSeedPlayer::query()
+                ->where('tournament_id', $tournament->id)
+                ->where('id', $validated['seed_player_id'])
+                ->where('is_active', true)
+                ->firstOrFail();
+
+            $seedPlayer->update([
+                'pro_bowler_id' => $bowler?->id,
+                'license_no' => $licenseNo,
+                'seed_source_type' => $validated['seed_source_type'],
+                'priority_order' => $validated['priority_order'] ?? null,
+                'display_label' => $validated['display_label'] ?? null,
+                'note' => $validated['note'] ?? null,
+                'is_active' => true,
+            ]);
+
+            return redirect()
+                ->route('tournaments.seed_players.index', $tournament)
+                ->with('success', '大会別シードを更新しました。');
+        }
 
         $seedService->addTournamentSeed(
             tournament: $tournament,

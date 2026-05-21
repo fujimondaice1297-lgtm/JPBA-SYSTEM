@@ -202,7 +202,7 @@
                                 <th class="text-end">優先</th>
                                 <th>氏名</th>
                                 <th class="seed-license">ライセンスNo</th>
-                                <th>シード理由</th>
+                                <th>シード理由・PDF枠</th>
                                 <th>表示ラベル</th>
                                 <th>備考</th>
                                 <th class="text-center">操作</th>
@@ -211,34 +211,100 @@
                         <tbody>
                             @foreach($seedPlayers as $seedPlayer)
                                 @php
-                                    $sourceLabel = $seedSourceOptions[$seedPlayer->seed_source_type] ?? $seedPlayer->seed_source_type;
+                                    $updateFormId = 'seed-player-update-' . $seedPlayer->id;
                                     $bowlerName = $seedPlayer->bowler->name_kanji
                                         ?? $seedPlayer->bowler->name
                                         ?? $seedPlayer->bowler->display_name
                                         ?? '-';
+                                    $displayLicenseNo = $seedPlayer->license_no ? mb_substr(strtoupper(trim($seedPlayer->license_no)), -4) : '-';
                                 @endphp
                                 <tr>
-                                    <td class="text-end">{{ $seedPlayer->priority_order ?? '-' }}</td>
-                                    <td>{{ $bowlerName }}</td>
-                                    <td class="seed-license">{{ $seedPlayer->license_no ? mb_substr(strtoupper(trim($seedPlayer->license_no)), -4) : '-' }}</td>
-                                    <td>{{ $sourceLabel }}</td>
-                                    <td>{{ $seedPlayer->display_label ?? '-' }}</td>
-                                    <td class="small">{{ $seedPlayer->note ?? '-' }}</td>
-                                    <td class="text-center">
-                                        <form
-                                            method="POST"
-                                            action="{{ route('tournaments.seed_players.destroy', [$tournament, $seedPlayer]) }}"
-                                            onsubmit="return confirm('このシード設定を解除しますか？');"
-                                        >
+                                    <td class="text-end seed-priority-cell">
+                                        <form id="{{ $updateFormId }}" method="POST" action="{{ route('tournaments.seed_players.store', $tournament) }}">
                                             @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="btn btn-sm btn-outline-danger">解除</button>
+                                            <input type="hidden" name="seed_player_id" value="{{ $seedPlayer->id }}">
                                         </form>
+                                        <input
+                                            type="number"
+                                            name="priority_order"
+                                            value="{{ $seedPlayer->priority_order }}"
+                                            form="{{ $updateFormId }}"
+                                            class="form-control form-control-sm text-end seed-priority-input"
+                                            min="1"
+                                            max="9999"
+                                            placeholder="-"
+                                        >
+                                    </td>
+                                    <td>
+                                        <div class="fw-semibold">{{ $bowlerName }}</div>
+                                        <div class="small text-muted">表示：{{ $displayLicenseNo }}</div>
+                                    </td>
+                                    <td class="seed-license-edit">
+                                        <input
+                                            type="text"
+                                            name="license_no"
+                                            value="{{ $seedPlayer->license_no }}"
+                                            form="{{ $updateFormId }}"
+                                            class="form-control form-control-sm seed-license-input"
+                                            required
+                                        >
+                                    </td>
+                                    <td class="seed-source-edit">
+                                        <select
+                                            name="seed_source_type"
+                                            form="{{ $updateFormId }}"
+                                            class="form-select form-select-sm seed-source-select"
+                                            required
+                                        >
+                                            @foreach($seedSourceOptions as $value => $label)
+                                                <option value="{{ $value }}" @selected($seedPlayer->seed_source_type === $value)>
+                                                    {{ $label }}
+                                                </option>
+                                            @endforeach
+                                        </select>
+                                    </td>
+                                    <td class="seed-label-edit">
+                                        <input
+                                            type="text"
+                                            name="display_label"
+                                            value="{{ $seedPlayer->display_label }}"
+                                            form="{{ $updateFormId }}"
+                                            class="form-control form-control-sm seed-label-input"
+                                            placeholder="空欄でOK"
+                                        >
+                                    </td>
+                                    <td class="seed-note-edit">
+                                        <input
+                                            type="text"
+                                            name="note"
+                                            value="{{ $seedPlayer->note }}"
+                                            form="{{ $updateFormId }}"
+                                            class="form-control form-control-sm seed-note-input"
+                                            placeholder="備考"
+                                        >
+                                    </td>
+                                    <td class="text-center seed-action-cell">
+                                        <div class="d-flex flex-wrap justify-content-center gap-1">
+                                            <button type="submit" form="{{ $updateFormId }}" class="btn btn-sm btn-primary">保存</button>
+                                            <form
+                                                method="POST"
+                                                action="{{ route('tournaments.seed_players.destroy', [$tournament, $seedPlayer]) }}"
+                                                onsubmit="return confirm('このシード設定を解除しますか？');"
+                                            >
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="btn btn-sm btn-outline-danger">解除</button>
+                                            </form>
+                                        </div>
                                     </td>
                                 </tr>
                             @endforeach
                         </tbody>
                     </table>
+                </div>
+                <div class="p-3 small text-muted border-top">
+                    行内の内容を修正して「保存」を押すと、大会別追加シードをその場で更新できます。
+                    ライセンスNoのDB値は保持しつつ、一覧やPDFでは下4桁表示を基本にします。
                 </div>
             @endif
         </div>
@@ -263,6 +329,55 @@
     .priority-player-table th,
     .priority-player-table td {
         vertical-align: middle;
+    }
+
+    .seed-player-table td {
+        vertical-align: middle;
+    }
+
+    .seed-priority-cell {
+        width: 5rem;
+    }
+
+    .seed-priority-input {
+        min-width: 4.5rem;
+    }
+
+    .seed-license-edit {
+        width: 8.5rem;
+    }
+
+    .seed-license-input {
+        min-width: 8rem;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .seed-source-edit {
+        min-width: 17rem;
+    }
+
+    .seed-source-select {
+        min-width: 16.5rem;
+    }
+
+    .seed-label-edit {
+        width: 9rem;
+    }
+
+    .seed-label-input {
+        min-width: 8.5rem;
+    }
+
+    .seed-note-edit {
+        min-width: 13rem;
+    }
+
+    .seed-note-input {
+        min-width: 12.5rem;
+    }
+
+    .seed-action-cell {
+        width: 7.5rem;
     }
 </style>
 @endsection
