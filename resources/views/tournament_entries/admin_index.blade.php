@@ -66,6 +66,12 @@
       </div></div>
     </div>
     <div class="col-md-2">
+      <div class="card border-danger"><div class="card-body">
+        <div class="text-muted small">優先出場 未登録</div>
+        <div class="fs-4 fw-bold text-danger">{{ $summary['priority_missing_count'] ?? 0 }}</div>
+      </div></div>
+    </div>
+    <div class="col-md-2">
       <div class="card"><div class="card-body">
         <div class="text-muted small">希望シフトあり</div>
         <div class="fs-4 fw-bold">{{ $summary['preferred_shift_count'] }}</div>
@@ -90,6 +96,44 @@
       </div></div>
     </div>
   </div>
+
+  @if (($summary['priority_missing_count'] ?? 0) > 0)
+    <div class="card border-danger mb-4">
+      <div class="card-header fw-bold text-danger">優先出場者の未登録チェック</div>
+      <div class="card-body">
+        <p class="small text-muted mb-3">
+          優先出場者一覧に入っていますが、この大会のエントリー / ウェイティングにはまだ存在しない選手です。
+          必要に応じて、下の「ウェイティング登録」から登録してください。
+        </p>
+        <div class="table-responsive">
+          <table class="table table-sm table-bordered align-middle mb-0">
+            <thead>
+              <tr>
+                <th>優先順</th>
+                <th>種別</th>
+                <th>由来</th>
+                <th>ライセンスNo</th>
+                <th>氏名</th>
+                <th>備考</th>
+              </tr>
+            </thead>
+            <tbody>
+              @foreach (($summary['priority_missing_entries'] ?? []) as $priorityMissing)
+                <tr>
+                  <td>{{ $priorityMissing['priority_order_label'] ?? '-' }}</td>
+                  <td>{{ $priorityMissing['priority_label'] ?? '-' }}</td>
+                  <td>{{ $priorityMissing['priority_source_label'] ?? '-' }}</td>
+                  <td>{{ $priorityMissing['license_no'] ?? '-' }}</td>
+                  <td>{{ $priorityMissing['name_kanji'] ?? '-' }}</td>
+                  <td class="small">{{ $priorityMissing['priority_note'] ?? '-' }}</td>
+                </tr>
+              @endforeach
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  @endif
 
   <div class="card mb-4">
     <div class="card-header fw-bold">ウェイティング登録</div>

@@ -224,6 +224,7 @@ class TournamentEntryAdminController extends Controller
             ->get();
 
         $decorated = $this->decorateEntriesWithPriority($activeEntries, $priorityLookup);
+        $priorityCoverage = $this->buildPriorityCoverage($tournament, $priorityLookup);
 
         return [
             'entry_count' => (clone $base)->where('status', 'entry')->count(),
@@ -238,6 +239,109 @@ class TournamentEntryAdminController extends Controller
             'priority_waitlist_count' => $decorated
                 ->filter(fn (TournamentEntry $entry) => (bool) ($entry->is_priority_entry ?? false) && $entry->status === 'waiting')
                 ->count(),
+            'priority_total_count' => $priorityCoverage['total_count'],
+            'priority_missing_count' => $priorityCoverage['missing_count'],
+            'priority_missing_entries' => $priorityCoverage['missing_entries'],
+        ];
+    }
+
+    private function buildPriorityCoverage(Tournament $tournament, array $priorityLookup): array
+    {
+        $candidates = collect(array_values($priorityLookup))
+            ->filter(function (array $candidate) {
+                return !empty($candidate['pro_bowler_id']) || trim((string) ($candidate['license_no'] ?? '')) !== '';
+            })
+            ->unique(function (array $candidate) {
+                if (!empty($candidate['pro_bowler_id'])) {
+                    return 'id:' . (int) $candidate['pro_bowler_id'];
+                }
+
+                return 'license:' . strtoupper(trim((string) ($candidate['license_no'] ?? '')));
+            })
+            ->sortBy(fn (array $candidate) => sprintf(
+                '%06d-%s',
+                (int) ($candidate['priority_sort'] ?? 999999),
+                strtoupper((string) ($candidate['license_no'] ?? ''))
+            ))
+            ->values();
+
+        $bowlerIds = $candidates
+            ->pluck('pro_bowler_id')
+            ->filter()
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values();
+
+        $bowlersById = $bowlerIds->isNotEmpty()
+            ? ProBowler::query()->whereIn('id', $bowlerIds)->get()->keyBy('id')
+            : collect();
+
+        $activeEntries = TournamentEntry::query()
+            ->with('bowler')
+            ->where('tournament_id', $tournament->id)
+            ->whereIn('status', ['entry', 'waiting'])
+            ->get();
+
+        $entriesByBowlerId = $activeEntries
+            ->filter(fn (TournamentEntry $entry) => !is_null($entry->pro_bowler_id))
+            ->keyBy(fn (TournamentEntry $entry) => (int) $entry->pro_bowler_id);
+
+        $entriesByLicenseKey = [];
+        foreach ($activeEntries as $entry) {
+            $entryLicenseNo = strtoupper(trim((string) ($entry->bowler?->license_no ?? '')));
+            if ($entryLicenseNo === '') {
+                continue;
+            }
+
+            $entriesByLicenseKey['license:' . $entryLicenseNo] = $entry;
+
+            $tail = $this->licenseTail($entryLicenseNo);
+            if ($tail !== '') {
+                $entriesByLicenseKey['tail:' . $tail] = $entry;
+            }
+        }
+
+        $missingEntries = [];
+
+        foreach ($candidates as $candidate) {
+            $proBowlerId = !empty($candidate['pro_bowler_id']) ? (int) $candidate['pro_bowler_id'] : null;
+            $candidateLicenseNo = strtoupper(trim((string) ($candidate['license_no'] ?? '')));
+            $entry = null;
+
+            if ($proBowlerId && $entriesByBowlerId->has($proBowlerId)) {
+                $entry = $entriesByBowlerId->get($proBowlerId);
+            }
+
+            if (!$entry && $candidateLicenseNo !== '') {
+                $entry = $entriesByLicenseKey['license:' . $candidateLicenseNo] ?? null;
+
+                if (!$entry) {
+                    $tail = $this->licenseTail($candidateLicenseNo);
+                    $entry = $tail !== '' ? ($entriesByLicenseKey['tail:' . $tail] ?? null) : null;
+                }
+            }
+
+            if ($entry) {
+                continue;
+            }
+
+            $bowler = $proBowlerId ? $bowlersById->get($proBowlerId) : null;
+
+            $missingEntries[] = [
+                'license_no' => $bowler?->license_no ?: ($candidate['license_no'] ?? null),
+                'name_kanji' => $bowler?->name_kanji ?: '-',
+                'priority_order_label' => $candidate['priority_order_label'] ?? '-',
+                'priority_label' => $candidate['priority_label'] ?? '-',
+                'priority_source_label' => $candidate['priority_source_label'] ?? '-',
+                'priority_note' => $candidate['priority_note'] ?? null,
+                'priority_sort' => (int) ($candidate['priority_sort'] ?? 999999),
+            ];
+        }
+
+        return [
+            'total_count' => $candidates->count(),
+            'missing_count' => count($missingEntries),
+            'missing_entries' => array_slice($missingEntries, 0, 20),
         ];
     }
 

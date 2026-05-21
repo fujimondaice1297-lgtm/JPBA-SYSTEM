@@ -45,6 +45,12 @@
       </div></div>
     </div>
     <div class="col-md-2">
+      <div class="card border-danger"><div class="card-body">
+        <div class="text-muted small">優先出場 未登録</div>
+        <div class="fs-4 fw-bold text-danger">{{ $summary['priority_missing_count'] ?? 0 }}</div>
+      </div></div>
+    </div>
+    <div class="col-md-2">
       <div class="card"><div class="card-body">
         <div class="text-muted small">希望シフトあり</div>
         <div class="fs-4 fw-bold">{{ $summary['preferred_shift_count'] }}</div>
@@ -69,6 +75,14 @@
       </div></div>
     </div>
   </div>
+
+  @if (($summary['priority_missing_count'] ?? 0) > 0)
+    <div class="alert alert-warning small">
+      優先出場者一覧に登録済みで、まだエントリー / ウェイティングに存在しない選手が
+      <strong>{{ $summary['priority_missing_count'] }}</strong> 名います。
+      抽選前にエントリー一覧で確認してください。
+    </div>
+  @endif
 
   <div class="card mb-4">
     <div class="card-header fw-bold">事務局一括抽選</div>
