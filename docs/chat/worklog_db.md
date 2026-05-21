@@ -4962,3 +4962,174 @@ User::where('email','domaine-d@i.softbank.jp')->exists(); // true
   - このログ記録時点では、DBスキーマ変更は行っていない。
   - そのため、この時点では `migrations` / `docs/db/data_dictionary.md` / `docs/db/ER.dbml` の更新は不要。
   - 実装に入る段階で、必ず `migrations` / `docs/db/data_dictionary.md` / `docs/db/ER.dbml` をセットで更新する。
+
+## 2026-05-20 シードプロ `S` 表示・年度別シード生成・大会優先出場者PDF
+
+- 目的:
+  - 前回整理した「シードプロ識別 `S` 表示 / ランキング・トーナメントシード設計方針」を、実画面・PDF・大会別優先出場者一覧まで接続する。
+  - 前年度ポイントランキング上位者から翌年度のトーナメントシードを生成し、同じ年度・性別の大会ではライセンスNo欄に `S 0524` のように表示できるようにする。
+  - 大会ごとの例外シード・手動追加シードも設定できるようにし、最終的にはJPBA公式PDFの「出場優先順位表」に近い形で出せるようにする。
+  - 今回も ProTest は対象外。
+
+- 作業開始時の前提:
+  - 直前までに、シードプロ識別の正本設計方針はログ化済み。
+  - `data_dictionary.md` / `ER.dbml` には、ランキング・年度別シード・大会別シードに必要なテーブル方針が入っている状態。
+  - 作業中は、既存データがあるテーブルの破壊的変更は行わず、追加済みのランキング / シード系テーブルと既存の大会成績系データを使う方針にした。
+  - 変更ごとに `git status -sb` / `git diff --name-only` を確認し、差分対象だけを扱った。
+
+- シード表示サービス:
+  - `app/Services/ProBowlerSeedService.php` を追加した。
+  - ライセンスNo表示を、通常表示とシード表示で切り替えられるようにした。
+    - 通常: `0524`
+    - シード対象: `S 0524`
+  - PDFだけでなく、速報・最終成績・snapshot詳細などでも同じ判定を使えるようにした。
+  - `formatLicenseForPdf()` / `formatLicenseForTournamentPdf()` などの表示用メソッドを確認した。
+  - Tinkerで `M00001443` が `S 1443` / `1443` に切り替わることを確認した。
+
+- `S` 表示の横展開:
+  - 大会成績一覧、PDF、snapshot詳細、速報系画面へシード表示を反映した。
+  - 対象となった主な表示は以下。
+    - `resources/views/tournament_results/show.blade.php`
+    - `resources/views/tournament_results/pdfs/partials/context.blade.php`
+    - `resources/views/tournament_result_snapshots/show.blade.php`
+    - `resources/views/scores/result.blade.php`
+    - `resources/views/scores/round_robin_result.blade.php`
+    - `resources/views/scores/shootout_result.blade.php`
+    - `resources/views/scores/single_elimination_result.blade.php`
+  - 途中で `stdClass::$player` 未定義エラーが発生したため、選手データを object / array / snapshot 行の複数形に耐える形へ修正した。
+  - ラウンドロビン画面ではライセンスNo欄の右詰め・横幅調整も行い、`S 0524` と通常4桁の両方が自然に収まるようにした。
+
+- 年度別シード一覧:
+  - `app/Http/Controllers/ProBowlerSeedListController.php` を追加した。
+  - `resources/views/pro_bowler_seed_lists/index.blade.php` を追加した。
+  - `resources/views/pro_bowler_seed_lists/show.blade.php` を追加した。
+  - `routes/web.php` に年度別シード一覧のルートを追加した。
+  - 画面では、前年度ポイントランキングから翌年度の年度別シード一覧を自動生成できるようにした。
+    - 例: 2025年男子ポイントランキング上位24名 → 2026年男子シード
+  - 2025年ランキング候補がまだDBに無い場合でも、元ランキング年度を直接入力できるようにした。
+  - 同じシード年度・性別の一覧が既にある場合は、再生成でランキング結果に差し替える方針にした。
+  - 例外対応として、ライセンスNo貼り付けによる手動登録導線も残した。
+  - 入力フォームの横並びが崩れていたため、grid幅を調整し、シード年度 / 性別 / 元ランキング年度 / 上位人数 / 備考の横並びを揃えた。
+
+- 仮ランキング・年度別シード生成確認:
+  - 2025年のポイントランキングデータが空だったため、確認用として2025年男子 / 女子ポイントランキングを仮投入した。
+  - そのデータを元に、2026年男子 / 女子の年度別シード一覧を生成した。
+  - Tinkerで以下を確認した。
+    - `pro_bowler_seed_lists` に 2026年男子 / 女子が存在する。
+    - それぞれ `players=24` である。
+  - AAAカップは男子大会のため、男子シードのみが `S` 対象になり、女子シードが混入しないことを確認した。
+  - 手動追加シードを削除した場合、年度別シードに含まれていなければ `S` は消え、年度別シードに含まれていれば `S` が復活することを確認した。
+
+- 大会別シード設定:
+  - `app/Http/Controllers/TournamentSeedPlayerController.php` を追加・拡張した。
+  - `resources/views/tournament_seed_players/index.blade.php` を追加・拡張した。
+  - `routes/web.php` に大会別シード設定ルートを追加した。
+  - 大会編集画面 `resources/views/tournaments/edit.blade.php` に「シード設定」ボタンを追加し、運用者が大会編集画面から大会別シード設定へ移動できるようにした。
+  - 大会別シード設定画面では、ライセンスNoを入力して手動追加シードを登録・解除できるようにした。
+  - 年度別シード一覧に登録済みの選手と、大会別追加シードを統合して、大会優先出場者一覧として表示できるようにした。
+
+- 大会優先出場者一覧PDF:
+  - `/tournaments/{tournament}/seed-players/pdf` を追加した。
+  - 大会別シード設定画面に「優先出場者PDF」ボタンを追加した。
+  - `resources/views/tournament_seed_players/pdf.blade.php` を追加した。
+  - PDFでは、まずトーナメントシードプロ（TS）一覧を表示する構成にした。
+  - 表示列は、公式PDFサンプルに寄せて以下へ整理した。
+    - 優先順位
+    - 前年ランキング
+    - ライセンスNo
+    - 氏名
+    - 期
+    - 種別
+  - フリガナ列、由来列、備考列は不要と判断し削除した。
+  - 見出しは `2026年優先出場順位` のような表現へ寄せた。
+
+- PDFエラー対応:
+  - PDFファイル名生成時に `preg_replace(): Unknown modifier '\'` が発生した。
+    - 原因: ファイル名禁止文字を消す正規表現の区切り文字・バックスラッシュ指定が崩れていた。
+    - 対応: 正規表現を使わず `str_replace()` で禁止文字を `_` に置換する方式へ変更。
+  - PDF日本語表示で文字化けが発生した。
+    - 当初 `@font-face` で `storage/fonts/ipaexg.ttf` を直接指定したが、Dompdfのフォントキャッシュと噛み合わず `Undefined array key ... ipaexg_normal...` が発生した。
+    - Controller側で `defaultFont => ipaexg` を強制していたことも原因になった。
+    - 最終的に、PDF Blade側の `@font-face` を削除し、Controller側の `defaultFont` 強制指定も外した。
+    - さらに太字指定を避け、日本語表示を既存PDFと同じ安全寄せにした。
+    - 必要に応じて `vendor/dompdf/dompdf/lib/fonts/ipaexg*` のキャッシュを削除する方針を確認した。
+  - 最終的にPDFは表示され、日本語文字化けも解消した。
+
+- 公式PDFサンプルへの寄せ:
+  - 参考PDFの構成に合わせ、トーナメントシードプロ以外の優先枠スペースを確保した。
+  - 該当者がまだいない枠でも `該当者なし（0名）` と表示し、後から実データを流し込めるようにした。
+  - 確保した主な枠:
+    - 公認T/M歴代優勝者シードプロ
+    - 永久シードプロ（V20）
+    - 全日本選手権者シード（JS）
+    - 準永久シードプロ（V10）
+    - 本大会スポンサー推薦
+    - プロテスト実技免除合格者
+    - プロテストトップ合格者
+    - シーズントライアル出場者
+    - 主催者（スポンサー）推薦
+  - 現時点では、該当者がいない枠は0名表示で場所を確保する段階。
+  - 次段で、大会別追加シードの種別をこれらの枠に正確に流し込む必要がある。
+
+- 確認済みコマンド:
+  - `php -l app/Services/ProBowlerSeedService.php`
+  - `php -l app/Http/Controllers/ProBowlerSeedListController.php`
+  - `php -l app/Http/Controllers/TournamentSeedPlayerController.php`
+  - `php -l routes/web.php`
+  - `php artisan optimize:clear`
+  - `php artisan view:cache`
+  - `php artisan route:list | findstr seed`
+  - Tinkerによる `formatLicenseForTournamentPdf()` 確認
+  - Tinkerによる年度別シード一覧件数確認
+  - Tinkerによる大会別シード削除後の `S` 消滅 / 復活確認
+
+- コミット / Push:
+  - 作業を段階ごとに commit / push 済み。
+  - 最終コミット後、`git status -sb` は `## main...origin/main`。
+  - `git diff --name-only` は空で差分なし。
+  - 最後のコミットメッセージ案は `feat: 大会優先出場者一覧PDFを追加` とした。
+
+- DB / 辞書:
+  - シード設計の実装では、ランキング / 年度別シード / 大会別シードの正本として以下を使う方針が確定した。
+    - `pro_bowler_ranking_snapshots`
+    - `pro_bowler_ranking_rows`
+    - `pro_bowler_seed_lists`
+    - `pro_bowler_seed_list_players`
+    - `tournament_seed_players`
+  - これらは `data_dictionary.md` / `ER.dbml` 側でも正本管理対象として扱う。
+  - 最終の大会優先出場者PDF追加作業自体は、既存のシード系テーブルと既存画面の拡張であり、新たなDBスキーマ変更は行っていない。
+  - そのため、最後のPDF追加コミットでは `migrations` / `docs/db/data_dictionary.md` / `docs/db/ER.dbml` の追加更新は不要と判断した。
+
+- 現時点で完了したこと:
+  - シードプロ `S` 表示サービス。
+  - 大会成績一覧 / PDF / snapshot / 速報系画面への `S` 表示反映。
+  - 年度別シード一覧画面。
+  - 前年度ポイントランキングからの年度別シード自動生成。
+  - 2026年男子 / 女子シード一覧の生成確認。
+  - 大会編集画面からの大会別シード設定導線。
+  - 大会別追加シード設定画面。
+  - 大会優先出場者一覧の画面表示。
+  - 大会優先出場者一覧PDF。
+  - 公式PDFサンプルに合わせた、トーナメントシード以外の優先枠の場所確保。
+  - PDF日本語文字化け・Dompdfフォントキャッシュ問題の解消。
+
+- 残タスク / 次に詰める候補:
+  1. 大会別追加シードの種別入力を、公式PDF右側の各枠へ正確に割り振る。
+     - 永久シード
+     - 準永久シード
+     - 歴代優勝者
+     - スポンサー推薦
+     - プロテスト枠
+     - シーズントライアル枠
+  2. 大会エントリー導線へ、優先出場順位をどう反映するか整理する。
+  3. 年度末のランキング確定処理と、実ランキング取り込み導線を整理する。
+  4. 全日本選手権用に、当該年度途中ランキングを使う運用を設計する。
+  5. ST Winter 2026 C 実データ投入コマンド整理。
+  6. 配分系テーブル整理。
+  7. ダブルエリミネーション方式の要件整理。
+
+- 現時点の判断:
+  - **シードプロ `S` 表示は、設計から実表示・年度別シード生成・大会別シード設定・大会優先出場者PDFまで一通り接続できた。**
+  - ただし、公式PDF右側にある各種優先枠は、現時点では枠の確保まで。
+  - 次は、各シード種別の入力値をどの枠へ流すかを固めるのが自然。
+

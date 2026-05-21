@@ -1,5 +1,5 @@
 // Auto-generated from docs/db/data_dictionary.md
-// Generated at: 2026-05-15T16:39:09+09:00
+// Generated at: 2026-05-21T09:39:50+09:00
 
 Project JPBA_SYSTEM {
   database_type: 'PostgreSQL'

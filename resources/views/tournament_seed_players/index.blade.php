@@ -34,6 +34,7 @@
         <div class="fw-bold">この画面の役割</div>
         <div>
             この大会だけでシード扱いにする選手を設定します。
+            シード理由は、優先出場者PDF右側の各枠に対応しています。
             年度別シード一覧に登録済みの選手と、この画面で追加した大会別シードを合わせて、
             下の「大会優先出場者一覧」で確認できます。
             S表示はライセンスNoのDB値を変更せず、画面・成績表・PDF上だけで <strong>S 0524</strong> のように表示します。
@@ -46,7 +47,7 @@
             <form method="POST" action="{{ route('tournaments.seed_players.store', $tournament) }}">
                 @csrf
 
-                <div class="row g-3 align-items-end">
+                <div class="row g-3 align-items-start">
                     <div class="col-md-3">
                         <label for="license_no" class="form-label">ライセンスNo</label>
                         <input
@@ -63,8 +64,8 @@
                         @enderror
                     </div>
 
-                    <div class="col-md-3">
-                        <label for="seed_source_type" class="form-label">シード理由</label>
+                    <div class="col-md-4">
+                        <label for="seed_source_type" class="form-label">シード理由・PDF枠</label>
                         <select
                             id="seed_source_type"
                             name="seed_source_type"
@@ -80,6 +81,9 @@
                         @error('seed_source_type')
                             <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
+                        <div class="form-text">
+                            PDF右側の②〜⑪枠へ自動振り分けします。TSは左側の①に表示します。
+                        </div>
                     </div>
 
                     <div class="col-md-2">
@@ -107,14 +111,15 @@
                             name="display_label"
                             value="{{ old('display_label') }}"
                             class="form-control @error('display_label') is-invalid @enderror"
-                            placeholder="未入力可"
+                            placeholder="通常は空欄でOK"
                         >
                         @error('display_label')
                             <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
                     </div>
 
-                    <div class="col-md-2">
+                    <div class="col-md-1">
+                        <label class="form-label d-none d-md-block">&nbsp;</label>
                         <button type="submit" class="btn btn-primary w-100">追加</button>
                     </div>
 
@@ -126,7 +131,7 @@
                             name="note"
                             value="{{ old('note') }}"
                             class="form-control @error('note') is-invalid @enderror"
-                            placeholder="例：歴代優勝者枠、要項確認済み など"
+                            placeholder="例：要項確認済み、対象大会名、推薦理由など"
                         >
                         @error('note')
                             <div class="invalid-feedback">{{ $message }}</div>
@@ -178,7 +183,7 @@
                 </div>
                 <div class="p-3 small text-muted border-top">
                     年度別シードと大会別追加シードを合わせた確認用一覧です。
-                    公式PDFの完全再現には、会場別出場枠・スポンサー推薦・プロテスト枠などの追加データが必要です。
+                    PDF右側の各枠は、登録時に選んだシード理由・PDF枠をもとに自動振り分けします。
                 </div>
             @endif
         </div>
@@ -215,7 +220,7 @@
                                 <tr>
                                     <td class="text-end">{{ $seedPlayer->priority_order ?? '-' }}</td>
                                     <td>{{ $bowlerName }}</td>
-                                    <td class="seed-license">{{ $seedPlayer->license_no ?? '-' }}</td>
+                                    <td class="seed-license">{{ $seedPlayer->license_no ? mb_substr(strtoupper(trim($seedPlayer->license_no)), -4) : '-' }}</td>
                                     <td>{{ $sourceLabel }}</td>
                                     <td>{{ $seedPlayer->display_label ?? '-' }}</td>
                                     <td class="small">{{ $seedPlayer->note ?? '-' }}</td>

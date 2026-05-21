@@ -32,6 +32,11 @@ class ProBowlerSeedService
     public const SOURCE_CURRENT_YEAR_WINNER = 'current_year_winner';
     public const SOURCE_PREVIOUS_YEAR_WINNER = 'previous_year_winner';
     public const SOURCE_PAST_CHAMPION = 'past_champion';
+    public const SOURCE_EVENT_SPONSOR_RECOMMENDATION = 'event_sponsor_recommendation';
+    public const SOURCE_ORGANIZER_RECOMMENDATION = 'organizer_recommendation';
+    public const SOURCE_PRO_TEST_PRACTICAL_EXEMPT = 'pro_test_practical_exempt';
+    public const SOURCE_PRO_TEST_TOP_PASSER = 'pro_test_top_passer';
+    public const SOURCE_SEASON_TRIAL_PARTICIPANT = 'season_trial_participant';
     public const SOURCE_MANUAL = 'manual';
 
     /**
@@ -662,7 +667,12 @@ class ProBowlerSeedService
             self::SOURCE_ALL_JAPAN_CHAMPION => 'JS',
             self::SOURCE_CURRENT_YEAR_WINNER => 'CS1',
             self::SOURCE_PREVIOUS_YEAR_WINNER => 'CS2',
-            self::SOURCE_PAST_CHAMPION => '歴代優勝者',
+            self::SOURCE_PAST_CHAMPION => '公認T/M歴代優勝者シード',
+            self::SOURCE_EVENT_SPONSOR_RECOMMENDATION => '本大会スポンサー推薦',
+            self::SOURCE_ORGANIZER_RECOMMENDATION => '主催者推薦',
+            self::SOURCE_PRO_TEST_PRACTICAL_EXEMPT => 'プロテスト実技免除合格者',
+            self::SOURCE_PRO_TEST_TOP_PASSER => 'プロテストトップ合格者',
+            self::SOURCE_SEASON_TRIAL_PARTICIPANT => 'シーズントライアル出場者',
             self::SOURCE_MANUAL => '手動',
             default => $seedSourceType,
         };

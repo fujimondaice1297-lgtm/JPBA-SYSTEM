@@ -127,6 +127,9 @@ class TournamentSeedPlayerController extends Controller
                 'ranking_rank' => $row->ranking_rank ?? null,
                 'base_ranking_year' => $row->base_ranking_year ?? null,
                 'note' => '前年度ランキング由来',
+                'seed_source_type' => ProBowlerSeedService::SOURCE_PREVIOUS_YEAR_RANKING_TOP24,
+                'seed_source_types' => [ProBowlerSeedService::SOURCE_PREVIOUS_YEAR_RANKING_TOP24],
+                'seed_category' => $row->seed_category ?? null,
             ];
         }
 
@@ -148,8 +151,18 @@ class TournamentSeedPlayerController extends Controller
                 if (($rows[$key]['period_label'] ?? '') === '' && $bowlerPeriod !== '') {
                     $rows[$key]['period_label'] = $bowlerPeriod;
                 }
+
                 $rows[$key]['source_label'] .= ' / 大会別追加';
-                $rows[$key]['seed_label'] = $seedPlayer->display_label ?: $rows[$key]['seed_label'];
+                $rows[$key]['seed_source_types'] = array_values(array_unique(array_filter(array_merge(
+                    $rows[$key]['seed_source_types'] ?? [],
+                    [$seedPlayer->seed_source_type]
+                ))));
+
+                if (!$this->isTournamentSeedSourceType($rows[$key]['seed_source_type'] ?? null)) {
+                    $rows[$key]['seed_source_type'] = $seedPlayer->seed_source_type;
+                    $rows[$key]['seed_label'] = $seedPlayer->display_label ?: $sourceLabel;
+                }
+
                 $rows[$key]['note'] = trim(($rows[$key]['note'] ?? '') . ' ' . ($seedPlayer->note ?? ''));
                 if ($seedPlayer->priority_order !== null) {
                     $rows[$key]['sort'] = (int) $seedPlayer->priority_order;
@@ -170,6 +183,9 @@ class TournamentSeedPlayerController extends Controller
                 'ranking_rank' => $seedPlayer->ranking_rank,
                 'base_ranking_year' => null,
                 'note' => $seedPlayer->note ?? '',
+                'seed_source_type' => $seedPlayer->seed_source_type,
+                'seed_source_types' => [$seedPlayer->seed_source_type],
+                'seed_category' => null,
             ];
         }
 
@@ -265,15 +281,20 @@ class TournamentSeedPlayerController extends Controller
     private function seedSourceOptions(): array
     {
         return [
-            ProBowlerSeedService::SOURCE_PREVIOUS_YEAR_RANKING_TOP24 => '前年度ランキング上位24名',
-            ProBowlerSeedService::SOURCE_CURRENT_YEAR_RANKING => '当該年度ランキング',
-            ProBowlerSeedService::SOURCE_PERMANENT_SEED => '永久シード',
-            ProBowlerSeedService::SOURCE_SEMI_PERMANENT_SEED => '準永久シード',
-            ProBowlerSeedService::SOURCE_ALL_JAPAN_CHAMPION => '全日本選手権者シード',
-            ProBowlerSeedService::SOURCE_CURRENT_YEAR_WINNER => '当該年度優勝者シード',
-            ProBowlerSeedService::SOURCE_PREVIOUS_YEAR_WINNER => '前年度優勝者シード',
-            ProBowlerSeedService::SOURCE_PAST_CHAMPION => '歴代優勝者',
-            ProBowlerSeedService::SOURCE_MANUAL => '手動追加',
+            ProBowlerSeedService::SOURCE_PREVIOUS_YEAR_RANKING_TOP24 => '① トーナメントシード（前年度ランキング上位24名）',
+            ProBowlerSeedService::SOURCE_CURRENT_YEAR_RANKING => '① トーナメントシード（当該年度ランキング）',
+            ProBowlerSeedService::SOURCE_PAST_CHAMPION => '② 公認T/M歴代優勝者シードプロ',
+            ProBowlerSeedService::SOURCE_PERMANENT_SEED => '③ 永久シードプロ（V20）',
+            ProBowlerSeedService::SOURCE_ALL_JAPAN_CHAMPION => '④ 全日本選手権者シード（JS）',
+            ProBowlerSeedService::SOURCE_CURRENT_YEAR_WINNER => '⑤ 当該年度優勝者シード',
+            ProBowlerSeedService::SOURCE_PREVIOUS_YEAR_WINNER => '⑤ 前年度優勝者シード',
+            ProBowlerSeedService::SOURCE_SEMI_PERMANENT_SEED => '⑥ 準永久シードプロ（V10）',
+            ProBowlerSeedService::SOURCE_EVENT_SPONSOR_RECOMMENDATION => '⑦ 本大会スポンサー推薦',
+            ProBowlerSeedService::SOURCE_PRO_TEST_PRACTICAL_EXEMPT => '⑧ プロテスト実技免除合格者',
+            ProBowlerSeedService::SOURCE_PRO_TEST_TOP_PASSER => '⑨ プロテストトップ合格者',
+            ProBowlerSeedService::SOURCE_SEASON_TRIAL_PARTICIPANT => '⑩ シーズントライアル出場者',
+            ProBowlerSeedService::SOURCE_ORGANIZER_RECOMMENDATION => '⑪ 主催者（スポンサー）推薦',
+            ProBowlerSeedService::SOURCE_MANUAL => 'その他：手動追加',
         ];
     }
 
@@ -344,6 +365,15 @@ class TournamentSeedPlayerController extends Controller
         };
     }
 
+    private function isTournamentSeedSourceType(?string $seedSourceType): bool
+    {
+        return in_array($seedSourceType, [
+            ProBowlerSeedService::SOURCE_SEED_LIST,
+            ProBowlerSeedService::SOURCE_PREVIOUS_YEAR_RANKING_TOP24,
+            ProBowlerSeedService::SOURCE_CURRENT_YEAR_RANKING,
+        ], true);
+    }
+
     private function priorityKey(?int $proBowlerId, ?string $licenseNo): string
     {
         if ($proBowlerId !== null) {
@@ -359,7 +389,11 @@ class TournamentSeedPlayerController extends Controller
     {
         $licenseNo = $this->normalizeLicenseNo($licenseNo);
 
-        return $licenseNo ?: '-';
+        if ($licenseNo === '') {
+            return '-';
+        }
+
+        return mb_substr($licenseNo, -4);
     }
 
     private function normalizeLicenseNo(?string $licenseNo): string
