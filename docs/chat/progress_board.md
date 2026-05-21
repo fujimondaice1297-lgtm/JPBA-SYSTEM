@@ -830,13 +830,18 @@
   - `php artisan view:cache`
 - [✓] 今回作業分は commit / push 済みで、最終状態は差分なし
 - [✓] ProTest は今回も対象外
-- [ ] 次の候補は、大会別追加シードの種別選択を公式PDF右側の枠へ正確に流すこと
+- [✓] 大会別追加シードの種別選択を公式PDF右側の枠へ正確に流す処理を実装した
   - 永久シード
   - 準永久シード
-  - 歴代優勝者
-  - スポンサー推薦
-  - プロテスト枠
-  - シーズントライアル枠
+  - 全日本選手権者シード
+  - 公認T/M歴代優勝者シード
+  - 本大会スポンサー推薦
+  - 主催者（スポンサー）推薦
+  - プロテスト実技免除合格者
+  - プロテストトップ合格者
+  - シーズントライアル出場者
+- [✓] 大会別追加シードの編集機能を追加し、優先順位 / ライセンスNo / シード理由・PDF枠 / 表示ラベル / 備考を画面上で更新できるようにした
+- [✓] 大会別追加シードの重複登録防止と、大会性別を優先した4桁ライセンス照合を実装した
 - [ ] 大会エントリー導線へ、優先出場順位をどう反映するかは後続で整理する
 - [ ] 実ランキング取り込み・年度末確定処理・全日本選手権用の当該年度途中ランキング運用は後続で整理する
 
@@ -846,4 +851,49 @@
 - PDF上のライセンスNoは既存方針どおり下4桁を基本とし、シード対象のみ `S 0524` のように表示する
 - 大会優先出場者PDFは、該当者がまだいない優先枠も `0名` で場所を確保する
 - Dompdfで日本語PDFを追加する場合、安易に `@font-face` や `defaultFont` を追加せず、既存の日本語表示方式に合わせる
+
+#### 2026-05-21 メモ（大会別追加シード種別・優先出場者PDF・編集/重複/性別照合 完了）
+- [✓] 大会別追加シードの `seed_source_type` 運用値を、公式PDF右側の優先枠に対応できるよう整理した
+  - `permanent_seed`
+  - `semi_permanent_seed`
+  - `all_japan_champion`
+  - `past_champion`
+  - `event_sponsor_recommendation`
+  - `organizer_recommendation`
+  - `pro_test_practical_exempt`
+  - `pro_test_top_passer`
+  - `season_trial_participant`
+  - `manual`
+- [✓] `docs/db/data_dictionary.md` の `tournament_seed_players.seed_source_type` 説明を更新し、`php tools/generate_er_from_dictionary.php` で `docs/db/ER.dbml` を再生成した
+- [✓] DBカラム追加・型変更・NOT NULL化・rename は行っていないため、migration は追加していない
+- [✓] 大会別シード設定画面で、シード理由・PDF枠を選択しやすくした
+- [✓] 大会優先出場者PDFで、年度別TSは左側①のトーナメントシード枠へ表示し、大会別追加シードは右側②〜⑪の該当枠へ自動振り分けするようにした
+- [✓] 該当者がいない右側枠は、引き続き `該当者なし（0名）` として表示する
+- [✓] 優先出場者PDFのライセンスNo表示を下4桁へ統一した
+- [✓] 優先出場者PDFの文字サイズ・カラム幅・折り返し・右側枠の見出しを調整した
+- [✓] Dompdfの日本語PDF対策として、安易な `@font-face` 追加や Controller 側 `defaultFont` 強制は行わず、既存PDFと同じ安全な表示方式を維持した
+- [✓] 大会別追加シードの編集機能を追加した
+  - 優先順位
+  - ライセンスNo
+  - シード理由・PDF枠
+  - 表示ラベル
+  - 備考
+- [✓] 編集は既存の `POST tournaments/{tournament}/seed-players` を追加・編集兼用で使い、route追加なしで対応した
+- [✓] 同一大会内で同じ選手を二重登録しないよう、追加時の重複チェックを追加した
+- [✓] 4桁ライセンス入力時は、大会の対象性別を優先して照合するようにした
+  - 男子大会で `0001` → 男子ライセンスを優先
+  - 女子大会で `0001` → 女子ライセンスを優先
+  - 明示的に `M...` / `F...` を入力した場合、対象大会の性別と合わなければ止める
+- [✓] 年度別TSにも該当する大会別追加シードは、画面上で注意表示し、PDFでは左側①のTS枠を優先する方針にした
+- [✓] 確認済みコマンド
+  - `php -l app/Services/ProBowlerSeedService.php`
+  - `php -l app/Http/Controllers/TournamentSeedPlayerController.php`
+  - `php tools/generate_er_from_dictionary.php`
+  - `php artisan optimize:clear`
+  - `php artisan view:cache`
+  - `php artisan route:list | findstr seed`
+- [✓] 今回分は commit / push 済みで、push後に差分なしを確認済み
+- [ ] 次の自然な後続は、大会エントリー導線へ優先出場順位をどう反映するか整理すること
+- [ ] 実ランキング取り込み・年度末確定処理・全日本選手権用の当該年度途中ランキング運用は後続で整理する
+- [ ] ST Winter 2026 C 実データ投入コマンド整理、配分系テーブル整理、ダブルエリミネーション方式は後続タスクとして維持する
 
