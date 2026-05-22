@@ -1,156 +1,159 @@
-
-## 2026-05-21 大会別追加シード種別・優先出場者PDF・編集/重複/性別照合 完了
+## 2026-05-22 大会エントリー管理への優先出場順位反映・取消/一括繰り上げ 完了
 
 - 目的:
-  - 直前までに作成したシードプロ `S` 表示、年度別シード一覧、大会別シード設定、大会優先出場者PDFを、実運用で使いやすい状態へ仕上げる。
-  - 公式PDF右側にあるトーナメントシード以外の優先枠へ、大会別追加シードを種別ごとに自動振り分けできるようにする。
-  - 登録ミスが起きた場合に削除→再登録だけでなく、画面上で編集できるようにする。
-  - 同一大会内の重複登録と、男女で同じ下4桁ライセンスを誤照合する事故を防ぐ。
+  - 2026-05-21 までに整備した年度別シード一覧・大会別追加シード・大会優先出場者PDFを、大会エントリー管理・ウェイティング管理・抽選管理へ接続する。
+  - 優先出場者なのにエントリー側へ存在しない選手を見落とさないようにする。
+  - 参加者 / ウェイティング者の取り消し、一括参加繰り上げを管理画面から扱えるようにする。
+  - 優先順位の序列では、優先出場順位だけでなく、参加権利の有無を最優先にして実運用上の事故を防ぐ。
 
 - 作業開始時の前提:
-  - 直前までに以下は完了済み。
-    - `ProBowlerSeedService` によるシードプロ `S` 表示の土台。
-    - 年度別シード一覧 `pro_bowler_seed_lists` / `pro_bowler_seed_list_players`。
-    - 大会別シード `tournament_seed_players`。
-    - 大会優先出場者一覧画面。
-    - 大会優先出場者PDF。
+  - シードプロ `S` 表示、年度別シード一覧、大会別追加シード、大会優先出場者PDF、編集機能、重複防止、性別照合は完了済み。
   - 作業開始時は commit / push 済みで差分なし。
   - ProTest は今回も対象外。
   - 既存テーブルの破壊的変更は禁止。
-  - DB変更が必要な場合のみ、`migrations` / `docs/db/data_dictionary.md` / `docs/db/ER.dbml` をセット更新する方針を維持。
+  - DB変更が必要な場合のみ `migrations` / `docs/db/data_dictionary.md` / `docs/db/ER.dbml` をセット更新する方針を維持。
 
 - DB / 辞書:
-  - `tournament_seed_players.seed_source_type` は既に文字列カラムとして存在していたため、DBカラム追加は不要と判断した。
-  - 大会別追加シードの種別は、既存カラムの運用値追加として扱った。
-  - `docs/db/data_dictionary.md` の `tournament_seed_players.seed_source_type` 説明を更新した。
-  - `php tools/generate_er_from_dictionary.php` を実行し、`docs/db/ER.dbml` を再生成した。
-  - DBカラム追加・型変更・NOT NULL化・rename は行っていないため、migration は追加していない。
-  - 追加・整理した主な運用値は以下。
-    - `permanent_seed`
-    - `semi_permanent_seed`
-    - `all_japan_champion`
-    - `current_year_winner`
-    - `previous_year_winner`
-    - `past_champion`
-    - `event_sponsor_recommendation`
-    - `organizer_recommendation`
-    - `pro_test_practical_exempt`
-    - `pro_test_top_passer`
-    - `season_trial_participant`
-    - `manual`
+  - 今回は既存の `tournament_entries`、`tournament_seed_players`、年度別シード一覧を参照・更新するアプリ実装のみで対応した。
+  - `tournament_entries` には既に以下の運用カラムがあるため、追加カラムは不要と判断した。
+    - `status`
+    - `shift`
+    - `lane`
+    - `shift_drawn`
+    - `lane_drawn`
+    - `checked_in_at`
+    - `waitlist_priority`
+    - `waitlisted_at`
+    - `waitlist_note`
+    - `promoted_from_waitlist_at`
+    - `preferred_shift_code`
+  - DBカラム追加・型変更・NOT NULL化・rename は行っていない。
+  - そのため、`migrations` / `docs/db/data_dictionary.md` / `docs/db/ER.dbml` の追加更新は不要と判断した。
 
-- 大会別追加シードの種別入力:
-  - `resources/views/tournament_seed_players/index.blade.php` の追加フォームで、シード理由・PDF枠を選択しやすくした。
-  - 公式PDF右側の各枠に対応する選択肢を追加した。
-    - ② 公認T/M歴代優勝者シードプロ
-    - ③ 永久シードプロ（V20）
-    - ④ 全日本選手権者シード（JS）
-    - ⑤ 公認T/M歴代優勝者シードプロ
-    - ⑥ 準永久シードプロ（V10）
-    - ⑦ 本大会スポンサー推薦
-    - ⑧ プロテスト実技免除合格者
-    - ⑨ プロテストトップ合格者
-    - ⑩ シーズントライアル出場者
-    - ⑪ 主催者（スポンサー）推薦
-  - トーナメントシード（TS）は従来どおり、年度別シード由来として左側①のメイン表に表示する方針を維持した。
+- 優先出場表示のエントリー管理反映:
+  - `app/Http/Controllers/TournamentEntryAdminController.php` を調整し、年度別シード一覧 + 大会別追加シードから大会単位の優先出場者情報を組み立てるようにした。
+  - `resources/views/tournament_entries/admin_index.blade.php` に `優先出場` 列を追加した。
+  - `resources/views/tournament_entries/admin_draws.blade.php` にも `優先出場` 列を追加した。
+  - エントリー済み / ウェイティング済みの選手について、優先出場順位・種別・由来を一覧で確認できるようにした。
+  - 優先出場者は一覧の上位に並ぶようにした。
+  - ウェイティング登録時、`waitlist_priority` が空欄なら優先出場設定から自動補完するようにした。
+  - ウェイティング登録のライセンスNo入力でも下4桁入力に対応し、4桁入力時は大会の対象性別を優先して照合するようにした。
+  - 抽選ロジック自体は変更せず、参加 / ウェイティング状態も自動変更しない方針を維持した。
 
-- 大会優先出場者PDF:
-  - `resources/views/tournament_seed_players/pdf.blade.php` を調整した。
-  - 年度別TSは左側①のトーナメントシード枠に表示する。
-  - 大会別追加シードは `seed_source_type` をもとに右側②〜⑪の該当枠へ振り分ける。
-  - 該当者がいない右側枠は、引き続き `該当者なし（0名）` として枠を確保する。
-  - 備考列、フリガナ列、由来列は出さず、公式PDFに近い簡潔な構成を維持した。
-  - `期` 列は維持した。
-  - ライセンスNoは、年度別TS・大会別追加シードともに下4桁表示へ統一した。
-  - PDFレイアウトについて、文字サイズ・カラム幅・右側枠の見出し・折り返しを調整した。
-  - `ライセンスNo` 見出しは枠からはみ出さないよう、必要箇所では `ライセンス` / `No` の2行表示にした。
-  - Dompdfの日本語表示については、直前に `@font-face` や Controller 側 `defaultFont` 強制で font cache エラーが出たため、今回も安易なフォント指定追加は行わず、既存PDFと同じ安全な表示方式に寄せた。
+- 優先出場未登録チェック:
+  - 年度別シード一覧 + 大会別追加シードから作った優先出場者総リストと、`tournament_entries` を照合するようにした。
+  - 優先出場者なのに `tournament_entries` に存在しない選手を検出できるようにした。
+  - エントリー管理画面に `優先出場 未登録` 件数を表示した。
+  - 未登録の優先出場者一覧を表示した。
+  - 抽選一覧にも、抽選前の注意として未登録件数を表示した。
+  - 優先出場未登録一覧から、該当選手を直接ウェイティング登録できる導線を追加した。
+  - ウェイティング登録時には、優先順と備考を自動で渡すようにした。
 
-- 大会別追加シード編集機能:
-  - `TournamentSeedPlayerController` と `tournament_seed_players/index.blade.php` を調整し、現在の大会別シードを一覧上で編集できるようにした。
-  - 編集可能項目は以下。
-    - 優先順位
-    - ライセンスNo
-    - シード理由・PDF枠
-    - 表示ラベル
-    - 備考
-  - 既存の `POST tournaments/{tournament}/seed-players` を、新規追加と編集の兼用にした。
-  - `seed_player_id` が渡された場合は既存行を更新する。
-  - route追加は行わず、既存ルートを利用した。
-  - 削除（解除）ボタンは従来どおり維持した。
+- 取消機能:
+  - エントリー者 / ウェイティング者に `取消` ボタンを追加した。
+  - 取消時は物理削除せず、`status = no_entry` に戻す方針にした。
+  - 取消時にクリアする主な値:
+    - `shift`
+    - `lane`
+    - `shift_drawn`
+    - `lane_drawn`
+    - `checked_in_at`
+    - `waitlist_priority`
+    - `waitlisted_at`
+    - `waitlist_note`
+    - `promoted_from_waitlist_at`
+  - これにより、誤登録や参加取り消しを、DB行を削除せずに運用上の状態変更として扱えるようにした。
 
-- 重複登録防止:
-  - 同一大会内で同じ選手を大会別追加シードへ二重登録しないようにした。
-  - 重複判定では以下を考慮した。
-    - `pro_bowler_id`
-    - ライセンスNo完全一致
-    - 大会性別を踏まえた下4桁照合
-  - 登録済みの選手をもう一度追加しようとした場合はエラー表示し、既存行を編集してもらう運用にした。
-  - 実画面で、登録済みを再登録しようとすると正しくエラーが出ることを確認した。
-  - 既存行の編集・保存・削除は引き続き動作することを確認した。
+- ウェイティング者の一括参加繰り上げ:
+  - ウェイティング行にチェックボックスを追加した。
+  - チェックしたウェイティング者を一括で `entry` へ変更できるようにした。
+  - 参加権利がない行はチェック対象外にした。
+  - サーバー側でも、参加権利がない行は一括繰り上げ処理から除外するようにした。
+  - 一括参加登録後は、抽選関連値を未抽選状態として扱えるように整理した。
 
-- 大会性別を優先した4桁ライセンス照合:
-  - 当初、男子大会で `0001` と入力したときに、DB上で先に見つかった女子 `F00000001` を拾う問題があった。
-  - `findBowlerByLicenseNo()` を調整し、4桁入力時は `tournament.gender` を優先して照合するようにした。
-  - 男子大会で `0001` と入力した場合は男子ライセンスを優先する。
-  - 女子大会で `0001` と入力した場合は女子ライセンスを優先する。
-  - 明示的に `M...` / `F...` を入力した場合、対象大会の性別と合わなければ登録を止める。
-  - 誤って女子側に入った `0001` 行は、保存し直すことで男子側 `M00000001` に再照合されることを確認した。
-  - 年度別TSにも該当する大会別追加シード行は、画面上で黄色背景と注意バッジを出し、PDFでは左側①のトーナメントシード枠を優先する方針にした。
+- 参加権利を最優先にした序列:
+  - 優先順位の序列で、優先出場順位だけを最優先にしない方針へ整理した。
+  - 表示・処理の優先順位は以下の考え方にした。
+    1. 参加権利あり
+    2. 参加 / ウェイティング
+    3. 優先出場順位
+    4. 待機順
+    5. 抽選状況
+  - 会員無効 / 公式戦対象外 / 競技参加対象外の選手は、優先出場者であっても実運用上は下へ回す方針にした。
+
+- 追加ルート:
+  - `routes/web.php` に管理操作用のPOSTルートを追加した。
+    - `tournaments.waitlist.bulk_promote`
+    - `tournaments.entries.cancel`
+  - HTMLフォームの混乱を避けるため、今回は `DELETE` / `PATCH` ではなく、明示的な操作名を持つPOSTルートとして扱った。
+
+- 触った主なファイル:
+  - `app/Http/Controllers/TournamentEntryAdminController.php`
+  - `resources/views/tournament_entries/admin_index.blade.php`
+  - `resources/views/tournament_entries/admin_draws.blade.php`
+  - `routes/web.php`
 
 - 確認済みコマンド:
-  - `php -l app/Services/ProBowlerSeedService.php`
-  - `php -l app/Http/Controllers/TournamentSeedPlayerController.php`
-  - `php tools/generate_er_from_dictionary.php`
+  - `php -l app/Http/Controllers/TournamentEntryAdminController.php`
+  - `php -l routes/web.php`
   - `php artisan optimize:clear`
   - `php artisan view:cache`
-  - `php artisan route:list | findstr seed`
+  - `php artisan route:list | findstr waitlist`
+  - `php artisan route:list | findstr cancel`
   - `git diff --name-only`
+  - `git status -sb`
 
-- 確認済み画面 / PDF:
-  - AAAカップ 大会別シード設定
-    - `/tournaments/3/seed-players`
-  - AAAカップ 大会優先出場者PDF
-    - `/tournaments/3/seed-players/pdf`
-  - 年度別シード一覧
-    - `/pro-bowler-seed-lists`
+- 確認済み画面:
+  - 大会エントリー管理
+    - `/tournaments/3/entries/admin`
+  - 表示確認:
+    - `優先出場` 列が表示される。
+    - 優先出場者が緑背景で上位表示される。
+    - ウェイティング行に一括繰り上げ用チェックボックスが出る。
+    - 参加権利ありの行だけ一括繰り上げ対象になる。
+    - 取消ボタンが表示される。
+    - 優先出場未登録者を確認できる。
+    - 未登録優先出場者からウェイティング登録できる。
 
 - 主なコミット:
-  - `feat: 大会別追加シード種別と優先出場者PDF表示を調整`
-  - `feat: 大会別シード設定の編集機能を追加`
-  - `fix: 大会別シードの重複登録と性別照合を修正`
-
-- DB / migration 判断:
-  - 最初の種別整理では `docs/db/data_dictionary.md` と `docs/db/ER.dbml` を更新した。
-  - ただし、DBカラム追加は無く、既存文字列カラム `seed_source_type` の運用値追加で対応できたため、migration は不要と判断した。
-  - その後の編集機能・重複防止・性別照合はアプリ実装のみであり、`migrations` / `docs/db/data_dictionary.md` / `docs/db/ER.dbml` の追加更新は不要。
+  - `feat: 大会エントリー管理に優先出場表示を追加`
+  - `feat: 優先出場者の未登録検出を追加`
+  - `feat: エントリー管理に取消と待機者一括繰り上げを追加`
 
 - 現時点で完了したこと:
-  - 大会別追加シードの種別入力。
-  - 公式PDF右側②〜⑪枠への自動振り分け。
-  - 優先出場者PDFの文字サイズ・カラム幅・折り返し調整。
-  - 年度別TSの左側①表示維持。
-  - TS / 大会別追加シードのライセンスNo下4桁表示。
-  - 大会別追加シードの一覧上編集。
-  - 重複登録防止。
-  - 大会性別を優先した4桁ライセンス照合。
-  - 年度別TS該当者の注意表示と、PDF左側①優先方針。
+  - 大会優先出場者一覧の優先順位をエントリー管理画面へ反映。
+  - 抽選一覧への優先出場表示。
+  - 優先出場者の未登録検出。
+  - 未登録優先出場者からのウェイティング登録導線。
+  - エントリー者 / ウェイティング者の取消。
+  - ウェイティング者の一括参加繰り上げ。
+  - 優先順位の序列で参加権利ありを最優先にする表示整理。
+  - 参加権利なし行を一括繰り上げ対象外にするサーバー側ガード。
 
 - 残タスク / 次に詰める候補:
-  1. 大会エントリー導線へ、優先出場順位をどう反映するか整理する。
-     - エントリー受付時点で優先順位を表示するか。
-     - 抽選・waitlist・参加確定へどう接続するか。
-  2. 実ランキング取り込み・年度末確定処理を整理する。
+  1. 取消理由・操作ログ・一括繰り上げ履歴を残すか整理する。
+     - 現状は状態変更のみ。
+     - 監査ログが必要なら新規テーブルまたは既存 operation log への統合を検討する。
+  2. エントリー管理の回帰確認。
+     - 参加者取消。
+     - ウェイティング取消。
+     - ウェイティング一括参加登録。
+     - 参加権利なし行が処理対象外になること。
+     - 優先出場未登録者からのウェイティング登録。
+  3. 実ランキング取り込み・年度末確定処理を整理する。
      - 公式ランキング取り込み。
      - 前年度最終ランキングからの年度別シード生成。
      - 全日本選手権用の当該年度途中ランキング運用。
-  3. ST Winter 2026 C 実データ投入コマンドを、テスト用として残すか dev seed 専用へ移すか整理する。
-  4. `tournament_awards` / `tournament_points` と `prize_distributions` / `point_distributions` の役割整理を進める。
-  5. ダブルエリミネーション方式の要件整理へ進む。
+  4. ST Winter 2026 C 実データ投入コマンドを、テスト用として残すか dev seed 専用へ移すか整理する。
+  5. `tournament_awards` / `tournament_points` と `prize_distributions` / `point_distributions` の役割整理を進める。
+  6. ダブルエリミネーション方式の要件整理へ進む。
 
 - 現時点の判断:
-  - **シードプロ `S` 表示まわりは、年度別シード、大会別追加シード、公式PDF枠振り分け、優先出場者PDF、編集、重複防止、性別照合まで実運用に近い状態まで到達した。**
-  - 次は大会エントリー・抽選・waitlistへ優先出場順位をどう接続するかを整理するのが自然。
+  - **シード管理で作った優先出場順位は、エントリー管理・ウェイティング管理・抽選一覧の表示まで接続できた。**
+  - **未登録検出、ウェイティング登録、取消、一括繰り上げまで通ったため、優先出場者の参加管理は実運用確認フェーズへ進める状態になった。**
+  - DBスキーマは既存の `tournament_entries` とシード系テーブルで足りており、今回の範囲では新規migrationは不要。
+
+---
 
 ## 2026-05-13 大会別PDF Blade分割・シュートアウト復旧・シングルエリミネーションPDF追加
 
