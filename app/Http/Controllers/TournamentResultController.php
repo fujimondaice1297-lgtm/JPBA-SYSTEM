@@ -464,34 +464,87 @@ class TournamentResultController extends Controller
 
     public function rankings(Request $request)
     {
-        $year  = $request->input('year', date('Y'));
-        $years = TournamentResult::select('ranking_year')->distinct()->orderByDesc('ranking_year')->pluck('ranking_year');
+        $year = (int) $request->query('year', date('Y'));
+        $gender = $this->normalizeRankingGender($request->query('gender'));
+        $genderLabel = $this->rankingGenderLabel($gender);
 
-        $moneyRanks = TournamentResult::where('ranking_year', $year)
-            ->select('pro_bowler_license_no', DB::raw('SUM(prize_money) as total_prize_money'))
-            ->groupBy('pro_bowler_license_no')->orderByDesc('total_prize_money')->get()
+        $years = TournamentResult::select('ranking_year')
+            ->whereNotNull('ranking_year')
+            ->distinct()
+            ->orderByDesc('ranking_year')
+            ->pluck('ranking_year');
+
+        $moneyRanks = $this->applyRankingGenderFilter(
+                TournamentResult::query()->where('ranking_year', $year),
+                $gender
+            )
+            ->whereNotNull('pro_bowler_license_no')
+            ->where('pro_bowler_license_no', '<>', '')
+            ->select('pro_bowler_license_no', DB::raw('SUM(COALESCE(prize_money, 0)) as total_prize_money'))
+            ->groupBy('pro_bowler_license_no')
+            ->orderByDesc('total_prize_money')
+            ->get()
             ->map(function ($item) {
-                $item->name_kanji = optional(ProBowler::where('license_no',$item->pro_bowler_license_no)->first())->name_kanji;
+                $item->name_kanji = optional(ProBowler::where('license_no', $item->pro_bowler_license_no)->first())->name_kanji;
                 return $item;
             });
 
-        $pointRanks = TournamentResult::where('ranking_year', $year)
-            ->select('pro_bowler_license_no', DB::raw('SUM(points) as total_points'))
-            ->groupBy('pro_bowler_license_no')->orderByDesc('total_points')->get()
+        $pointRanks = $this->applyRankingGenderFilter(
+                TournamentResult::query()->where('ranking_year', $year),
+                $gender
+            )
+            ->whereNotNull('pro_bowler_license_no')
+            ->where('pro_bowler_license_no', '<>', '')
+            ->select('pro_bowler_license_no', DB::raw('SUM(COALESCE(points, 0)) as total_points'))
+            ->groupBy('pro_bowler_license_no')
+            ->orderByDesc('total_points')
+            ->get()
             ->map(function ($item) {
-                $item->name_kanji = optional(ProBowler::where('license_no',$item->pro_bowler_license_no)->first())->name_kanji;
+                $item->name_kanji = optional(ProBowler::where('license_no', $item->pro_bowler_license_no)->first())->name_kanji;
                 return $item;
             });
 
-        $averageRanks = TournamentResult::where('ranking_year', $year)
+        $averageRanks = $this->applyRankingGenderFilter(
+                TournamentResult::query()->where('ranking_year', $year),
+                $gender
+            )
+            ->whereNotNull('pro_bowler_license_no')
+            ->where('pro_bowler_license_no', '<>', '')
             ->select('pro_bowler_license_no', DB::raw('AVG(average) as avg_average'))
-            ->groupBy('pro_bowler_license_no')->orderByDesc('avg_average')->get()
+            ->groupBy('pro_bowler_license_no')
+            ->orderByDesc('avg_average')
+            ->get()
             ->map(function ($item) {
-                $item->name_kanji = optional(ProBowler::where('license_no',$item->pro_bowler_license_no)->first())->name_kanji;
+                $item->name_kanji = optional(ProBowler::where('license_no', $item->pro_bowler_license_no)->first())->name_kanji;
                 return $item;
             });
 
-        return view('tournament_results.rankings', compact('year','years','moneyRanks','pointRanks','averageRanks'));
+        return view('tournament_results.rankings', compact('year', 'years', 'gender', 'genderLabel', 'moneyRanks', 'pointRanks', 'averageRanks'));
+    }
+
+    private function normalizeRankingGender(?string $gender): ?string
+    {
+        $gender = strtoupper(trim((string) $gender));
+
+        return in_array($gender, ['M', 'F'], true) ? $gender : null;
+    }
+
+    private function rankingGenderLabel(?string $gender): string
+    {
+        return match ($gender) {
+            'M' => '男子',
+            'F' => '女子',
+            default => '全体',
+        };
+    }
+
+    private function applyRankingGenderFilter($query, ?string $gender)
+    {
+        if (in_array($gender, ['M', 'F'], true)) {
+            $query->whereRaw("upper(coalesce(pro_bowler_license_no, '')) like ?", [$gender . '%']);
+        }
+
+        return $query;
     }
 
     public function exportTournamentPdf(Tournament $tournament)

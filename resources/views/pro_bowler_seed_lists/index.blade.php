@@ -57,7 +57,7 @@
         <div>
             <h2 class="mb-1">年度別シード一覧</h2>
             <div class="text-muted">
-                前年度ポイントランキング上位者など、年度共通でシード扱いにする選手を管理します。
+                DB内の大会成績ポイントランキングから、年度共通でシード扱いにする選手を管理します。
             </div>
         </div>
         <div class="d-flex gap-2">
@@ -84,12 +84,12 @@
     <div class="alert alert-info">
         <div class="fw-bold mb-1">この画面の役割</div>
         <div>
-            通常運用では、年度末に確定したポイントランキングから翌年度のシードを自動生成します。<br>
+            通常運用では、DB内の <code>tournament_results.points</code> を年度・性別ごとに集計し、翌年度のシードを自動生成します。<br>
             例：2025年男子ポイントランキング上位24名 → 2026年男子シード。<br>
+            DB内ポイントランキングへのリンクは、指定した性別を付けて開きます。<br>
             ここで登録された選手は、同じ年度・性別の大会でライセンスNo欄に <strong>S 0524</strong> のように表示されます。
         </div>
     </div>
-
 
     @if (($availableRankingYears ?? collect())->isEmpty())
         <div class="alert alert-warning">
@@ -102,7 +102,7 @@
     @endif
 
     <div class="card mb-4">
-        <div class="card-header fw-bold">前年度ポイントランキングから自動生成</div>
+        <div class="card-header fw-bold">DB内ポイントランキングから自動生成</div>
         <div class="card-body">
             <form method="POST" action="{{ route('pro_bowler_seed_lists.generate') }}">
                 @csrf
@@ -153,15 +153,54 @@
 
                 <div class="mt-3 d-flex align-items-center gap-3">
                     <button type="submit" class="btn btn-primary">
-                        ランキングから年度別シードを生成
+                        DB内ランキングから年度別シードを生成
                     </button>
                     <span class="text-muted small">
-                        同じシード年度・性別で既に登録済みの場合は、ランキング結果で差し替えます。
+                        同じシード年度・性別で既に登録済みの場合は、DB内ポイント集計結果で差し替えます。
                     </span>
                 </div>
             </form>
         </div>
     </div>
+
+    @if (($rankingSnapshots ?? collect())->isNotEmpty())
+        <div class="card mb-4">
+            <div class="card-header fw-bold">DB内ポイントランキング保存履歴</div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-bordered table-sm align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width: 110px;">ランキング年度</th>
+                                <th style="width: 70px;">性別</th>
+                                <th style="width: 110px;">保存日</th>
+                                <th style="width: 90px;">行数</th>
+                                <th>備考</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach ($rankingSnapshots as $snapshot)
+                                <tr>
+                                    <td>{{ $snapshot->ranking_year }}</td>
+                                    <td>{{ $genderLabels[$snapshot->gender] ?? $snapshot->gender }}</td>
+                                    <td>{{ optional($snapshot->as_of_date)->format('Y-m-d') ?: '-' }}</td>
+                                    <td>{{ $snapshot->rows_count ?? 0 }}名</td>
+                                    <td class="small">
+                                        {{ $snapshot->notes ?: '-' }}
+                                        <div>
+                                            <a href="{{ route('tournament_results.rankings', ['year' => $snapshot->ranking_year, 'gender' => $snapshot->gender]) }}" target="_blank" rel="noopener">
+                                                DB内ポイントランキングを開く（{{ $genderLabels[$snapshot->gender] ?? $snapshot->gender }}）
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    @endif
 
     <details class="mb-4">
         <summary class="fw-bold mb-2">例外対応：ライセンスNo貼り付けで作成する</summary>
@@ -204,7 +243,7 @@
                             <label class="form-label">参照URL</label>
                             <input type="text" name="source_url" class="form-control"
                                    value="{{ old('source_url') }}"
-                                   placeholder="例：https://www.jpba.or.jp/...">
+                                   placeholder="例：管理用メモURLなど">
                         </div>
 
                         <div class="col-12">
@@ -215,18 +254,18 @@
 1452
 1443
 
-または公式ランキング表から
+または管理用メモから
 1 1423 安里 秀策
 2 1452 内藤 広人">{{ old('license_rows') }}</textarea>
                             <div class="form-text">
-                                通常は上の自動生成を使ってください。ここはランキング外の緊急対応・移行用です。
+                                通常は上のDB内ポイントランキングからの自動生成を使ってください。ここはランキング外の緊急対応・移行用です。
                             </div>
                         </div>
 
                         <div class="col-12">
                             <label class="form-label">備考</label>
                             <textarea name="notes" class="form-control" rows="2"
-                                      placeholder="例：公式ランキング未反映分を手入力">{{ old('notes') }}</textarea>
+                                      placeholder="例：DB内ランキング外の例外対応を手入力">{{ old('notes') }}</textarea>
                         </div>
                     </div>
 
@@ -296,7 +335,13 @@
                                     </td>
                                     <td class="small">
                                         {{ $seedList->notes ?: '-' }}
-                                        @if ($seedList->source_url)
+                                        @if ($seedList->source_ranking_snapshot_id && $seedList->base_ranking_year)
+                                            <div>
+                                                <a href="{{ route('tournament_results.rankings', ['year' => $seedList->base_ranking_year, 'gender' => $seedList->gender]) }}" target="_blank" rel="noopener">
+                                                    元ランキングを開く（{{ $genderLabels[$seedList->gender] ?? $seedList->gender }}）
+                                                </a>
+                                            </div>
+                                        @elseif ($seedList->source_url)
                                             <div>
                                                 <a href="{{ $seedList->source_url }}" target="_blank" rel="noopener">
                                                     元ランキングを開く

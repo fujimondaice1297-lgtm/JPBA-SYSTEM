@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\ProBowler;
+use App\Models\ProBowlerRankingRow;
+use App\Models\ProBowlerRankingSnapshot;
 use App\Models\ProBowlerSeedList;
 use App\Models\ProBowlerSeedListPlayer;
 use App\Models\TournamentResult;
@@ -43,8 +45,19 @@ class ProBowlerSeedListController extends Controller
             ->orderBy('gender')
             ->get();
 
+        $rankingSnapshots = ProBowlerRankingSnapshot::query()
+            ->where('ranking_type', 'points')
+            ->where('ranking_scope', 'official_tournament')
+            ->withCount('rows')
+            ->orderByDesc('ranking_year')
+            ->orderBy('gender')
+            ->orderByDesc('as_of_date')
+            ->limit(20)
+            ->get();
+
         return view('pro_bowler_seed_lists.index', [
             'seedLists' => $seedLists,
+            'rankingSnapshots' => $rankingSnapshots,
             'genderLabels' => $this->genderLabels(),
             'rankingYears' => $rankingYears,
             'availableRankingYears' => $availableRankingYears,
@@ -124,11 +137,57 @@ class ProBowlerSeedListController extends Controller
             return back()
                 ->withInput()
                 ->withErrors([
-                    'base_ranking_year' => '指定された年度・性別のポイントランキング対象者が見つかりませんでした。',
+                    'base_ranking_year' => '指定された年度・性別のポイントランキング対象者が見つかりませんでした。大会成績一覧でポイント再計算が済んでいるか確認してください。',
                 ]);
         }
 
-        DB::transaction(function () use ($validated, $rankingRows, $seedYear, $gender, $baseRankingYear, $topCount) {
+        $rankingSnapshot = null;
+
+        DB::transaction(function () use ($validated, $rankingRows, $seedYear, $gender, $baseRankingYear, $topCount, &$rankingSnapshot) {
+            $snapshotNotes = $validated['notes']
+                ?: "{$baseRankingYear}年DB内ポイントランキング上位{$topCount}名から自動生成";
+
+            $rankingSnapshot = ProBowlerRankingSnapshot::query()->firstOrNew([
+                'ranking_year' => $baseRankingYear,
+                'gender' => $gender,
+                'ranking_type' => 'points',
+                'ranking_scope' => 'official_tournament',
+                'is_final' => true,
+            ]);
+
+            $rankingSnapshot->fill([
+                'as_of_date' => now()->toDateString(),
+                'source_url' => $this->buildPointRankingUrl($baseRankingYear, $gender),
+                'notes' => $snapshotNotes,
+            ]);
+            $rankingSnapshot->save();
+
+            ProBowlerRankingRow::query()
+                ->where('ranking_snapshot_id', $rankingSnapshot->id)
+                ->delete();
+
+            foreach ($rankingRows as $index => $rankingRow) {
+                $rank = $index + 1;
+
+                ProBowlerRankingRow::query()->create([
+                    'ranking_snapshot_id' => $rankingSnapshot->id,
+                    'ranking_rank' => $rank,
+                    'pro_bowler_id' => $rankingRow['pro_bowler_id'],
+                    'license_no' => $rankingRow['license_no'],
+                    'name_kanji' => $rankingRow['name_kanji'],
+                    'name_kana' => $rankingRow['name_kana'] ?? null,
+                    'kibetsu' => $rankingRow['kibetsu'] ?? null,
+                    'organization_name' => $rankingRow['organization_name'] ?? null,
+                    'equipment_contract' => $rankingRow['equipment_contract'] ?? null,
+                    'points' => $rankingRow['total_points'],
+                    'games' => $rankingRow['total_games'] ?? null,
+                    'total_pin' => $rankingRow['total_pin'] ?? null,
+                    'average' => $rankingRow['average'] ?? null,
+                    'prize_money' => $rankingRow['prize_money'] ?? null,
+                    'sort_order' => $rank,
+                ]);
+            }
+
             $seedList = ProBowlerSeedList::query()->firstOrNew([
                 'seed_year' => $seedYear,
                 'gender' => $gender,
@@ -136,14 +195,14 @@ class ProBowlerSeedListController extends Controller
             ]);
 
             $seedList->fill([
-                'source_ranking_snapshot_id' => null,
+                'source_ranking_snapshot_id' => $rankingSnapshot->id,
                 'base_ranking_year' => $baseRankingYear,
                 'base_top_count' => $topCount,
-                'as_of_date' => now()->toDateString(),
+                'as_of_date' => $rankingSnapshot->as_of_date,
                 'is_active' => true,
-                'source_url' => route('tournament_results.rankings', ['year' => $baseRankingYear], false),
+                'source_url' => $rankingSnapshot->source_url,
                 'notes' => $validated['notes']
-                    ?: "{$baseRankingYear}年ポイントランキング上位{$topCount}名から自動生成",
+                    ?: "{$baseRankingYear}年DB内ポイントランキング上位{$topCount}名から自動生成",
             ]);
             $seedList->save();
 
@@ -160,12 +219,12 @@ class ProBowlerSeedListController extends Controller
                     'license_no' => $rankingRow['license_no'],
                     'seed_category' => ProBowlerSeedService::SEED_CATEGORY_TOURNAMENT_SEED,
                     'seed_rank' => $rank,
-                    'ranking_snapshot_id' => null,
+                    'ranking_snapshot_id' => $rankingSnapshot->id,
                     'ranking_rank' => $rank,
                     'source_tournament_id' => null,
                     'pro_bowler_title_id' => null,
                     'priority_order' => $rank,
-                    'note' => 'points=' . $rankingRow['total_points'],
+                    'note' => 'points=' . $this->formatPointValue($rankingRow['total_points']),
                     'is_active' => true,
                 ]);
             }
@@ -175,7 +234,7 @@ class ProBowlerSeedListController extends Controller
 
         return redirect()
             ->route('pro_bowler_seed_lists.index')
-            ->with('status', "{$baseRankingYear}年{$genderLabel}ポイントランキング上位" . count($rankingRows) . "名から、{$seedYear}年{$genderLabel}シードを生成しました。");
+            ->with('status', "{$baseRankingYear}年{$genderLabel}のDB内ポイントランキング上位" . count($rankingRows) . "名を保存し、{$seedYear}年{$genderLabel}シードを生成しました。");
     }
 
     /**
@@ -273,8 +332,10 @@ class ProBowlerSeedListController extends Controller
     {
         $columns = ['id', 'pro_bowler_license_no', 'points'];
 
-        if (Schema::hasColumn('tournament_results', 'pro_bowler_id')) {
-            $columns[] = 'pro_bowler_id';
+        foreach (['pro_bowler_id', 'games', 'total_pin', 'prize_money'] as $optionalColumn) {
+            if (Schema::hasColumn('tournament_results', $optionalColumn)) {
+                $columns[] = $optionalColumn;
+            }
         }
 
         $results = TournamentResult::query()
@@ -299,21 +360,48 @@ class ProBowlerSeedListController extends Controller
                     'pro_bowler_id' => $bowler->id,
                     'license_no' => $bowler->license_no,
                     'name_kanji' => $bowler->name_kanji,
-                    'total_points' => 0,
+                    'name_kana' => $bowler->name_kana ?? null,
+                    'kibetsu' => $bowler->kibetsu ?? null,
+                    'organization_name' => $bowler->organization_name
+                        ?? $bowler->affiliation
+                        ?? $bowler->belongs_to
+                        ?? null,
+                    'equipment_contract' => $bowler->equipment_contract
+                        ?? $bowler->contract_maker
+                        ?? null,
+                    'total_points' => 0.0,
+                    'total_games' => 0,
+                    'total_pin' => 0,
+                    'prize_money' => 0,
+                    'average' => null,
                 ];
             }
 
-            $rankings[$key]['total_points'] += (int) $result->points;
+            $rankings[$key]['total_points'] += (float) $result->points;
+            $rankings[$key]['total_games'] += (int) ($result->games ?? 0);
+            $rankings[$key]['total_pin'] += (int) ($result->total_pin ?? 0);
+            $rankings[$key]['prize_money'] += (int) ($result->prize_money ?? 0);
         }
 
         $rows = array_values($rankings);
 
+        foreach ($rows as &$row) {
+            $row['average'] = $row['total_games'] > 0
+                ? round($row['total_pin'] / $row['total_games'], 2)
+                : null;
+        }
+        unset($row);
+
         usort($rows, function (array $a, array $b) {
-            if ($a['total_points'] === $b['total_points']) {
-                return strcmp((string) $a['license_no'], (string) $b['license_no']);
+            if ((float) $a['total_points'] === (float) $b['total_points']) {
+                if ((int) $a['total_pin'] === (int) $b['total_pin']) {
+                    return strcmp((string) $a['license_no'], (string) $b['license_no']);
+                }
+
+                return (int) $b['total_pin'] <=> (int) $a['total_pin'];
             }
 
-            return $b['total_points'] <=> $a['total_points'];
+            return (float) $b['total_points'] <=> (float) $a['total_points'];
         });
 
         return array_slice($rows, 0, $limit);
@@ -433,6 +521,14 @@ class ProBowlerSeedListController extends Controller
         };
     }
 
+    private function buildPointRankingUrl(int $rankingYear, string $gender): string
+    {
+        return route('tournament_results.rankings', [
+            'year' => $rankingYear,
+            'gender' => $gender,
+        ], false);
+    }
+
     private function pointTextFromNote(?string $note): string
     {
         $note = trim((string) $note);
@@ -441,11 +537,22 @@ class ProBowlerSeedListController extends Controller
             return '-';
         }
 
-        if (preg_match('/points=([0-9]+)/', $note, $matches)) {
-            return number_format((int) $matches[1]);
+        if (preg_match('/points=([0-9]+(?:\.[0-9]+)?)/', $note, $matches)) {
+            return number_format((float) $matches[1], str_contains($matches[1], '.') ? 2 : 0);
         }
 
         return $note;
+    }
+
+    private function formatPointValue(float|int|string $value): string
+    {
+        $number = (float) $value;
+
+        if (floor($number) === $number) {
+            return (string) (int) $number;
+        }
+
+        return rtrim(rtrim(number_format($number, 2, '.', ''), '0'), '.');
     }
 
     private function seedCategoryLabels(): array
