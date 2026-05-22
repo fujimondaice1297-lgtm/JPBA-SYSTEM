@@ -37,7 +37,8 @@
 
   <div class="alert alert-info small">
     優先出場者一覧に登録済みの選手は、この画面の「優先出場」列に表示します。
-    表示順も優先出場順位を先に見ます。参加/ウェイティングの状態は自動変更せず、必要に応じて管理者が繰り上げ操作を行います。
+    表示順は「参加権利あり」を最優先にし、その中で参加/ウェイティング、優先出場順位、待機順を見ます。
+    参加権利がない選手は、優先出場者であっても一括繰り上げ対象から外します。
   </div>
 
   <div class="row g-3 mb-4">
@@ -103,7 +104,7 @@
       <div class="card-body">
         <p class="small text-muted mb-3">
           優先出場者一覧に入っていますが、この大会のエントリー / ウェイティングにはまだ存在しない選手です。
-          必要に応じて、下の「ウェイティング登録」から登録してください。
+          必要に応じて、この表の「ウェイティング登録」ボタン、または下の「ウェイティング登録」から登録してください。
         </p>
         <div class="table-responsive">
           <table class="table table-sm table-bordered align-middle mb-0">
@@ -115,17 +116,54 @@
                 <th>ライセンスNo</th>
                 <th>氏名</th>
                 <th>備考</th>
+                <th>操作</th>
               </tr>
             </thead>
             <tbody>
               @foreach (($summary['priority_missing_entries'] ?? []) as $priorityMissing)
+                @php
+                  $missingLicenseNo = trim((string) ($priorityMissing['license_no'] ?? ''));
+                  $missingPrioritySort = (int) ($priorityMissing['priority_sort'] ?? 999999);
+                  $missingWaitlistPriority = $missingPrioritySort > 0 && $missingPrioritySort < 999999 ? $missingPrioritySort : null;
+                  $missingNoteParts = array_filter([
+                    '優先出場未登録から登録',
+                    $priorityMissing['priority_source_label'] ?? null,
+                    $priorityMissing['priority_label'] ?? null,
+                  ]);
+                @endphp
                 <tr>
                   <td>{{ $priorityMissing['priority_order_label'] ?? '-' }}</td>
                   <td>{{ $priorityMissing['priority_label'] ?? '-' }}</td>
                   <td>{{ $priorityMissing['priority_source_label'] ?? '-' }}</td>
-                  <td>{{ $priorityMissing['license_no'] ?? '-' }}</td>
+                  <td>{{ $missingLicenseNo !== '' ? $missingLicenseNo : '-' }}</td>
                   <td>{{ $priorityMissing['name_kanji'] ?? '-' }}</td>
+                  <td>
+                    <span class="badge bg-light text-dark" title="{{ $priorityMissing['eligibility_message'] ?? '' }}">
+                      {{ $priorityMissing['eligibility_short'] ?? '-' }}
+                    </span>
+                  </td>
                   <td class="small">{{ $priorityMissing['priority_note'] ?? '-' }}</td>
+                  <td>
+                    @if ($missingLicenseNo !== '' && (($priorityMissing['eligibility_short'] ?? '') === '参加権利あり'))
+                      <form method="POST" action="{{ route('tournaments.waitlist.store', $tournament->id) }}" class="m-0">
+                        @csrf
+                        <input type="hidden" name="license_no" value="{{ $missingLicenseNo }}">
+                        @if (!is_null($missingWaitlistPriority))
+                          <input type="hidden" name="waitlist_priority" value="{{ $missingWaitlistPriority }}">
+                        @endif
+                        <input type="hidden" name="waitlist_note" value="{{ implode(' / ', $missingNoteParts) }}">
+                        <button type="submit"
+                                class="btn btn-sm btn-danger"
+                                onclick="return confirm('この優先出場者をウェイティング登録します。よろしいですか？');">
+                          ウェイティング登録
+                        </button>
+                      </form>
+                    @else
+                      <span class="text-muted small">
+                        {{ $missingLicenseNo === '' ? 'ライセンスNo未設定' : '参加権利なし' }}
+                      </span>
+                    @endif
+                  </td>
                 </tr>
               @endforeach
             </tbody>
@@ -185,10 +223,32 @@
     </div>
   </form>
 
+  <form id="bulk-promote-waitlist-form"
+        method="POST"
+        action="{{ route('tournaments.waitlist.bulk_promote', $tournament->id) }}"
+        class="d-none">
+    @csrf
+  </form>
+
+  <div class="card mb-3">
+    <div class="card-body d-flex flex-wrap gap-2 justify-content-between align-items-center">
+      <div class="small text-muted">
+        チェックしたウェイティング行をまとめて参加へ繰り上げます。参加権利がない行は選択できません。
+      </div>
+      <button type="submit"
+              form="bulk-promote-waitlist-form"
+              class="btn btn-success"
+              onclick="return confirm('チェックしたウェイティング行を参加へ一括繰り上げします。よろしいですか？');">
+        チェックしたウェイティングを一括参加登録
+      </button>
+    </div>
+  </div>
+
   <div class="table-responsive">
     <table class="table table-bordered align-middle">
       <thead>
         <tr>
+          <th>選択</th>
           <th>状態</th>
           <th>優先出場</th>
           <th>待機順</th>
@@ -210,6 +270,20 @@
             $bowler = $entry->bowler;
           @endphp
           <tr class="{{ $entry->is_priority_entry ? 'table-success' : '' }}">
+            <td class="text-center">
+              @if ($entry->status === 'waiting' && $entry->eligibility_short === '参加権利あり')
+                <input type="checkbox"
+                       name="entry_ids[]"
+                       value="{{ $entry->id }}"
+                       form="bulk-promote-waitlist-form"
+                       class="form-check-input"
+                       title="一括参加登録の対象にする">
+              @elseif ($entry->status === 'waiting')
+                <span class="text-muted small" title="{{ $entry->eligibility_message }}">対象外</span>
+              @else
+                <span class="text-muted">-</span>
+              @endif
+            </td>
             <td>
               @if ($entry->status === 'entry')
                 <span class="badge bg-primary">参加</span>
@@ -264,12 +338,23 @@
                    class="btn btn-sm btn-outline-secondary">
                   抽選状況
                 </a>
+
+                @if (in_array($entry->status, ['entry', 'waiting'], true))
+                  <form method="POST" action="{{ route('tournaments.entries.cancel', $entry->id) }}" class="m-0">
+                    @csrf
+                    <button type="submit"
+                            class="btn btn-sm btn-outline-danger"
+                            onclick="return confirm('このエントリー / ウェイティングを取り消します。抽選・待機順・チェックイン情報もクリアされます。よろしいですか？');">
+                      取消
+                    </button>
+                  </form>
+                @endif
               </div>
             </td>
           </tr>
         @empty
           <tr>
-            <td colspan="13" class="text-center text-muted">該当データはありません。</td>
+            <td colspan="14" class="text-center text-muted">該当データはありません。</td>
           </tr>
         @endforelse
       </tbody>

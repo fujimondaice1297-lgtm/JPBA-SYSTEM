@@ -316,8 +316,12 @@ Route::middleware(['auth','role:editor,admin'])->group(function () {
         ->name('tournaments.draw_reminders.store');
     Route::post('/tournaments/{tournament}/waitlist', [\App\Http\Controllers\TournamentEntryAdminController::class, 'storeWaitlist'])
         ->name('tournaments.waitlist.store');
+    Route::post('/tournaments/{tournament}/waitlist/bulk-promote', [\App\Http\Controllers\TournamentEntryAdminController::class, 'bulkPromoteWaitlist'])
+        ->name('tournaments.waitlist.bulk_promote');
     Route::post('/tournament_entries/{entry}/promote-waitlist', [\App\Http\Controllers\TournamentEntryAdminController::class, 'promoteWaitlist'])
         ->name('tournaments.waitlist.promote');
+    Route::post('/tournament_entries/{entry}/cancel', [\App\Http\Controllers\TournamentEntryAdminController::class, 'cancel'])
+        ->name('tournaments.entries.cancel');
     Route::get('/api/venues/search', [VenuePageController::class, 'search'])
         ->name('api.venues.search');
     Route::get('/api/venues/{id}', [VenuePageController::class, 'showJson'])

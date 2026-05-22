@@ -185,6 +185,13 @@ class TournamentEntryAdminController extends Controller
                 ->with('error', 'ウェイティング行のみ繰り上げできます。');
         }
 
+        $eligibility = $this->resolveEligibility($entry->bowler);
+        if (($eligibility['short'] ?? '') !== '参加権利あり') {
+            return redirect()
+                ->route('tournaments.entries.index', $entry->tournament_id)
+                ->with('error', '参加権利がない選手は参加へ繰り上げできません。先に会員区分・出場可否を確認してください。');
+        }
+
         $entry->update([
             'status' => 'entry',
             'promoted_from_waitlist_at' => now(),
@@ -198,6 +205,107 @@ class TournamentEntryAdminController extends Controller
         return redirect()
             ->route('tournaments.entries.index', $entry->tournament_id)
             ->with('success', 'ウェイティングから参加へ繰り上げました。');
+    }
+
+    public function bulkPromoteWaitlist(Request $request, Tournament $tournament)
+    {
+        $data = $request->validate([
+            'entry_ids' => ['required', 'array', 'min:1'],
+            'entry_ids.*' => ['integer'],
+        ], [
+            'entry_ids.required' => '参加へ繰り上げるウェイティング行を選択してください。',
+            'entry_ids.min' => '参加へ繰り上げるウェイティング行を選択してください。',
+        ]);
+
+        $entryIds = collect($data['entry_ids'] ?? [])
+            ->map(fn ($id) => (int) $id)
+            ->filter(fn ($id) => $id > 0)
+            ->unique()
+            ->values();
+
+        if ($entryIds->isEmpty()) {
+            return redirect()
+                ->route('tournaments.entries.index', $tournament->id)
+                ->with('error', '参加へ繰り上げるウェイティング行を選択してください。');
+        }
+
+        $entries = TournamentEntry::query()
+            ->with('bowler')
+            ->where('tournament_id', $tournament->id)
+            ->whereIn('id', $entryIds)
+            ->where('status', 'waiting')
+            ->get();
+
+        if ($entries->isEmpty()) {
+            return redirect()
+                ->route('tournaments.entries.index', $tournament->id)
+                ->with('error', '対象のウェイティング行が見つかりませんでした。');
+        }
+
+        $promotedCount = 0;
+        $skippedCount = 0;
+
+        foreach ($entries as $entry) {
+            $eligibility = $this->resolveEligibility($entry->bowler);
+            if (($eligibility['short'] ?? '') !== '参加権利あり') {
+                $skippedCount++;
+                continue;
+            }
+
+            $entry->update([
+                'status' => 'entry',
+                'promoted_from_waitlist_at' => now(),
+                'shift' => null,
+                'lane' => null,
+                'checked_in_at' => null,
+                'shift_drawn' => false,
+                'lane_drawn' => false,
+            ]);
+
+            $promotedCount++;
+        }
+
+        if ($promotedCount === 0) {
+            return redirect()
+                ->route('tournaments.entries.index', $tournament->id)
+                ->with('error', '参加権利のあるウェイティング行が選択されていないため、繰り上げは行いませんでした。');
+        }
+
+        $message = $promotedCount . '名をウェイティングから参加へ繰り上げました。';
+        if ($skippedCount > 0) {
+            $message .= ' 参加権利がない ' . $skippedCount . '名はスキップしました。';
+        }
+
+        return redirect()
+            ->route('tournaments.entries.index', $tournament->id)
+            ->with('success', $message);
+    }
+
+    public function cancel(TournamentEntry $entry)
+    {
+        if (!in_array((string) $entry->status, ['entry', 'waiting'], true)) {
+            return redirect()
+                ->route('tournaments.entries.index', $entry->tournament_id)
+                ->with('error', '参加またはウェイティングの行のみ取り消しできます。');
+        }
+
+        $entry->update([
+            'status' => 'no_entry',
+            'preferred_shift_code' => null,
+            'shift' => null,
+            'lane' => null,
+            'checked_in_at' => null,
+            'waitlist_priority' => null,
+            'waitlisted_at' => null,
+            'waitlist_note' => null,
+            'promoted_from_waitlist_at' => null,
+            'shift_drawn' => false,
+            'lane_drawn' => false,
+        ]);
+
+        return redirect()
+            ->route('tournaments.entries.index', $entry->tournament_id)
+            ->with('success', 'エントリー / ウェイティングを取り消しました。');
     }
 
     private function applyBowlerKeyword(Builder $query, string $keyword): void
@@ -327,6 +435,8 @@ class TournamentEntryAdminController extends Controller
 
             $bowler = $proBowlerId ? $bowlersById->get($proBowlerId) : null;
 
+            $eligibility = $this->resolveEligibility($bowler);
+
             $missingEntries[] = [
                 'license_no' => $bowler?->license_no ?: ($candidate['license_no'] ?? null),
                 'name_kanji' => $bowler?->name_kanji ?: '-',
@@ -335,8 +445,21 @@ class TournamentEntryAdminController extends Controller
                 'priority_source_label' => $candidate['priority_source_label'] ?? '-',
                 'priority_note' => $candidate['priority_note'] ?? null,
                 'priority_sort' => (int) ($candidate['priority_sort'] ?? 999999),
+                'eligibility_short' => $eligibility['short'],
+                'eligibility_message' => $eligibility['message'],
+                'eligibility_sort' => ($eligibility['short'] ?? '') === '参加権利あり' ? 0 : 1,
             ];
         }
+
+        $missingEntries = collect($missingEntries)
+            ->sortBy(fn (array $entry) => sprintf(
+                '%d-%06d-%s',
+                (int) ($entry['eligibility_sort'] ?? 1),
+                (int) ($entry['priority_sort'] ?? 999999),
+                strtoupper((string) ($entry['license_no'] ?? ''))
+            ))
+            ->values()
+            ->all();
 
         return [
             'total_count' => $candidates->count(),
@@ -463,6 +586,7 @@ class TournamentEntryAdminController extends Controller
             $entry->priority_badge_class = $priority['priority_badge_class'] ?? 'bg-secondary';
             $entry->eligibility_short = $eligibility['short'];
             $entry->eligibility_message = $eligibility['message'];
+            $entry->eligibility_sort = ($eligibility['short'] ?? '') === '参加権利あり' ? 0 : 1;
 
             return $entry;
         });
@@ -513,7 +637,8 @@ class TournamentEntryAdminController extends Controller
     {
         return $entries
             ->sortBy(fn (TournamentEntry $entry) => sprintf(
-                '%d-%06d-%06d-%d-%s-%d-%s-%08d',
+                '%d-%d-%06d-%06d-%d-%s-%d-%s-%08d',
+                (int) ($entry->eligibility_sort ?? 1),
                 $this->statusSortValue((string) $entry->status),
                 (int) ($entry->priority_sort ?? 999999),
                 $this->nullableIntSortValue($entry->waitlist_priority),
@@ -530,7 +655,8 @@ class TournamentEntryAdminController extends Controller
     {
         return $entries
             ->sortBy(fn (TournamentEntry $entry) => sprintf(
-                '%06d-%d-%s-%d-%s-%08d',
+                '%d-%06d-%d-%s-%d-%s-%08d',
+                (int) ($entry->eligibility_sort ?? 1),
                 (int) ($entry->priority_sort ?? 999999),
                 blank($entry->shift) ? 0 : 1,
                 (string) ($entry->shift ?? ''),

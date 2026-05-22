@@ -27,8 +27,8 @@
   @endif
 
   <div class="alert alert-info small">
-    抽選一覧では、優先出場者一覧に登録済みの参加者を上位に表示します。
-    抽選ロジック自体は変更せず、運用者が未抽選者・優先出場者を確認しやすい表示にしています。
+    抽選一覧では、参加権利がある参加者を最優先にし、その中で優先出場順位を見て表示します。
+    抽選ロジック自体は変更せず、運用者が未抽選者・優先出場者・参加権利を確認しやすい表示にしています。
   </div>
 
   <div class="row g-3 mb-4">
@@ -77,10 +77,15 @@
   </div>
 
   @if (($summary['priority_missing_count'] ?? 0) > 0)
-    <div class="alert alert-warning small">
-      優先出場者一覧に登録済みで、まだエントリー / ウェイティングに存在しない選手が
-      <strong>{{ $summary['priority_missing_count'] }}</strong> 名います。
-      抽選前にエントリー一覧で確認してください。
+    <div class="alert alert-warning small d-flex justify-content-between align-items-center flex-wrap gap-2">
+      <div>
+        優先出場者一覧に登録済みで、まだエントリー / ウェイティングに存在しない選手が
+        <strong>{{ $summary['priority_missing_count'] }}</strong> 名います。
+        抽選前にエントリー一覧からウェイティング登録してください。
+      </div>
+      <a href="{{ route('tournaments.entries.index', $tournament->id) }}" class="btn btn-sm btn-warning">
+        エントリー一覧で登録
+      </a>
     </div>
   @endif
 
@@ -154,12 +159,14 @@
           <th>ライセンスNo</th>
           <th>氏名</th>
           <th>優先出場</th>
+          <th>参加権利</th>
           <th>希望シフト</th>
           <th>シフト</th>
           <th>レーン</th>
           <th>ボール数</th>
           <th>チェックイン</th>
           <th>状態</th>
+          <th>操作</th>
         </tr>
       </thead>
       <tbody>
@@ -182,6 +189,11 @@
               @else
                 <span class="text-muted">-</span>
               @endif
+            </td>
+            <td>
+              <span class="badge bg-light text-dark" title="{{ $entry->eligibility_message }}">
+                {{ $entry->eligibility_short }}
+              </span>
             </td>
             <td>{{ $entry->preferred_shift_code ?? '-' }}</td>
             <td>
@@ -222,10 +234,20 @@
                 <span class="badge bg-success">抽選済 / チェックイン済</span>
               @endif
             </td>
+            <td>
+              <form method="POST" action="{{ route('tournaments.entries.cancel', $entry->id) }}" class="m-0">
+                @csrf
+                <button type="submit"
+                        class="btn btn-sm btn-outline-danger"
+                        onclick="return confirm('この参加登録を取り消します。抽選・チェックイン情報もクリアされます。よろしいですか？');">
+                  取消
+                </button>
+              </form>
+            </td>
           </tr>
         @empty
           <tr>
-            <td colspan="9" class="text-center text-muted">該当データはありません。</td>
+            <td colspan="11" class="text-center text-muted">該当データはありません。</td>
           </tr>
         @endforelse
       </tbody>
