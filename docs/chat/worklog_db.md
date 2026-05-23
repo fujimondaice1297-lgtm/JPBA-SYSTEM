@@ -1,115 +1,235 @@
-## 2026-05-23 DB内ポイントランキングから年度別シード生成・性別絞り込み修正 完了
+## 2026-05-23 フォワードテスト前の大会運用データ初期化 完了
 
 - 目的:
-  - 年度別シード一覧の生成根拠を、外部の公式ランキング表貼り付けではなく、JPBA-system内の `tournament_results.points` 集計に統一する。
-  - DB内ポイントランキングを年度・性別ごとに作成し、そのランキングsnapshotを根拠として翌年度の年度別シード一覧を生成する。
-  - 年度別シード一覧から開く `DB内ポイントランキング` 表示で、男子・女子が混在しないようにする。
-  - 今後のシード運用で、生成根拠を `pro_bowler_ranking_snapshots` / `pro_bowler_ranking_rows` に残せる状態にする。
+  - そろそろフォワードテストを行うため、これまでテストで作成した大会・大会入力選手・スコア・最終成績・ポイント/賞金・ランキング/シード・タイトル反映の残骸を一度消す。
+  - 新たに `大会登録 → 選手登録 / エントリー登録 → スコア登録 → snapshot反映 → 最終成績 → PDF確認` までを、現行システムと相違なく出力できるか確認できる状態にする。
+  - 実稼働後に使う恒久リセット機能ではないため、Artisanコマンドや画面は作成せず、一回限りのDB直接整理として扱う。
 
 - 作業開始時の前提:
-  - 直前までに、シードプロ `S` 表示、年度別シード一覧、大会別追加シード、大会優先出場者PDF、エントリー管理への優先出場反映は完了済み。
-  - ユーザーから、基本スタイルは「現在のDB内でポイントランキングを作成し、それをもとに年度別シード一覧を生成する」と明示された。
-  - 公式ランキング表の貼り付け / 取り込みは行わない。
+  - 直前までに、DB内ポイントランキングから年度別シード一覧を生成する処理と、ランキング画面の性別絞り込み修正は完了済み。
+  - 作業ログ更新も commit / push 済みで、作業ツリーは `## main...origin/main` の差分なし。
+  - 今回はアプリコード修正ではなく、フォワードテスト前のDB整理。
+  - DBスキーマ変更は行わない。
+  - したがって、`migrations` / `docs/db/data_dictionary.md` / `docs/db/ER.dbml` の更新は不要。
   - ProTest は今回も対象外。
-  - 既存テーブルの破壊的変更は禁止。
-  - DB変更が必要な場合のみ `migrations` / `docs/db/data_dictionary.md` / `docs/db/ER.dbml` をセット更新する方針を維持。
 
-- DB / 辞書:
-  - 今回は既存の以下テーブルを使うアプリ実装のみで対応した。
+- 今回の削除方針:
+  - 恒久的なリセットコマンドは作らない。
+  - `TRUNCATE CASCADE` は使わず、FK影響を避けるため子テーブルから順に `DELETE` する。
+  - 事前にバックアップを作る。
+  - まず `BEGIN` + `ROLLBACK` のドライランで削除順と削除後件数を確認する。
+  - 問題がなければ、同じSQLの最後だけ `COMMIT` に変えて本実行する。
+
+- 残すもの:
+  - `pro_bowlers`
+  - `users`
+  - `venues`
+  - `districts`
+  - `sexes`
+  - `distribution_patterns`
+  - その他、選手・会場・地区・性別・ユーザー・パターンなどのマスタ系
+
+- 消す / リセット対象:
+  - 大会本体
+    - `tournaments`
+  - 大会エントリー / 参加者 / 使用ボール
+    - `tournament_entries`
+    - `tournament_participants`
+    - `tournament_entry_balls`
+  - スコア / 速報 / 成績
+    - `game_scores`
     - `tournament_results`
-    - `pro_bowler_ranking_snapshots`
-    - `pro_bowler_ranking_rows`
+    - `tournament_result_snapshots`
+    - `tournament_result_snapshot_rows`
+  - スコアシート
+    - `tournament_match_score_sheets`
+    - `tournament_match_score_sheet_players`
+    - `tournament_match_score_frames`
+  - シード / ランキング
+    - `tournament_seed_players`
     - `pro_bowler_seed_lists`
     - `pro_bowler_seed_list_players`
-  - DBカラム追加・型変更・NOT NULL化・rename は行っていない。
-  - そのため、`migrations` / `docs/db/data_dictionary.md` / `docs/db/ER.dbml` の追加更新は不要と判断した。
+    - `pro_bowler_ranking_snapshots`
+    - `pro_bowler_ranking_rows`
+  - 配分 / 表彰 / ポイント
+    - `point_distributions`
+    - `prize_distributions`
+    - `tournament_awards`
+    - `tournament_points`
+  - その他大会紐づきデータ
+    - `tournament_draw_reminder_logs`
+    - `tournament_auto_draw_logs`
+    - `media_publications`
+    - `stage_settings`
+    - `tournament_files`
+    - `tournament_organizations`
+  - タイトル反映
+    - `pro_bowler_titles`
+    - `pro_bowlers.has_title`
+    - `pro_bowlers.titles_count`
 
-- 年度別シード生成の整理:
-  - `app/Http/Controllers/ProBowlerSeedListController.php` を修正した。
-  - `tournament_results.points` を、指定した元ランキング年度・性別ごとに集計するようにした。
-  - 集計結果を `pro_bowler_ranking_snapshots` へ保存するようにした。
-  - 集計明細を `pro_bowler_ranking_rows` へ保存するようにした。
-  - 保存した ranking snapshot を根拠として `pro_bowler_seed_lists` を作成するようにした。
-  - `pro_bowler_seed_lists.source_ranking_snapshot_id` に生成元snapshotを保持するようにした。
-  - `pro_bowler_seed_list_players.ranking_snapshot_id` に、各シード選手の生成根拠snapshotを保持するようにした。
-  - 同じシード年度・性別のシード一覧は、従来どおり再生成時に差し替える運用を維持した。
+- DB接続確認:
+  - 当初、`psql -p 5433 -d JPBA_MAIN` のように接続したため、Windowsユーザー名 `user` で接続しようとしてパスワード認証エラーになった。
+  - `.env` を確認し、正しい接続情報を確認した。
+    - `DB_CONNECTION=pgsql`
+    - `DB_HOST=127.0.0.1`
+    - `DB_PORT=5433`
+    - `DB_DATABASE=jpba_main`
+    - `DB_USERNAME=postgres`
+  - `-U postgres` を指定する必要があることを確認した。
+  - DB名は大文字の `JPBA_MAIN` ではなく、小文字の `jpba_main` で接続する必要があることを確認した。
+  - 接続確認:
+    - `current_user = postgres`
+    - `current_database = jpba_main`
 
-- 年度別シード一覧画面:
-  - `resources/views/pro_bowler_seed_lists/index.blade.php` を修正した。
-  - 画面文言を `公式ランキング貼り付け` 前提ではなく、`DB内ポイントランキング` 基準へ変更した。
-  - 例外登録・手動追加の説明でも、外部ランキング取り込みを前提にしない文言へ整理した。
-  - DB内ポイントランキング保存履歴を確認できるようにした。
-  - 元ランキングリンクは、年度だけでなく性別も含める方針にした。
-    - 例: `/tournament_results/rankings?year=2025&gender=F`
-    - 例: `/tournament_results/rankings?year=2025&gender=M`
+- 削除前の大会一覧:
+  - `tournaments` には以下7件が存在した。
+    - `1 / 2026 / X / entry_test_20260411_091332`
+    - `2 / 2026 / X / entry_flow_test_20260413_021055`
+    - `3 / 2026 / M / AAAカップ`
+    - `4 / 2026 / M / BBBカップ`
+    - `5 / 2026 / F / CCCカップ`
+    - `8 / 2026 / M / メリーランドカップ`
+    - `9 / 2025 / M / __TEMP_2025_POINT_RANKING__`
 
-- ランキング表示側の性別絞り込み:
-  - 当初、年度別シード一覧側のリンクに `gender=F/M` を付ける修正だけを入れたが、`/tournament_results/rankings` 側で `gender` を検索条件に使っていなかったため、表示上は男子・女子が混在していた。
-  - `app/Http/Controllers/TournamentResultController.php` を修正し、`Request` の `gender` をランキング集計条件へ反映するようにした。
-  - `resources/views/tournament_results/rankings.blade.php` を修正し、ランキング画面で性別セレクトと現在の性別表示を追加した。
-  - 以下すべてのランキング表示で性別絞り込みが反映されるようにした。
-    - 賞金ランキング
-    - 獲得ポイントランキング
-    - アベレージランキング
-  - `gender` が空の場合は、従来どおり全体表示を維持するようにした。
+- 削除前の主な件数:
+  - `tournament_match_score_frames`: 140
+  - `tournament_match_score_sheet_players`: 14
+  - `tournament_match_score_sheets`: 5
+  - `tournament_result_snapshot_rows`: 457
+  - `tournament_result_snapshots`: 50
+  - `tournament_seed_players`: 4
+  - `pro_bowler_seed_list_players`: 48
+  - `pro_bowler_seed_lists`: 2
+  - `pro_bowler_ranking_rows`: 24
+  - `pro_bowler_ranking_snapshots`: 1
+  - `pro_bowler_titles`: 3
+  - `stage_settings`: 4
+  - `game_scores`: 640
+  - `tournament_results`: 91
+  - `tournament_entries`: 21
+  - `point_distributions`: 36
+  - `prize_distributions`: 18
+  - `tournaments`: 7
 
-- 確認できたこと:
-  - 女子の年度別シード詳細は、女子24名で正しく表示される。
-  - 男子の年度別シード詳細は、男子24名で正しく表示される。
-  - 女子シード一覧から `DB内ポイントランキングを開く（女子）` を開くと、URLに `gender=F` が付き、女子だけのランキングが表示される。
-  - 男子シード一覧から開くと、URLに `gender=M` が付き、男子だけのランキングが表示される。
-  - `獲得ポイントランキング（女子）` のように画面上でも性別が分かる。
-  - 公式ランキング表の貼り付け / 取り込み導線は追加していない。
+- タイトル反映データ:
+  - `pro_bowler_titles.source = sync_from_results` が3件存在した。
+  - `pro_bowlers` 側には以下の反映系カラムが存在することを確認した。
+    - `award_total_count`
+    - `eight_hundred_count`
+    - `has_title`
+    - `perfect_count`
+    - `seven_ten_count`
+    - `titles_count`
+  - 今回は大会成績から同期されたタイトルリセットが主目的のため、`has_title` と `titles_count` のみリセット対象にした。
+  - `perfect_count` / `seven_ten_count` / `eight_hundred_count` / `award_total_count` は今回のタイトル・ポイント・賞金リセットとは別扱いとして触っていない。
 
-- 触った主なファイル:
-  - `app/Http/Controllers/ProBowlerSeedListController.php`
-  - `app/Http/Controllers/TournamentResultController.php`
-  - `resources/views/pro_bowler_seed_lists/index.blade.php`
-  - `resources/views/tournament_results/rankings.blade.php`
+- バックアップ:
+  - `storage/backups` フォルダを作成した。
+  - `pg_dump -Fc` でバックアップを作成した。
+    - `storage/backups/jpba_main_before_forward_test_reset.dump`
+  - このバックアップはローカル保管用。
+  - Gitへコミットしない。
 
-- 確認済みコマンド:
-  - `php -l app/Http/Controllers/ProBowlerSeedListController.php`
-  - `php -l app/Http/Controllers/TournamentResultController.php`
-  - `php artisan optimize:clear`
-  - `php artisan view:cache`
-  - `git diff --name-only`
-  - `git status -sb`
+- ドライラン:
+  - `storage/backups/forward_test_reset_dry_run.sql` を作成した。
+  - 最後を `ROLLBACK;` にして、実際には消さずに削除順と削除後件数を確認した。
+  - SQLファイル作成時に `Set-Content -Encoding UTF8` によりUTF-8 BOMが入り、`psql` 側がSJISとして読もうとして文字コードエラーになった。
+  - SQLファイルは英数字だけだったため、ASCIIで保存し直して再実行した。
+  - 先頭バイトが `42-45-47-49-4E`、つまり `BEGIN` から始まっていることを確認した。
+  - ドライランは正常に完了し、最後は `ROLLBACK` で破棄された。
 
-- 主なコミット:
-  - `feat: DB内ポイントランキングから年度別シードを生成`
-  - `fix: ポイントランキングの性別絞り込みを修正`
+- ドライランで確認した削除後状態:
+  - 以下の対象テーブルがすべて0件になることを確認した。
+    - `tournament_match_score_frames`
+    - `tournament_match_score_sheet_players`
+    - `tournament_match_score_sheets`
+    - `tournament_result_snapshot_rows`
+    - `tournament_result_snapshots`
+    - `tournament_seed_players`
+    - `pro_bowler_seed_list_players`
+    - `pro_bowler_seed_lists`
+    - `pro_bowler_ranking_rows`
+    - `pro_bowler_ranking_snapshots`
+    - `pro_bowler_titles`
+    - `tournament_entry_balls`
+    - `tournament_draw_reminder_logs`
+    - `tournament_auto_draw_logs`
+    - `media_publications`
+    - `stage_settings`
+    - `game_scores`
+    - `tournament_results`
+    - `tournament_entries`
+    - `tournament_participants`
+    - `tournament_files`
+    - `tournament_organizations`
+    - `point_distributions`
+    - `prize_distributions`
+    - `tournament_awards`
+    - `tournament_points`
+    - `tournaments`
+  - `pro_bowlers` 側のタイトル反映フラグも以下になることを確認した。
+    - `has_title_true_count = 0`
+    - `titles_count_nonzero_count = 0`
+
+- 本実行:
+  - ドライランSQLをコピーし、最後の `ROLLBACK;` だけ `COMMIT;` に変えた。
+  - `storage/backups/forward_test_reset_commit.sql` を作成した。
+  - 末尾が `COMMIT;` であることを確認した。
+  - `psql -v ON_ERROR_STOP=1 -f storage/backups/forward_test_reset_commit.sql` で実行した。
+  - `BEGIN` から始まり、対象削除・確認SELECTを通過し、最後に `COMMIT` まで完了した。
+
+- 本実行後の確認:
+  - 対象27テーブルすべてが0件になったことを確認した。
+  - `pro_bowlers` 側のタイトル反映フラグも0件になったことを確認した。
+    - `has_title_true_count = 0`
+    - `titles_count_nonzero_count = 0`
+  - これにより、フォワードテスト前の大会運用データは初期化済みと判断した。
+
+- 作成されたローカルファイル:
+  - `storage/backups/jpba_main_before_forward_test_reset.dump`
+  - `storage/backups/forward_test_reset_dry_run.sql`
+  - `storage/backups/forward_test_reset_commit.sql`
+  - これらは作業用・復旧用のローカルファイル。
+  - Git管理対象には入れない。
+
+- DB / 辞書:
+  - 今回は既存DBデータの整理のみ。
+  - DBスキーマ変更は行っていない。
+  - そのため、以下は更新不要。
+    - `database/migrations`
+    - `docs/db/data_dictionary.md`
+    - `docs/db/ER.dbml`
 
 - 現時点で完了したこと:
-  - DB内 `tournament_results.points` から男女別ポイントランキングを作成。
-  - ポイントランキングsnapshotとrowを保存。
-  - 保存済みranking snapshotを根拠に年度別シード一覧を生成。
-  - 年度別シード一覧から元ランキングを開くときに、男女別のランキングを開けるようにした。
-  - ランキング表示側でも `gender=M/F` を実際の絞り込み条件として扱うようにした。
-  - 公式ランキング表の貼り付け / 取り込みを行わない方針を再確認した。
+  - フォワードテスト前に不要なテスト大会・大会入力選手・スコア・最終成績・snapshot・配分・ランキング/シード・タイトル反映を削除した。
+  - 大会運用データは空の状態になった。
+  - `pro_bowlers` などの選手マスタは保持した。
+  - 事前バックアップを作成済み。
+  - ドライランで削除順を確認し、本実行でCOMMIT済み。
 
 - 残タスク / 次に詰める候補:
-  1. 年度末確定処理を整理する。
-     - どのタイミングで当年度ランキングを確定扱いにするか。
-     - 確定済みランキングsnapshotを再生成可能にするか、固定するか。
-  2. 全日本選手権用の当該年度途中ランキング運用を設計する。
-     - 大会日時点ランキングを使う場合の snapshot の作り方。
-     - 通常の前年度ランキング上位24名との違い。
-  3. ランキングsnapshotの再生成履歴・表示整理。
-     - 同年度・同性別の再生成時に旧snapshotをどう扱うか。
-     - 画面上で「生成元」「生成日時」「有効/無効」をどう見せるか。
-  4. エントリー管理強化の実運用回帰確認。
-     - 優先出場未登録。
-     - ウェイティング登録。
-     - 取消。
-     - 一括参加繰り上げ。
-  5. ST Winter 2026 C 実データ投入コマンド整理。
-  6. 配分系テーブル整理。
-  7. ダブルエリミネーション方式の要件整理。
+  1. `git status -sb` で `storage/backups/` が未追跡として出るか確認する。
+     - 出る場合、バックアップファイルはGitに入れない。
+     - 必要なら `.gitignore` の現状確認またはローカル退避を行う。
+  2. 画面で大会一覧が空、または新規登録可能な状態になっていることを確認する。
+     - `/tournaments`
+  3. フォワードテストを開始する。
+     - 大会登録
+     - 配分設定
+     - 選手登録 / エントリー登録
+     - スコア登録
+     - snapshot反映
+     - 最終成績
+     - PDF確認
+     - ランキング / シード反映確認
+  4. フォワードテスト中は、現行システムとの差異を都度メモする。
+  5. フォワードテストでDBスキーマ変更が必要になった場合のみ、`migrations` / `docs/db/data_dictionary.md` / `docs/db/ER.dbml` をセット更新する。
 
 - 現時点の判断:
-  - **年度別シード生成は、DB内ポイントランキングを基準にした運用へ整理できた。**
-  - **公式ランキング表の貼り付け / 取り込みは行わない。**
-  - 今後のシード運用は、`tournament_results.points` → `pro_bowler_ranking_snapshots` / `pro_bowler_ranking_rows` → `pro_bowler_seed_lists` / `pro_bowler_seed_list_players` の流れを基本にする。
+  - **フォワードテスト前のDB整理は完了。**
+  - **大会・スコア・成績・snapshot・配分・ランキング/シード・タイトル反映は空になった。**
+  - **次チャットでは、まず `git status -sb` でバックアップファイルの未追跡状態を確認し、その後フォワードテスト開始へ進む。**
 
 ---
 
@@ -255,9 +375,9 @@
      - ウェイティング一括参加登録。
      - 参加権利なし行が処理対象外になること。
      - 優先出場未登録者からのウェイティング登録。
-  3. 年度末確定処理を整理する。
-     - 公式ランキング表の貼り付け / 取り込みは行わない。
-     - DB内ポイントランキングから前年度最終ランキングを確定し、翌年度の年度別シードを生成する。
+  3. 実ランキング取り込み・年度末確定処理を整理する。
+     - 公式ランキング取り込み。
+     - 前年度最終ランキングからの年度別シード生成。
      - 全日本選手権用の当該年度途中ランキング運用。
   4. ST Winter 2026 C 実データ投入コマンドを、テスト用として残すか dev seed 専用へ移すか整理する。
   5. `tournament_awards` / `tournament_points` と `prize_distributions` / `point_distributions` の役割整理を進める。
@@ -267,8 +387,6 @@
   - **シード管理で作った優先出場順位は、エントリー管理・ウェイティング管理・抽選一覧の表示まで接続できた。**
   - **未登録検出、ウェイティング登録、取消、一括繰り上げまで通ったため、優先出場者の参加管理は実運用確認フェーズへ進める状態になった。**
   - DBスキーマは既存の `tournament_entries` とシード系テーブルで足りており、今回の範囲では新規migrationは不要。
-
----
 
 ---
 
@@ -5395,7 +5513,7 @@ User::where('email','domaine-d@i.softbank.jp')->exists(); // true
      - プロテスト枠
      - シーズントライアル枠
   2. 大会エントリー導線へ、優先出場順位をどう反映するか整理する。
-  3. 年度末のランキング確定処理を整理する（公式ランキング表の貼り付け / 取り込みは行わず、DB内ポイントランキング基準で進める）。
+  3. 年度末のランキング確定処理と、実ランキング取り込み導線を整理する。
   4. 全日本選手権用に、当該年度途中ランキングを使う運用を設計する。
   5. ST Winter 2026 C 実データ投入コマンド整理。
   6. 配分系テーブル整理。
