@@ -1,3 +1,118 @@
+## 2026-05-23 DB内ポイントランキングから年度別シード生成・性別絞り込み修正 完了
+
+- 目的:
+  - 年度別シード一覧の生成根拠を、外部の公式ランキング表貼り付けではなく、JPBA-system内の `tournament_results.points` 集計に統一する。
+  - DB内ポイントランキングを年度・性別ごとに作成し、そのランキングsnapshotを根拠として翌年度の年度別シード一覧を生成する。
+  - 年度別シード一覧から開く `DB内ポイントランキング` 表示で、男子・女子が混在しないようにする。
+  - 今後のシード運用で、生成根拠を `pro_bowler_ranking_snapshots` / `pro_bowler_ranking_rows` に残せる状態にする。
+
+- 作業開始時の前提:
+  - 直前までに、シードプロ `S` 表示、年度別シード一覧、大会別追加シード、大会優先出場者PDF、エントリー管理への優先出場反映は完了済み。
+  - ユーザーから、基本スタイルは「現在のDB内でポイントランキングを作成し、それをもとに年度別シード一覧を生成する」と明示された。
+  - 公式ランキング表の貼り付け / 取り込みは行わない。
+  - ProTest は今回も対象外。
+  - 既存テーブルの破壊的変更は禁止。
+  - DB変更が必要な場合のみ `migrations` / `docs/db/data_dictionary.md` / `docs/db/ER.dbml` をセット更新する方針を維持。
+
+- DB / 辞書:
+  - 今回は既存の以下テーブルを使うアプリ実装のみで対応した。
+    - `tournament_results`
+    - `pro_bowler_ranking_snapshots`
+    - `pro_bowler_ranking_rows`
+    - `pro_bowler_seed_lists`
+    - `pro_bowler_seed_list_players`
+  - DBカラム追加・型変更・NOT NULL化・rename は行っていない。
+  - そのため、`migrations` / `docs/db/data_dictionary.md` / `docs/db/ER.dbml` の追加更新は不要と判断した。
+
+- 年度別シード生成の整理:
+  - `app/Http/Controllers/ProBowlerSeedListController.php` を修正した。
+  - `tournament_results.points` を、指定した元ランキング年度・性別ごとに集計するようにした。
+  - 集計結果を `pro_bowler_ranking_snapshots` へ保存するようにした。
+  - 集計明細を `pro_bowler_ranking_rows` へ保存するようにした。
+  - 保存した ranking snapshot を根拠として `pro_bowler_seed_lists` を作成するようにした。
+  - `pro_bowler_seed_lists.source_ranking_snapshot_id` に生成元snapshotを保持するようにした。
+  - `pro_bowler_seed_list_players.ranking_snapshot_id` に、各シード選手の生成根拠snapshotを保持するようにした。
+  - 同じシード年度・性別のシード一覧は、従来どおり再生成時に差し替える運用を維持した。
+
+- 年度別シード一覧画面:
+  - `resources/views/pro_bowler_seed_lists/index.blade.php` を修正した。
+  - 画面文言を `公式ランキング貼り付け` 前提ではなく、`DB内ポイントランキング` 基準へ変更した。
+  - 例外登録・手動追加の説明でも、外部ランキング取り込みを前提にしない文言へ整理した。
+  - DB内ポイントランキング保存履歴を確認できるようにした。
+  - 元ランキングリンクは、年度だけでなく性別も含める方針にした。
+    - 例: `/tournament_results/rankings?year=2025&gender=F`
+    - 例: `/tournament_results/rankings?year=2025&gender=M`
+
+- ランキング表示側の性別絞り込み:
+  - 当初、年度別シード一覧側のリンクに `gender=F/M` を付ける修正だけを入れたが、`/tournament_results/rankings` 側で `gender` を検索条件に使っていなかったため、表示上は男子・女子が混在していた。
+  - `app/Http/Controllers/TournamentResultController.php` を修正し、`Request` の `gender` をランキング集計条件へ反映するようにした。
+  - `resources/views/tournament_results/rankings.blade.php` を修正し、ランキング画面で性別セレクトと現在の性別表示を追加した。
+  - 以下すべてのランキング表示で性別絞り込みが反映されるようにした。
+    - 賞金ランキング
+    - 獲得ポイントランキング
+    - アベレージランキング
+  - `gender` が空の場合は、従来どおり全体表示を維持するようにした。
+
+- 確認できたこと:
+  - 女子の年度別シード詳細は、女子24名で正しく表示される。
+  - 男子の年度別シード詳細は、男子24名で正しく表示される。
+  - 女子シード一覧から `DB内ポイントランキングを開く（女子）` を開くと、URLに `gender=F` が付き、女子だけのランキングが表示される。
+  - 男子シード一覧から開くと、URLに `gender=M` が付き、男子だけのランキングが表示される。
+  - `獲得ポイントランキング（女子）` のように画面上でも性別が分かる。
+  - 公式ランキング表の貼り付け / 取り込み導線は追加していない。
+
+- 触った主なファイル:
+  - `app/Http/Controllers/ProBowlerSeedListController.php`
+  - `app/Http/Controllers/TournamentResultController.php`
+  - `resources/views/pro_bowler_seed_lists/index.blade.php`
+  - `resources/views/tournament_results/rankings.blade.php`
+
+- 確認済みコマンド:
+  - `php -l app/Http/Controllers/ProBowlerSeedListController.php`
+  - `php -l app/Http/Controllers/TournamentResultController.php`
+  - `php artisan optimize:clear`
+  - `php artisan view:cache`
+  - `git diff --name-only`
+  - `git status -sb`
+
+- 主なコミット:
+  - `feat: DB内ポイントランキングから年度別シードを生成`
+  - `fix: ポイントランキングの性別絞り込みを修正`
+
+- 現時点で完了したこと:
+  - DB内 `tournament_results.points` から男女別ポイントランキングを作成。
+  - ポイントランキングsnapshotとrowを保存。
+  - 保存済みranking snapshotを根拠に年度別シード一覧を生成。
+  - 年度別シード一覧から元ランキングを開くときに、男女別のランキングを開けるようにした。
+  - ランキング表示側でも `gender=M/F` を実際の絞り込み条件として扱うようにした。
+  - 公式ランキング表の貼り付け / 取り込みを行わない方針を再確認した。
+
+- 残タスク / 次に詰める候補:
+  1. 年度末確定処理を整理する。
+     - どのタイミングで当年度ランキングを確定扱いにするか。
+     - 確定済みランキングsnapshotを再生成可能にするか、固定するか。
+  2. 全日本選手権用の当該年度途中ランキング運用を設計する。
+     - 大会日時点ランキングを使う場合の snapshot の作り方。
+     - 通常の前年度ランキング上位24名との違い。
+  3. ランキングsnapshotの再生成履歴・表示整理。
+     - 同年度・同性別の再生成時に旧snapshotをどう扱うか。
+     - 画面上で「生成元」「生成日時」「有効/無効」をどう見せるか。
+  4. エントリー管理強化の実運用回帰確認。
+     - 優先出場未登録。
+     - ウェイティング登録。
+     - 取消。
+     - 一括参加繰り上げ。
+  5. ST Winter 2026 C 実データ投入コマンド整理。
+  6. 配分系テーブル整理。
+  7. ダブルエリミネーション方式の要件整理。
+
+- 現時点の判断:
+  - **年度別シード生成は、DB内ポイントランキングを基準にした運用へ整理できた。**
+  - **公式ランキング表の貼り付け / 取り込みは行わない。**
+  - 今後のシード運用は、`tournament_results.points` → `pro_bowler_ranking_snapshots` / `pro_bowler_ranking_rows` → `pro_bowler_seed_lists` / `pro_bowler_seed_list_players` の流れを基本にする。
+
+---
+
 ## 2026-05-22 大会エントリー管理への優先出場順位反映・取消/一括繰り上げ 完了
 
 - 目的:
@@ -140,9 +255,9 @@
      - ウェイティング一括参加登録。
      - 参加権利なし行が処理対象外になること。
      - 優先出場未登録者からのウェイティング登録。
-  3. 実ランキング取り込み・年度末確定処理を整理する。
-     - 公式ランキング取り込み。
-     - 前年度最終ランキングからの年度別シード生成。
+  3. 年度末確定処理を整理する。
+     - 公式ランキング表の貼り付け / 取り込みは行わない。
+     - DB内ポイントランキングから前年度最終ランキングを確定し、翌年度の年度別シードを生成する。
      - 全日本選手権用の当該年度途中ランキング運用。
   4. ST Winter 2026 C 実データ投入コマンドを、テスト用として残すか dev seed 専用へ移すか整理する。
   5. `tournament_awards` / `tournament_points` と `prize_distributions` / `point_distributions` の役割整理を進める。
@@ -152,6 +267,8 @@
   - **シード管理で作った優先出場順位は、エントリー管理・ウェイティング管理・抽選一覧の表示まで接続できた。**
   - **未登録検出、ウェイティング登録、取消、一括繰り上げまで通ったため、優先出場者の参加管理は実運用確認フェーズへ進める状態になった。**
   - DBスキーマは既存の `tournament_entries` とシード系テーブルで足りており、今回の範囲では新規migrationは不要。
+
+---
 
 ---
 
@@ -5278,7 +5395,7 @@ User::where('email','domaine-d@i.softbank.jp')->exists(); // true
      - プロテスト枠
      - シーズントライアル枠
   2. 大会エントリー導線へ、優先出場順位をどう反映するか整理する。
-  3. 年度末のランキング確定処理と、実ランキング取り込み導線を整理する。
+  3. 年度末のランキング確定処理を整理する（公式ランキング表の貼り付け / 取り込みは行わず、DB内ポイントランキング基準で進める）。
   4. 全日本選手権用に、当該年度途中ランキングを使う運用を設計する。
   5. ST Winter 2026 C 実データ投入コマンド整理。
   6. 配分系テーブル整理。
