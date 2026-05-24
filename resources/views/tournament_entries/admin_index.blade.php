@@ -11,6 +11,7 @@
       <a href="{{ route('tournaments.index') }}" class="btn btn-secondary">大会一覧へ戻る</a>
       <a href="{{ route('tournaments.seed_players.index', $tournament->id) }}" class="btn btn-outline-success">優先出場者一覧</a>
       <a href="{{ route('tournaments.draws.index', $tournament->id) }}" class="btn btn-outline-dark">抽選一覧</a>
+      <a href="{{ route('tournaments.lane_movement_table.show', $tournament->id) }}" class="btn btn-outline-info">レーン移動表</a>
       <a href="{{ route('tournaments.draws.index', ['tournament' => $tournament->id, 'pending_draw' => 1]) }}" class="btn btn-outline-secondary">未抽選一覧</a>
       <a href="{{ route('member.tournaments.entries.index', $tournament->id) }}" class="btn btn-outline-primary">参加選手向け一覧</a>
     </div>

@@ -548,6 +548,101 @@ class TournamentController extends Controller
         };
     }
 
+
+    private function normalizeLaneMovementSettings(Request $request): ?string
+    {
+        $input = (array) $request->input('lane_movement', []);
+        $enabled = filter_var($input['enabled'] ?? false, FILTER_VALIDATE_BOOLEAN);
+
+        if (! $enabled) {
+            return null;
+        }
+
+        $laneFrom = $request->filled('lane_from') ? (int) $request->input('lane_from') : (int) ($input['lane_from'] ?? 0);
+        $laneTo = $request->filled('lane_to') ? (int) $request->input('lane_to') : (int) ($input['lane_to'] ?? 0);
+        $boxWidth = (int) ($input['box_width'] ?? 2);
+        $games = (int) ($input['games'] ?? 0);
+        $startTime = trim((string) ($input['start_time'] ?? ''));
+        $regularMoveBoxes = (int) ($input['regular_move_boxes'] ?? 1);
+        $halfTurnEnabled = filter_var($input['half_turn_enabled'] ?? false, FILTER_VALIDATE_BOOLEAN);
+        $halfTurnGame = $halfTurnEnabled ? (int) ($input['half_turn_game'] ?? 0) : null;
+        $halfTurnMoveBoxes = $halfTurnEnabled ? (int) ($input['half_turn_move_boxes'] ?? 0) : null;
+        $direction = (string) ($input['direction'] ?? 'right');
+        $wrap = ! array_key_exists('wrap', $input) || filter_var($input['wrap'], FILTER_VALIDATE_BOOLEAN);
+
+        if ($laneFrom < 1 || $laneTo < $laneFrom) {
+            throw ValidationException::withMessages([
+                'lane_movement.lane_from' => 'レーン移動表を作成する場合は、使用レーン開始・終了を正しく入力してください。',
+            ]);
+        }
+
+        if ($boxWidth < 1 || $boxWidth > 20) {
+            throw ValidationException::withMessages([
+                'lane_movement.box_width' => '1BOXのレーン数は1〜20で指定してください。',
+            ]);
+        }
+
+        $laneCount = $laneTo - $laneFrom + 1;
+        if ($laneCount % $boxWidth !== 0) {
+            throw ValidationException::withMessages([
+                'lane_movement.box_width' => '使用レーン数は1BOXのレーン数で割り切れるようにしてください。',
+            ]);
+        }
+
+        if ($games < 1 || $games > 99) {
+            throw ValidationException::withMessages([
+                'lane_movement.games' => 'レーン移動表のゲーム数は1〜99で指定してください。',
+            ]);
+        }
+
+        if ($startTime !== '' && ! preg_match('/^(?:[01]\d|2[0-3]):[0-5]\d$/', $startTime)) {
+            throw ValidationException::withMessages([
+                'lane_movement.start_time' => '1G目開始時刻は HH:MM 形式で指定してください。',
+            ]);
+        }
+
+        if ($regularMoveBoxes < 0 || $regularMoveBoxes > 99) {
+            throw ValidationException::withMessages([
+                'lane_movement.regular_move_boxes' => '通常移動BOX数は0〜99で指定してください。',
+            ]);
+        }
+
+        if (! in_array($direction, ['right', 'left'], true)) {
+            throw ValidationException::withMessages([
+                'lane_movement.direction' => '移動方向は右へ、または左へを選択してください。',
+            ]);
+        }
+
+        if ($halfTurnEnabled) {
+            if ($halfTurnGame < 2 || $halfTurnGame > $games) {
+                throw ValidationException::withMessages([
+                    'lane_movement.half_turn_game' => '後半開始ゲームは2G目以降、かつ総ゲーム数以内で指定してください。',
+                ]);
+            }
+
+            if ($halfTurnMoveBoxes < 0 || $halfTurnMoveBoxes > 99) {
+                throw ValidationException::withMessages([
+                    'lane_movement.half_turn_move_boxes' => '後半開始時の移動BOX数は0〜99で指定してください。',
+                ]);
+            }
+        }
+
+        return json_encode([
+            'enabled' => true,
+            'lane_from' => $laneFrom,
+            'lane_to' => $laneTo,
+            'box_width' => $boxWidth,
+            'games' => $games,
+            'start_time' => $startTime !== '' ? $startTime : null,
+            'regular_move_boxes' => $regularMoveBoxes,
+            'half_turn_enabled' => $halfTurnEnabled,
+            'half_turn_game' => $halfTurnEnabled ? $halfTurnGame : null,
+            'half_turn_move_boxes' => $halfTurnEnabled ? $halfTurnMoveBoxes : null,
+            'direction' => $direction,
+            'wrap' => $wrap,
+        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    }
+
     private function validateAndNormalize(Request $request): array
     {
         $validated = $request->validate([
@@ -630,6 +725,17 @@ class TournamentController extends Controller
             'box_player_count'             => 'nullable|integer|min:1|max:12',
             'odd_lane_player_count'        => 'nullable|integer|min:1|max:12',
             'even_lane_player_count'       => 'nullable|integer|min:1|max:12',
+            'lane_movement'                 => 'nullable|array',
+            'lane_movement.enabled'         => 'nullable|boolean',
+            'lane_movement.box_width'       => 'nullable|integer|min:1|max:20',
+            'lane_movement.games'           => 'nullable|integer|min:1|max:99',
+            'lane_movement.start_time'      => 'nullable|date_format:H:i',
+            'lane_movement.regular_move_boxes' => 'nullable|integer|min:0|max:99',
+            'lane_movement.half_turn_enabled' => 'nullable|boolean',
+            'lane_movement.half_turn_game'  => 'nullable|integer|min:2|max:99',
+            'lane_movement.half_turn_move_boxes' => 'nullable|integer|min:0|max:99',
+            'lane_movement.direction'       => 'nullable|in:right,left',
+            'lane_movement.wrap'            => 'nullable|boolean',
 
             'schedule'                     => 'sometimes|array',
             'awards'                       => 'sometimes|array',
@@ -672,10 +778,10 @@ class TournamentController extends Controller
         $laneAssignmentMode = (string) ($validated['lane_assignment_mode'] ?? 'single_lane');
 
         $validated['entry_start'] = $request->filled('entry_start')
-            ? Carbon::parse($request->input('entry_start'))->setTime(10, 0)
+            ? Carbon::parse($request->input('entry_start'))
             : null;
         $validated['entry_end'] = $request->filled('entry_end')
-            ? Carbon::parse($request->input('entry_end'))->setTime(23, 59)
+            ? Carbon::parse($request->input('entry_end'))
             : null;
 
         $validated['inspection_required'] = $request->boolean('inspection_required');
@@ -810,6 +916,10 @@ class TournamentController extends Controller
             customJson: $request->input('result_carry_settings')
         );
 
+        // レーン移動表ルールは画面入力用配列 lane_movement を
+        // tournaments.lane_movement_settings JSON へ正規化して保存する。
+        $validated['lane_movement_settings'] = $this->normalizeLaneMovementSettings($request);
+
         $validated['use_shift_draw'] = $useShiftDraw;
         $validated['accept_shift_preference'] = $useShiftDraw && $request->boolean('accept_shift_preference');
         $validated['shift_codes'] = $useShiftDraw
@@ -820,7 +930,8 @@ class TournamentController extends Controller
             $validated['schedule'],
             $validated['awards'],
             $validated['org'],
-            $validated['shootout_stage_progress']
+            $validated['shootout_stage_progress'],
+            $validated['lane_movement']
         );
         
         $validated['shift_draw_open_at'] = $useShiftDraw && $request->filled('shift_draw_open_at')
@@ -844,13 +955,13 @@ class TournamentController extends Controller
         $validated['lane_draw_close_at'] = $useLaneDraw && $request->filled('lane_draw_close_at')
             ? Carbon::parse($request->input('lane_draw_close_at'))
             : null;
-        $validated['box_player_count'] = $useLaneDraw && $laneAssignmentMode === 'box' && $request->filled('box_player_count')
+        $validated['box_player_count'] = $useLaneDraw && $request->filled('box_player_count')
             ? (int) $request->input('box_player_count')
             : null;
-        $validated['odd_lane_player_count'] = $useLaneDraw && $laneAssignmentMode === 'box' && $request->filled('odd_lane_player_count')
+        $validated['odd_lane_player_count'] = $useLaneDraw && $request->filled('odd_lane_player_count')
             ? (int) $request->input('odd_lane_player_count')
             : null;
-        $validated['even_lane_player_count'] = $useLaneDraw && $laneAssignmentMode === 'box' && $request->filled('even_lane_player_count')
+        $validated['even_lane_player_count'] = $useLaneDraw && $request->filled('even_lane_player_count')
             ? (int) $request->input('even_lane_player_count')
             : null;
 
@@ -877,12 +988,17 @@ class TournamentController extends Controller
                         'box_player_count' => 'BOX運用を使う場合は、BOX人数と奇数/偶数レーン人数を入力してください。',
                     ]);
                 }
+            }
 
-                if (((int) $validated['odd_lane_player_count'] + (int) $validated['even_lane_player_count']) !== (int) $validated['box_player_count']) {
-                    throw ValidationException::withMessages([
-                        'box_player_count' => 'BOX人数は「奇数レーン人数 + 偶数レーン人数」と一致させてください。',
-                    ]);
-                }
+            if (
+                !is_null($validated['box_player_count']) &&
+                !is_null($validated['odd_lane_player_count']) &&
+                !is_null($validated['even_lane_player_count']) &&
+                ((int) $validated['odd_lane_player_count'] + (int) $validated['even_lane_player_count']) !== (int) $validated['box_player_count']
+            ) {
+                throw ValidationException::withMessages([
+                    'box_player_count' => 'BOX人数は「奇数レーン人数 + 偶数レーン人数」と一致させてください。',
+                ]);
             }
         }
 

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use App\Models\Tournament;
 use App\Models\PrizeDistribution;
 use App\Models\DistributionPattern;
@@ -27,42 +28,50 @@ class PrizeDistributionController extends Controller
 
     public function store(Request $request, Tournament $tournament)
     {
-        if ($request->filled('pattern_id')) {
-            $pattern = DistributionPattern::findOrFail($request->pattern_id);
+        DB::transaction(function () use ($request, $tournament) {
+            PrizeDistribution::where('tournament_id', $tournament->id)->delete();
 
-            foreach ($pattern->prizeDistributions as $row) {
-                PrizeDistribution::updateOrCreate(
-                    ['tournament_id' => $tournament->id, 'rank' => (int) $row->rank],
-                    ['amount' => (int) $row->amount, 'pattern_id' => $pattern->id]
-                );
+            if ($request->filled('pattern_id')) {
+                $pattern = DistributionPattern::findOrFail($request->pattern_id);
+
+                foreach ($pattern->prizeDistributions as $row) {
+                    $rank = (int) $row->rank;
+                    $amount = (int) $row->amount;
+
+                    if ($rank <= 0) {
+                        continue;
+                    }
+
+                    PrizeDistribution::create([
+                        'tournament_id' => $tournament->id,
+                        'rank' => $rank,
+                        'amount' => $amount,
+                        'pattern_id' => $pattern->id,
+                    ]);
+                }
+
+                return;
             }
 
-            return redirect()
-                ->route('tournaments.results.index', $tournament)
-                ->with('success', '賞金配分（パターン）を保存しました。大会成績一覧で「賞金・ポイント反映」を実行してください。');
-        }
+            $ranks = (array) $request->input('rank', []);
+            $amounts = (array) $request->input('amount', []);
 
-        $ranks = (array) $request->input('rank', []);
-        $amounts = (array) $request->input('amount', []);
-        $enabled = (array) $request->input('enabled', []);
+            foreach ($ranks as $i => $rank) {
+                $rank = (int) ($rank ?? 0);
+                $rawAmount = $amounts[$i] ?? null;
 
-        foreach ($ranks as $i => $rank) {
-            $rank = (int) ($rank ?? 0);
-            $amount = isset($amounts[$i]) ? (int) $amounts[$i] : null;
+                if ($rank <= 0 || $rawAmount === null || trim((string) $rawAmount) === '') {
+                    continue;
+                }
 
-            if ($rank <= 0 || $amount === null) {
-                continue;
+                PrizeDistribution::create([
+                    'tournament_id' => $tournament->id,
+                    'rank' => $rank,
+                    'amount' => (int) $rawAmount,
+                    'pattern_id' => null,
+                ]);
             }
-
-            if ($enabled && !in_array($rank, $enabled)) {
-                continue;
-            }
-
-            PrizeDistribution::updateOrCreate(
-                ['tournament_id' => $tournament->id, 'rank' => $rank],
-                ['amount' => $amount, 'pattern_id' => null]
-            );
-        }
+        });
 
         return redirect()
             ->route('tournaments.results.index', $tournament)

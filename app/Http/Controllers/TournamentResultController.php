@@ -92,6 +92,78 @@ class TournamentResultController extends Controller
             ->value('amount') ?? 0);
     }
 
+    private function isSeasonTrialTournament(?Tournament $tournament): bool
+    {
+        if (!$tournament) {
+            return false;
+        }
+
+        $titleCategory = trim((string) ($tournament->title_category ?? ''));
+        $category = trim((string) ($tournament->category ?? ''));
+        $type = trim((string) ($tournament->tournament_type ?? ''));
+        $name = trim((string) ($tournament->name ?? ''));
+
+        return $titleCategory === 'season_trial'
+            || $category === 'season_trial'
+            || $type === 'season_trial'
+            || str_contains($name, 'シーズントライアル');
+    }
+
+    private function seasonTrialAwardPointForRanking($ranking): int
+    {
+        if (!is_numeric($ranking)) {
+            return 0;
+        }
+
+        return [
+            1 => 50,
+            2 => 40,
+            3 => 35,
+            4 => 30,
+            5 => 25,
+            6 => 23,
+            7 => 20,
+            8 => 18,
+        ][(int) $ranking] ?? 0;
+    }
+
+    private function resolvePointBreakdown(?Tournament $tournament, int $ranking, bool $isPro = true): array
+    {
+        if (!$isPro || !$tournament || $ranking <= 0) {
+            return [
+                'step_points' => 0,
+                'award_points' => 0,
+                'points' => 0,
+            ];
+        }
+
+        $stepPoints = $this->resolvePoints((int) $tournament->id, $ranking);
+        $awardPoints = $this->isSeasonTrialTournament($tournament)
+            ? $this->seasonTrialAwardPointForRanking($ranking)
+            : 0;
+
+        return [
+            'step_points' => $stepPoints,
+            'award_points' => $awardPoints,
+            'points' => $stepPoints + $awardPoints,
+        ];
+    }
+
+    private function mergePointBreakdownForSave(array $data, array $pointBreakdown): array
+    {
+        $data['points'] = (int) ($pointBreakdown['points'] ?? 0);
+
+        if (Schema::hasColumn('tournament_results', 'step_points')) {
+            $data['step_points'] = (int) ($pointBreakdown['step_points'] ?? 0);
+        }
+
+        if (Schema::hasColumn('tournament_results', 'award_points')) {
+            $data['award_points'] = (int) ($pointBreakdown['award_points'] ?? 0);
+        }
+
+        return $data;
+    }
+
     public function store(Request $request)
     {
         $v = $request->validate([
@@ -109,6 +181,7 @@ class TournamentResultController extends Controller
             'amateur_name' => 'アマチュア選手名',
         ]);
 
+        $tournament = Tournament::findOrFail((int) $v['tournament_id']);
         $pro     = null;
         $license = null;
 
@@ -124,7 +197,7 @@ class TournamentResultController extends Controller
 
         $games   = max(1, (int)$v['games']);
         $average = round(((int)$v['total_pin']) / $games, 2);
-        $points  = $pro ? $this->resolvePoints((int) $v['tournament_id'], (int) $v['ranking']) : 0;
+        $pointBreakdown = $this->resolvePointBreakdown($tournament, (int) $v['ranking'], (bool) $pro);
         $prize   = $pro ? $this->resolvePrize((int) $v['tournament_id'], (int) $v['ranking']) : 0;
 
         $data = [
@@ -134,10 +207,12 @@ class TournamentResultController extends Controller
             'total_pin'      => (int)$v['total_pin'],
             'games'          => (int)$v['games'],
             'average'        => $average,
-            'points'         => $points,
+            'points'         => (int) $pointBreakdown['points'],
             'prize_money'    => $prize,
             'amateur_name'   => $pro ? null : ($v['amateur_name'] ?? null),
         ];
+
+        $data = $this->mergePointBreakdownForSave($data, $pointBreakdown);
 
         if ($pro) {
             $data['pro_bowler_license_no'] = $license;
@@ -221,22 +296,25 @@ class TournamentResultController extends Controller
         ]);
 
         $result  = TournamentResult::findOrFail($id);
+        $tournament = Tournament::findOrFail((int) $request->tournament_id);
 
         $average = round($request->total_pin / max(1,$request->games), 2);
-        $point   = $this->resolvePoints((int) $request->tournament_id, (int) $request->ranking);
+        $pointBreakdown = $this->resolvePointBreakdown($tournament, (int) $request->ranking, true);
         $prize   = $this->resolvePrize((int) $request->tournament_id, (int) $request->ranking);
 
-        $result->update([
+        $updateData = [
             'pro_bowler_license_no' => $request->pro_bowler_license_no,
             'tournament_id'         => $request->tournament_id,
             'ranking'               => $request->ranking,
-            'points'                => $point,
+            'points'                => (int) $pointBreakdown['points'],
             'total_pin'             => $request->total_pin,
             'games'                 => $request->games,
             'average'               => $average,
             'prize_money'           => $prize,
             'ranking_year'          => $request->ranking_year,
-        ]);
+        ];
+
+        $result->update($this->mergePointBreakdownForSave($updateData, $pointBreakdown));
 
         return redirect()
             ->route('tournaments.results.index', (int)$result->tournament_id)
@@ -262,20 +340,22 @@ class TournamentResultController extends Controller
 
         foreach ($validated['results'] as $data) {
             $average = round($data['total_pin'] / $data['games'], 2);
-            $point   = $this->resolvePoints((int) $tournament->id, (int) $data['ranking']);
+            $pointBreakdown = $this->resolvePointBreakdown($tournament, (int) $data['ranking'], true);
             $prize   = $this->resolvePrize((int) $tournament->id, (int) $data['ranking']);
 
-            TournamentResult::create([
+            $createData = [
                 'pro_bowler_license_no' => $data['pro_bowler_license_no'],
                 'tournament_id'         => $tournament->id,
                 'ranking'               => $data['ranking'],
-                'points'                => $point,
+                'points'                => (int) $pointBreakdown['points'],
                 'total_pin'             => $data['total_pin'],
                 'games'                 => $data['games'],
                 'average'               => $average,
                 'prize_money'           => $prize,
                 'ranking_year'          => $data['ranking_year'],
-            ]);
+            ];
+
+            TournamentResult::create($this->mergePointBreakdownForSave($createData, $pointBreakdown));
         }
 
         return redirect()->route('tournaments.results.index', $tournament)->with('success','成績を登録しました。');
@@ -298,6 +378,7 @@ class TournamentResultController extends Controller
 
         $tid  = (int) $request->input('tournament_id');
         $year = (int) $request->input('ranking_year');
+        $tournament = Tournament::findOrFail($tid);
 
         // 旧: results[ { pro_bowler_license_no, ranking, total_pin, games } ... ]
         $legacyRows = $request->input('results', []);
@@ -354,7 +435,7 @@ class TournamentResultController extends Controller
 
             $games   = max(1, (int)$entry['games']);
             $average = round(((int)$entry['total_pin']) / $games, 2);
-            $points  = $isPro ? $this->resolvePoints($tid, (int) $entry['ranking']) : 0;
+            $pointBreakdown = $this->resolvePointBreakdown($tournament, (int) $entry['ranking'], $isPro);
             $prize   = $isPro ? $this->resolvePrize($tid, (int) $entry['ranking']) : 0;
 
             $data = [
@@ -364,7 +445,7 @@ class TournamentResultController extends Controller
                 'total_pin'               => (int)$entry['total_pin'],
                 'games'                   => (int)$entry['games'],
                 'average'                 => $average,
-                'points'                  => $points,
+                'points'                  => (int) $pointBreakdown['points'],
                 'prize_money'             => $prize,
                 'amateur_name'            => $isPro ? null : ($entry['amateur_name'] ?? null),
             ];
@@ -378,6 +459,8 @@ class TournamentResultController extends Controller
                 }
             }
 
+            $data = $this->mergePointBreakdownForSave($data, $pointBreakdown);
+
             TournamentResult::create($data);
         }
 
@@ -387,23 +470,29 @@ class TournamentResultController extends Controller
 
     public function applyAwardsAndPoints(Tournament $tournament)
     {
-        $id      = $tournament->id;
-        $results = TournamentResult::where('tournament_id', $id)->get();
+        DB::transaction(function () use ($tournament) {
+            $id = (int) $tournament->id;
+            $results = TournamentResult::where('tournament_id', $id)->get();
 
-        foreach ($results as $result) {
-            $point = PointDistribution::where('tournament_id', $id)
-                        ->where('rank', $result->ranking)->value('points') ?? 0;
+            foreach ($results as $result) {
+                $ranking = (int) ($result->ranking ?? 0);
+                $isPro = trim((string) ($result->pro_bowler_license_no ?? '')) !== '';
+                $pointBreakdown = $this->resolvePointBreakdown($tournament, $ranking, $isPro);
 
-            $prize = PrizeDistribution::where('tournament_id', $id)
-                        ->where('rank', $result->ranking)->value('amount') ?? 0;
+                $prize = PrizeDistribution::where('tournament_id', $id)
+                    ->where('rank', $ranking)
+                    ->value('amount') ?? 0;
 
-            $result->update([
-                'points'      => $point,
-                'prize_money' => $prize,
-            ]);
-        }
+                $updateData = [
+                    'points' => (int) $pointBreakdown['points'],
+                    'prize_money' => (int) $prize,
+                ];
 
-        return back()->with('success','賞金とポイントを反映しました。');
+                $result->update($this->mergePointBreakdownForSave($updateData, $pointBreakdown));
+            }
+        });
+
+        return back()->with('success','賞金とポイントを反映しました。シーズントライアルは入賞ポイントも自動反映しました。');
     }
 
     public function syncTitles(Request $request, Tournament $tournament)

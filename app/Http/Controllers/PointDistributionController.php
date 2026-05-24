@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use App\Models\Tournament;
 use App\Models\PointDistribution;
 use App\Models\DistributionPattern;
@@ -27,42 +28,50 @@ class PointDistributionController extends Controller
 
     public function store(Request $request, Tournament $tournament)
     {
-        if ($request->filled('pattern_id')) {
-            $pattern = DistributionPattern::findOrFail($request->pattern_id);
+        DB::transaction(function () use ($request, $tournament) {
+            PointDistribution::where('tournament_id', $tournament->id)->delete();
 
-            foreach ($pattern->pointDistributions as $row) {
-                PointDistribution::updateOrCreate(
-                    ['tournament_id' => $tournament->id, 'rank' => (int) $row->rank],
-                    ['points' => (int) $row->points, 'pattern_id' => $pattern->id]
-                );
+            if ($request->filled('pattern_id')) {
+                $pattern = DistributionPattern::findOrFail($request->pattern_id);
+
+                foreach ($pattern->pointDistributions as $row) {
+                    $rank = (int) $row->rank;
+                    $points = (int) $row->points;
+
+                    if ($rank <= 0) {
+                        continue;
+                    }
+
+                    PointDistribution::create([
+                        'tournament_id' => $tournament->id,
+                        'rank' => $rank,
+                        'points' => $points,
+                        'pattern_id' => $pattern->id,
+                    ]);
+                }
+
+                return;
             }
 
-            return redirect()
-                ->route('tournaments.results.index', $tournament)
-                ->with('success', 'ポイント配分（パターン）を保存しました。大会成績一覧で「賞金・ポイント反映」を実行してください。');
-        }
+            $ranks = (array) $request->input('rank', []);
+            $points = (array) $request->input('points', []);
 
-        $ranks = (array) $request->input('rank', []);
-        $points = (array) $request->input('points', []);
-        $enabled = (array) $request->input('enabled', []);
+            foreach ($ranks as $i => $rank) {
+                $rank = (int) ($rank ?? 0);
+                $rawPoint = $points[$i] ?? null;
 
-        foreach ($ranks as $i => $rank) {
-            $rank = (int) ($rank ?? 0);
-            $point = isset($points[$i]) ? (int) $points[$i] : null;
+                if ($rank <= 0 || $rawPoint === null || trim((string) $rawPoint) === '') {
+                    continue;
+                }
 
-            if ($rank <= 0 || $point === null) {
-                continue;
+                PointDistribution::create([
+                    'tournament_id' => $tournament->id,
+                    'rank' => $rank,
+                    'points' => (int) $rawPoint,
+                    'pattern_id' => null,
+                ]);
             }
-
-            if ($enabled && !in_array($rank, $enabled)) {
-                continue;
-            }
-
-            PointDistribution::updateOrCreate(
-                ['tournament_id' => $tournament->id, 'rank' => $rank],
-                ['points' => $point, 'pattern_id' => null]
-            );
-        }
+        });
 
         return redirect()
             ->route('tournaments.results.index', $tournament)

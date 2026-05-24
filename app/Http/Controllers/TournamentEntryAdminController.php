@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\ProBowler;
 use App\Models\Tournament;
 use App\Models\TournamentEntry;
+use App\Services\TournamentLaneMovementService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -103,6 +104,27 @@ class TournamentEntryAdminController extends Controller
             'summary',
             'keyword',
             'pendingDraw'
+        ));
+    }
+
+
+    public function laneMovementTable(Request $request, Tournament $tournament, TournamentLaneMovementService $laneMovementService)
+    {
+        $entries = TournamentEntry::query()
+            ->with('bowler')
+            ->where('tournament_id', $tournament->id)
+            ->where('status', 'entry')
+            ->whereNotNull('lane')
+            ->orderBy('lane')
+            ->orderBy('id')
+            ->get();
+
+        $laneMovement = $laneMovementService->buildRows($tournament, $entries);
+
+        return view('tournament_entries.lane_movement_table', compact(
+            'tournament',
+            'entries',
+            'laneMovement'
         ));
     }
 

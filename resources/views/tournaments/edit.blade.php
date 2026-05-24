@@ -190,16 +190,16 @@
     </div>
 
     <div class="col-md-3 mb-3">
-      <label class="form-label">申込開始日</label>
-      <input type="date" name="entry_start" class="form-control @error('entry_start') is-invalid @enderror"
-             value="{{ old('entry_start', optional($tournament->entry_start)->format('Y-m-d')) }}">
+      <label class="form-label">申込開始日時</label>
+      <input type="datetime-local" name="entry_start" class="form-control @error('entry_start') is-invalid @enderror"
+             value="{{ old('entry_start', optional($tournament->entry_start)->format('Y-m-d\TH:i')) }}">
       @error('entry_start')<div class="invalid-feedback">{{ $message }}</div>@enderror
     </div>
 
     <div class="col-md-3 mb-3">
-      <label class="form-label">申込締切日</label>
-      <input type="date" name="entry_end" class="form-control @error('entry_end') is-invalid @enderror"
-             value="{{ old('entry_end', optional($tournament->entry_end)->format('Y-m-d')) }}">
+      <label class="form-label">申込締切日時</label>
+      <input type="datetime-local" name="entry_end" class="form-control @error('entry_end') is-invalid @enderror"
+             value="{{ old('entry_end', optional($tournament->entry_end)->format('Y-m-d\TH:i')) }}">
       @error('entry_end')<div class="invalid-feedback">{{ $message }}</div>@enderror
     </div>
 
@@ -332,11 +332,20 @@
     <div class="col-md-4 mb-3">
       <label class="form-label">SO詳細設定（JSON任意）</label>
       @php
+        $rawShootoutSettings = $tournament->shootout_settings ?? [];
+        if (is_string($rawShootoutSettings)) {
+            $decodedShootoutSettings = json_decode($rawShootoutSettings, true);
+            $rawShootoutSettings = is_array($decodedShootoutSettings) ? $decodedShootoutSettings : [];
+        } elseif (!is_array($rawShootoutSettings)) {
+            $rawShootoutSettings = [];
+        }
+
         $shootoutSettingsValue = old('shootout_settings');
         if ($shootoutSettingsValue === null) {
-            $rawShootoutSettings = $tournament->shootout_settings ?? null;
-            $shootoutSettingsValue = is_array($rawShootoutSettings)
-                ? json_encode($rawShootoutSettings, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT)
+            $shootoutSettingsForTextarea = $rawShootoutSettings;
+            unset($shootoutSettingsForTextarea['stage_progress']);
+            $shootoutSettingsValue = is_array($shootoutSettingsForTextarea) && !empty($shootoutSettingsForTextarea)
+                ? json_encode($shootoutSettingsForTextarea, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT)
                 : '';
         }
       @endphp
@@ -363,7 +372,7 @@
         @php
           $shootoutStageProgress = old('shootout_stage_progress');
           if (!is_array($shootoutStageProgress)) {
-              $rawShootoutStageSettings = $tournament->shootout_settings['stage_progress'] ?? [];
+              $rawShootoutStageSettings = $rawShootoutSettings['stage_progress'] ?? [];
               $shootoutStageProgress = is_array($rawShootoutStageSettings) ? $rawShootoutStageSettings : [];
           }
 
@@ -775,6 +784,138 @@
       <div class="small text-muted">
         BOX運用では「奇数レーン人数 + 偶数レーン人数 = 1BOX人数」にしてください。<br>
         例：5番レーン2名、6番レーン3名、BOX5名
+      </div>
+    </div>
+  </div>
+
+
+  @php
+    $laneMovementStored = $tournament->lane_movement_settings ?? [];
+    if (is_string($laneMovementStored)) {
+        $decodedLaneMovement = json_decode($laneMovementStored, true);
+        $laneMovementStored = is_array($decodedLaneMovement) ? $decodedLaneMovement : [];
+    }
+    $laneMovementInit = old('lane_movement', $laneMovementStored);
+    if (!is_array($laneMovementInit)) {
+        $laneMovementInit = [];
+    }
+  @endphp
+
+  <div class="card mt-3 mb-4 border-primary-subtle">
+    <div class="card-header fw-bold">レーン移動表ルール</div>
+    <div class="card-body">
+      <div class="row g-3 align-items-end">
+        <div class="col-md-3">
+          <label class="form-label d-block">レーン移動表を作成する</label>
+          <input type="hidden" name="lane_movement[enabled]" value="0">
+          <input type="checkbox"
+                 name="lane_movement[enabled]"
+                 value="1"
+                 class="form-check-input js-lane-movement-enabled"
+                 {{ !empty($laneMovementInit['enabled']) ? 'checked' : '' }}>
+          <span class="small text-muted ms-1">ONにすると移動表を作成できます</span>
+        </div>
+
+        <div class="col-md-2">
+          <label class="form-label">1BOXレーン数</label>
+          <input type="number"
+                 name="lane_movement[box_width]"
+                 class="form-control js-lane-movement-field @error('lane_movement.box_width') is-invalid @enderror"
+                 value="{{ $laneMovementInit['box_width'] ?? 2 }}"
+                 min="1">
+          @error('lane_movement.box_width')<div class="invalid-feedback">{{ $message }}</div>@enderror
+        </div>
+
+        <div class="col-md-2">
+          <label class="form-label">対象ゲーム数</label>
+          <input type="number"
+                 name="lane_movement[games]"
+                 class="form-control js-lane-movement-field @error('lane_movement.games') is-invalid @enderror"
+                 value="{{ $laneMovementInit['games'] ?? '' }}"
+                 min="1">
+          @error('lane_movement.games')<div class="invalid-feedback">{{ $message }}</div>@enderror
+        </div>
+
+        <div class="col-md-2">
+          <label class="form-label">1G目開始時刻</label>
+          <input type="time"
+                 name="lane_movement[start_time]"
+                 class="form-control js-lane-movement-field @error('lane_movement.start_time') is-invalid @enderror"
+                 value="{{ $laneMovementInit['start_time'] ?? '' }}">
+          @error('lane_movement.start_time')<div class="invalid-feedback">{{ $message }}</div>@enderror
+        </div>
+
+        <div class="col-md-2">
+          <label class="form-label">通常移動BOX数</label>
+          <input type="number"
+                 name="lane_movement[regular_move_boxes]"
+                 class="form-control js-lane-movement-field @error('lane_movement.regular_move_boxes') is-invalid @enderror"
+                 value="{{ $laneMovementInit['regular_move_boxes'] ?? 1 }}"
+                 min="0">
+          @error('lane_movement.regular_move_boxes')<div class="invalid-feedback">{{ $message }}</div>@enderror
+        </div>
+
+        <div class="col-md-3">
+          <label class="form-label">移動方向</label>
+          @php $laneMovementDirection = $laneMovementInit['direction'] ?? 'right'; @endphp
+          <select name="lane_movement[direction]"
+                  class="form-select js-lane-movement-field @error('lane_movement.direction') is-invalid @enderror">
+            <option value="right" {{ $laneMovementDirection === 'right' ? 'selected' : '' }}>右へ移動</option>
+            <option value="left" {{ $laneMovementDirection === 'left' ? 'selected' : '' }}>左へ移動</option>
+          </select>
+          @error('lane_movement.direction')<div class="invalid-feedback">{{ $message }}</div>@enderror
+        </div>
+
+        <div class="col-md-3">
+          <label class="form-label d-block">後半開始時だけ別移動</label>
+          <input type="hidden" name="lane_movement[half_turn_enabled]" value="0">
+          <input type="checkbox"
+                 name="lane_movement[half_turn_enabled]"
+                 value="1"
+                 class="form-check-input js-lane-movement-field js-lane-half-enabled"
+                 {{ !empty($laneMovementInit['half_turn_enabled']) ? 'checked' : '' }}>
+          <span class="small text-muted ms-1">例：5G目開始時のみ別移動</span>
+        </div>
+
+        <div class="col-md-2">
+          <label class="form-label">後半開始ゲーム</label>
+          <input type="number"
+                 name="lane_movement[half_turn_game]"
+                 class="form-control js-lane-movement-field js-lane-half-field @error('lane_movement.half_turn_game') is-invalid @enderror"
+                 value="{{ $laneMovementInit['half_turn_game'] ?? '' }}"
+                 min="2">
+          @error('lane_movement.half_turn_game')<div class="invalid-feedback">{{ $message }}</div>@enderror
+        </div>
+
+        <div class="col-md-2">
+          <label class="form-label">後半開始時の移動BOX数</label>
+          <input type="number"
+                 name="lane_movement[half_turn_move_boxes]"
+                 class="form-control js-lane-movement-field js-lane-half-field @error('lane_movement.half_turn_move_boxes') is-invalid @enderror"
+                 value="{{ $laneMovementInit['half_turn_move_boxes'] ?? '' }}"
+                 min="0">
+          @error('lane_movement.half_turn_move_boxes')<div class="invalid-feedback">{{ $message }}</div>@enderror
+        </div>
+
+        <div class="col-md-3">
+          <label class="form-label d-block">使用レーン内で循環する</label>
+          <input type="hidden" name="lane_movement[wrap]" value="0">
+          <input type="checkbox"
+                 name="lane_movement[wrap]"
+                 value="1"
+                 class="form-check-input js-lane-movement-field"
+                 {{ array_key_exists('wrap', $laneMovementInit) ? (!empty($laneMovementInit['wrap']) ? 'checked' : '') : 'checked' }}>
+          <span class="small text-muted ms-1">最終BOXの次を先頭BOXへ戻す</span>
+        </div>
+
+        <div class="col-12">
+          <div class="small text-muted">
+            使用レーン開始・終了は、上のレーン抽選設定と共通で使います。<br>
+            1G目開始時刻を入れると、1BOX人数に応じて進行予定時間を自動表示します。<br>
+            例：使用レーン3〜34、1BOXレーン数2、通常移動BOX数2なら、3-4 → 7-8 → 11-12 のように移動します。<br>
+            後半開始時の移動をONにすると、指定ゲーム開始時だけ通常移動とは別のBOX数で移動します。
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -1256,10 +1397,10 @@ document.addEventListener('DOMContentLoaded', function () {
   });
 
   // 運営 / 抽選設定
-  const useShift = document.querySelector('input[name="use_shift_draw"]');
-  const acceptShift = document.querySelector('input[name="accept_shift_preference"]');
+  const useShift = document.querySelector('input[type="checkbox"][name="use_shift_draw"]');
+  const acceptShift = document.querySelector('input[type="checkbox"][name="accept_shift_preference"]');
   const laneMode = document.querySelector('select[name="lane_assignment_mode"]');
-  const useLane = document.querySelector('input[name="use_lane_draw"]');
+  const useLane = document.querySelector('input[type="checkbox"][name="use_lane_draw"]');
 
   function toggleOperationFields() {
     const shiftEnabled = !!useShift?.checked;
@@ -1282,7 +1423,7 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     document.querySelectorAll('input[name="box_player_count"], input[name="odd_lane_player_count"], input[name="even_lane_player_count"]').forEach((el) => {
-      el.disabled = !laneEnabled || !isBox;
+      el.disabled = !laneEnabled;
     });
 
     if (laneMode) {
@@ -1293,7 +1434,27 @@ document.addEventListener('DOMContentLoaded', function () {
   useShift?.addEventListener('change', toggleOperationFields);
   useLane?.addEventListener('change', toggleOperationFields);
   laneMode?.addEventListener('change', toggleOperationFields);
+
+  const laneMovementEnabled = document.querySelector('.js-lane-movement-enabled');
+  const laneHalfEnabled = document.querySelector('.js-lane-half-enabled');
+
+  function toggleLaneMovementFields() {
+    const enabled = !!laneMovementEnabled?.checked;
+    const halfEnabled = enabled && !!laneHalfEnabled?.checked;
+
+    document.querySelectorAll('.js-lane-movement-field').forEach((el) => {
+      el.disabled = !enabled;
+    });
+
+    document.querySelectorAll('.js-lane-half-field').forEach((el) => {
+      el.disabled = !halfEnabled;
+    });
+  }
+
+  laneMovementEnabled?.addEventListener('change', toggleLaneMovementFields);
+  laneHalfEnabled?.addEventListener('change', toggleLaneMovementFields);
   toggleOperationFields();
+  toggleLaneMovementFields();
 
   // 組織
   const cats = ['host', 'special_sponsor', 'sponsor', 'support', 'cooperation', '__free__'];

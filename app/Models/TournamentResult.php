@@ -13,6 +13,8 @@ class TournamentResult extends Model
         'tournament_id',
         'ranking',
         'points',
+        'award_points',
+        'step_points',
         'total_pin',
         'games',
         'average',
@@ -21,6 +23,7 @@ class TournamentResult extends Model
         // ある環境では ID で持っている可能性があるため許可しておく（無ければ無視される）
         'pro_bowler_id',
         'amateur_name',
+        'affiliation_display',
     ];
 
     /** 大会 */

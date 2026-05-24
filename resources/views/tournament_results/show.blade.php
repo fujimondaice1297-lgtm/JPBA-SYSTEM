@@ -149,6 +149,7 @@
     <div class="alert alert-info py-2">
         基本の流れは、<strong>ポイント配分 / 賞金配分</strong> → <strong>成績登録</strong> → 配分変更時のみ<strong>賞金・ポイント再計算</strong> → <strong>タイトル反映</strong> です。<br>
         成績の<strong>新規登録・一括登録・編集時</strong>に、設定済みの<strong>ポイント配分</strong>と<strong>賞金配分</strong>が自動反映されます。<br>
+        シーズントライアルでは、最終順位1〜8位に固定の<strong>入賞ポイント</strong>を自動加算します。<br>
         配分未設定の順位は 0 のままです。<br>
         ライセンス番号のないアマチュア選手は、プロフィールには反映せず、この大会成績上の表示名だけを保持します。
         @if($finalScreen)
@@ -167,7 +168,9 @@
                     <th>選手名</th>
                     <th>ライセンスNo</th>
                     <th>順位</th>
-                    <th>ポイント</th>
+                    <th>合計ポイント</th>
+                    <th>入賞ポイント</th>
+                    <th>ステップポイント</th>
                     <th>トータルピン</th>
                     <th>G</th>
                     <th>アベレージ</th>
@@ -205,6 +208,8 @@
                     <td>{{ $licenseDisplay }}</td>
                     <td>{{ $rank }}</td>
                     <td>{{ number_format($result->points ?? 0) }}</td>
+                    <td>{{ number_format($result->award_points ?? 0) }}</td>
+                    <td>{{ number_format($result->step_points ?? 0) }}</td>
                     <td>{{ number_format($result->total_pin ?? 0) }}</td>
                     <td>{{ $result->games ?? '-' }}</td>
                     <td>{{ isset($result->average) ? number_format($result->average, 2) : '-' }}</td>

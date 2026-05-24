@@ -1,3 +1,217 @@
+## 2026-05-24 フォワードテスト開始・大会作成/配分/エントリー登録/レーン移動表機能追加
+
+- 目的:
+  - フォワードテストとして、実稼働に近い流れで大会作成からエントリー登録、ポイント/賞金配分、レーン移動表作成までを確認する。
+  - 対象大会は `ＪＰＢＡシーズントライアル ２０２５ オータムシリーズ　Ｃ会場：アソビックスあさひ`。
+  - 公式要項・公式レーン表を参考に、現行サイトの運用と同じように大会を登録し、入力・表示・PDF風帳票の不足点を洗い出す。
+  - シーズントライアルに限らず、全大会で使えるレーン移動ルールとレーン移動表の基盤を追加する。
+
+- 作業開始時の状態:
+  - 作業開始時HEADは `7c99cf9`。
+  - フォワードテスト前のDB整理により、`tournaments` / `tournament_entries` / `game_scores` / `tournament_results` は0件の状態から開始した。
+  - `storage/backups/` はバックアップ・一時投入スクリプト用の未追跡ファイルとして存在していた。
+  - `storage/backups/` はローカル作業用であり、Gitコミット対象外とする方針。
+
+- 大会作成フォワードテスト:
+  - 公式PDFの大会要項を参考に、シーズントライアル2025 オータムシリーズ C会場の大会を作成した。
+  - 作成後の大会IDは `10`。
+  - `tournaments` には以下が確認された。
+    - `id = 10`
+    - `title_category = season_trial`
+    - `start_date = 2025-10-02`
+    - `end_date = 2025-10-02`
+  - 大会作成・編集画面で、実運用に必要な項目を手入力しながら不具合を確認した。
+
+- 大会作成/編集画面の修正:
+  - `resources/views/tournaments/create.blade.php`
+  - `resources/views/tournaments/edit.blade.php`
+  - `app/Http/Controllers/TournamentController.php`
+  を中心に修正した。
+  - レーン抽選ON時に `使用レーン開始` / `使用レーン終了` が入力できない問題を修正した。
+  - BOX人数、奇数レーン人数、偶数レーン人数の入力欄が無効化されたままになる問題を改善した。
+  - 申込開始日 / 申込締切日を日付だけでなく時刻付きで入力できるようにした。
+  - シーズントライアル進行設定が保存後に編集画面で空白に戻る問題を修正した。
+  - `shootout_settings.stage_progress` 側の値が再表示されるようにした。
+
+- ポイント配分 / 賞金配分の改善:
+  - `app/Http/Controllers/PointDistributionController.php`
+  - `app/Http/Controllers/PrizeDistributionController.php`
+  - `resources/views/point_distributions/create.blade.php`
+  - `resources/views/prize_distributions/create.blade.php`
+  を修正した。
+  - ポイント配分画面に、人数を指定すると最下位から1ポイントずつ増える自動入力を追加した。
+    - 例: 34名指定なら、1位=34、2位=33、...、34位=1。
+  - ポイント欄に数値が入っている行は表示対象として扱い、空欄行は保存対象外にする方針にした。
+  - 賞金配分も、金額が入っている行だけを保存対象とするよう改善した。
+  - 表示チェックは入力補助として残しつつ、保存判定は数値入力を優先する方針にした。
+
+- シーズントライアルのポイント方針:
+  - `tournament_results` には既に `award_points` と `step_points` が存在することを確認した。
+  - DB変更なしで、シーズントライアルの入賞ポイントとステップポイントを分けて扱えると判断した。
+  - シーズントライアルの決勝シュートアウト進出者に付く入賞ポイントは固定配分とし、手入力ではなく最終成績確定・再計算時に自動付与する方針にした。
+    - 1位: 50
+    - 2位: 40
+    - 3位: 35
+    - 4位: 30
+    - 5位: 25
+    - 6位: 23
+    - 7位: 20
+    - 8位: 18
+  - `TournamentResultController` / `TournamentResult` / `tournament_results/show.blade.php` を調整し、合計ポイント / 入賞ポイント / ステップポイントを扱えるようにした。
+
+- C会場64名エントリー投入:
+  - 公式レーン表PDFを参考に、C会場64名のエントリーを作成した。
+  - 最初は `pro_bowlers` を `license_no` 文字列検索で照合したため、64名全員が missing になった。
+  - `pro_bowlers` には `license_no_num` が存在し、男子は `sex=1`、ライセンス下4桁は `license_no_num` で照合するのが正しいと判断した。
+  - `storage/backups/import_st_autumn_2025_c_entries.php` を一時投入スクリプトとして作成し、`license_no_num + sex=1` で照合する方式へ修正した。
+  - `tournament_entries.pro_bowler_id` は NOT NULL のため、仮登録ではなく選手マスタ紐づけで登録した。
+  - 投入後、以下を確認した。
+    - `tournament_entries`: 64件
+    - `tournament_participants`: 64件
+  - エントリー管理画面でも `参加 64` として表示された。
+  - 公式レーン表に合わせ、開始レーンも `tournament_entries.lane` へ投入した。
+  - `storage/backups/import_st_autumn_2025_c_entries.php` は一時投入スクリプトであり、Gitコミット対象外。
+
+- レーン移動ルールのDB追加:
+  - 大会ごとにレーン移動ルールが変わるため、全大会共通の大会設定として `tournaments.lane_movement_settings` を追加した。
+  - 新規migrationを追加した。
+    - `database/migrations/2025_09_01_000088_add_lane_movement_settings_to_tournaments_table.php`
+  - `docs/db/data_dictionary.md` を更新した。
+  - `php tools/generate_er_from_dictionary.php` で `docs/db/ER.dbml` を再生成した。
+  - `lane_movement_settings` には以下のような設定をJSONで保持する方針にした。
+    - 有効/無効
+    - 使用レーン範囲
+    - 1BOXレーン数
+    - 対象ゲーム数
+    - 通常移動BOX数
+    - 移動方向
+    - 後半開始ゲーム
+    - 後半開始時の移動BOX数
+    - 循環有無
+    - 1G目開始時刻
+
+- レーン移動計算サービス:
+  - `app/Services/TournamentLaneMovementService.php` を追加した。
+  - 登録済みの `tournament_entries.lane` をスタートレーンとして扱い、1G目〜対象ゲーム数までのBOX移動先を自動計算するようにした。
+  - 使用レーン内で循環する場合、最終BOXの次は先頭BOXへ戻るようにした。
+  - 通常移動とは別に、後半開始ゲームだけ別移動BOX数を指定できるようにした。
+  - `direction` 未設定時に `Undefined array key "direction"` が出る問題を修正し、既存大会では初期値 `right` として扱うようにした。
+
+- レーン移動表画面:
+  - `resources/views/tournament_entries/lane_movement_table.blade.php` を追加した。
+  - `TournamentEntryAdminController` にレーン移動表表示処理を追加した。
+  - `routes/web.php` にレーン移動表ルートを追加した。
+  - 大会ID10では以下で表示確認した。
+    - `/tournaments/10/lane-movement-table`
+  - `admin_draws.blade.php` と `admin_index.blade.php` にレーン移動表への導線ボタンを追加し、URL直打ちしなくても画面へ遷移できるようにした。
+
+- レーン移動表レイアウト調整:
+  - 公式PDFの `予選8Gレーン移動表` に寄せて、HTML印刷向けの表を作成した。
+  - 1ページあたり32名から、余白を見て36名=9BOX表示へ変更した。
+  - 同一BOX内の選手はゲーム欄を縦結合し、4G目と5G目の間は太線で区切るようにした。
+  - A4縦印刷に収まりやすいよう、表幅・罫線・文字サイズ・余白を調整した。
+  - 大会名は切りのよい位置で改行し、今回の大会では `オータムシリーズ` と `C会場：アソビックスあさひ` を分けて表示した。
+  - 氏名は中央揃えにした。
+  - 氏名表示は、公式プロフィール側の姓名区切りを尊重する方針にした。
+    - 漢字4文字: 姓と名の間にスペース1つ
+    - 漢字3文字: 姓と名の間にスペース2つ
+    - 漢字5文字以上: スペースなし
+  - 今回のC会場64名については、公式表記に合わせて姓名区切りを補正した。
+  - 公式PDFに合わせ、ゲーム進行予定時間を各ゲーム列の真上に配置した。
+  - 使用レーン / 通常移動BOXの表示はゲーム進行予定時間の上側へ戻した。
+  - 選手名の文字サイズを少し大きくし、読みやすくした。
+
+- ゲーム進行予定時間:
+  - 大会作成 / 編集画面のレーン移動表ルールに `1G目開始時刻` 入力欄を追加した。
+  - `lane_movement_settings.start_time` として保存する方針にした。
+  - BOX人数に応じて、2G目以降の開始予定時刻を自動表示するようにした。
+    - BOX3名: +27分
+    - BOX4名: +32分
+    - BOX5名: +38分
+    - BOX6名: +50分
+  - C会場では `09:30` 開始、BOX4名として、`10:02` / `10:34` / `11:06` / `11:38` / `12:10` / `12:42` / `13:14` のように表示されることを確認した。
+
+- 確認済みコマンド:
+  - `php -l app/Http/Controllers/PointDistributionController.php`
+  - `php -l app/Http/Controllers/PrizeDistributionController.php`
+  - `php -l app/Http/Controllers/TournamentController.php`
+  - `php -l app/Http/Controllers/TournamentEntryAdminController.php`
+  - `php -l app/Http/Controllers/TournamentResultController.php`
+  - `php -l app/Models/TournamentResult.php`
+  - `php -l app/Services/TournamentLaneMovementService.php`
+  - `php artisan migrate`
+  - `php tools/generate_er_from_dictionary.php`
+  - `php artisan view:clear`
+  - `php artisan optimize:clear`
+
+- 触った主なファイル:
+  - `app/Http/Controllers/PointDistributionController.php`
+  - `app/Http/Controllers/PrizeDistributionController.php`
+  - `app/Http/Controllers/TournamentController.php`
+  - `app/Http/Controllers/TournamentEntryAdminController.php`
+  - `app/Http/Controllers/TournamentResultController.php`
+  - `app/Models/TournamentResult.php`
+  - `app/Services/TournamentLaneMovementService.php`
+  - `database/migrations/2025_09_01_000088_add_lane_movement_settings_to_tournaments_table.php`
+  - `docs/db/data_dictionary.md`
+  - `docs/db/ER.dbml`
+  - `resources/views/point_distributions/create.blade.php`
+  - `resources/views/prize_distributions/create.blade.php`
+  - `resources/views/tournament_entries/admin_draws.blade.php`
+  - `resources/views/tournament_entries/admin_index.blade.php`
+  - `resources/views/tournament_entries/lane_movement_table.blade.php`
+  - `resources/views/tournament_results/show.blade.php`
+  - `resources/views/tournaments/create.blade.php`
+  - `resources/views/tournaments/edit.blade.php`
+  - `routes/web.php`
+
+- DB / 辞書:
+  - 今回は `tournaments.lane_movement_settings` を追加したため、DB変更あり。
+  - `database/migrations` / `docs/db/data_dictionary.md` / `docs/db/ER.dbml` をセットで更新した。
+  - LaravelのmigrationはDBスキーマ変更を共有・管理するための仕組みであり、今回のようなカラム追加はmigrationとして残す方針で正しい。
+
+- Git管理上の注意:
+  - `storage/backups/` は未追跡として残っているが、バックアップ・一時投入スクリプト用のためコミットしない。
+  - 一時投入スクリプト:
+    - `storage/backups/import_st_autumn_2025_c_entries.php`
+  - バックアップファイル:
+    - `storage/backups/*.dump`
+    - `storage/backups/forward_test_reset_*.sql`
+  - コミット時は `storage/backups/` を除外する。
+
+- 現時点で完了したこと:
+  - 空の大会運用データから、実大会を登録してフォワードテストを開始した。
+  - 大会作成/編集画面のレーン抽選・日時入力・ST進行設定保存を改善した。
+  - ポイント配分 / 賞金配分の自動入力・保存対象判定を改善した。
+  - C会場64名のエントリーを選手マスタと紐づけて登録した。
+  - 全大会共通のレーン移動ルールを追加した。
+  - 公式PDF風のレーン移動表を表示できるようにした。
+  - ゲーム進行予定時間を自動表示できるようにした。
+  - エントリー一覧 / 抽選一覧からレーン移動表へ遷移できる導線を追加した。
+
+- 残タスク / 次に詰める候補:
+  1. 今回差分をログ更新後にcommit / pushする。
+  2. `storage/backups/` はコミット対象から除外したままにする。
+  3. レーン移動表の印刷プレビューで、A4縦・36名表示が公式PDFに近いか最終確認する。
+  4. フォワードテストの次工程へ進む。
+     - ボール登録確認
+     - 予選スコア入力
+     - 予選結果反映
+     - 準決勝進出者確認
+     - 準決勝スコア入力
+     - シュートアウト
+     - 最終成績
+     - PDF確認
+  5. シーズントライアル入賞ポイント・ステップポイントの最終成績反映を、実スコア投入後に確認する。
+  6. レーン移動ルールを、シーズントライアル以外の大会でも使えるか回帰確認する。
+
+- 現時点の判断:
+  - **フォワードテストは、大会作成・配分・64名エントリー・レーン移動表作成まで通った。**
+  - **レーン移動ルールは全大会共通機能として追加できた。**
+  - **次はログ更新とコミットを行い、その後スコア入力以降のフォワードテストへ進む。**
+
+---
+
 ## 2026-05-23 フォワードテスト前の大会運用データ初期化 完了
 
 - 目的:

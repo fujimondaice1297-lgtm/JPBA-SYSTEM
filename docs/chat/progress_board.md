@@ -253,6 +253,73 @@
 - [✓] 公式PDF下部にあるゲーム別スコアシート風表示は、2026-05-02〜2026-05-05 の対応でPDF掲載まで実装済み
 - [✓] 図式表示調整は後続のシュートアウトPDF整備とあわせて commit / push 済み
 
+#### 2026-05-24 メモ（フォワードテスト開始・レーン移動ルール/公式風レーン移動表追加）
+- [✓] フォワードテスト用に、空の大会運用データから実大会登録を開始した
+- [✓] 対象大会として `ＪＰＢＡシーズントライアル ２０２５ オータムシリーズ　Ｃ会場：アソビックスあさひ` を作成した
+  - `tournament_id = 10`
+  - `title_category = season_trial`
+  - `start_date = 2025-10-02`
+  - `end_date = 2025-10-02`
+- [✓] 大会作成 / 編集画面のレーン抽選入力を修正した
+  - 使用レーン開始 / 終了を入力可能にした
+  - BOX人数 / 奇数レーン人数 / 偶数レーン人数の入力を改善した
+- [✓] 申込開始日時 / 申込締切日時で時刻を入力できるようにした
+- [✓] シーズントライアル進行設定が編集画面で消える問題を修正した
+- [✓] ポイント配分画面に、人数指定で最下位1ptから上位へ1ptずつ増える自動入力を追加した
+- [✓] ポイント配分 / 賞金配分で、数値が入っている行だけ保存対象にする方針へ改善した
+- [✓] `tournament_results.award_points` / `step_points` が既存列として存在することを確認し、シーズントライアルの入賞ポイントはDB追加なしで自動付与方針にした
+- [✓] 公式レーン表をもとに、C会場64名を `tournament_entries` / `tournament_participants` へ登録した
+  - `pro_bowlers.license_no_num + sex=1` で照合
+  - `tournament_entries`: 64件
+  - `tournament_participants`: 64件
+- [✓] `storage/backups/import_st_autumn_2025_c_entries.php` を一時投入スクリプトとして作成した
+  - `storage/backups/` はローカル作業用であり、Gitコミット対象外
+- [✓] 全大会共通のレーン移動ルールとして `tournaments.lane_movement_settings` を追加した
+  - 新規migration追加
+  - `docs/db/data_dictionary.md` 更新
+  - `docs/db/ER.dbml` 再生成
+- [✓] `TournamentLaneMovementService` を追加し、スタートレーンから1G目〜対象ゲーム数までの移動先BOXを自動計算できるようにした
+- [✓] 通常移動BOX数、移動方向、後半開始時だけ別移動、使用レーン内循環に対応した
+- [✓] `lane_movement_settings.start_time` を追加し、1G目開始時刻からゲーム進行予定時間を自動表示できるようにした
+  - BOX3名: +27分
+  - BOX4名: +32分
+  - BOX5名: +38分
+  - BOX6名: +50分
+- [✓] `resources/views/tournament_entries/lane_movement_table.blade.php` を追加し、公式PDF風の予選8Gレーン移動表を表示できるようにした
+- [✓] レーン移動表をA4縦印刷向けに調整した
+  - 1ページ36名 = 9BOX
+  - 4G / 5G間の太線
+  - 同一BOXのゲーム欄を縦結合
+  - 氏名中央揃え
+  - 姓名スペースの表記調整
+  - ゲーム進行予定時間を各ゲーム列の真上へ配置
+- [✓] エントリー一覧 / 抽選一覧からレーン移動表へ遷移できるボタンを追加した
+- [✓] 確認済みコマンド
+  - `php -l app/Http/Controllers/PointDistributionController.php`
+  - `php -l app/Http/Controllers/PrizeDistributionController.php`
+  - `php -l app/Http/Controllers/TournamentController.php`
+  - `php -l app/Http/Controllers/TournamentEntryAdminController.php`
+  - `php -l app/Http/Controllers/TournamentResultController.php`
+  - `php -l app/Models/TournamentResult.php`
+  - `php -l app/Services/TournamentLaneMovementService.php`
+  - `php artisan migrate`
+  - `php tools/generate_er_from_dictionary.php`
+  - `php artisan view:clear`
+  - `php artisan optimize:clear`
+- [ ] 今回差分をログ更新後にcommit / pushする
+- [ ] `storage/backups/` はコミット対象から除外する
+- [ ] 次のフォワードテスト工程へ進む
+  - ボール登録確認
+  - 予選スコア入力
+  - 予選結果反映
+  - 準決勝進出者確認
+  - 準決勝スコア入力
+  - シュートアウト
+  - 最終成績
+  - PDF確認
+- [ ] シーズントライアル入賞ポイント / ステップポイントの最終反映を実スコア投入後に確認する
+
+
 ## Phase 3：ProTest（後回し）
 - [ ] 要件整理
 - [ ] スキーマ確定

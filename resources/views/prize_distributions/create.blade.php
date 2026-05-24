@@ -6,7 +6,7 @@
 <form method="POST" action="{{ route('tournaments.prize_distributions.store', $tournament->id) }}">
     @csrf
 
-    <div>
+    <div class="mb-3">
         <label>テンプレート選択:</label>
         <select name="pattern_id" class="form-select">
             <option value="">カスタム入力</option>
@@ -20,20 +20,13 @@
         <button type="button" class="btn btn-sm btn-secondary" onclick="toggleAll(true)">全て表示</button>
         <button type="button" class="btn btn-sm btn-outline-secondary" onclick="toggleAll(false)">全て非表示</button>
         <button type="button" class="btn btn-sm btn-outline-danger" onclick="clearAll()">全てクリア</button>
+        <span class="text-muted ms-2">金額が入力されている行だけ保存対象になります。</span>
     </div>
-
-    <script>
-        function toggleAll(state) {
-            document.querySelectorAll('input[name="enabled[]"]').forEach(cb => cb.checked = state);
-        function clearAll() {
-            document.querySelectorAll('input[name="amount[]"]').forEach(input => input.value = '');}
-        }
-    </script>
 
     @php
         $max = 96;
         $rowsPerCol = 20;
-        $cols = ceil($max / $rowsPerCol); // = 5
+        $cols = ceil($max / $rowsPerCol);
     @endphp
 
     <div class="row">
@@ -53,10 +46,10 @@
                                     <input type="number" name="rank[]" value="{{ $i }}" class="form-control" readonly>
                                 </td>
                                 <td>
-                                    <input type="number" name="amount[]" value="{{ $existing?->amount ?? '' }}" class="form-control">
+                                    <input type="number" name="amount[]" value="{{ $existing?->amount ?? '' }}" class="form-control distribution-value" min="0" data-enabled-target="enabled_{{ $i }}">
                                 </td>
                                 <td class="text-center">
-                                    <input type="checkbox" name="enabled[]" value="{{ $i }}" {{ $existing ? 'checked' : '' }}>
+                                    <input type="checkbox" id="enabled_{{ $i }}" name="enabled[]" value="{{ $i }}" {{ $existing ? 'checked' : '' }}>
                                 </td>
                             </tr>
                         @endfor
@@ -67,7 +60,32 @@
     </div>
 
     <button type="submit" class="btn btn-primary">保存</button>
-    <a href="{{ route('tournaments.index') }}" class="btn btn-secondary ">大会一覧に戻る</a>
+    <a href="{{ route('tournaments.results.index', $tournament) }}" class="btn btn-secondary">大会成績へ戻る</a>
 </form>
-@endsection
 
+<script>
+    function syncEnabledFromValues() {
+        document.querySelectorAll('.distribution-value').forEach(input => {
+            const checkbox = document.getElementById(input.dataset.enabledTarget);
+            if (!checkbox) return;
+            checkbox.checked = input.value !== '';
+        });
+    }
+
+    function toggleAll(state) {
+        document.querySelectorAll('input[name="enabled[]"]').forEach(cb => cb.checked = state);
+    }
+
+    function clearAll() {
+        document.querySelectorAll('input[name="amount[]"]').forEach(input => input.value = '');
+        syncEnabledFromValues();
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        document.querySelectorAll('.distribution-value').forEach(input => {
+            input.addEventListener('input', syncEnabledFromValues);
+        });
+        syncEnabledFromValues();
+    });
+</script>
+@endsection

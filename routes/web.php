@@ -306,6 +306,8 @@ Route::middleware(['auth','role:editor,admin'])->group(function () {
         ->name('tournaments.entries.index');
     Route::get('/tournaments/{tournament}/draws', [\App\Http\Controllers\TournamentEntryAdminController::class, 'draws'])
         ->name('tournaments.draws.index');
+    Route::get('/tournaments/{tournament}/lane-movement-table', [\App\Http\Controllers\TournamentEntryAdminController::class, 'laneMovementTable'])
+        ->name('tournaments.lane_movement_table.show');
     Route::get('/tournaments/{tournament}/operation-logs', [\App\Http\Controllers\TournamentOperationLogController::class, 'index'])
         ->name('tournaments.operation_logs.index');
     Route::post('/tournaments/{tournament}/draws/bulk', [\App\Http\Controllers\DrawController::class, 'bulk'])
