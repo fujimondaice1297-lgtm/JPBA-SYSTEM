@@ -1,5 +1,5 @@
 // Auto-generated from docs/db/data_dictionary.md
-// Generated at: 2026-05-24T17:56:29+09:00
+// Generated at: 2026-05-25T12:02:05+09:00
 
 Project JPBA_SYSTEM {
   database_type: 'PostgreSQL'
@@ -242,6 +242,7 @@ Ref: approved_ball_pro_bowler.approved_ball_id > approved_balls.id
 Ref: approved_ball_pro_bowler.pro_bowler_id > pro_bowlers.id
 Ref: game_scores.pro_bowler_id > pro_bowlers.id
 Ref: game_scores.tournament_id > tournaments.id
+Ref: game_scores.tournament_participant_id > tournament_participants.id
 Ref: group_mail_recipients.mailout_id > group_mailouts.id
 Ref: group_mail_recipients.pro_bowler_id > pro_bowlers.id
 Ref: group_mailouts.group_id > groups.id

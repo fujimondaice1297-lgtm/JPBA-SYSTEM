@@ -496,64 +496,52 @@ class TournamentController extends Controller
         $direction = (string) ($input['direction'] ?? 'right');
         $wrap = ! array_key_exists('wrap', $input) || filter_var($input['wrap'], FILTER_VALIDATE_BOOLEAN);
 
+        $day1Label = trim((string) ($input['day1_label'] ?? ''));
+        $secondDayEnabled = filter_var($input['second_day_enabled'] ?? false, FILTER_VALIDATE_BOOLEAN);
+        $day2Label = trim((string) ($input['day2_label'] ?? ''));
+        $day2StartGame = $secondDayEnabled ? (int) ($input['day2_start_game'] ?? 0) : null;
+        $day2Games = $secondDayEnabled ? (int) ($input['day2_games'] ?? 0) : null;
+        $day2StartTime = trim((string) ($input['day2_start_time'] ?? ''));
+        $day2StartMoveBoxes = $secondDayEnabled ? (int) ($input['day2_start_move_boxes'] ?? 0) : null;
+        $day2RegularMoveBoxes = $secondDayEnabled ? (int) ($input['day2_regular_move_boxes'] ?? $regularMoveBoxes) : null;
+        $day2Direction = (string) ($input['day2_direction'] ?? $direction);
+        $day2HalfTurnEnabled = $secondDayEnabled && filter_var($input['day2_half_turn_enabled'] ?? false, FILTER_VALIDATE_BOOLEAN);
+        $day2HalfTurnGame = $day2HalfTurnEnabled ? (int) ($input['day2_half_turn_game'] ?? 0) : null;
+        $day2HalfTurnMoveBoxes = $day2HalfTurnEnabled ? (int) ($input['day2_half_turn_move_boxes'] ?? 0) : null;
+        $day2Wrap = ! array_key_exists('day2_wrap', $input) || filter_var($input['day2_wrap'], FILTER_VALIDATE_BOOLEAN);
+
         if ($laneFrom < 1 || $laneTo < $laneFrom) {
-            throw ValidationException::withMessages([
-                'lane_movement.lane_from' => 'レーン移動表を作成する場合は、使用レーン開始・終了を正しく入力してください。',
-            ]);
+            throw ValidationException::withMessages(['lane_movement.lane_from' => 'レーン移動表を作成する場合は、使用レーン開始・終了を正しく入力してください。']);
         }
-
         if ($boxWidth < 1 || $boxWidth > 20) {
-            throw ValidationException::withMessages([
-                'lane_movement.box_width' => '1BOXのレーン数は1〜20で指定してください。',
-            ]);
+            throw ValidationException::withMessages(['lane_movement.box_width' => '1BOXのレーン数は1〜20で指定してください。']);
         }
-
         $laneCount = $laneTo - $laneFrom + 1;
         if ($laneCount % $boxWidth !== 0) {
-            throw ValidationException::withMessages([
-                'lane_movement.box_width' => '使用レーン数は1BOXのレーン数で割り切れるようにしてください。',
-            ]);
+            throw ValidationException::withMessages(['lane_movement.box_width' => '使用レーン数は1BOXのレーン数で割り切れるようにしてください。']);
         }
-
         if ($games < 1 || $games > 99) {
-            throw ValidationException::withMessages([
-                'lane_movement.games' => 'レーン移動表のゲーム数は1〜99で指定してください。',
-            ]);
+            throw ValidationException::withMessages(['lane_movement.games' => 'レーン移動表のゲーム数は1〜99で指定してください。']);
         }
-
         if ($startTime !== '' && ! preg_match('/^(?:[01]\d|2[0-3]):[0-5]\d$/', $startTime)) {
-            throw ValidationException::withMessages([
-                'lane_movement.start_time' => '1G目開始時刻は HH:MM 形式で指定してください。',
-            ]);
+            throw ValidationException::withMessages(['lane_movement.start_time' => '1G目開始時刻は HH:MM 形式で指定してください。']);
         }
-
         if ($regularMoveBoxes < 0 || $regularMoveBoxes > 99) {
-            throw ValidationException::withMessages([
-                'lane_movement.regular_move_boxes' => '通常移動BOX数は0〜99で指定してください。',
-            ]);
+            throw ValidationException::withMessages(['lane_movement.regular_move_boxes' => '通常移動BOX数は0〜99で指定してください。']);
         }
-
         if (! in_array($direction, ['right', 'left'], true)) {
-            throw ValidationException::withMessages([
-                'lane_movement.direction' => '移動方向は右へ、または左へを選択してください。',
-            ]);
+            throw ValidationException::withMessages(['lane_movement.direction' => '移動方向は右へ、または左へを選択してください。']);
         }
-
         if ($halfTurnEnabled) {
             if ($halfTurnGame < 2 || $halfTurnGame > $games) {
-                throw ValidationException::withMessages([
-                    'lane_movement.half_turn_game' => '後半開始ゲームは2G目以降、かつ総ゲーム数以内で指定してください。',
-                ]);
+                throw ValidationException::withMessages(['lane_movement.half_turn_game' => '後半開始ゲームは2G目以降、かつ総ゲーム数以内で指定してください。']);
             }
-
             if ($halfTurnMoveBoxes < 0 || $halfTurnMoveBoxes > 99) {
-                throw ValidationException::withMessages([
-                    'lane_movement.half_turn_move_boxes' => '後半開始時の移動BOX数は0〜99で指定してください。',
-                ]);
+                throw ValidationException::withMessages(['lane_movement.half_turn_move_boxes' => '後半開始時の移動BOX数は0〜99で指定してください。']);
             }
         }
 
-        return json_encode([
+        $settings = [
             'enabled' => true,
             'lane_from' => $laneFrom,
             'lane_to' => $laneTo,
@@ -566,7 +554,88 @@ class TournamentController extends Controller
             'half_turn_move_boxes' => $halfTurnEnabled ? $halfTurnMoveBoxes : null,
             'direction' => $direction,
             'wrap' => $wrap,
-        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            'day1_label' => $day1Label !== '' ? $day1Label : null,
+            'second_day_enabled' => $secondDayEnabled,
+        ];
+
+        if ($secondDayEnabled) {
+            if ($day2StartGame < 2 || $day2StartGame > $games) {
+                throw ValidationException::withMessages(['lane_movement.day2_start_game' => '2日目開始ゲームは2G目以降、かつ総ゲーム数以内で指定してください。']);
+            }
+            if ($day2Games < 1 || ($day2StartGame + $day2Games - 1) > $games) {
+                throw ValidationException::withMessages(['lane_movement.day2_games' => '2日目対象ゲーム数は、総ゲーム数の範囲内になるように指定してください。']);
+            }
+            if ($day2StartTime !== '' && ! preg_match('/^(?:[01]\d|2[0-3]):[0-5]\d$/', $day2StartTime)) {
+                throw ValidationException::withMessages(['lane_movement.day2_start_time' => '2日目開始時刻は HH:MM 形式で指定してください。']);
+            }
+            if ($day2StartMoveBoxes < 0 || $day2StartMoveBoxes > 99) {
+                throw ValidationException::withMessages(['lane_movement.day2_start_move_boxes' => '2日目開始BOX補正は0〜99で指定してください。']);
+            }
+            if ($day2RegularMoveBoxes < 0 || $day2RegularMoveBoxes > 99) {
+                throw ValidationException::withMessages(['lane_movement.day2_regular_move_boxes' => '2日目通常移動BOX数は0〜99で指定してください。']);
+            }
+            if (! in_array($day2Direction, ['right', 'left'], true)) {
+                throw ValidationException::withMessages(['lane_movement.day2_direction' => '2日目の移動方向は右へ、または左へを選択してください。']);
+            }
+            if ($day2HalfTurnEnabled) {
+                if ($day2HalfTurnGame < $day2StartGame || $day2HalfTurnGame > ($day2StartGame + $day2Games - 1)) {
+                    throw ValidationException::withMessages(['lane_movement.day2_half_turn_game' => '2日目の途中移動ゲームは、2日目の対象ゲーム範囲内で指定してください。']);
+                }
+                if ($day2HalfTurnMoveBoxes < 0 || $day2HalfTurnMoveBoxes > 99) {
+                    throw ValidationException::withMessages(['lane_movement.day2_half_turn_move_boxes' => '2日目途中移動BOX数は0〜99で指定してください。']);
+                }
+            }
+
+            $day1GameTo = $day2StartGame - 1;
+            // 編集画面で再表示しやすいように、2日目入力値もトップレベルへ保持する。
+            // 実際のレーン表計算は day_blocks を正本として使う。
+            $settings['day2_label'] = $day2Label !== '' ? $day2Label : null;
+            $settings['day2_start_game'] = $day2StartGame;
+            $settings['day2_games'] = $day2Games;
+            $settings['day2_start_time'] = $day2StartTime !== '' ? $day2StartTime : null;
+            $settings['day2_start_move_boxes'] = $day2StartMoveBoxes;
+            $settings['day2_regular_move_boxes'] = $day2RegularMoveBoxes;
+            $settings['day2_direction'] = $day2Direction;
+            $settings['day2_half_turn_enabled'] = $day2HalfTurnEnabled;
+            $settings['day2_half_turn_game'] = $day2HalfTurnEnabled ? $day2HalfTurnGame : null;
+            $settings['day2_half_turn_move_boxes'] = $day2HalfTurnEnabled ? $day2HalfTurnMoveBoxes : null;
+            $settings['day2_wrap'] = $day2Wrap;
+
+            $settings['day_blocks'] = [
+                [
+                    'key' => 'day1',
+                    'label' => $day1Label !== '' ? $day1Label : '1日目',
+                    'game_from' => 1,
+                    'game_to' => $day1GameTo,
+                    'games' => max(1, $day1GameTo),
+                    'start_time' => $startTime !== '' ? $startTime : null,
+                    'start_move_boxes' => 0,
+                    'regular_move_boxes' => $regularMoveBoxes,
+                    'half_turn_enabled' => $halfTurnEnabled,
+                    'half_turn_game' => $halfTurnEnabled ? $halfTurnGame : null,
+                    'half_turn_move_boxes' => $halfTurnEnabled ? $halfTurnMoveBoxes : null,
+                    'direction' => $direction,
+                    'wrap' => $wrap,
+                ],
+                [
+                    'key' => 'day2',
+                    'label' => $day2Label !== '' ? $day2Label : '2日目',
+                    'game_from' => $day2StartGame,
+                    'game_to' => $day2StartGame + $day2Games - 1,
+                    'games' => $day2Games,
+                    'start_time' => $day2StartTime !== '' ? $day2StartTime : null,
+                    'start_move_boxes' => $day2StartMoveBoxes,
+                    'regular_move_boxes' => $day2RegularMoveBoxes,
+                    'half_turn_enabled' => $day2HalfTurnEnabled,
+                    'half_turn_game' => $day2HalfTurnEnabled ? $day2HalfTurnGame : null,
+                    'half_turn_move_boxes' => $day2HalfTurnEnabled ? $day2HalfTurnMoveBoxes : null,
+                    'direction' => $day2Direction,
+                    'wrap' => $day2Wrap,
+                ],
+            ];
+        }
+
+        return json_encode($settings, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     }
 
     private function validateAndNormalize(Request $request): array
@@ -662,6 +731,19 @@ class TournamentController extends Controller
             'lane_movement.half_turn_move_boxes' => 'nullable|integer|min:0|max:99',
             'lane_movement.direction'       => 'nullable|in:right,left',
             'lane_movement.wrap'            => 'nullable|boolean',
+            'lane_movement.day1_label'      => 'nullable|string|max:255',
+            'lane_movement.second_day_enabled' => 'nullable|boolean',
+            'lane_movement.day2_label'      => 'nullable|string|max:255',
+            'lane_movement.day2_start_game' => 'nullable|integer|min:2|max:99',
+            'lane_movement.day2_games'      => 'nullable|integer|min:1|max:99',
+            'lane_movement.day2_start_time' => 'nullable|date_format:H:i',
+            'lane_movement.day2_start_move_boxes' => 'nullable|integer|min:0|max:99',
+            'lane_movement.day2_regular_move_boxes' => 'nullable|integer|min:0|max:99',
+            'lane_movement.day2_direction'  => 'nullable|in:right,left',
+            'lane_movement.day2_half_turn_enabled' => 'nullable|boolean',
+            'lane_movement.day2_half_turn_game' => 'nullable|integer|min:2|max:99',
+            'lane_movement.day2_half_turn_move_boxes' => 'nullable|integer|min:0|max:99',
+            'lane_movement.day2_wrap'       => 'nullable|boolean',
 
             'schedule'                     => 'sometimes|array',
             'awards'                       => 'sometimes|array',

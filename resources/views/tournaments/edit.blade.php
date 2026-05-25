@@ -575,76 +575,90 @@
     <div class="col-md-12">
       <hr>
       <div class="alert alert-light border mb-3">
-        <strong>スコア持ち込み方式</strong>
+        <strong>成績の持ち込み設定</strong>
         <div class="small text-muted">
-          大会ごとに「どのステージのスコアを次の通算成績へ持ち込むか」を選びます。
-          速報ランキング、正式成績反映、PDF、シード決定はこの設定を共通で参照します。
+          通算成績を作るときに、前ステージのスコアを持ち込むか、どこでリセットするかを大会ごとに設定します。
+          通常はプルダウンを選ぶだけで大丈夫です。JSON欄は上級者向けです。
         </div>
       </div>
     </div>
 
-    <div class="col-md-5 mb-3">
-      <label class="form-label">スコア持ち込み方式</label>
-      @php
-        $carryService = app(\App\Services\TournamentResultCarryService::class);
-        $carryPresetOptions = $carryService->presetOptions();
-        $carryPreset = $carryService->canonicalPresetKey(old('result_carry_preset', $tournament->result_carry_preset ?? 'default'));
-        $carryExamples = [];
-        foreach ($carryPresetOptions as $presetKey => $option) {
-            if ($presetKey !== 'custom') {
-                $carryExamples[$presetKey] = $carryService->presetSettings($presetKey);
-            }
-        }
+    <div class="col-md-4 mb-3">
+      <label class="form-label">持ち込みプリセット</label>
+      @php $carryPreset = old('result_carry_preset', $tournament->result_carry_preset ?? 'default'); @endphp
+      <select name="result_carry_preset" id="result_carry_preset" class="form-select @error('result_carry_preset') is-invalid @enderror">
+        <option value="default" {{ $carryPreset === 'default' ? 'selected' : '' }}>標準（現行どおり）</option>
+        <option value="no_carry" {{ $carryPreset === 'no_carry' ? 'selected' : '' }}>全ステージ持ち込みなし</option>
+        <option value="reset_after_quarterfinal" {{ $carryPreset === 'reset_after_quarterfinal' ? 'selected' : '' }}>予選→準々決勝までは持ち込み、準決勝からリセット</option>
+        <option value="reset_from_quarterfinal" {{ $carryPreset === 'reset_from_quarterfinal' ? 'selected' : '' }}>予選から準々決勝へは持ち込まない</option>
+        <option value="carry_to_semifinal_reset_rr" {{ $carryPreset === 'carry_to_semifinal_reset_rr' ? 'selected' : '' }}>予選→準々決勝→準決勝までは持ち込み、ラウンドロビンからリセット</option>
+        <option value="carry_prelim_to_semifinal_for_tournament" {{ $carryPreset === 'carry_prelim_to_semifinal_for_tournament' ? 'selected' : '' }}>予選＋準決勝の通算でトーナメント進出者を決定</option>
+        <option value="custom" {{ $carryPreset === 'custom' ? 'selected' : '' }}>カスタムJSON</option>
+      </select>
+      @error('result_carry_preset')<div class="invalid-feedback">{{ $message }}</div>@enderror
+    </div>
 
+    <div class="col-md-8 mb-3">
+      <label class="form-label">持ち込み詳細設定（JSON / 上級者向け）</label>
+      @php
         $carrySettings = old('result_carry_settings', $tournament->result_carry_settings ?? '');
-        if (($carrySettings === '' || $carrySettings === null) && $carryPreset !== 'custom') {
-            $carrySettings = $carryService->presetSettings($carryPreset);
-        }
         if (is_array($carrySettings)) {
             $carrySettings = json_encode($carrySettings, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
         }
       @endphp
-      <select name="result_carry_preset" id="result_carry_preset" class="form-select @error('result_carry_preset') is-invalid @enderror">
-        @foreach($carryPresetOptions as $presetKey => $option)
-          <option value="{{ $presetKey }}" {{ $carryPreset === $presetKey ? 'selected' : '' }}>
-            {{ $option['label'] }}
-          </option>
-        @endforeach
-      </select>
-      @error('result_carry_preset')<div class="invalid-feedback">{{ $message }}</div>@enderror
-      <small class="text-muted d-block mt-1" id="result_carry_preset_help">
-        {{ $carryPresetOptions[$carryPreset]['description'] ?? '大会別の持ち込み設定を選択してください。' }}
-      </small>
-    </div>
-
-    <div class="col-md-7 mb-3">
-      <label class="form-label">持ち込み詳細設定（JSON / 確認用）</label>
-      <textarea name="result_carry_settings" id="result_carry_settings" rows="8" class="form-control @error('result_carry_settings') is-invalid @enderror"
+      <textarea name="result_carry_settings" id="result_carry_settings" rows="6" class="form-control @error('result_carry_settings') is-invalid @enderror"
                 placeholder='例: {"semifinal_total":{"source_stages":["予選","準決勝"]}}'>{{ $carrySettings }}</textarea>
       @error('result_carry_settings')<div class="invalid-feedback">{{ $message }}</div>@enderror
       <small class="text-muted d-block">
-        プリセットを選ぶと自動でJSONが入ります。通常は直接編集しません。個別大会で例外がある場合だけ「カスタムJSON」を選んで編集してください。
+        プリセットを選ぶと自動でJSON例が入ります。通常は編集不要です。
       </small>
+      <div class="small text-muted mt-2">
+        <div>・予選＋準決勝でトーナメント進出者を決める場合：<code>{"semifinal_total":{"source_stages":["予選","準決勝"]}}</code></div>
+        <div>・準決勝からリセットする場合：<code>{"semifinal_total":{"source_stages":["準決勝"]}}</code></div>
+        <div>・ラウンドロビンから持ち込まない場合：<code>{"round_robin_total":{"source_stages":["ラウンドロビン"]}}</code></div>
+      </div>
     </div>
 
     <script>
       document.addEventListener('DOMContentLoaded', function () {
         const preset = document.getElementById('result_carry_preset');
         const textarea = document.getElementById('result_carry_settings');
-        const help = document.getElementById('result_carry_preset_help');
 
         if (!preset || !textarea) {
           return;
         }
 
-        const examples = @json($carryExamples, JSON_UNESCAPED_UNICODE);
-        const descriptions = @json(collect($carryPresetOptions)->map(fn($row) => $row['description'] ?? '')->all(), JSON_UNESCAPED_UNICODE);
+        const examples = {
+          default: {},
+          no_carry: {
+            quarterfinal_total: { source_stages: ['準々決勝'] },
+            semifinal_total: { source_stages: ['準決勝'] },
+            round_robin_total: { source_stages: ['ラウンドロビン'] },
+            final_total: { source_stages: ['決勝'] }
+          },
+          reset_after_quarterfinal: {
+            quarterfinal_total: { source_stages: ['予選', '準々決勝'] },
+            semifinal_total: { source_stages: ['準決勝'] },
+            round_robin_total: { source_stages: ['準決勝', 'ラウンドロビン'] },
+            final_total: { source_stages: ['準決勝', '決勝'] }
+          },
+          reset_from_quarterfinal: {
+            quarterfinal_total: { source_stages: ['準々決勝'] },
+            semifinal_total: { source_stages: ['準々決勝', '準決勝'] },
+            round_robin_total: { source_stages: ['準々決勝', '準決勝', 'ラウンドロビン'] },
+            final_total: { source_stages: ['準々決勝', '準決勝', '決勝'] }
+          },
+          carry_to_semifinal_reset_rr: {
+            quarterfinal_total: { source_stages: ['予選', '準々決勝'] },
+            semifinal_total: { source_stages: ['予選', '準々決勝', '準決勝'] },
+            round_robin_total: { source_stages: ['ラウンドロビン'] }
+          },
+          carry_prelim_to_semifinal_for_tournament: {
+            semifinal_total: { source_stages: ['予選', '準決勝'] }
+          }
+        };
 
         preset.addEventListener('change', function () {
-          if (help) {
-            help.textContent = descriptions[preset.value] || '大会別の持ち込み設定を選択してください。';
-          }
-
           if (preset.value === 'custom') {
             return;
           }
@@ -781,9 +795,54 @@
         $decodedLaneMovement = json_decode($laneMovementStored, true);
         $laneMovementStored = is_array($decodedLaneMovement) ? $decodedLaneMovement : [];
     }
-    $laneMovementInit = old('lane_movement', $laneMovementStored);
+
+    // 保存済みJSONは day_blocks 配下に2日目情報を持つため、編集画面用の入力名に展開する。
+    // バリデーションエラー時は old('lane_movement') を最優先にし、ユーザー入力を消さない。
+    $laneMovementInit = old('lane_movement', null);
     if (!is_array($laneMovementInit)) {
-        $laneMovementInit = [];
+        $laneMovementInit = is_array($laneMovementStored) ? $laneMovementStored : [];
+
+        $dayBlocks = $laneMovementInit['day_blocks'] ?? [];
+        if (is_array($dayBlocks)) {
+            $day1Block = null;
+            $day2Block = null;
+
+            foreach ($dayBlocks as $block) {
+                if (!is_array($block)) {
+                    continue;
+                }
+
+                $key = (string) ($block['key'] ?? '');
+                $gameFrom = (int) ($block['game_from'] ?? 0);
+
+                if ($key === 'day1' || ($day1Block === null && $gameFrom === 1)) {
+                    $day1Block = $block;
+                }
+
+                if ($key === 'day2' || $gameFrom > 1) {
+                    $day2Block = $block;
+                }
+            }
+
+            if (is_array($day1Block)) {
+                $laneMovementInit['day1_label'] = $laneMovementInit['day1_label'] ?? ($day1Block['label'] ?? null);
+            }
+
+            if (is_array($day2Block)) {
+                $laneMovementInit['second_day_enabled'] = $laneMovementInit['second_day_enabled'] ?? true;
+                $laneMovementInit['day2_label'] = $laneMovementInit['day2_label'] ?? ($day2Block['label'] ?? null);
+                $laneMovementInit['day2_start_game'] = $laneMovementInit['day2_start_game'] ?? ($day2Block['game_from'] ?? null);
+                $laneMovementInit['day2_games'] = $laneMovementInit['day2_games'] ?? ($day2Block['games'] ?? null);
+                $laneMovementInit['day2_start_time'] = $laneMovementInit['day2_start_time'] ?? ($day2Block['start_time'] ?? null);
+                $laneMovementInit['day2_start_move_boxes'] = $laneMovementInit['day2_start_move_boxes'] ?? ($day2Block['start_move_boxes'] ?? 0);
+                $laneMovementInit['day2_regular_move_boxes'] = $laneMovementInit['day2_regular_move_boxes'] ?? ($day2Block['regular_move_boxes'] ?? ($laneMovementInit['regular_move_boxes'] ?? 1));
+                $laneMovementInit['day2_direction'] = $laneMovementInit['day2_direction'] ?? ($day2Block['direction'] ?? ($laneMovementInit['direction'] ?? 'right'));
+                $laneMovementInit['day2_half_turn_enabled'] = $laneMovementInit['day2_half_turn_enabled'] ?? (bool) ($day2Block['half_turn_enabled'] ?? false);
+                $laneMovementInit['day2_half_turn_game'] = $laneMovementInit['day2_half_turn_game'] ?? ($day2Block['half_turn_game'] ?? null);
+                $laneMovementInit['day2_half_turn_move_boxes'] = $laneMovementInit['day2_half_turn_move_boxes'] ?? ($day2Block['half_turn_move_boxes'] ?? null);
+                $laneMovementInit['day2_wrap'] = $laneMovementInit['day2_wrap'] ?? (array_key_exists('wrap', $day2Block) ? (bool) $day2Block['wrap'] : true);
+            }
+        }
     }
   @endphp
 
@@ -891,6 +950,141 @@
                  value="1"
                  class="form-check-input js-lane-movement-field"
                  {{ array_key_exists('wrap', $laneMovementInit) ? (!empty($laneMovementInit['wrap']) ? 'checked' : '') : 'checked' }}>
+          <span class="small text-muted ms-1">最終BOXの次を先頭BOXへ戻す</span>
+        </div>
+
+        <div class="col-12"><hr class="my-2"></div>
+
+        <div class="col-md-3">
+          <label class="form-label">1日目ラベル</label>
+          <input type="text"
+                 name="lane_movement[day1_label]"
+                 class="form-control js-lane-movement-field @error('lane_movement.day1_label') is-invalid @enderror"
+                 value="{{ $laneMovementInit['day1_label'] ?? '' }}"
+                 placeholder="例：7/25（金）予選前半8G">
+          @error('lane_movement.day1_label')<div class="invalid-feedback">{{ $message }}</div>@enderror
+        </div>
+
+        <div class="col-md-3">
+          <label class="form-label d-block">2日目設定を使う</label>
+          <input type="hidden" name="lane_movement[second_day_enabled]" value="0">
+          <input type="checkbox"
+                 name="lane_movement[second_day_enabled]"
+                 value="1"
+                 class="form-check-input js-lane-movement-field js-lane-second-day-enabled"
+                 {{ !empty($laneMovementInit['second_day_enabled']) ? 'checked' : '' }}>
+          <span class="small text-muted ms-1">ONで2日目を別ブロック表示</span>
+        </div>
+
+        <div class="col-md-3">
+          <label class="form-label">2日目ラベル</label>
+          <input type="text"
+                 name="lane_movement[day2_label]"
+                 class="form-control js-lane-movement-field js-lane-day2-field @error('lane_movement.day2_label') is-invalid @enderror"
+                 value="{{ $laneMovementInit['day2_label'] ?? '' }}"
+                 placeholder="例：7/26（土）予選後半8G">
+          @error('lane_movement.day2_label')<div class="invalid-feedback">{{ $message }}</div>@enderror
+        </div>
+
+        <div class="col-md-2">
+          <label class="form-label">2日目開始G</label>
+          <input type="number"
+                 name="lane_movement[day2_start_game]"
+                 class="form-control js-lane-movement-field js-lane-day2-field @error('lane_movement.day2_start_game') is-invalid @enderror"
+                 value="{{ $laneMovementInit['day2_start_game'] ?? '' }}"
+                 min="2">
+          @error('lane_movement.day2_start_game')<div class="invalid-feedback">{{ $message }}</div>@enderror
+        </div>
+
+        <div class="col-md-2">
+          <label class="form-label">2日目ゲーム数</label>
+          <input type="number"
+                 name="lane_movement[day2_games]"
+                 class="form-control js-lane-movement-field js-lane-day2-field @error('lane_movement.day2_games') is-invalid @enderror"
+                 value="{{ $laneMovementInit['day2_games'] ?? '' }}"
+                 min="1">
+          @error('lane_movement.day2_games')<div class="invalid-feedback">{{ $message }}</div>@enderror
+        </div>
+
+        <div class="col-md-2">
+          <label class="form-label">2日目開始時刻</label>
+          <input type="time"
+                 name="lane_movement[day2_start_time]"
+                 class="form-control js-lane-movement-field js-lane-day2-field @error('lane_movement.day2_start_time') is-invalid @enderror"
+                 value="{{ $laneMovementInit['day2_start_time'] ?? '' }}">
+          @error('lane_movement.day2_start_time')<div class="invalid-feedback">{{ $message }}</div>@enderror
+        </div>
+
+        <div class="col-md-2">
+          <label class="form-label">2日目開始BOX補正</label>
+          <input type="number"
+                 name="lane_movement[day2_start_move_boxes]"
+                 class="form-control js-lane-movement-field js-lane-day2-field @error('lane_movement.day2_start_move_boxes') is-invalid @enderror"
+                 value="{{ $laneMovementInit['day2_start_move_boxes'] ?? 0 }}"
+                 min="0">
+          @error('lane_movement.day2_start_move_boxes')<div class="invalid-feedback">{{ $message }}</div>@enderror
+        </div>
+
+        <div class="col-md-2">
+          <label class="form-label">2日目通常移動BOX数</label>
+          <input type="number"
+                 name="lane_movement[day2_regular_move_boxes]"
+                 class="form-control js-lane-movement-field js-lane-day2-field @error('lane_movement.day2_regular_move_boxes') is-invalid @enderror"
+                 value="{{ $laneMovementInit['day2_regular_move_boxes'] ?? ($laneMovementInit['regular_move_boxes'] ?? 1) }}"
+                 min="0">
+          @error('lane_movement.day2_regular_move_boxes')<div class="invalid-feedback">{{ $message }}</div>@enderror
+        </div>
+
+        <div class="col-md-3">
+          <label class="form-label">2日目移動方向</label>
+          @php $laneMovementDay2Direction = $laneMovementInit['day2_direction'] ?? ($laneMovementInit['direction'] ?? 'right'); @endphp
+          <select name="lane_movement[day2_direction]"
+                  class="form-select js-lane-movement-field js-lane-day2-field @error('lane_movement.day2_direction') is-invalid @enderror">
+            <option value="right" {{ $laneMovementDay2Direction === 'right' ? 'selected' : '' }}>右へ移動</option>
+            <option value="left" {{ $laneMovementDay2Direction === 'left' ? 'selected' : '' }}>左へ移動</option>
+          </select>
+          @error('lane_movement.day2_direction')<div class="invalid-feedback">{{ $message }}</div>@enderror
+        </div>
+
+        <div class="col-md-3">
+          <label class="form-label d-block">2日目途中だけ別移動</label>
+          <input type="hidden" name="lane_movement[day2_half_turn_enabled]" value="0">
+          <input type="checkbox"
+                 name="lane_movement[day2_half_turn_enabled]"
+                 value="1"
+                 class="form-check-input js-lane-movement-field js-lane-day2-field js-lane-day2-half-enabled"
+                 {{ !empty($laneMovementInit['day2_half_turn_enabled']) ? 'checked' : '' }}>
+          <span class="small text-muted ms-1">例：13G目開始時のみ別移動</span>
+        </div>
+
+        <div class="col-md-2">
+          <label class="form-label">2日目途中移動G</label>
+          <input type="number"
+                 name="lane_movement[day2_half_turn_game]"
+                 class="form-control js-lane-movement-field js-lane-day2-field js-lane-day2-half-field @error('lane_movement.day2_half_turn_game') is-invalid @enderror"
+                 value="{{ $laneMovementInit['day2_half_turn_game'] ?? '' }}"
+                 min="2">
+          @error('lane_movement.day2_half_turn_game')<div class="invalid-feedback">{{ $message }}</div>@enderror
+        </div>
+
+        <div class="col-md-2">
+          <label class="form-label">2日目途中移動BOX数</label>
+          <input type="number"
+                 name="lane_movement[day2_half_turn_move_boxes]"
+                 class="form-control js-lane-movement-field js-lane-day2-field js-lane-day2-half-field @error('lane_movement.day2_half_turn_move_boxes') is-invalid @enderror"
+                 value="{{ $laneMovementInit['day2_half_turn_move_boxes'] ?? '' }}"
+                 min="0">
+          @error('lane_movement.day2_half_turn_move_boxes')<div class="invalid-feedback">{{ $message }}</div>@enderror
+        </div>
+
+        <div class="col-md-3">
+          <label class="form-label d-block">2日目も循環する</label>
+          <input type="hidden" name="lane_movement[day2_wrap]" value="0">
+          <input type="checkbox"
+                 name="lane_movement[day2_wrap]"
+                 value="1"
+                 class="form-check-input js-lane-movement-field js-lane-day2-field"
+                 {{ array_key_exists('day2_wrap', $laneMovementInit) ? (!empty($laneMovementInit['day2_wrap']) ? 'checked' : '') : 'checked' }}>
           <span class="small text-muted ms-1">最終BOXの次を先頭BOXへ戻す</span>
         </div>
 
@@ -1423,10 +1617,14 @@ document.addEventListener('DOMContentLoaded', function () {
 
   const laneMovementEnabled = document.querySelector('.js-lane-movement-enabled');
   const laneHalfEnabled = document.querySelector('.js-lane-half-enabled');
+  const laneSecondDayEnabled = document.querySelector('.js-lane-second-day-enabled');
+  const laneDay2HalfEnabled = document.querySelector('.js-lane-day2-half-enabled');
 
   function toggleLaneMovementFields() {
     const enabled = !!laneMovementEnabled?.checked;
     const halfEnabled = enabled && !!laneHalfEnabled?.checked;
+    const secondDayEnabled = enabled && !!laneSecondDayEnabled?.checked;
+    const day2HalfEnabled = secondDayEnabled && !!laneDay2HalfEnabled?.checked;
 
     document.querySelectorAll('.js-lane-movement-field').forEach((el) => {
       el.disabled = !enabled;
@@ -1435,10 +1633,20 @@ document.addEventListener('DOMContentLoaded', function () {
     document.querySelectorAll('.js-lane-half-field').forEach((el) => {
       el.disabled = !halfEnabled;
     });
+
+    document.querySelectorAll('.js-lane-day2-field').forEach((el) => {
+      el.disabled = !secondDayEnabled;
+    });
+
+    document.querySelectorAll('.js-lane-day2-half-field').forEach((el) => {
+      el.disabled = !day2HalfEnabled;
+    });
   }
 
   laneMovementEnabled?.addEventListener('change', toggleLaneMovementFields);
   laneHalfEnabled?.addEventListener('change', toggleLaneMovementFields);
+  laneSecondDayEnabled?.addEventListener('change', toggleLaneMovementFields);
+  laneDay2HalfEnabled?.addEventListener('change', toggleLaneMovementFields);
   toggleOperationFields();
   toggleLaneMovementFields();
 

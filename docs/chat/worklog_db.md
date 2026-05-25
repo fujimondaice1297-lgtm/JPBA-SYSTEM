@@ -1,3 +1,198 @@
+## 2026-05-25 THE OPEN公式戦フォワードテスト・アマ対応・2日間レーン移動表調整
+
+- 目的:
+  - シーズントライアルのフォワードテスト完了後、通常公式戦として `大岡産業レディース［THE OPEN］トーナメント ２０２５` を作成し、公式戦側の大会作成・エントリー・レーン移動表・アマチュア参加者対応を確認する。
+  - THE OPEN はアマチュア選手を含む大会であり、プロボウラープロフィールを恒久登録しない一時参加者を扱える必要がある。
+  - 公式レーン移動表では予選16Gが2日間に分かれているため、既存の1日型レーン移動表から、2日間ブロック表示へ拡張する。
+  - 次工程の予選スコア入力へ進む前に、レーン配置表と管理画面表示を公式表に近い状態へ整える。
+
+- 作業開始時の状態:
+  - 直前のシーズントライアル成績反映・表示仕様改善は `db67e06` で commit / push 済み。
+  - 作業開始時点の確認では、作業ツリーは `?? storage/backups/` のみで、通常コード差分はなかった。
+  - `storage/backups/` は引き続きローカル作業用であり、Gitコミット対象外。
+  - ProTest は今回も対象外。
+
+- THE OPEN大会作成:
+  - 公式要項PDFと大会ページを参考に、大会情報だけを読み取り、結果情報は無視して大会を作成した。
+  - 作成後の大会IDは `11`。
+  - `tournaments` で以下を確認した。
+    - `id = 11`
+    - `name = 大岡産業レディース［THE OPEN］トーナメント ２０２５`
+    - `gender = F`
+    - `title_category = normal`
+    - `result_flow_type = prelim_to_rr_to_final`
+    - `start_date = 2025-07-25`
+    - `end_date = 2025-07-27`
+  - 今回はシーズントライアルではなく通常公式戦として扱う。
+
+- アマチュア参加者対応の方針:
+  - アマチュア選手は、通常はプロボウラープロフィールへ恒久登録しない。
+  - 大会参加・スコア入力・レーン移動表・成績表示では一時的な参加者として扱う。
+  - ただし、アマチュアがプロを負かして優勝した場合など、歴代優勝者として名前を残す必要があるケースは後続で別途整理する。
+  - プロボウラーリストに存在しない参加者は、ライセンスNo欄に `アマ` と表示する方針にした。
+  - 今回のTHE OPENでは公式表に合わせ、アマチュア5名もレーン移動表に含める方針にした。
+
+- 一時参加者用DB拡張:
+  - アマチュア参加者を扱うため、`tournament_participants` と `game_scores` に一時参加者情報を持てる拡張を追加する方針にした。
+  - 新規migration候補:
+    - `database/migrations/2025_09_01_000089_add_temporary_participants_to_tournament_participants_and_game_scores.php`
+  - `docs/db/data_dictionary.md` を更新対象にした。
+  - `docs/db/ER.dbml` は辞書から再生成する対象にした。
+  - 既存の `pro_bowlers` や既存参加者データは破壊しない。
+  - 既存列のrename / 型変更 / NOT NULL化は行わず、追加カラムで対応する方針。
+
+- 差し替え事故の回避:
+  - 一度、`lane_movement_table.blade.php` や `ScoreService.php` などの差し替え候補が、元ファイルより大幅に短くなる問題が発生した。
+  - その時点でユーザーが差し替えを停止し、確認を行った。
+  - その後 `git restore` と未追跡migration削除で一度クリーン状態へ戻した。
+  - 以後、長い既存ファイルは短縮版で全文上書きしない方針を再確認した。
+  - `resources/views/tournament_entries/lane_movement_table.blade.php` はローカル実体601行であることを確認し、公式風レイアウトを維持したまま最小差分で進めた。
+
+- エントリー一覧 / 抽選結果表示の調整:
+  - THE OPENの参加者一覧で、希望シフト・シフト・レーン表示の列がずれて見える問題を修正した。
+  - レーン欄には `3L-1` などのスタートレーンラベルを表示する方針にした。
+  - シフトがない大会では、シフト欄を `予選` ではなく `なし` と表示するようにした。
+  - シフト抽選がない大会でも、レーン確定済みとして運用できるよう、表示側を整理した。
+  - エントリー一覧ではプロ選手のライセンスNoを4桁表示に寄せた。
+
+- レーン移動表ルート / 表示:
+  - レーン移動表は以下のルートで表示する。
+    - `/tournaments/11/lane-movement-table`
+  - 当初 `/tournaments/11/lane-movement-table` で404や `Undefined array key "direction"` が発生した。
+  - route確認と `TournamentLaneMovementService` の既存設定fallbackを調整し、未設定キーがあっても既定値で動くようにした。
+  - 大会編集画面で「レーン移動表を作成する」をONにし、レーン移動表が表示されることを確認した。
+
+- 2日間レーン移動表対応:
+  - THE OPEN公式レーン移動表は、予選16Gが2日間に分かれている。
+    - 1日目: 7/25（金）予選前半8G
+    - 2日目: 7/26（土）予選後半8G
+  - 事故を避けるため、初日終了位置から自動計算する方式ではなく、2日目設定を独立して持つ方式を採用した。
+  - 既存の `tournaments.lane_movement_settings` JSONを拡張し、DBカラム追加は行わずに `day_blocks` 系の設定を持たせる方針にした。
+  - 1日型設定が残る既存大会では、従来どおり表示されるようfallbackを維持した。
+  - 2日目設定ONの場合のみ、レーン移動表を日別ブロック表示するようにした。
+
+- THE OPENレーン移動設定:
+  - 大会編集画面で以下の設定を行った。
+    - レーン移動表を作成する: ON
+    - 1BOXレーン数: 2
+    - 対象ゲーム数: 16
+    - 1G目開始時刻: 11:45
+    - 通常移動BOX数: 2
+    - 移動方向: 右へ移動
+    - 使用レーン内で循環する: ON
+    - 後半開始時だけ別移動: ON
+    - 後半開始ゲーム: 5
+    - 後半開始時の移動BOX数: 1
+    - 1日目ラベル: `7/25（金） 予選前半8G`
+    - 2日目設定を使う: ON
+    - 2日目ラベル: `7/26（土） 予選後半8G`
+    - 2日目開始G: 9
+    - 2日目ゲーム数: 8
+    - 2日目開始時刻: 10:45
+    - 2日目開始BOX補正: 8
+    - 2日目通常移動BOX数: 2
+    - 2日目移動方向: 右へ移動
+    - 2日目途中だけ別移動: ON
+    - 2日目途中移動G: 13
+    - 2日目途中移動BOX数: 1
+    - 2日目も循環する: ON
+  - 当初、対象ゲーム数が8のまま2日目開始G=9を入れたためバリデーションエラーになった。
+  - 対象ゲーム数を16へ修正して保存できることを確認した。
+  - 保存後に編集画面へ戻ったとき、2日目設定が空欄に見える問題があったため、保存済みJSONの `day_blocks` から編集画面へ再表示できるように修正した。
+
+- レーン移動表のアマチュア表示:
+  - 既存のレーン移動表取得が `tournament_entries` 中心だったため、アマチュアが表示されない問題があった。
+  - レーン移動表では `tournament_participants` を優先して読み、存在しない場合のみ `tournament_entries` へfallbackする方針に変更した。
+  - アマチュアもレーン移動表へ表示されるようにした。
+  - アマチュアのライセンスNo欄は `アマ` と表示するようにした。
+  - 公式表に合わせ、以下のアマチュア配置が表示されることを確認した。
+    - `7L-3` 坂本真貴子
+    - `13L-3` 藤林　華音
+    - `19L-3` 野村　緋那
+    - `25L-3` 戸塚　知菜
+    - `31L-3` 中村　華世
+
+- 氏名表記の調整:
+  - プロ氏名で漢字3文字の姓名スペース位置が誤る問題を再確認した。
+  - 文字数だけで分割するのではなく、公式プロフィール・公式表記に合わせた補正を優先する方針にした。
+  - THE OPEN女子プロについて、性別プレフィックス付きライセンスNoを使って表示補正できるようにした。
+  - アマチュア5名も公式表記に寄せて表示するようにした。
+
+- レーン移動表の画面確認:
+  - `/tournaments/11/lane-movement-table` でTHE OPENのレーン移動表を表示した。
+  - スクリーンショット上では、1ページ目に以下が表示された。
+    - 大会名: `大岡産業レディース［THE OPEN］トーナメント ２０２５`
+    - `7/25（金） 予選前半8G`
+    - 使用レーン `3〜32`
+    - 通常移動 `2BOX`
+    - アマチュア行を含むレーン配置
+    - `1G目〜8G目`
+    - 4G→5Gの太線区切り
+  - 公式PDFの1日目レーン移動表に近い見た目で表示されたため、現時点では問題なしと判断した。
+
+- 確認済みコマンド:
+  - `php -l app/Http/Controllers/TournamentController.php`
+  - `php -l app/Http/Controllers/TournamentEntryAdminController.php`
+  - `php -l app/Services/TournamentLaneMovementService.php`
+  - `php artisan view:clear`
+  - `php artisan optimize:clear`
+  - `php artisan route:list | Select-String -Pattern "lane-movement|movement|entries"`
+  - `git diff --name-only`
+  - `psql` による `tournament_participants` / `game_scores` 構造確認
+  - `psql` によるTHE OPEN参加者の `lane_label` 確認
+
+- 触った主なファイル:
+  - `app/Http/Controllers/TournamentController.php`
+  - `app/Http/Controllers/TournamentEntryAdminController.php`
+  - `app/Services/TournamentLaneMovementService.php`
+  - `docs/db/data_dictionary.md`
+  - `docs/db/ER.dbml`
+  - `resources/views/tournament_entries/admin_index.blade.php`
+  - `resources/views/tournament_entries/lane_movement_table.blade.php`
+  - `resources/views/tournaments/create.blade.php`
+  - `resources/views/tournaments/edit.blade.php`
+  - `database/migrations/2025_09_01_000089_add_temporary_participants_to_tournament_participants_and_game_scores.php`
+
+- Git管理上の注意:
+  - `storage/backups/` は引き続きコミット対象外。
+  - 一時投入スクリプトやバックアップはGitへ入れない。
+  - 新規migration `2025_09_01_000089...` は、アマチュア一時参加者対応として採用する場合はコミット対象に含める。
+  - コミット前には必ず `git status -sb` と `git diff --name-only` を確認し、差分ファイルだけを根拠にコミットメッセージを決める。
+
+- 現時点で完了したこと:
+  - THE OPENの公式戦大会作成。
+  - アマチュア選手を一時参加者として扱う方針整理。
+  - アマチュアをレーン移動表へ表示する修正。
+  - アマチュアのライセンス欄 `アマ` 表示。
+  - シフトなし大会の表示を `なし` に変更。
+  - レーン欄を `3L-1` などのレーンラベル表示へ変更。
+  - 2日間に分かれる予選16Gレーン移動表に対応。
+  - 2日目設定の保存・編集画面再表示を修正。
+  - THE OPEN公式表に近い1日目レーン移動表を表示確認。
+  - 構文確認とキャッシュクリアを実施済み。
+
+- 残タスク / 次に詰める候補:
+  1. 現在のログ更新後に `git status -sb` / `git diff --name-only` を確認する。
+  2. `storage/backups/` を除外したまま、今回差分をcommit / pushする。
+  3. THE OPENの2ページ目以降のレーン移動表も、公式PDFと照合する。
+  4. THE OPENの予選スコア入力へ進む。
+     - 予選前半8G入力
+     - 予選後半8G入力
+     - 予選16G通算ランキング確認
+     - ラウンドロビン進出者確認
+     - ラウンドロビン入力
+     - 決勝ステップラダー入力
+     - 最終成績反映
+     - PDF確認
+  5. アマチュア選手が成績・速報・snapshot・最終成績・PDFで破綻なく表示されるか確認する。
+  6. 一時参加者カラムの辞書/ER整合を最終確認する。
+
+- 現時点の判断:
+  - **THE OPENの大会作成、プロ/アマ混在参加者、1日目レーン移動表、2日間レーン移動設定は実運用確認に進める状態。**
+  - **次はログ更新とコミットを行い、その後THE OPENの予選スコア入力フォワードテストへ進む。**
+
+---
+
 ## 2026-05-24 フォワードテスト開始・大会作成/配分/エントリー登録/レーン移動表機能追加
 
 - 目的:

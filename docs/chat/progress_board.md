@@ -320,6 +320,66 @@
 - [ ] シーズントライアル入賞ポイント / ステップポイントの最終反映を実スコア投入後に確認する
 
 
+#### 2026-05-25 メモ（THE OPEN公式戦フォワードテスト・アマ対応・2日間レーン移動表）
+- [✓] シーズントライアル完了後、通常公式戦として `大岡産業レディース［THE OPEN］トーナメント ２０２５` を作成した
+  - `tournament_id = 11`
+  - `gender = F`
+  - `title_category = normal`
+  - `result_flow_type = prelim_to_rr_to_final`
+  - `start_date = 2025-07-25`
+  - `end_date = 2025-07-27`
+- [✓] アマチュア選手をプロボウラープロフィールへ恒久登録せず、一時参加者として扱う方針を整理した
+- [✓] アマチュア選手のライセンス欄は `アマ` と表示する方針にした
+- [✓] 一時参加者対応として、`tournament_participants` / `game_scores` を拡張するmigration方針を追加した
+  - `database/migrations/2025_09_01_000089_add_temporary_participants_to_tournament_participants_and_game_scores.php`
+  - `docs/db/data_dictionary.md`
+  - `docs/db/ER.dbml`
+- [✓] 既存長尺ファイルを短縮版で上書きしない方針を再確認した
+  - `lane_movement_table.blade.php` はローカル実体601行を基準にした
+- [✓] エントリー一覧で、レーン欄を `3L-1` などのレーンラベル表示へ変更した
+- [✓] シフトがない大会では、シフト欄を `予選` ではなく `なし` と表示するようにした
+- [✓] THE OPEN公式表に合わせ、レーン移動表を2日間ブロック表示へ拡張した
+  - 1日目: `7/25（金） 予選前半8G`
+  - 2日目: `7/26（土） 予選後半8G`
+  - 対象ゲーム数: 16
+  - 1G目開始時刻: 11:45
+  - 2日目開始G: 9
+  - 2日目開始時刻: 10:45
+  - 2日目開始BOX補正: 8
+  - 5G / 13G 開始時のみ別移動: 1BOX
+- [✓] 2日目設定を保存後、編集画面に戻っても値が再表示されるように修正した
+- [✓] レーン移動表の取得元を `tournament_participants` 優先へ変更し、アマチュア参加者も表示できるようにした
+- [✓] THE OPENのアマチュア5名がレーン移動表へ表示されることを確認した
+  - `7L-3` 坂本真貴子
+  - `13L-3` 藤林　華音
+  - `19L-3` 野村　緋那
+  - `25L-3` 戸塚　知菜
+  - `31L-3` 中村　華世
+- [✓] プロ氏名の姓名スペース位置を、文字数だけでなく公式表記に合わせて補正する方針へ修正した
+- [✓] `/tournaments/11/lane-movement-table` で、1ページ目の公式風レーン移動表表示を確認した
+- [✓] 確認済みコマンド
+  - `php -l app/Http/Controllers/TournamentController.php`
+  - `php -l app/Http/Controllers/TournamentEntryAdminController.php`
+  - `php -l app/Services/TournamentLaneMovementService.php`
+  - `php artisan view:clear`
+  - `php artisan optimize:clear`
+  - `git diff --name-only`
+- [ ] 今回差分をログ更新後にcommit / pushする
+- [ ] `storage/backups/` はコミット対象から除外する
+- [ ] THE OPENの2ページ目以降のレーン移動表を公式PDFと照合する
+- [ ] THE OPENの予選スコア入力へ進む
+  - 予選前半8G
+  - 予選後半8G
+  - 予選16G通算ランキング
+  - ラウンドロビン進出者確認
+  - ラウンドロビン入力
+  - 決勝ステップラダー入力
+  - 最終成績反映
+  - PDF確認
+- [ ] アマチュア選手が速報 / snapshot / 最終成績 / PDFで破綻なく表示されるか確認する
+
+
+
 ## Phase 3：ProTest（後回し）
 - [ ] 要件整理
 - [ ] スキーマ確定

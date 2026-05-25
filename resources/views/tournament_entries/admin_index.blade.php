@@ -313,16 +313,21 @@
               @endif
             </td>
             <td>{{ $entry->waitlist_priority ?? '-' }}</td>
-            <td>{{ $bowler->license_no ?? '-' }}</td>
-            <td>{{ $bowler->name_kanji ?? '-' }}</td>
+            <td>{{ $entry->participant_display_license_no ?? ($bowler->license_no ?? '-') }}</td>
+            <td>{{ $entry->participant_display_name ?? ($bowler->name_kanji ?? '-') }}</td>
             <td>
               <span class="badge bg-light text-dark" title="{{ $entry->eligibility_message }}">
                 {{ $entry->eligibility_short }}
               </span>
             </td>
-            <td>{{ $entry->preferred_shift_code ?? '-' }}</td>
-            <td>{{ $entry->shift ?? '-' }}</td>
-            <td>{{ $entry->lane ?? '-' }}</td>
+            <td>{{ filled($entry->preferred_shift_code) ? $entry->preferred_shift_code : '-' }}</td>
+           <td>
+              @php
+                $displayShift = $entry->participant_shift ?? $entry->shift ?? null;
+              @endphp
+              {{ filled($displayShift) && !in_array($displayShift, ['予選'], true) ? $displayShift : 'なし' }}
+            </td>
+            <td>{{ filled($entry->participant_lane_label ?? null) ? $entry->participant_lane_label : (filled($entry->lane) ? $entry->lane : '-') }}</td>
             <td>{{ $entry->balls_count }}</td>
             <td>{{ optional($entry->checked_in_at)->format('Y-m-d H:i') ?? '-' }}</td>
             <td class="small">{{ $entry->waitlist_note ?? '-' }}</td>

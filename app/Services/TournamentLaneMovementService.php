@@ -11,6 +11,7 @@ class TournamentLaneMovementService
     {
         $settings = $this->settings($tournament);
         $boxes = $this->boxes($settings);
+        $dayBlocks = $settings['day_blocks'] ?? [];
 
         $slotByLane = [];
         $rows = [];
@@ -23,23 +24,44 @@ class TournamentLaneMovementService
             }
 
             $slotByLane[$lane] = ($slotByLane[$lane] ?? 0) + 1;
-            $slotNo = $slotByLane[$lane];
+            $slotNo = isset($entry->lane_slot) && (int) $entry->lane_slot > 0
+                ? (int) $entry->lane_slot
+                : $slotByLane[$lane];
+
+            $bowler = $entry->bowler ?? null;
+            $displayName = trim((string) ($entry->display_name ?? ($entry->name ?? ($bowler->name_kanji ?? ''))));
+            $displayLicenseNo = trim((string) ($entry->display_license_no ?? ''));
+            $licenseSource = $displayLicenseNo !== ''
+                ? $displayLicenseNo
+                : ($entry->pro_bowler_license_no ?? ($bowler->license_no ?? null));
 
             $startBoxIndex = $this->boxIndexForLane($lane, $settings);
+            $gameLanes = $this->gameLanes($startBoxIndex, $settings, $boxes);
+            $dayGameLanes = [];
+
+            foreach ($dayBlocks as $block) {
+                $key = (string) ($block['key'] ?? ('day_' . count($dayGameLanes)));
+                $dayGameLanes[$key] = $this->gameLanesForBlock($startBoxIndex, $block, $settings, $boxes);
+            }
 
             $rows[] = [
                 'entry' => $entry,
-                'bowler' => $entry->bowler,
-                'start_lane_label' => $lane . 'L-' . $slotNo,
-                'license_tail' => $this->licenseTail($entry->bowler->license_no ?? null),
-                'kibetsu' => $entry->bowler->kibetsu ?? null,
-                'game_lanes' => $this->gameLanes($startBoxIndex, $settings, $boxes),
+                'bowler' => $bowler,
+                'participant_type' => $entry->participant_type ?? null,
+                'display_name' => $displayName,
+                'display_license_no' => $displayLicenseNo,
+                'start_lane_label' => $entry->lane_label ?? ($lane . 'L-' . $slotNo),
+                'license_tail' => $this->licenseTail($licenseSource),
+                'kibetsu' => $entry->kibetsu ?? ($entry->bowler_kibetsu ?? ($bowler->kibetsu ?? null)),
+                'game_lanes' => $gameLanes,
+                'day_game_lanes' => $dayGameLanes,
             ];
         }
 
         return [
             'settings' => $settings,
             'boxes' => $boxes,
+            'day_blocks' => $dayBlocks,
             'rows' => $rows,
         ];
     }
@@ -66,22 +88,70 @@ class TournamentLaneMovementService
         $halfTurnEnabled = (bool) ($raw['half_turn_enabled'] ?? false);
         $halfTurnGame = $halfTurnEnabled ? (int) ($raw['half_turn_game'] ?? 0) : null;
         $halfTurnMoveBoxes = $halfTurnEnabled ? max(0, (int) ($raw['half_turn_move_boxes'] ?? 0)) : null;
-        $direction = in_array(($raw['direction'] ?? 'right'), ['right', 'left'], true) ? $raw['direction'] : 'right';
+        $directionRaw = (string) ($raw['direction'] ?? 'right');
+        $direction = in_array($directionRaw, ['right', 'left'], true) ? $directionRaw : 'right';
+        $wrap = array_key_exists('wrap', $raw) ? (bool) $raw['wrap'] : true;
 
-        return [
+        $settings = [
             'enabled' => (bool) ($raw['enabled'] ?? false),
             'lane_from' => $laneFrom,
             'lane_to' => $laneTo,
             'box_width' => $boxWidth,
             'games' => $games,
-            'start_time' => preg_match('/^(?:[01]\d|2[0-3]):[0-5]\d$/', $startTime) ? $startTime : null,
+            'start_time' => $this->validTime($startTime),
             'regular_move_boxes' => $regularMoveBoxes,
             'half_turn_enabled' => $halfTurnEnabled,
             'half_turn_game' => $halfTurnGame,
             'half_turn_move_boxes' => $halfTurnMoveBoxes,
             'direction' => $direction,
-            'wrap' => array_key_exists('wrap', $raw) ? (bool) $raw['wrap'] : true,
+            'wrap' => $wrap,
+            'second_day_enabled' => (bool) ($raw['second_day_enabled'] ?? false),
+            'day1_label' => $raw['day1_label'] ?? null,
         ];
+
+        $settings['day_blocks'] = $this->normalizeDayBlocks($raw, $settings);
+
+        return $settings;
+    }
+
+    private function normalizeDayBlocks(array $raw, array $settings): array
+    {
+        $blocks = [];
+        $rawBlocks = $raw['day_blocks'] ?? null;
+
+        if (! is_array($rawBlocks) || count($rawBlocks) < 1) {
+            return [];
+        }
+
+        foreach ($rawBlocks as $index => $block) {
+            if (! is_array($block)) {
+                continue;
+            }
+
+            $gameFrom = max(1, (int) ($block['game_from'] ?? 1));
+            $blockGames = max(1, (int) ($block['games'] ?? (($block['game_to'] ?? $gameFrom) - $gameFrom + 1)));
+            $gameTo = (int) ($block['game_to'] ?? ($gameFrom + $blockGames - 1));
+            $blockGames = max(1, $gameTo - $gameFrom + 1);
+            $directionRaw = (string) ($block['direction'] ?? $settings['direction'] ?? 'right');
+
+            $blocks[] = [
+                'key' => (string) ($block['key'] ?? ('day' . ($index + 1))),
+                'label' => trim((string) ($block['label'] ?? (($index + 1) . '日目'))),
+                'game_from' => $gameFrom,
+                'game_to' => $gameTo,
+                'games' => $blockGames,
+                'start_time' => $this->validTime($block['start_time'] ?? null),
+                'start_move_boxes' => max(0, (int) ($block['start_move_boxes'] ?? 0)),
+                'regular_move_boxes' => max(0, (int) ($block['regular_move_boxes'] ?? $settings['regular_move_boxes'] ?? 1)),
+                'half_turn_enabled' => (bool) ($block['half_turn_enabled'] ?? false),
+                'half_turn_game' => isset($block['half_turn_game']) ? (int) $block['half_turn_game'] : null,
+                'half_turn_move_boxes' => isset($block['half_turn_move_boxes']) ? max(0, (int) $block['half_turn_move_boxes']) : null,
+                'direction' => in_array($directionRaw, ['right', 'left'], true) ? $directionRaw : 'right',
+                'wrap' => array_key_exists('wrap', $block) ? (bool) $block['wrap'] : (bool) ($settings['wrap'] ?? true),
+            ];
+        }
+
+        return $blocks;
     }
 
     private function boxes(array $settings): array
@@ -106,36 +176,72 @@ class TournamentLaneMovementService
 
     private function gameLanes(int $startBoxIndex, array $settings, array $boxes): array
     {
+        $block = [
+            'game_from' => 1,
+            'game_to' => (int) $settings['games'],
+            'games' => (int) $settings['games'],
+            'start_move_boxes' => 0,
+            'regular_move_boxes' => (int) $settings['regular_move_boxes'],
+            'half_turn_enabled' => (bool) $settings['half_turn_enabled'],
+            'half_turn_game' => $settings['half_turn_game'],
+            'half_turn_move_boxes' => $settings['half_turn_move_boxes'],
+            'direction' => $settings['direction'],
+            'wrap' => (bool) $settings['wrap'],
+        ];
+
+        return $this->gameLanesForBlock($startBoxIndex, $block, $settings, $boxes);
+    }
+
+    private function gameLanesForBlock(int $startBoxIndex, array $block, array $settings, array $boxes): array
+    {
         $result = [];
         $boxCount = count($boxes);
-        $currentIndex = $startBoxIndex;
 
-        for ($game = 1; $game <= (int) $settings['games']; $game++) {
-            if ($game > 1) {
-                $moveBoxes = (int) $settings['regular_move_boxes'];
+        if ($boxCount < 1) {
+            return $result;
+        }
+
+        $direction = ($block['direction'] ?? 'right') === 'left' ? -1 : 1;
+        $currentIndex = $startBoxIndex + ((int) ($block['start_move_boxes'] ?? 0) * $direction);
+        $currentIndex = $this->normalizeBoxIndex($currentIndex, $boxCount, (bool) ($block['wrap'] ?? $settings['wrap'] ?? true));
+
+        $gameFrom = (int) ($block['game_from'] ?? 1);
+        $gameTo = (int) ($block['game_to'] ?? ($gameFrom + (int) ($block['games'] ?? 1) - 1));
+
+        for ($game = $gameFrom; $game <= $gameTo; $game++) {
+            if ($game > $gameFrom) {
+                $moveBoxes = (int) ($block['regular_move_boxes'] ?? $settings['regular_move_boxes'] ?? 1);
 
                 if (
-                    (bool) $settings['half_turn_enabled']
-                    && (int) $settings['half_turn_game'] === $game
-                    && $settings['half_turn_move_boxes'] !== null
+                    (bool) ($block['half_turn_enabled'] ?? false)
+                    && (int) ($block['half_turn_game'] ?? 0) === $game
+                    && array_key_exists('half_turn_move_boxes', $block)
+                    && $block['half_turn_move_boxes'] !== null
                 ) {
-                    $moveBoxes = (int) $settings['half_turn_move_boxes'];
+                    $moveBoxes = (int) $block['half_turn_move_boxes'];
                 }
 
-                $direction = $settings['direction'] === 'left' ? -1 : 1;
                 $currentIndex += ($moveBoxes * $direction);
-
-                if ((bool) $settings['wrap']) {
-                    $currentIndex = (($currentIndex % $boxCount) + $boxCount) % $boxCount;
-                } else {
-                    $currentIndex = max(0, min($boxCount - 1, $currentIndex));
-                }
+                $currentIndex = $this->normalizeBoxIndex($currentIndex, $boxCount, (bool) ($block['wrap'] ?? $settings['wrap'] ?? true));
             }
 
             $result[$game] = $this->boxLabel($boxes[$currentIndex] ?? []);
         }
 
         return $result;
+    }
+
+    private function normalizeBoxIndex(int $index, int $boxCount, bool $wrap): int
+    {
+        if ($boxCount < 1) {
+            return 0;
+        }
+
+        if ($wrap) {
+            return (($index % $boxCount) + $boxCount) % $boxCount;
+        }
+
+        return max(0, min($boxCount - 1, $index));
     }
 
     private function boxLabel(array $lanes): string
@@ -145,9 +251,22 @@ class TournamentLaneMovementService
             ->implode('･');
     }
 
+    private function validTime($value): ?string
+    {
+        $value = trim((string) $value);
+
+        return preg_match('/^(?:[01]\d|2[0-3]):[0-5]\d$/', $value) ? $value : null;
+    }
+
     private function licenseTail(?string $licenseNo): string
     {
-        $digits = preg_replace('/\D+/', '', (string) $licenseNo);
+        $value = trim((string) $licenseNo);
+
+        if ($value === 'アマ') {
+            return 'アマ';
+        }
+
+        $digits = preg_replace('/\D+/', '', $value);
 
         if ($digits === '') {
             return '';

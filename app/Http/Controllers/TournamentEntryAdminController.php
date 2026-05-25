@@ -34,9 +34,12 @@ class TournamentEntryAdminController extends Controller
 
         $this->applyBowlerKeyword($query, $keyword);
 
-        $entriesCollection = $this->decorateEntriesWithPriority(
-            $query->get(),
-            $priorityLookup
+        $entriesCollection = $this->decorateEntriesWithParticipantDisplay(
+            $this->decorateEntriesWithPriority(
+                $query->get(),
+                $priorityLookup
+            ),
+            $tournament
         );
 
         $entries = $this->paginateCollection(
@@ -86,9 +89,12 @@ class TournamentEntryAdminController extends Controller
 
         $this->applyBowlerKeyword($query, $keyword);
 
-        $entriesCollection = $this->decorateEntriesWithPriority(
-            $query->get(),
-            $priorityLookup
+        $entriesCollection = $this->decorateEntriesWithParticipantDisplay(
+            $this->decorateEntriesWithPriority(
+                $query->get(),
+                $priorityLookup
+            ),
+            $tournament
         );
 
         $entries = $this->paginateCollection(
@@ -110,14 +116,61 @@ class TournamentEntryAdminController extends Controller
 
     public function laneMovementTable(Request $request, Tournament $tournament, TournamentLaneMovementService $laneMovementService)
     {
-        $entries = TournamentEntry::query()
-            ->with('bowler')
-            ->where('tournament_id', $tournament->id)
-            ->where('status', 'entry')
-            ->whereNotNull('lane')
-            ->orderBy('lane')
-            ->orderBy('id')
-            ->get();
+        $participants = DB::table('tournament_participants as tp')
+            ->leftJoin('pro_bowlers as pb', 'pb.id', '=', 'tp.pro_bowler_id')
+            ->where('tp.tournament_id', $tournament->id)
+            ->whereNotNull('tp.lane')
+            ->select([
+                'tp.id',
+                'tp.tournament_id',
+                'tp.pro_bowler_id',
+                'tp.pro_bowler_license_no',
+                'tp.participant_type',
+                'tp.display_name',
+                'tp.display_license_no',
+                'tp.gender',
+                'tp.shift',
+                'tp.lane',
+                'tp.lane_slot',
+                'tp.lane_label',
+                'tp.box_no',
+                'tp.sort_order',
+                'tp.source_note',
+                'tp.is_temporary',
+                'pb.license_no as bowler_license_no',
+                'pb.name_kanji as bowler_name_kanji',
+                'pb.kibetsu as bowler_kibetsu',
+            ])
+            ->orderByRaw('COALESCE(tp.sort_order, (tp.lane * 10 + COALESCE(tp.lane_slot, 0)))')
+            ->orderBy('tp.lane')
+            ->orderBy('tp.lane_slot')
+            ->orderBy('tp.id')
+            ->get()
+            ->map(function ($row) {
+                $row->status = 'entry';
+
+                $row->bowler = $row->pro_bowler_id ? (object) [
+                    'id' => $row->pro_bowler_id,
+                    'license_no' => $row->bowler_license_no ?: $row->pro_bowler_license_no,
+                    'name_kanji' => $row->bowler_name_kanji ?: $row->display_name,
+                    'kibetsu' => $row->bowler_kibetsu,
+                ] : null;
+
+                return $row;
+            });
+
+        if ($participants->isNotEmpty()) {
+            $entries = $participants;
+        } else {
+            $entries = TournamentEntry::query()
+                ->with('bowler')
+                ->where('tournament_id', $tournament->id)
+                ->where('status', 'entry')
+                ->whereNotNull('lane')
+                ->orderBy('lane')
+                ->orderBy('id')
+                ->get();
+        }
 
         $laneMovement = $laneMovementService->buildRows($tournament, $entries);
 
@@ -592,6 +645,76 @@ class TournamentEntryAdminController extends Controller
         }
     }
 
+    private function decorateEntriesWithParticipantDisplay(Collection $entries, Tournament $tournament): Collection
+    {
+        $bowlerIds = $entries
+            ->pluck('pro_bowler_id')
+            ->filter()
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values();
+
+        $participantsByBowlerId = $bowlerIds->isNotEmpty()
+            ? DB::table('tournament_participants')
+                ->where('tournament_id', $tournament->id)
+                ->whereNotNull('pro_bowler_id')
+                ->whereIn('pro_bowler_id', $bowlerIds)
+                ->select([
+                    'pro_bowler_id',
+                    'display_name',
+                    'display_license_no',
+                    'shift',
+                    'lane',
+                    'lane_slot',
+                    'lane_label',
+                    'box_no',
+                    'sort_order',
+                ])
+                ->get()
+                ->keyBy(fn ($participant) => (int) $participant->pro_bowler_id)
+            : collect();
+
+        return $entries->map(function (TournamentEntry $entry) use ($participantsByBowlerId) {
+            $participant = $entry->pro_bowler_id
+                ? $participantsByBowlerId->get((int) $entry->pro_bowler_id)
+                : null;
+
+            $entry->participant_display_license_no = filled($participant?->display_license_no)
+                ? (string) $participant->display_license_no
+                : ($entry->bowler?->license_no ?? '-');
+
+            $entry->participant_display_name = filled($participant?->display_name)
+                ? (string) $participant->display_name
+                : ($entry->bowler?->name_kanji ?? '-');
+
+            $entry->participant_shift = filled($participant?->shift)
+                ? (string) $participant->shift
+                : ($entry->shift ?? null);
+
+            $entry->participant_lane_label = filled($participant?->lane_label)
+                ? (string) $participant->lane_label
+                : (filled($entry->lane) ? (string) $entry->lane : null);
+
+            $entry->participant_lane = !is_null($participant?->lane)
+                ? (int) $participant->lane
+                : (!is_null($entry->lane) ? (int) $entry->lane : null);
+
+            $entry->participant_lane_slot = !is_null($participant?->lane_slot)
+                ? (int) $participant->lane_slot
+                : null;
+
+            $entry->participant_box_no = !is_null($participant?->box_no)
+                ? (int) $participant->box_no
+                : null;
+
+            $entry->participant_sort_order = !is_null($participant?->sort_order)
+                ? (int) $participant->sort_order
+                : null;
+
+            return $entry;
+        });
+    }
+
     private function decorateEntriesWithPriority(Collection $entries, array $priorityLookup): Collection
     {
         return $entries->map(function (TournamentEntry $entry) use ($priorityLookup) {
@@ -658,18 +781,23 @@ class TournamentEntryAdminController extends Controller
     private function sortAdminIndexEntries(Collection $entries): Collection
     {
         return $entries
-            ->sortBy(fn (TournamentEntry $entry) => sprintf(
-                '%d-%d-%06d-%06d-%d-%s-%d-%s-%08d',
-                (int) ($entry->eligibility_sort ?? 1),
-                $this->statusSortValue((string) $entry->status),
-                (int) ($entry->priority_sort ?? 999999),
-                $this->nullableIntSortValue($entry->waitlist_priority),
-                blank($entry->shift) ? 1 : 0,
-                (string) ($entry->shift ?? ''),
-                blank($entry->lane) ? 1 : 0,
-                (string) ($entry->lane ?? ''),
-                (int) $entry->id
-            ))
+            ->sortBy(function (TournamentEntry $entry) {
+                $displayShift = $entry->participant_shift ?? $entry->shift;
+                $displaySortOrder = $entry->participant_sort_order ?? null;
+
+                return sprintf(
+                    '%d-%d-%06d-%06d-%d-%s-%d-%06d-%08d',
+                    (int) ($entry->eligibility_sort ?? 1),
+                    $this->statusSortValue((string) $entry->status),
+                    (int) ($entry->priority_sort ?? 999999),
+                    $this->nullableIntSortValue($entry->waitlist_priority),
+                    blank($displayShift) ? 1 : 0,
+                    (string) ($displayShift ?? ''),
+                    is_null($displaySortOrder) ? (blank($entry->lane) ? 1 : 0) : 0,
+                    is_null($displaySortOrder) ? $this->nullableIntSortValue($entry->lane) : (int) $displaySortOrder,
+                    (int) $entry->id
+                );
+            })
             ->values();
     }
 
