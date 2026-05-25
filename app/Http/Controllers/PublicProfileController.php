@@ -38,10 +38,37 @@ class PublicProfileController extends Controller
         return $v === '有' ? '有' : ($v === '無' ? '無' : '—');
     }
 
+
+    private function normalizeEquipmentName(?string $value): ?string
+    {
+        $value = trim((string) $value);
+        if ($value === '') {
+            return null;
+        }
+
+        $value = str_replace(['･', '・', '　'], ['・', '・', ' '], $value);
+        $upper = strtoupper($value);
+
+        if (str_contains($upper, 'HI-SP') || str_contains($value, 'ハイ・スポーツ') || str_contains($value, 'ハイスポーツ')) {
+            return 'HI-SP';
+        }
+
+        if (str_contains($upper, 'SUNBRIDGE') || str_contains($value, 'サンブリッジ') || str_contains($value, 'ｻﾝﾌﾞﾘｯｼﾞ')) {
+            return 'サンブリッジ';
+        }
+
+        return $value;
+    }
+
     public function show(int $id)
     {
         /** @var ProBowler $p */
-        $p = ProBowler::with(['district','titles' => function($q){ $q->orderBy('year','desc'); }])->findOrFail($id);
+        $p = ProBowler::with([
+            'district',
+            'titles' => function ($q) {
+                $q->with('tournament')->orderBy('year', 'desc');
+            },
+        ])->findOrFail($id);
 
         // 基本
         $name    = $p->name_kanji ?? $p->name ?? '';
@@ -96,6 +123,14 @@ class PublicProfileController extends Controller
             ['label'=>'C','name'=>$p->sponsor_c ?? null,'url'=>$p->sponsor_c_url ?? null],
         ];
 
+        $titles = collect($p->titles ?? []);
+        $officialTitles = $titles
+            ->reject(fn ($title) => method_exists($title, 'isSeasonTrialTitle') && $title->isSeasonTrialTitle())
+            ->values();
+        $seasonTrialTitles = $titles
+            ->filter(fn ($title) => method_exists($title, 'isSeasonTrialTitle') && $title->isSeasonTrialTitle())
+            ->values();
+
         // その他公開項目
         $view = [
             'id'              => $p->id,
@@ -133,7 +168,7 @@ class PublicProfileController extends Controller
             'other_sports'       => $p->other_sports_history ?: null,
             'season_goal'        => $p->season_goal ?: null,
             'coach'              => $p->coach ?: null,
-            'equipment_contract' => $p->equipment_contract ?: null,
+            'equipment_contract' => $this->normalizeEquipmentName($p->equipment_contract),
             'coaching_history'   => $p->coaching_history ?: null,
             'motto'              => $p->motto ?: null,
             'selling_point'      => $p->selling_point ?: null,
@@ -144,7 +179,10 @@ class PublicProfileController extends Controller
             'sponsors'       => $sponsors,
             'instructors'    => $instructors,
             'usbc_coach'     => $usbc,
-            'titles'         => $p->titles ?? collect(),
+            'titles'         => $officialTitles,
+            'official_titles_count' => $officialTitles->count(),
+            'season_trial_titles' => $seasonTrialTitles,
+            'season_trial_titles_count' => $seasonTrialTitles->count(),
         ];
 
         return view('pro_bowlers.public_show', compact('view'));

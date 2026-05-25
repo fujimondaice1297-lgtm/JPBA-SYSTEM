@@ -186,8 +186,8 @@
     $stageNumber = fn (?int $value): string => $value !== null && $value > 0 ? number_format($value) : '-';
 
     $officialMainTitle = $tournamentName !== '' ? $tournamentName : '大会成績';
-    $officialSeriesTitle = $isSeasonTrialPdf ? ($shootoutSettings['series_title'] ?? 'ＪＰＢＡシーズントライアル２０２６') : '';
-    $officialSeasonTitle = $isSeasonTrialPdf ? ($shootoutSettings['season_title'] ?? 'ウィンターシリーズ') : '';
+    $officialSeriesTitle = $isSeasonTrialPdf ? trim((string) ($shootoutSettings['series_title'] ?? '')) : '';
+    $officialSeasonTitle = $isSeasonTrialPdf ? trim((string) ($shootoutSettings['season_title'] ?? '')) : '';
     $officialVenueTitle = $venueText !== '' ? $venueText : '会場';
 
     $finalQualifierCount = $isSingleEliminationFlow
@@ -306,24 +306,79 @@
         return $formatPeriodDigits($period);
     };
 
-    $resolveBelong = function ($result) use ($valueOf) {
+    $normalizeAffiliationToken = function ($value): string {
+        $value = trim((string) $value);
+        if ($value === '') {
+            return '';
+        }
+
+        $value = str_replace(['･', '・', '　'], ['・', '・', ' '], $value);
+        $value = preg_replace('/\s+/u', ' ', $value) ?? $value;
+        $upper = strtoupper($value);
+
+        if (str_contains($upper, 'HI-SP') || str_contains($value, 'ハイ・スポーツ') || str_contains($value, 'ハイスポーツ')) {
+            return 'HI-SP';
+        }
+
+        if (str_contains($upper, 'SUNBRIDGE') || str_contains($value, 'サンブリッジ') || str_contains($value, 'ｻﾝﾌﾞﾘｯｼﾞ')) {
+            return 'サンブリッジ';
+        }
+
+        return $value;
+    };
+
+    $splitAffiliationParts = function ($value) use ($normalizeAffiliationToken): array {
+        $value = trim((string) $value);
+        if ($value === '' || $value === '-') {
+            return [];
+        }
+
+        $value = str_replace(['／', '｜', '|'], '/', $value);
+
+        return collect(explode('/', $value))
+            ->map(fn ($part) => $normalizeAffiliationToken($part))
+            ->filter(fn ($part) => $part !== '')
+            ->values()
+            ->all();
+    };
+
+    $sameAffiliationToken = function ($a, $b) use ($normalizeAffiliationToken): bool {
+        return $normalizeAffiliationToken((string) $a) === $normalizeAffiliationToken((string) $b);
+    };
+
+    $joinAffiliationParts = function ($organization, $equipment = '') use ($splitAffiliationParts, $sameAffiliationToken): string {
+        $parts = [];
+
+        foreach ($splitAffiliationParts($organization) as $part) {
+            if (!collect($parts)->contains(fn ($existing) => $sameAffiliationToken($existing, $part))) {
+                $parts[] = $part;
+            }
+        }
+
+        foreach ($splitAffiliationParts($equipment) as $part) {
+            if (!collect($parts)->contains(fn ($existing) => $sameAffiliationToken($existing, $part))) {
+                $parts[] = $part;
+            }
+        }
+
+        return !empty($parts) ? implode('/', $parts) : '-';
+    };
+
+    $resolveBelong = function ($result) use ($valueOf, $joinAffiliationParts) {
         $belong = $valueOf($result, [
             'pdf_affiliation_display', 'affiliation_display', 'affiliation', 'belonging', 'organization_name',
             'organization', 'sponsor', 'sponsor_name', 'company_name', 'club_name', 'center_name', 'shop_name',
         ], '');
-        if ($belong === '') {
-            $player = $result->player ?? $result->bowler ?? null;
-            $organizationName = trim((string) (optional($player)->organization_name ?? optional($player)->affiliation ?? optional($player)->belonging ?? optional($player)->organization ?? optional($player)->sponsor ?? ''));
-            $equipmentContract = trim((string) (optional($player)->equipment_contract ?? optional($player)->equipment ?? optional($player)->equipment_sponsor ?? ''));
-            if ($organizationName !== '' && $equipmentContract !== '') {
-                $belong = $organizationName . '/' . $equipmentContract;
-            } elseif ($organizationName !== '') {
-                $belong = $organizationName;
-            } elseif ($equipmentContract !== '') {
-                $belong = $equipmentContract;
-            }
+
+        if ($belong !== '') {
+            return $joinAffiliationParts($belong);
         }
-        return trim((string) $belong) !== '' ? trim((string) $belong) : '-';
+
+        $player = $result->player ?? $result->bowler ?? null;
+        $organizationName = trim((string) (optional($player)->organization_name ?? optional($player)->affiliation ?? optional($player)->belonging ?? optional($player)->organization ?? optional($player)->sponsor ?? ''));
+        $equipmentContract = trim((string) (optional($player)->equipment_contract ?? optional($player)->equipment ?? optional($player)->equipment_sponsor ?? ''));
+
+        return $joinAffiliationParts($organizationName, $equipmentContract);
     };
 
     $belongTextClass = function ($text): string {
@@ -546,16 +601,17 @@
         return $arm;
     };
 
-    $snapshotBelong = function ($row) use ($snapshotInfo, $infoValue, $snapshotMeta) {
+    $snapshotBelong = function ($row) use ($snapshotInfo, $infoValue, $snapshotMeta, $joinAffiliationParts) {
         $meta = $snapshotMeta($row);
-        if (is_array($meta) && !empty($meta['affiliation'])) return (string) $meta['affiliation'];
+        if (is_array($meta) && !empty($meta['affiliation'])) {
+            return $joinAffiliationParts((string) $meta['affiliation']);
+        }
+
         $info = $snapshotInfo($row);
         $organization = $infoValue($info, ['organization_name', 'affiliation', 'belonging', 'organization', 'sponsor', 'company_name', 'club_name', 'center_name'], '');
         $equipment = $infoValue($info, ['equipment_contract', 'equipment', 'equipment_sponsor'], '');
-        if ($organization !== '' && $equipment !== '') return $organization . '/' . $equipment;
-        if ($organization !== '') return $organization;
-        if ($equipment !== '') return $equipment;
-        return '-';
+
+        return $joinAffiliationParts($organization, $equipment);
     };
 
     $snapshotBelongClass = function (string $text): string {

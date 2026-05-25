@@ -299,29 +299,76 @@
       </div>
 
       @if(isset($bowler))
+        @php
+          $allTitles = collect($bowler->titles ?? []);
+
+          $isSeasonTrialTitle = function ($title) {
+              $titleName = (string) ($title->title_name ?? '');
+              $tournamentName = (string) ($title->tournament_name ?? '');
+              $source = (string) ($title->source ?? '');
+              $category = (string) (optional($title->tournament)->title_category ?? '');
+
+              return $category === 'season_trial'
+                  || $source === 'sync_from_results_season_trial'
+                  || str_contains($titleName, 'シーズントライアル')
+                  || str_contains($tournamentName, 'シーズントライアル');
+          };
+
+          $seasonTrialTitles = $allTitles->filter($isSeasonTrialTitle)->values();
+          $officialTitles = $allTitles->reject($isSeasonTrialTitle)->values();
+          $officialTitleCount = (int) ($bowler->official_titles_count ?? $bowler->titles_count ?? $officialTitles->count());
+          $seasonTrialTitleCount = (int) ($bowler->season_trial_titles_count ?? $seasonTrialTitles->count());
+        @endphp
+
         <div class="col-12">
           <h5 class="mt-2">タイトル情報</h5>
-          <div class="d-flex align-items-center gap-3">
-            <div><strong>タイトル数：</strong>
-              <span class="fs-5">{{ $bowler->titles_count ?? ($bowler->titles->count() ?? 0) }}</span>
+
+          <div class="d-flex flex-wrap align-items-center gap-3">
+            <div><strong>公式タイトル数：</strong>
+              <span class="fs-5">{{ $officialTitleCount }}</span>
+            </div>
+            <div><strong>シーズントライアル優勝回数：</strong>
+              <span class="fs-5">{{ $seasonTrialTitleCount }}</span>
             </div>
           </div>
 
-          <ul class="list-group mt-2">
-            @forelse($bowler->titles as $t)
-              <li class="list-group-item d-flex justify-content-between align-items-center">
-                <div>{{ $t->year }}年 / {{ $t->title_name }} @if($t->won_date)（{{ \Carbon\Carbon::parse($t->won_date)->format('Y-m-d') }}）@endif</div>
-                <button type="submit" form="title-del-{{ $t->id }}" class="btn btn-sm btn-outline-danger" onclick="return confirm('削除しますか？')">削除</button>
-              </li>
-            @empty
-              <li class="list-group-item text-muted">登録されたタイトルはありません</li>
-            @endforelse
-          </ul>
+          <div class="small text-muted mt-1">
+            ※シーズントライアルはタイトルホルダー履歴として保持しますが、JPBA公式タイトル数には加算しません。
+          </div>
+
+          <div class="mt-3">
+            <div class="fw-bold mb-1">公式タイトル</div>
+            <ul class="list-group">
+              @forelse($officialTitles as $t)
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                  <div>{{ $t->year }}年 / {{ $t->title_name }} @if($t->won_date)（{{ \Carbon\Carbon::parse($t->won_date)->format('Y-m-d') }}）@endif</div>
+                  <button type="submit" form="title-del-{{ $t->id }}" class="btn btn-sm btn-outline-danger" onclick="return confirm('削除しますか？')">削除</button>
+                </li>
+              @empty
+                <li class="list-group-item text-muted">登録された公式タイトルはありません</li>
+              @endforelse
+            </ul>
+          </div>
+
+          <div class="mt-3">
+            <div class="fw-bold mb-1">シーズントライアル優勝</div>
+            <ul class="list-group">
+              @forelse($seasonTrialTitles as $t)
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                  <div>{{ $t->year }}年 / {{ $t->title_name }} @if($t->won_date)（{{ \Carbon\Carbon::parse($t->won_date)->format('Y-m-d') }}）@endif</div>
+                  <button type="submit" form="title-del-{{ $t->id }}" class="btn btn-sm btn-outline-danger" onclick="return confirm('削除しますか？')">削除</button>
+                </li>
+              @empty
+                <li class="list-group-item text-muted">登録されたシーズントライアル優勝はありません</li>
+              @endforelse
+            </ul>
+          </div>
 
           <div class="row row-cols-lg-auto g-2 align-items-end mt-3">
             <div class="col-12">
               <label class="form-label">大会名</label>
               <input type="text" name="title_name" form="title-add-form" class="form-control" placeholder="例：全日本選手権" required>
+              <small class="form-text text-muted">通常の公式タイトルを手動追加するときに使用します。シーズントライアルは大会成績のタイトル反映から登録します。</small>
             </div>
             <div class="col-12">
               <label class="form-label">取得年</label>
@@ -332,7 +379,7 @@
               <input type="date" name="won_date" form="title-add-form" class="form-control">
             </div>
             <div class="col-12">
-              <button type="submit" form="title-add-form" class="btn btn-outline-primary">タイトル追加</button>
+              <button type="submit" form="title-add-form" class="btn btn-outline-primary">公式タイトル追加</button>
             </div>
           </div>
         </div>

@@ -376,6 +376,12 @@
                 <a href="{{ route('tournaments.edit', $tournament->id) }}" class="btn btn-primary btn-sm">編集</a>
                 <a href="{{ route('tournaments.clone', $tournament->id) }}" class="btn btn-outline-success btn-sm">コピー</a>
                 <a href="{{ route('tournaments.results.index', $tournament->id) }}" class="btn btn-success btn-sm">成績一覧</a>
+                <a href="{{ route('scores.result', [
+                    'tournament_id' => $tournament->id,
+                    'stage' => '予選',
+                    'game_number' => 4,
+                    'gender' => in_array($tournament->sex, ['female', 'F', '女子'], true) ? 'F' : 'M',
+                ]) }}" class="btn btn-warning btn-sm">速報ランキング</a>
                 <a href="{{ route('tournament_results.create', $tournament->id) }}" class="btn btn-outline-info btn-sm">成績入力</a>
                 <a href="{{ route('tournaments.point_distributions.index', $tournament->id) }}" class="btn btn-outline-danger btn-sm">ポイント配分</a>
                 <a href="{{ route('tournaments.prize_distributions.index', $tournament->id) }}" class="btn btn-outline-warning btn-sm">賞金配分</a>

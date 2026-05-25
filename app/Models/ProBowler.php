@@ -181,6 +181,42 @@ class ProBowler extends Model
     public function titles()
     {
         return $this->hasMany(ProBowlerTitle::class, 'pro_bowler_id')
+            ->with('tournament')
+            ->orderByDesc('won_date')
+            ->orderByDesc('year');
+    }
+
+    public function officialTitles()
+    {
+        return $this->hasMany(ProBowlerTitle::class, 'pro_bowler_id')
+            ->whereDoesntHave('tournament', function ($q) {
+                $q->where('title_category', 'season_trial');
+            })
+            ->where('title_name', 'not like', '%シーズントライアル%')
+            ->where(function ($q) {
+                $q->whereNull('tournament_name')
+                    ->orWhere('tournament_name', 'not like', '%シーズントライアル%');
+            })
+            ->where(function ($q) {
+                $q->whereNull('source')
+                    ->orWhere('source', '<>', 'sync_from_results_season_trial');
+            })
+            ->orderByDesc('won_date')
+            ->orderByDesc('year');
+    }
+
+    public function seasonTrialTitles()
+    {
+        return $this->hasMany(ProBowlerTitle::class, 'pro_bowler_id')
+            ->where(function ($q) {
+                $q->whereHas('tournament', function ($tournament) {
+                    $tournament->where('title_category', 'season_trial');
+                })
+                    ->orWhere('title_name', 'like', '%シーズントライアル%')
+                    ->orWhere('tournament_name', 'like', '%シーズントライアル%')
+                    ->orWhere('source', 'sync_from_results_season_trial');
+            })
+            ->with('tournament')
             ->orderByDesc('won_date')
             ->orderByDesc('year');
     }
@@ -249,7 +285,7 @@ class ProBowler extends Model
 
         return isset($this->titles_count)
             ? ((int) $this->titles_count > 0)
-            : $this->titles()->exists();
+            : $this->officialTitles()->exists();
     }
 
     public function getHasSportsCoachLicenseAttribute($value): bool
@@ -402,7 +438,7 @@ class ProBowler extends Model
     {
         return isset($this->attributes['titles_count'])
             ? (int) $this->attributes['titles_count']
-            : $this->titles()->count();
+            : $this->officialTitles()->count();
     }
 
     public function getKibetsuLabelAttribute(): string

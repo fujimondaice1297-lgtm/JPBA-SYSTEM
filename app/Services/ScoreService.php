@@ -30,15 +30,26 @@ class ScoreService
 
         $tournament = Tournament::find($tid);
 
-        $includeStages = [$stage];
-        $carryStages   = $this->resolveCarryStages($stage, $carryPrelim, $carrySemifinal, $enabledStages);
+        $sourceSets = $this->normalizeSourceSets((array)($opt['source_sets'] ?? []), $stage, $uptoGame);
 
-        if (!empty($enabledStages)) {
-            $includeStages = array_values(array_intersect($includeStages, $enabledStages));
-            $carryStages   = array_values(array_intersect($carryStages, $enabledStages));
+        if (!empty($sourceSets)) {
+            $includeStages = array_values(array_unique(array_map(fn ($row) => (string) $row['stage'], $sourceSets)));
+            $carryStages = array_values(array_filter(
+                $includeStages,
+                fn ($stageName) => $stageName !== $stage
+            ));
+            $allStages = $includeStages;
+        } else {
+            $includeStages = [$stage];
+            $carryStages = $this->resolveCarryStages($stage, $carryPrelim, $carrySemifinal, $enabledStages);
+
+            if (!empty($enabledStages)) {
+                $includeStages = array_values(array_intersect($includeStages, $enabledStages));
+                $carryStages = array_values(array_intersect($carryStages, $enabledStages));
+            }
+
+            $allStages = array_values(array_unique(array_merge($includeStages, $carryStages)));
         }
-
-        $allStages = array_values(array_unique(array_merge($includeStages, $carryStages)));
 
         $q = GameScore::query()
             ->where('tournament_id', $tid)
@@ -63,6 +74,13 @@ class ScoreService
 
         $players = [];
         foreach ($rows as $r) {
+            $stageName = (string)$r->stage;
+            $gameNo = (int)$r->game_number;
+
+            if (!empty($sourceSets) && !$this->isScoreIncludedBySourceSets($stageName, $gameNo, $sourceSets)) {
+                continue;
+            }
+
             $key = $this->normKey($r);
             if ($key === '') {
                 continue;
@@ -77,8 +95,8 @@ class ScoreService
                         'entry'   => $r->entry_number,
                         'name'    => $r->name,
                     ],
-                    'breakdown'    => ['予選' => [], '準々決勝' => [], '準決勝' => [], '決勝' => []],
-                    'stage_totals' => ['予選' => 0, '準々決勝' => 0, '準決勝' => 0, '決勝' => 0],
+                    'breakdown'    => ['予選' => [], '準々決勝' => [], '準決勝' => [], 'ラウンドロビン' => [], '決勝' => []],
+                    'stage_totals' => ['予選' => 0, '準々決勝' => 0, '準決勝' => 0, 'ラウンドロビン' => 0, '決勝' => 0],
                 ];
             } else {
                 if ($players[$key]['gender'] === '' && (string)$r->gender !== '') {
@@ -86,48 +104,59 @@ class ScoreService
                 }
             }
 
-            $stageName = (string)$r->stage;
             if (!isset($players[$key]['breakdown'][$stageName])) {
                 $players[$key]['breakdown'][$stageName] = [];
                 $players[$key]['stage_totals'][$stageName] = 0;
             }
 
-            $gameNo = (int)$r->game_number;
-            $score  = (int)$r->score;
-
+            $score = (int)$r->score;
             $players[$key]['breakdown'][$stageName][$gameNo] = $score;
-
-            if ($stageName === $stage) {
-                if ($gameNo <= $uptoGame) {
-                    $players[$key]['stage_totals'][$stageName] += $score;
-                }
-            } else {
-                $players[$key]['stage_totals'][$stageName] += $score;
-            }
+            $players[$key]['stage_totals'][$stageName] += $score;
         }
 
-        // 現在ステージに1G以上ある選手のみ
+        // 現在ステージに1G以上ある選手のみ。
+        // 通算表示でも、表示中のステージに参加していない選手はランキングから外す。
         $players = array_values(array_filter($players, function ($p) use ($stage) {
             $arr = $p['breakdown'][$stage] ?? [];
             return count(array_filter($arr, fn($v) => $v !== null && $v !== '' && (int)$v > 0)) > 0;
         }));
 
-        // 合計とタイブレーク計算
         foreach ($players as &$p) {
             $p['total'] = 0;
-            foreach ($carryStages as $cs) {
-                $p['total'] += ($p['stage_totals'][$cs] ?? 0);
-            }
-            $p['total'] += ($p['stage_totals'][$stage] ?? 0);
 
-            $countedScores = $this->collectCountedScores($p, $carryStages, $stage, $uptoGame);
+            if (!empty($sourceSets)) {
+                foreach ($sourceSets as $sourceSet) {
+                    $sourceStage = (string) $sourceSet['stage'];
+                    $p['total'] += $this->sumSourceSetScores($p, $sourceSet);
+                }
+            } else {
+                foreach ($carryStages as $cs) {
+                    $p['total'] += ($p['stage_totals'][$cs] ?? 0);
+                }
+                $p['total'] += ($p['stage_totals'][$stage] ?? 0);
+            }
+
+            $countedScores = !empty($sourceSets)
+                ? $this->collectCountedScoresFromSourceSets($p, $sourceSets)
+                : $this->collectCountedScores($p, $carryStages, $stage, $uptoGame);
+
+            $tieBreakScores = !empty($sourceSets)
+                ? $this->collectTieBreakScoresFromSourceSets($p, $sourceSets, $stage, $uptoGame)
+                : $this->collectCurrentStageScores($p, $stage, $uptoGame);
+
+            if (count($tieBreakScores) === 0) {
+                $tieBreakScores = $countedScores;
+            }
+
             $gamesCount = count($countedScores);
 
             $p['baseline_points'] = $gamesCount * $perPoint;
             $p['over_under']      = $p['total'] - $p['baseline_points'];
 
-            // 同点時は差の少ない方を上位
-            $p['tie_break_spread'] = $this->scoreSpread($countedScores);
+            // 同ピン時は、現在ステージのローハイ（最高点 - 最低点）が少ない方を上位にする。
+            // 例：準決勝通算12Gでは、通算合計は予選+準決勝で見るが、同ピン判定は準決勝4Gのローハイで見る。
+            $p['tie_break_spread'] = $this->scoreSpread($tieBreakScores);
+            $p['tie_break_scores'] = $tieBreakScores;
             $p['counted_scores']   = $countedScores;
             $p['games_counted']    = $gamesCount;
         }
@@ -175,8 +204,18 @@ class ScoreService
         }
 
         $carryBaseG = 0;
-        foreach ($carryStages as $cs) {
-            $carryBaseG += (int)($stageSettings[$cs] ?? 0);
+        if (!empty($sourceSets)) {
+            foreach ($sourceSets as $sourceSet) {
+                $sourceStage = (string) $sourceSet['stage'];
+                if ($sourceStage === $stage) {
+                    continue;
+                }
+                $carryBaseG += max(0, (int) $sourceSet['game_to'] - (int) $sourceSet['game_from'] + 1);
+            }
+        } else {
+            foreach ($carryStages as $cs) {
+                $carryBaseG += (int)($stageSettings[$cs] ?? 0);
+            }
         }
 
         $maxCountedGames = 0;
@@ -207,6 +246,7 @@ class ScoreService
                 'per_point'                 => $perPoint,
                 'includeStages'             => $includeStages,
                 'carryStages'               => $carryStages,
+                'source_sets'               => $sourceSets,
                 'border_type'               => $borderType,
                 'border_value'              => $borderValue,
                 'baseline_games'            => $headerBaseGames,
@@ -215,6 +255,152 @@ class ScoreService
             'rows'         => $players,
             'border_index' => $borderIndex,
         ];
+    }
+
+    /**
+     * @param array<int,array<string,mixed>> $sourceSets
+     * @return array<int,array{stage:string,game_from:int,game_to:int,bucket:string}>
+     */
+    private function normalizeSourceSets(array $sourceSets, string $stage, int $uptoGame): array
+    {
+        $normalized = [];
+
+        foreach ($sourceSets as $sourceSet) {
+            if (!is_array($sourceSet)) {
+                continue;
+            }
+
+            $stageName = trim((string) ($sourceSet['stage'] ?? ''));
+            if ($stageName === '') {
+                continue;
+            }
+
+            $from = max(1, (int) ($sourceSet['game_from'] ?? 1));
+            $to = (int) ($sourceSet['game_to'] ?? 0);
+            if ($to <= 0) {
+                $to = $stageName === $stage ? $uptoGame : $from;
+            }
+
+            if ($to < $from) {
+                continue;
+            }
+
+            $normalized[] = [
+                'stage' => $stageName,
+                'game_from' => $from,
+                'game_to' => $to,
+                'bucket' => (string) ($sourceSet['bucket'] ?? ($stageName === $stage ? 'scratch' : 'carry')),
+            ];
+        }
+
+        return $normalized;
+    }
+
+    private function isScoreIncludedBySourceSets(string $stageName, int $gameNo, array $sourceSets): bool
+    {
+        foreach ($sourceSets as $sourceSet) {
+            if ((string) $sourceSet['stage'] !== $stageName) {
+                continue;
+            }
+
+            if ($gameNo >= (int) $sourceSet['game_from'] && $gameNo <= (int) $sourceSet['game_to']) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function sumSourceSetScores(array $player, array $sourceSet): int
+    {
+        $stageScores = (array)($player['breakdown'][(string) $sourceSet['stage']] ?? []);
+        $sum = 0;
+
+        foreach ($stageScores as $gameNo => $score) {
+            if ((int) $gameNo < (int) $sourceSet['game_from'] || (int) $gameNo > (int) $sourceSet['game_to']) {
+                continue;
+            }
+
+            $sum += (int) $score;
+        }
+
+        return $sum;
+    }
+
+    private function collectCountedScoresFromSourceSets(array $player, array $sourceSets): array
+    {
+        $scores = [];
+
+        foreach ($sourceSets as $sourceSet) {
+            $stageScores = (array)($player['breakdown'][(string) $sourceSet['stage']] ?? []);
+            ksort($stageScores);
+
+            foreach ($stageScores as $gameNo => $score) {
+                if ((int) $gameNo < (int) $sourceSet['game_from'] || (int) $gameNo > (int) $sourceSet['game_to']) {
+                    continue;
+                }
+
+                if ((int) $score > 0) {
+                    $scores[] = (int) $score;
+                }
+            }
+        }
+
+        return $scores;
+    }
+
+    private function collectTieBreakScoresFromSourceSets(array $player, array $sourceSets, string $stage, int $uptoGame): array
+    {
+        $scores = [];
+
+        foreach ($sourceSets as $sourceSet) {
+            $sourceStage = (string) $sourceSet['stage'];
+            $bucket = (string) ($sourceSet['bucket'] ?? '');
+
+            if ($sourceStage !== $stage && $bucket !== 'scratch') {
+                continue;
+            }
+
+            $stageScores = (array) ($player['breakdown'][$sourceStage] ?? []);
+            ksort($stageScores);
+
+            foreach ($stageScores as $gameNo => $score) {
+                $gameNo = (int) $gameNo;
+
+                if ($gameNo < (int) $sourceSet['game_from'] || $gameNo > (int) $sourceSet['game_to']) {
+                    continue;
+                }
+
+                if ($sourceStage === $stage && $gameNo > $uptoGame) {
+                    continue;
+                }
+
+                if ((int) $score > 0) {
+                    $scores[] = (int) $score;
+                }
+            }
+        }
+
+        return $scores;
+    }
+
+    private function collectCurrentStageScores(array $player, string $stage, int $uptoGame): array
+    {
+        $scores = [];
+        $stageScores = (array) ($player['breakdown'][$stage] ?? []);
+        ksort($stageScores);
+
+        foreach ($stageScores as $gameNo => $score) {
+            if ((int) $gameNo > $uptoGame) {
+                continue;
+            }
+
+            if ((int) $score > 0) {
+                $scores[] = (int) $score;
+            }
+        }
+
+        return $scores;
     }
 
     private function resolveCarryStages(string $stage, bool $carryPrelim, bool $carrySemifinal, array $enabledStages): array

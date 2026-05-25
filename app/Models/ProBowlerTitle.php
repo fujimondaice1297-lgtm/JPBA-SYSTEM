@@ -13,6 +13,7 @@ class ProBowlerTitle extends Model
         'year',
         'won_date',
         'source',
+        'tournament_name',
     ];
 
     protected $casts = [
@@ -28,4 +29,23 @@ class ProBowlerTitle extends Model
     {
         return $this->belongsTo(Tournament::class);
     }
+
+    public function isSeasonTrialTitle(): bool
+    {
+        $titleName = (string) ($this->title_name ?? '');
+        $tournamentName = (string) ($this->tournament_name ?? '');
+        $source = (string) ($this->source ?? '');
+        $category = (string) (optional($this->tournament)->title_category ?? '');
+
+        return $category === 'season_trial'
+            || $source === 'sync_from_results_season_trial'
+            || str_contains($titleName, 'シーズントライアル')
+            || str_contains($tournamentName, 'シーズントライアル');
+    }
+
+    public function isOfficialTitle(): bool
+    {
+        return ! $this->isSeasonTrialTitle();
+    }
+
 }

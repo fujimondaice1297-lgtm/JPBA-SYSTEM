@@ -153,18 +153,33 @@
     </div>
   </div>
 
-  {{-- タイトル（簡易） --}}
+  {{-- タイトル --}}
   <div class="card mb-4">
     <div class="card-header fw-bold">タイトル</div>
     <div class="card-body">
+      <div class="mb-3">
+        <span class="badge bg-primary me-2">公式タイトル：{{ $view['official_titles_count'] ?? 0 }}</span>
+        <span class="badge bg-secondary">シーズントライアル優勝：{{ $view['season_trial_titles_count'] ?? 0 }}</span>
+      </div>
+
       @if(($view['titles'] ?? collect())->count())
-        <ul class="mb-0">
+        <div class="fw-bold mb-1">公式タイトル</div>
+        <ul class="mb-3">
           @foreach($view['titles'] as $t)
             <li>{{ $t->year }}年 / {{ $t->title_name }} @if($t->won_date)（{{ \Carbon\Carbon::parse($t->won_date)->format('Y-m-d') }}）@endif</li>
           @endforeach
         </ul>
       @else
-        <div class="text-muted">登録されたタイトルはありません。</div>
+        <div class="text-muted mb-3">公式タイトルは登録されていません。</div>
+      @endif
+
+      @if(($view['season_trial_titles'] ?? collect())->count())
+        <div class="fw-bold mb-1">シーズントライアル優勝</div>
+        <ul class="mb-0">
+          @foreach($view['season_trial_titles'] as $t)
+            <li>{{ $t->year }}年 / {{ $t->title_name }} @if($t->won_date)（{{ \Carbon\Carbon::parse($t->won_date)->format('Y-m-d') }}）@endif</li>
+          @endforeach
+        </ul>
       @endif
     </div>
   </div>

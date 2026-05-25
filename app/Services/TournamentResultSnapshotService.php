@@ -258,6 +258,8 @@ class TournamentResultSnapshotService
                     'total_pin' => 0,
                     'games' => 0,
                     'scores' => [],
+                    'scratch_scores' => [],
+                    'carry_scores' => [],
                 ];
             }
 
@@ -268,8 +270,10 @@ class TournamentResultSnapshotService
 
             if ($bucket === 'carry') {
                 $grouped[$groupKey]['carry_pin'] += $score;
+                $grouped[$groupKey]['carry_scores'][] = $score;
             } else {
                 $grouped[$groupKey]['scratch_pin'] += $score;
+                $grouped[$groupKey]['scratch_scores'][] = $score;
             }
         }
 
@@ -277,8 +281,13 @@ class TournamentResultSnapshotService
             $entry['average'] = $entry['games'] > 0
                 ? round($entry['total_pin'] / $entry['games'], 3)
                 : null;
-            $entry['tie_break_value'] = null;
-            unset($entry['scores']);
+
+            // 同ピン時は、現在ステージ側（scratch bucket）のローハイが少ない方を上位にする。
+            // carry + scratch の通算成績でも、公式表の同ピン判定は現在ステージ側の点数差で見る。
+            $tieBreakScores = !empty($entry['scratch_scores']) ? $entry['scratch_scores'] : $entry['scores'];
+            $entry['tie_break_value'] = $this->scoreSpread($tieBreakScores);
+
+            unset($entry['scores'], $entry['scratch_scores'], $entry['carry_scores']);
             return $entry;
         }, $grouped));
     }
@@ -289,6 +298,11 @@ class TournamentResultSnapshotService
             $byTotal = $b['total_pin'] <=> $a['total_pin'];
             if ($byTotal !== 0) {
                 return $byTotal;
+            }
+
+            $byTieBreak = ((int) ($a['tie_break_value'] ?? PHP_INT_MAX)) <=> ((int) ($b['tie_break_value'] ?? PHP_INT_MAX));
+            if ($byTieBreak !== 0) {
+                return $byTieBreak;
             }
 
             $byScratch = $b['scratch_pin'] <=> $a['scratch_pin'];
@@ -307,6 +321,20 @@ class TournamentResultSnapshotService
         unset($row);
 
         return $rows;
+    }
+
+    private function scoreSpread(array $scores): int
+    {
+        $scores = array_values(array_filter(
+            array_map('intval', $scores),
+            fn (int $score): bool => $score > 0
+        ));
+
+        if (count($scores) <= 1) {
+            return 0;
+        }
+
+        return max($scores) - min($scores);
     }
 
     private function closeCurrentSnapshots(int $tournamentId, string $resultCode, ?string $gender, ?string $shift): void

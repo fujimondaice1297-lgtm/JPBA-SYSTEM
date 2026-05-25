@@ -25,7 +25,7 @@ class ProBowlerController extends Controller
 
         $query = ProBowler::query()
             ->with(['district', 'currentInstructorRegistry'])
-            ->withCount('titles')
+            ->withCount(['officialTitles as titles_count'])
             ->withCount([
                 'records as perfect_count'       => fn ($q) => $q->where('record_type', 'perfect'),
                 'records as seven_ten_count'     => fn ($q) => $q->where('record_type', 'seven_ten'),
@@ -34,12 +34,12 @@ class ProBowlerController extends Controller
 
         if ($titleYear) {
             $query->withCount([
-                'titles as titles_count_'.$titleYear => fn ($q) => $q->where('year', $titleYear),
+                'officialTitles as titles_count_'.$titleYear => fn ($q) => $q->where('year', $titleYear),
             ]);
         }
         if ($titleFrom && $titleTo) {
             $query->withCount([
-                'titles as titles_count_range' => fn ($q) => $q->whereBetween('year', [$titleFrom, $titleTo]),
+                'officialTitles as titles_count_range' => fn ($q) => $q->whereBetween('year', [$titleFrom, $titleTo]),
             ]);
         }
 
@@ -68,7 +68,7 @@ class ProBowlerController extends Controller
             $query->where('kibetsu', '<=', $request->term_to);
         }
         if ($request->boolean('has_title')) {
-            $query->has('titles');
+            $query->has('officialTitles');
         }
         if ($request->boolean('has_sports_coach_license')) {
             $query->where(fn ($q) => $q->where('coach_1_status', '有')->orWhere('coach_3_status', '有')->orWhere('coach_4_status', '有'));
@@ -161,9 +161,18 @@ class ProBowlerController extends Controller
     public function edit($id)
     {
         $bowler = ProBowler::with([
-            'titles' => fn ($q) => $q->orderByDesc('won_date')->orderByDesc('year'),
+            'titles.tournament',
             'currentInstructorRegistry',
-        ])->withCount('titles')->findOrFail($id);
+        ])
+            ->withCount([
+                'officialTitles as official_titles_count',
+                'seasonTrialTitles as season_trial_titles_count',
+            ])
+            ->findOrFail($id);
+
+        // 管理画面の「タイトル数」は公式タイトルのみ。
+        // シーズントライアル優勝は title 履歴には残すが、公式タイトル数には加算しない。
+        $bowler->setAttribute('titles_count', (int) ($bowler->official_titles_count ?? 0));
 
         $order = ['北海道', '東北', '北関東', '埼玉', '千葉', '城東', '城南', '城西', '三多摩', '神奈川・東', '神奈川・西', '静岡', '甲信越', '東海', '北陸', '関西・東', '関西・西', '関西・南', '中国四国', '九州・北', '九州･南／沖縄', '海外'];
         $districts = District::all()
@@ -293,9 +302,25 @@ class ProBowlerController extends Controller
             ->orderBy('id')
             ->get(['id', 'name', 'is_retired']);
 
+        // 公式タイトル数の集計。
+        // シーズントライアルは「タイトルホルダー」履歴として残すが、公式タイトル数には加算しない。
         $titlesAgg = DB::table('pro_bowler_titles')
-            ->select('pro_bowler_id', DB::raw('count(*) as titles_count'))
-            ->groupBy('pro_bowler_id');
+            ->leftJoin('tournaments', 'tournaments.id', '=', 'pro_bowler_titles.tournament_id')
+            ->where(function ($q) {
+                $q->whereNull('tournaments.title_category')
+                    ->orWhere('tournaments.title_category', '<>', 'season_trial');
+            })
+            ->where('pro_bowler_titles.title_name', 'not like', '%シーズントライアル%')
+            ->where(function ($q) {
+                $q->whereNull('pro_bowler_titles.tournament_name')
+                    ->orWhere('pro_bowler_titles.tournament_name', 'not like', '%シーズントライアル%');
+            })
+            ->where(function ($q) {
+                $q->whereNull('pro_bowler_titles.source')
+                    ->orWhere('pro_bowler_titles.source', '<>', 'sync_from_results_season_trial');
+            })
+            ->select('pro_bowler_titles.pro_bowler_id', DB::raw('count(*) as titles_count'))
+            ->groupBy('pro_bowler_titles.pro_bowler_id');
 
         $query = ProBowler::query()
             ->with(['district', 'currentInstructorRegistry'])

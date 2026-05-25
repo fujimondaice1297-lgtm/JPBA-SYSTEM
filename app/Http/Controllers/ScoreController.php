@@ -7,6 +7,7 @@ use App\Models\GameScore;
 use App\Models\ProBowler;
 use App\Models\Tournament;
 use App\Services\ScoreService;
+use App\Services\TournamentResultCarryService;
 use App\Services\RoundRobinService;
 use App\Services\StepLadderService;
 use App\Services\ShootoutService;
@@ -372,6 +373,7 @@ final class ScoreController extends Controller
     public function result(
         Request $r,
         ScoreService $service,
+        TournamentResultCarryService $carryService,
         RoundRobinService $roundRobinService,
         StepLadderService $stepLadderService,
         ShootoutService $shootoutService,
@@ -381,9 +383,9 @@ final class ScoreController extends Controller
         $opt = [
             'tournament_id'   => (int) $r->get('tournament_id'),
             'stage'           => (string) $r->get('stage', '予選'),
-            'upto_game'       => (int) $r->get('upto_game', 1),
+            'upto_game'       => (int) $r->get('upto_game', $r->get('game_number', 1)),
             'shifts'          => (string) $r->get('shifts', ''),
-            'gender_filter'   => (string) $r->get('gender_filter', ''),
+            'gender_filter'   => (string) $r->get('gender_filter', $r->get('gender', '')),
             'per_point'       => (int) $r->get('per_point', 200),
             'border_type'     => (string) $r->get('border_type', 'rank'),
             'border_value'    => $r->get('border_value'),
@@ -397,7 +399,7 @@ final class ScoreController extends Controller
         $tournament_name = $t?->name ?? '大会名';
         $flowType = trim((string) ($t?->result_flow_type ?? 'legacy_standard')) ?: 'legacy_standard';
 
-        $this->applyConfiguredCarryForRanking($opt, $t);
+        $this->applyConfiguredCarryForRanking($opt, $t, $carryService);
 
         if ($opt['stage'] === 'ラウンドロビン') {
             $data = $roundRobinService->build([
@@ -1577,115 +1579,90 @@ final class ScoreController extends Controller
     }
 
 
-    private function applyConfiguredCarryForRanking(array &$opt, ?Tournament $tournament): void
-    {
+    private function applyConfiguredCarryForRanking(
+        array &$opt,
+        ?Tournament $tournament,
+        TournamentResultCarryService $carryService
+    ): void {
         if (!$tournament) {
             return;
         }
 
-        $stage = $this->normalizeStageLabel((string) ($opt['stage'] ?? ''));
+        $stage = $carryService->normalizeStageLabel((string) ($opt['stage'] ?? ''));
+        $opt['stage'] = $stage;
 
-        $resultCode = match ($stage) {
-            '準々決勝' => 'quarterfinal_total',
-            '準決勝' => 'semifinal_total',
-            '決勝' => 'final_total',
-            default => null,
-        };
+        $stageGameCounts = $this->detectScoreStageGameCounts(
+            tournamentId: (int) ($opt['tournament_id'] ?? 0),
+            genderFilter: (string) ($opt['gender_filter'] ?? ''),
+            shifts: (string) ($opt['shifts'] ?? '')
+        );
 
-        if (!$resultCode) {
+        $opt['stage_settings'] = $stageGameCounts;
+
+        $sourceSets = $carryService->sourceSetsForStage(
+            tournament: $tournament,
+            stage: $stage,
+            stageGameCounts: $stageGameCounts,
+            currentUptoGame: max(1, (int) ($opt['upto_game'] ?? 1))
+        );
+
+        if (empty($sourceSets)) {
+            // result_carry_settings 未設定の大会は、従来の carry_prelim / carry_semifinal 指定を残す。
             return;
         }
 
-        $settings = $tournament->result_carry_settings ?? [];
-
-        if (is_string($settings) && trim($settings) !== '') {
-            $decoded = json_decode($settings, true);
-            $settings = is_array($decoded) ? $decoded : [];
-        }
-
-        if (!is_array($settings)) {
-            $settings = [];
-        }
-
-        $sourceStages = [];
-
-        if (!empty($settings[$resultCode]) && is_array($settings[$resultCode])) {
-            $configuredStages = $settings[$resultCode]['source_stages'] ?? [];
-            if (is_array($configuredStages)) {
-                $sourceStages = $configuredStages;
-            }
-        }
-
-        if (empty($sourceStages)) {
-            $sourceStages = $this->defaultSourceStagesForRanking($tournament, $resultCode, $stage);
-        }
-
-        if (!is_array($sourceStages) || empty($sourceStages)) {
-            return;
-        }
+        $opt['source_sets'] = $sourceSets;
 
         $sourceStages = array_values(array_unique(array_map(
-            fn ($value) => $this->normalizeStageLabel((string) $value),
-            $sourceStages
+            fn (array $row): string => (string) $row['stage'],
+            $sourceSets
         )));
 
-        if (in_array('予選', $sourceStages, true) && $stage !== '予選') {
-            $opt['carry_prelim'] = 1;
-        }
-
-        if (in_array('準決勝', $sourceStages, true) && $stage === '決勝') {
-            $opt['carry_semifinal'] = 1;
-        }
+        $opt['carry_prelim'] = in_array('予選', $sourceStages, true) && $stage !== '予選' ? 1 : 0;
+        $opt['carry_semifinal'] = in_array('準決勝', $sourceStages, true) && $stage !== '準決勝' ? 1 : 0;
     }
 
-    private function defaultSourceStagesForRanking(Tournament $tournament, string $resultCode, string $stage): array
+    private function detectScoreStageGameCounts(int $tournamentId, string $genderFilter = '', string $shifts = ''): array
     {
-        $flowType = trim((string) ($tournament->result_flow_type ?? ''));
-        $preset = trim((string) ($tournament->result_carry_preset ?? ''));
-
-        if ($preset === 'no_carry') {
+        if ($tournamentId <= 0) {
             return [];
         }
 
-        if ($resultCode === 'quarterfinal_total') {
-            if (str_contains($flowType, 'quarterfinal')) {
-                return ['予選', '準々決勝'];
+        $shiftList = collect(explode(',', $shifts))
+            ->map(fn ($value) => trim((string) $value))
+            ->filter()
+            ->values()
+            ->all();
+
+        $rows = DB::table('game_scores')
+            ->select('stage', DB::raw('MAX(game_number) AS games_count'))
+            ->where('tournament_id', $tournamentId)
+            ->when($genderFilter !== '', function ($query) use ($genderFilter) {
+                $query->where(function ($qq) use ($genderFilter) {
+                    $qq->where('gender', $genderFilter)
+                        ->orWhere(function ($q2) use ($genderFilter) {
+                            $q2->whereNotNull('license_number')
+                                ->where('license_number', 'like', $genderFilter . '%');
+                        });
+                });
+            })
+            ->when(!empty($shiftList), fn ($query) => $query->whereIn('shift', $shiftList))
+            ->whereNotNull('stage')
+            ->groupBy('stage')
+            ->get();
+
+        $counts = [];
+
+        foreach ($rows as $row) {
+            $stage = $this->normalizeStageLabel((string) ($row->stage ?? ''));
+            if ($stage === '') {
+                continue;
             }
 
-            return [];
+            $counts[$stage] = max((int) ($counts[$stage] ?? 0), (int) ($row->games_count ?? 0));
         }
 
-        if ($resultCode === 'semifinal_total') {
-            $seedSource = trim((string) ($tournament->shootout_seed_source_result_code ?? ''));
-            $singleEliminationSeedSource = trim((string) ($tournament->single_elimination_seed_source_result_code ?? ''));
-
-            if (
-                $seedSource === 'semifinal_total'
-                || $singleEliminationSeedSource === 'semifinal_total'
-                || str_contains($flowType, 'prelim_to_semifinal')
-                || str_contains($flowType, 'quarterfinal_to_semifinal')
-                || $preset === 'carry_prelim_to_semifinal_for_tournament'
-                || $preset === 'carry_to_semifinal_reset_rr'
-            ) {
-                if (str_contains($flowType, 'quarterfinal')) {
-                    return ['予選', '準々決勝', '準決勝'];
-                }
-
-                return ['予選', '準決勝'];
-            }
-
-            return [];
-        }
-
-        if ($resultCode === 'final_total') {
-            if ($preset === 'carry_all') {
-                return ['予選', '準々決勝', '準決勝', '決勝'];
-            }
-
-            return [];
-        }
-
-        return [];
+        return $counts;
     }
 
     private function buildSingleEliminationResultPayload(Tournament $tournament, SingleEliminationService $singleEliminationService, array $opt): array

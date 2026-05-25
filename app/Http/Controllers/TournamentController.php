@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Tournament;
+use App\Services\TournamentResultCarryService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -449,7 +450,8 @@ class TournamentController extends Controller
 
     private function normalizeResultCarrySettings(string $preset, $customJson): array
     {
-        $preset = trim($preset) ?: 'default';
+        $service = app(TournamentResultCarryService::class);
+        $preset = $service->canonicalPresetKey($preset);
 
         if ($preset === 'custom') {
             $json = trim((string) $customJson);
@@ -466,86 +468,10 @@ class TournamentController extends Controller
                 ]);
             }
 
-            return $decoded;
+            return $service->normalizeSettings('custom', $decoded);
         }
 
-        return $this->resultCarryPresetSettings($preset);
-    }
-
-    private function resultCarryPresetSettings(string $preset): array
-    {
-        return match ($preset) {
-            // すべての通算系を、そのステージ単体で集計する
-            'no_carry' => [
-                'quarterfinal_total' => [
-                    'source_stages' => ['準々決勝'],
-                ],
-                'semifinal_total' => [
-                    'source_stages' => ['準決勝'],
-                ],
-                'round_robin_total' => [
-                    'source_stages' => ['ラウンドロビン'],
-                ],
-                'final_total' => [
-                    'source_stages' => ['決勝'],
-                ],
-            ],
-
-            // 予選→準々決勝までは持ち込み、準決勝からリセット
-            'reset_after_quarterfinal' => [
-                'quarterfinal_total' => [
-                    'source_stages' => ['予選', '準々決勝'],
-                ],
-                'semifinal_total' => [
-                    'source_stages' => ['準決勝'],
-                ],
-                'round_robin_total' => [
-                    'source_stages' => ['準決勝', 'ラウンドロビン'],
-                ],
-                'final_total' => [
-                    'source_stages' => ['準決勝', '決勝'],
-                ],
-            ],
-
-            // 予選から準々決勝へは持ち込まない。準々決勝以降を通算する
-            'reset_from_quarterfinal' => [
-                'quarterfinal_total' => [
-                    'source_stages' => ['準々決勝'],
-                ],
-                'semifinal_total' => [
-                    'source_stages' => ['準々決勝', '準決勝'],
-                ],
-                'round_robin_total' => [
-                    'source_stages' => ['準々決勝', '準決勝', 'ラウンドロビン'],
-                ],
-                'final_total' => [
-                    'source_stages' => ['準々決勝', '準決勝', '決勝'],
-                ],
-            ],
-
-            // 予選→準々決勝→準決勝までは持ち込み、ラウンドロビンからリセット
-            'carry_to_semifinal_reset_rr' => [
-                'quarterfinal_total' => [
-                    'source_stages' => ['予選', '準々決勝'],
-                ],
-                'semifinal_total' => [
-                    'source_stages' => ['予選', '準々決勝', '準決勝'],
-                ],
-                'round_robin_total' => [
-                    'source_stages' => ['ラウンドロビン'],
-                ],
-            ],
-
-            // 今回のBBBカップ想定：予選＋準決勝の通算でトーナメント進出者を決める
-            'carry_prelim_to_semifinal_for_tournament' => [
-                'semifinal_total' => [
-                    'source_stages' => ['予選', '準決勝'],
-                ],
-            ],
-
-            // default は現行ロジックを維持
-            default => [],
-        };
+        return $service->presetSettings($preset);
     }
 
 
@@ -681,7 +607,7 @@ class TournamentController extends Controller
             'shootout_stage_progress.prelim_qualifier_count' => 'nullable|integer|min:1|max:999',
             'shootout_stage_progress.semifinal_game_count' => 'nullable|integer|min:1|max:99',
             'shootout_stage_progress.semifinal_total_game_count' => 'nullable|integer|min:1|max:199',
-            'result_carry_preset' => 'nullable|in:default,no_carry,reset_after_quarterfinal,reset_from_quarterfinal,carry_to_semifinal_reset_rr,carry_prelim_to_semifinal_for_tournament,custom',
+            'result_carry_preset' => 'nullable|in:' . implode(',', app(TournamentResultCarryService::class)->allowedPresetKeys()),
             'result_carry_settings' => 'nullable|string|max:20000',
             'entry_start'          => 'nullable|date',
             'entry_end'            => 'nullable|date|after_or_equal:entry_start',
@@ -908,7 +834,9 @@ class TournamentController extends Controller
             ]);
         }
 
-        $carryPreset = trim((string) ($request->input('result_carry_preset', 'default') ?: 'default'));
+        $carryPreset = app(TournamentResultCarryService::class)->canonicalPresetKey(
+            trim((string) ($request->input('result_carry_preset', 'default') ?: 'default'))
+        );
 
         $validated['result_carry_preset'] = $carryPreset;
         $validated['result_carry_settings'] = $this->normalizeResultCarrySettings(
