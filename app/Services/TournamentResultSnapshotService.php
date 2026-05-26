@@ -198,35 +198,86 @@ class TournamentResultSnapshotService
 
     private function collectScoreRows(int $tournamentId, ?string $gender, ?string $shift, array $sourceSets)
     {
-        return DB::table('game_scores')
-            ->select([
-                'id',
-                'tournament_id',
-                'stage',
-                'shift',
-                'gender',
-                'license_number',
-                'name',
-                'entry_number',
-                'game_number',
-                'score',
-                'pro_bowler_id',
-            ])
-            ->where('tournament_id', $tournamentId)
-            ->when($gender !== null, fn ($q) => $q->where('gender', $gender))
-            ->when($shift !== null, fn ($q) => $q->where('shift', $shift))
+        $hasTournamentParticipantId = $this->hasColumn('game_scores', 'tournament_participant_id');
+        $hasParticipantTable = Schema::hasTable('tournament_participants');
+
+        $canJoinParticipants = $hasTournamentParticipantId
+            && $hasParticipantTable
+            && $this->hasColumn('tournament_participants', 'id');
+
+        $select = [
+            'g.id',
+            'g.tournament_id',
+            'g.stage',
+            'g.shift',
+            'g.gender',
+            'g.license_number',
+            'g.name',
+            'g.entry_number',
+            'g.game_number',
+            'g.score',
+            'g.pro_bowler_id',
+        ];
+
+        if ($hasTournamentParticipantId) {
+            $select[] = 'g.tournament_participant_id';
+        } else {
+            $select[] = DB::raw('null as tournament_participant_id');
+        }
+
+        if ($canJoinParticipants && $this->hasColumn('tournament_participants', 'participant_type')) {
+            $select[] = 'tp.participant_type';
+        } else {
+            $select[] = DB::raw('null as participant_type');
+        }
+
+        if ($canJoinParticipants && $this->hasColumn('tournament_participants', 'display_name')) {
+            $select[] = DB::raw('tp.display_name as participant_display_name');
+        } else {
+            $select[] = DB::raw('null as participant_display_name');
+        }
+
+        if ($canJoinParticipants && $this->hasColumn('tournament_participants', 'display_license_no')) {
+            $select[] = DB::raw('tp.display_license_no as participant_display_license_no');
+        } else {
+            $select[] = DB::raw('null as participant_display_license_no');
+        }
+
+        $query = DB::table('game_scores as g')
+            ->select($select)
+            ->where('g.tournament_id', $tournamentId)
+            ->when($gender !== null, fn ($q) => $q->where('g.gender', $gender))
+            ->when($shift !== null, fn ($q) => $q->where('g.shift', $shift))
             ->where(function ($outer) use ($sourceSets) {
                 foreach ($sourceSets as $set) {
                     $outer->orWhere(function ($inner) use ($set) {
-                        $inner->where('stage', $set['stage'])
-                            ->whereBetween('game_number', [$set['game_from'], $set['game_to']]);
+                        $inner->where('g.stage', $set['stage'])
+                            ->whereBetween('g.game_number', [$set['game_from'], $set['game_to']]);
                     });
                 }
             })
-            ->orderBy('stage')
-            ->orderBy('game_number')
-            ->orderBy('id')
-            ->get();
+            ->orderBy('g.stage')
+            ->orderBy('g.game_number')
+            ->orderBy('g.id');
+
+        if ($canJoinParticipants) {
+            $query->leftJoin('tournament_participants as tp', 'tp.id', '=', 'g.tournament_participant_id');
+        }
+
+        return $query->get();
+    }
+
+    private function hasColumn(string $table, string $column): bool
+    {
+        static $cache = [];
+
+        $key = $table . '.' . $column;
+
+        if (!array_key_exists($key, $cache)) {
+            $cache[$key] = Schema::hasColumn($table, $column);
+        }
+
+        return $cache[$key];
     }
 
     private function aggregateRows($rows, array $sourceSets): array
@@ -373,8 +424,16 @@ class TournamentResultSnapshotService
 
     private function buildParticipantKey(object $row): string
     {
+        // アマチュア・一時参加者は license_number が全員「アマ」になるため、
+        // license_number でGROUP BYすると複数名が1行に合算されてしまう。
+        // そのため、正式成績スナップショットでは tournament_participant_id を最優先キーにする。
+        $temporaryParticipantKey = $this->buildTemporaryParticipantKey($row);
+        if ($temporaryParticipantKey !== null) {
+            return $temporaryParticipantKey;
+        }
+
         // pro_bowler_id が入っている行と、license_number だけの行が混在しても、
-        // 同じ選手を別人扱いしないよう、まずライセンスから正式プロを解決する。
+        // 同じ選手を別人扱いしないよう、プロはライセンスから正式プロを解決する。
         //
         // 例:
         // - 予選 game_scores: pro_bowler_id = null / license_number = M00001289
@@ -406,6 +465,62 @@ class TournamentResultSnapshotService
         return 'row:' . (string) $row->id;
     }
 
+    private function buildTemporaryParticipantKey(object $row): ?string
+    {
+        if (!$this->isTemporaryParticipantRow($row)) {
+            return null;
+        }
+
+        $participantId = $row->tournament_participant_id ?? null;
+        if ($participantId !== null && (int) $participantId > 0) {
+            return 'participant:' . (int) $participantId;
+        }
+
+        $entryNumber = $this->nullableTrim($row->entry_number);
+        if ($entryNumber !== null) {
+            return 'temporary_entry:' . strtoupper($entryNumber);
+        }
+
+        $name = $this->nullableTrim($row->participant_display_name)
+            ?? $this->nullableTrim($row->name);
+
+        if ($name !== null) {
+            return 'temporary_name:' . $this->normalizeIdentityText($name);
+        }
+
+        return 'temporary_row:' . (string) $row->id;
+    }
+
+    private function isTemporaryParticipantRow(object $row): bool
+    {
+        $participantType = strtolower((string) ($this->nullableTrim($row->participant_type ?? null) ?? ''));
+        if (in_array($participantType, ['amateur', 'temporary'], true)) {
+            return true;
+        }
+
+        $license = $this->nullableTrim($row->license_number);
+        if ($license === 'アマ') {
+            return true;
+        }
+
+        $participantDisplayLicense = $this->nullableTrim($row->participant_display_license_no ?? null);
+        if ($participantDisplayLicense === 'アマ') {
+            return true;
+        }
+
+        $entryNumber = $this->nullableTrim($row->entry_number);
+        if ($entryNumber !== null && preg_match('/^AM[-_]/i', $entryNumber) === 1) {
+            return true;
+        }
+
+        return false;
+    }
+
+    private function normalizeIdentityText(string $value): string
+    {
+        return str_replace([' ', '　', '選手'], '', trim($value));
+    }
+
     private function resolveDisplayName(object $row): string
     {
         $name = $this->nullableTrim($row->name);
@@ -429,6 +544,28 @@ class TournamentResultSnapshotService
 
     private function resolveParticipantIdentityFromGameScoreRow(object $row): array
     {
+        if ($this->isTemporaryParticipantRow($row)) {
+            $displayName = $this->nullableTrim($row->participant_display_name ?? null)
+                ?? $this->nullableTrim($row->name)
+                ?? $this->nullableTrim($row->entry_number)
+                ?? 'アマ';
+
+            $licenseNo = $this->nullableTrim($row->participant_display_license_no ?? null)
+                ?? $this->nullableTrim($row->license_number)
+                ?? 'アマ';
+
+            if ($licenseNo !== 'アマ' && preg_match('/^AM[-_]/i', (string) $licenseNo) === 1) {
+                $licenseNo = 'アマ';
+            }
+
+            return [
+                'pro_bowler_id' => null,
+                'pro_bowler_license_no' => $licenseNo,
+                'amateur_name' => $displayName,
+                'display_name' => $displayName,
+            ];
+        }
+
         $resolvedBowler = $this->resolveBowlerFromGameScoreRow($row);
         $displayName = $resolvedBowler?->name_kanji
             ?? $resolvedBowler?->name_kana
@@ -444,6 +581,10 @@ class TournamentResultSnapshotService
 
     private function resolveBowlerFromGameScoreRow(object $row): ?ProBowler
     {
+        if ($this->isTemporaryParticipantRow($row)) {
+            return null;
+        }
+
         if ($row->pro_bowler_id !== null) {
             $byId = ProBowler::query()->find((int) $row->pro_bowler_id);
             if ($byId) {
