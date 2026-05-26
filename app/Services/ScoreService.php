@@ -91,9 +91,12 @@ class ScoreService
                     'id'           => $key,
                     'gender'       => (string)($r->gender ?? ''),
                     'raw_ids'      => [
-                        'license' => $this->digitsOnly($r->license_number),
-                        'entry'   => $r->entry_number,
-                        'name'    => $r->name,
+                        'license'                   => $this->digitsOnly($r->license_number),
+                        'license_number'            => $r->license_number,
+                        'entry'                     => $r->entry_number,
+                        'name'                      => $r->name,
+                        'pro_bowler_id'             => $r->pro_bowler_id ?? null,
+                        'tournament_participant_id' => $r->tournament_participant_id ?? null,
                     ],
                     'breakdown'    => ['予選' => [], '準々決勝' => [], '準決勝' => [], 'ラウンドロビン' => [], '決勝' => []],
                     'stage_totals' => ['予選' => 0, '準々決勝' => 0, '準決勝' => 0, 'ラウンドロビン' => 0, '決勝' => 0],
@@ -184,7 +187,9 @@ class ScoreService
         foreach ($players as $i => &$p) {
             $p['rank'] = $i + 1;
             $p['diff_from_top'] = $top > 0 ? ($p['total'] - $top) : 0;
-            $p['display_license'] = $p['raw_ids']['license'] ?: ($p['raw_ids']['entry'] ?: '');
+            $p['display_license'] = $this->isAmateurScoreRow($p['raw_ids'])
+                ? 'アマ'
+                : ($p['raw_ids']['license'] ?: ($p['raw_ids']['entry'] ?: ''));
         }
         unset($p);
 
@@ -486,6 +491,26 @@ class ScoreService
         }
 
         return max($scores) - min($scores);
+    }
+
+    /**
+     * アマチュアなどプロライセンス番号を持たない一時参加者を判定する。
+     *
+     * `AM-001` のような大会内エントリー番号を下4桁ライセンスとして扱うと、
+     * 既存プロボウラーに誤解決されるため、速報表示用のライセンス欄は明示的に「アマ」にする。
+     *
+     * @param array<string,mixed> $rawIds
+     */
+    private function isAmateurScoreRow(array $rawIds): bool
+    {
+        $licenseNumber = trim((string)($rawIds['license_number'] ?? ''));
+        $entryNumber = trim((string)($rawIds['entry'] ?? ''));
+
+        if ($licenseNumber === 'アマ') {
+            return true;
+        }
+
+        return preg_match('/^AM[-_]/i', $entryNumber) === 1;
     }
 
     private function digitsOnly(?string $s): string

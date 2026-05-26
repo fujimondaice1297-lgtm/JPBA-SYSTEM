@@ -96,7 +96,48 @@
     };
 
 
-    $extractLicenseInfo = function(array $r): array {
+    $isAmateurScoreRow = function(array $r): bool {
+        $rawIds = (isset($r['raw_ids']) && is_array($r['raw_ids'])) ? $r['raw_ids'] : [];
+
+        $licenseCandidates = [
+            $rawIds['license_number'] ?? null,
+            $rawIds['display_license'] ?? null,
+            $r['license_number'] ?? null,
+            $r['display_license'] ?? null,
+            $r['license'] ?? null,
+        ];
+
+        foreach ($licenseCandidates as $candidate) {
+            if (trim((string)$candidate) === 'アマ') {
+                return true;
+            }
+        }
+
+        $entryCandidates = [
+            $rawIds['entry'] ?? null,
+            $r['entry_number'] ?? null,
+            $r['display_license'] ?? null,
+        ];
+
+        foreach ($entryCandidates as $candidate) {
+            if (preg_match('/^AM[-_]/i', trim((string)$candidate)) === 1) {
+                return true;
+            }
+        }
+
+        return false;
+    };
+
+    $extractLicenseInfo = function(array $r) use ($isAmateurScoreRow): array {
+        if ($isAmateurScoreRow($r)) {
+            return [
+                'full'   => null,
+                'pad4'   => null,
+                'raw'    => null,
+                'gender' => null,
+            ];
+        }
+
         $candidates = [];
 
         if (isset($r['raw_ids']) && is_array($r['raw_ids'])) {
@@ -153,6 +194,10 @@
 
     $tokens = [];
     foreach ($rows as $r) {
+        if ($isAmateurScoreRow((array)$r)) {
+            continue;
+        }
+
         $info = $extractLicenseInfo((array)$r);
         if ($info['pad4']) {
             $tokens[] = $info['pad4'];
@@ -392,6 +437,7 @@
         $rank = $i + 1;
         $sum  = (int)($p['total'] ?? $p['sum'] ?? 0);
 
+        $isAmateur = $isAmateurScoreRow((array)$p);
         $info = $extractLicenseInfo((array)$p);
         $digits4  = $info['pad4'];
         $digitsRaw = $info['raw'];
@@ -418,7 +464,7 @@
             }
         }
 
-        if ($digits4 !== null) {
+        if (!$isAmateur && $digits4 !== null) {
             foreach ($trySexes as $sx) {
                 if (isset($profilesMap[$sx . ':' . $digits4])) {
                     $prof = $profilesMap[$sx . ':' . $digits4];
@@ -431,7 +477,7 @@
             }
         }
 
-        if (!$prof && $digits4 !== null) {
+        if (!$isAmateur && !$prof && $digits4 !== null) {
             if (isset($profilesAnyUnique[$digits4])) {
                 $prof = $profilesAnyUnique[$digits4];
             } elseif ($digitsRaw !== null && isset($profilesAnyUnique[$digitsRaw])) {
@@ -442,10 +488,12 @@
         $rawIds = (array)($p['raw_ids'] ?? []);
         $fallbackName = (string)($rawIds['name'] ?? $p['name'] ?? $p['display_name'] ?? $p['display_license'] ?? $digits4 ?? '—');
         $proBowlerIdForSeed = $p['pro_bowler_id'] ?? $p['bowler_id'] ?? ($rawIds['pro_bowler_id'] ?? null);
-        $licenseDisplay = $formatSeedLicenseDisplay($info['full'] ?? ($digits4 ?? ($p['display_license'] ?? null)), $proBowlerIdForSeed);
+        $licenseDisplay = $isAmateur
+            ? 'アマ'
+            : $formatSeedLicenseDisplay($info['full'] ?? ($digits4 ?? ($p['display_license'] ?? null)), $proBowlerIdForSeed);
 
-        $name  = $prof['name'] ?? $fallbackName;
-        $photo = $prof['portrait_url'] ?? null;
+        $name  = $isAmateur ? $fallbackName : ($prof['name'] ?? $fallbackName);
+        $photo = $isAmateur ? null : ($prof['portrait_url'] ?? null);
 
         $bk = (array)($p['breakdown'] ?? []);
         $stageLines = [];
