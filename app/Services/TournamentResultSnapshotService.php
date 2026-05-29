@@ -243,6 +243,12 @@ class TournamentResultSnapshotService
             $select[] = DB::raw('null as participant_display_license_no');
         }
 
+        if ($canJoinParticipants && $this->hasColumn('tournament_participants', 'pro_bowler_license_no')) {
+            $select[] = DB::raw('tp.pro_bowler_license_no as participant_entry_no');
+        } else {
+            $select[] = DB::raw('null as participant_entry_no');
+        }
+
         $query = DB::table('game_scores as g')
             ->select($select)
             ->where('g.tournament_id', $tournamentId)
@@ -471,6 +477,8 @@ class TournamentResultSnapshotService
             return null;
         }
 
+        $this->assertTemporaryParticipantIdentity($row);
+
         $participantId = $row->tournament_participant_id ?? null;
         if ($participantId !== null && (int) $participantId > 0) {
             return 'participant:' . (int) $participantId;
@@ -514,6 +522,33 @@ class TournamentResultSnapshotService
         }
 
         return false;
+    }
+
+    private function assertTemporaryParticipantIdentity(object $row): void
+    {
+        $scoreEntryNumber = $this->nullableTrim($row->entry_number ?? null);
+        $participantEntryNumber = $this->nullableTrim($row->participant_entry_no ?? null);
+
+        if ($scoreEntryNumber === null || $participantEntryNumber === null) {
+            return;
+        }
+
+        $scoreEntryKey = strtoupper($scoreEntryNumber);
+        $participantEntryKey = strtoupper($participantEntryNumber);
+
+        $looksLikeAmateur = preg_match('/^AM[-_]\d+/i', $scoreEntryKey) === 1
+            || preg_match('/^AM[-_]\d+/i', $participantEntryKey) === 1
+            || $this->nullableTrim($row->license_number ?? null) === 'アマ'
+            || $this->nullableTrim($row->participant_display_license_no ?? null) === 'アマ';
+
+        if ($looksLikeAmateur && $scoreEntryKey !== $participantEntryKey) {
+            throw new InvalidArgumentException(sprintf(
+                'アマチュア参加者の紐づけが不正です。game_scores.id=%s entry_number=%s / tournament_participants.pro_bowler_license_no=%s。display_license_no=アマでは人物特定できないため、正式反映を中止しました。',
+                (string) ($row->id ?? ''),
+                $scoreEntryNumber,
+                $participantEntryNumber
+            ));
+        }
     }
 
     private function normalizeIdentityText(string $value): string

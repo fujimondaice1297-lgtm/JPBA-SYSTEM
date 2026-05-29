@@ -1930,7 +1930,7 @@ private function attachResultPdfDisplayFields($results): void
                 );
 
                 $profiles[$row->id] = [
-                    'period' => '',
+                    'period' => '選手',
                     'throw' => $throw,
                     'affiliation' => $affiliation !== '' ? $affiliation : '-',
                     'license_display' => 'アマ',

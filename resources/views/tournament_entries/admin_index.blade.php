@@ -119,6 +119,9 @@
               @endphp
               @foreach ($amateurBowlerOptions as $amateurBowler)
                 <option value="{{ $amateurBowler->id }}" {{ (string) old('amateur_bowler_id') === (string) $amateurBowler->id ? 'selected' : '' }}>
+                  @if (!empty($amateurBowler->amateur_no))
+                    {{ $amateurBowler->amateur_no }} /
+                  @endif
                   {{ $amateurBowler->name }}
                   @if (!empty($amateurBowler->name_kana))
                     （{{ $amateurBowler->name_kana }}）
@@ -130,6 +133,11 @@
               @endforeach
             </select>
             <div class="form-text">既存選手を選ぶと、空欄項目はマスター情報で補完します。</div>
+          </div>
+          <div class="col-md-2">
+            <label class="form-label">識別番号</label>
+            <input type="text" name="amateur_no" value="{{ old('amateur_no') }}" class="form-control" maxlength="32" placeholder="例: A000001">
+            <div class="form-text">空欄なら自動採番。人物マスター用です。</div>
           </div>
           <div class="col-md-3">
             <label class="form-label">氏名</label>
@@ -209,7 +217,7 @@
           <thead>
             <tr>
               <th>表示順</th>
-              <th>大会内No</th>
+              <th>大会内No<br><span class="small text-muted">マスターNo</span></th>
               <th>氏名</th>
               <th>性別</th>
               <th>利き腕</th>
@@ -232,7 +240,13 @@
               @endphp
               <tr>
                 <td>{{ $amateurParticipant->sort_order ?? '-' }}</td>
-                <td>{{ $amateurParticipant->display_license_no ?? 'アマ' }}<br><span class="text-muted small">{{ $amateurParticipant->pro_bowler_license_no }}</span></td>
+                <td>
+                  {{ $amateurParticipant->display_license_no ?? 'アマ' }}<br>
+                  <span class="text-muted small">{{ $amateurParticipant->pro_bowler_license_no }}</span>
+                  @if (!empty($amateurParticipant->master_amateur_no))
+                    <br><span class="badge text-bg-light">{{ $amateurParticipant->master_amateur_no }}</span>
+                  @endif
+                </td>
                 <td>
                   <div class="fw-bold">{{ $amateurParticipant->display_name }}</div>
                   @if (!empty($amateurParticipant->master_name_kana))
@@ -285,6 +299,9 @@
                           <option value="">マスター未選択 / 新規作成</option>
                           @foreach ($amateurBowlerOptions as $amateurBowler)
                             <option value="{{ $amateurBowler->id }}" {{ (string) $amateurParticipant->amateur_bowler_id === (string) $amateurBowler->id ? 'selected' : '' }}>
+                              @if (!empty($amateurBowler->amateur_no))
+                                {{ $amateurBowler->amateur_no }} /
+                              @endif
                               {{ $amateurBowler->name }}
                               @if (!empty($amateurBowler->name_kana))
                                 （{{ $amateurBowler->name_kana }}）
@@ -295,6 +312,10 @@
                             </option>
                           @endforeach
                         </select>
+                      </div>
+                      <div class="col-md-2">
+                        <label class="form-label small mb-1">識別番号</label>
+                        <input type="text" name="amateur_no" value="{{ $amateurParticipant->master_amateur_no }}" class="form-control form-control-sm" maxlength="32" placeholder="例: A000001">
                       </div>
                       <div class="col-md-2">
                         <label class="form-label small mb-1">氏名</label>

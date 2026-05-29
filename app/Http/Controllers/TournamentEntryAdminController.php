@@ -261,6 +261,7 @@ class TournamentEntryAdminController extends Controller
     {
         $data = $request->validate([
             'amateur_bowler_id' => ['nullable', 'integer', 'min:1'],
+            'amateur_no' => ['nullable', 'string', 'max:32'],
             'name' => ['nullable', 'string', 'max:255'],
             'name_kana' => ['nullable', 'string', 'max:255'],
             'gender' => ['nullable', 'string', 'in:M,F,X'],
@@ -276,6 +277,7 @@ class TournamentEntryAdminController extends Controller
         ]);
 
         $amateurBowlerId = !empty($data['amateur_bowler_id']) ? (int) $data['amateur_bowler_id'] : null;
+        $amateurNo = $this->normalizeAmateurNo((string) ($data['amateur_no'] ?? ''));
         $name = trim((string) ($data['name'] ?? ''));
         $gender = $this->normalizeParticipantGender((string) ($data['gender'] ?? ($tournament->gender ?? '')));
         $dominantArm = $this->normalizeDominantArm((string) ($data['dominant_arm'] ?? ''));
@@ -303,6 +305,8 @@ class TournamentEntryAdminController extends Controller
 
         $now = now();
 
+        $hasAmateurNoColumn = Schema::hasColumn('amateur_bowlers', 'amateur_no');
+
         if ($amateurBowler) {
             $name = $name !== '' ? $name : trim((string) $amateurBowler->name);
             $gender = $gender !== '' ? $gender : (trim((string) ($amateurBowler->gender ?? '')) ?: $this->normalizeParticipantGender((string) ($tournament->gender ?? '')));
@@ -310,22 +314,45 @@ class TournamentEntryAdminController extends Controller
             $affiliationName = $affiliationName !== '' ? $affiliationName : trim((string) ($amateurBowler->affiliation_name ?? ''));
             $equipmentContract = $equipmentContract !== '' ? $equipmentContract : trim((string) ($amateurBowler->equipment_contract ?? ''));
 
+            if ($hasAmateurNoColumn) {
+                $amateurNo = $amateurNo !== ''
+                    ? $amateurNo
+                    : $this->normalizeAmateurNo((string) ($amateurBowler->amateur_no ?? ''));
+
+                if ($amateurNo === '') {
+                    $amateurNo = $this->nextAmateurNo();
+                }
+
+                if ($this->amateurNoExists($amateurNo, (int) $amateurBowler->id)) {
+                    return redirect()
+                        ->route('tournaments.entries.index', $tournament->id)
+                        ->withErrors(['amateur_no' => 'このアマチュア識別番号はすでに使用されています。'])
+                        ->withInput();
+                }
+            }
+
+            $masterUpdate = [
+                'name' => $name,
+                'name_kana' => trim((string) ($data['name_kana'] ?? '')) ?: ($amateurBowler->name_kana ?? null),
+                'gender' => $gender ?: ($amateurBowler->gender ?? null),
+                'dominant_arm' => $dominantArm ?: null,
+                'affiliation_name' => $affiliationName ?: null,
+                'equipment_contract' => $equipmentContract ?: null,
+                'note' => trim((string) ($data['master_note'] ?? '')) ?: ($amateurBowler->note ?? null),
+                'updated_at' => $now,
+            ];
+
+            if ($hasAmateurNoColumn) {
+                $masterUpdate['amateur_no'] = $amateurNo;
+            }
+
             DB::table('amateur_bowlers')
                 ->where('id', $amateurBowler->id)
-                ->update(array_filter([
-                    'name' => $name,
-                    'name_kana' => trim((string) ($data['name_kana'] ?? '')) ?: ($amateurBowler->name_kana ?? null),
-                    'gender' => $gender ?: ($amateurBowler->gender ?? null),
-                    'dominant_arm' => $dominantArm ?: null,
-                    'affiliation_name' => $affiliationName ?: null,
-                    'equipment_contract' => $equipmentContract ?: null,
-                    'note' => trim((string) ($data['master_note'] ?? '')) ?: ($amateurBowler->note ?? null),
-                    'updated_at' => $now,
-                ], fn ($value) => !is_null($value)));
+                ->update(array_filter($masterUpdate, fn ($value) => !is_null($value)));
 
             $amateurBowlerId = (int) $amateurBowler->id;
         } else {
-            $amateurBowlerId = (int) DB::table('amateur_bowlers')->insertGetId([
+            $insertPayload = [
                 'name' => $name,
                 'name_kana' => trim((string) ($data['name_kana'] ?? '')) ?: null,
                 'gender' => $gender ?: $this->normalizeParticipantGender((string) ($tournament->gender ?? '')) ?: null,
@@ -336,7 +363,22 @@ class TournamentEntryAdminController extends Controller
                 'is_active' => true,
                 'created_at' => $now,
                 'updated_at' => $now,
-            ]);
+            ];
+
+            if ($hasAmateurNoColumn) {
+                $amateurNo = $amateurNo !== '' ? $amateurNo : $this->nextAmateurNo();
+
+                if ($this->amateurNoExists($amateurNo)) {
+                    return redirect()
+                        ->route('tournaments.entries.index', $tournament->id)
+                        ->withErrors(['amateur_no' => 'このアマチュア識別番号はすでに使用されています。'])
+                        ->withInput();
+                }
+
+                $insertPayload['amateur_no'] = $amateurNo;
+            }
+
+            $amateurBowlerId = (int) DB::table('amateur_bowlers')->insertGetId($insertPayload);
         }
 
         $lane = isset($data['lane']) && $data['lane'] !== null && $data['lane'] !== '' ? (int) $data['lane'] : null;
@@ -412,6 +454,7 @@ class TournamentEntryAdminController extends Controller
 
         $data = $request->validate([
             'amateur_bowler_id' => ['nullable', 'integer', 'min:1'],
+            'amateur_no' => ['nullable', 'string', 'max:32'],
             'name' => ['required', 'string', 'max:255'],
             'name_kana' => ['nullable', 'string', 'max:255'],
             'gender' => ['nullable', 'string', 'in:M,F,X'],
@@ -427,6 +470,7 @@ class TournamentEntryAdminController extends Controller
         ]);
 
         $name = trim((string) ($data['name'] ?? ''));
+        $amateurNo = $this->normalizeAmateurNo((string) ($data['amateur_no'] ?? ''));
         $nameKana = trim((string) ($data['name_kana'] ?? ''));
         $gender = $this->normalizeParticipantGender((string) ($data['gender'] ?? ($row->gender ?? '')));
         $dominantArm = $this->normalizeDominantArm((string) ($data['dominant_arm'] ?? ''));
@@ -441,6 +485,8 @@ class TournamentEntryAdminController extends Controller
         $now = now();
         $amateurBowler = null;
 
+        $hasAmateurNoColumn = Schema::hasColumn('amateur_bowlers', 'amateur_no');
+
         if ($amateurBowlerId) {
             $amateurBowler = DB::table('amateur_bowlers')->where('id', $amateurBowlerId)->first();
             if (!$amateurBowler) {
@@ -450,22 +496,45 @@ class TournamentEntryAdminController extends Controller
                     ->withInput();
             }
 
+            if ($hasAmateurNoColumn) {
+                $amateurNo = $amateurNo !== ''
+                    ? $amateurNo
+                    : $this->normalizeAmateurNo((string) ($amateurBowler->amateur_no ?? ''));
+
+                if ($amateurNo === '') {
+                    $amateurNo = $this->nextAmateurNo();
+                }
+
+                if ($this->amateurNoExists($amateurNo, (int) $amateurBowler->id)) {
+                    return redirect()
+                        ->route('tournaments.entries.index', $row->tournament_id)
+                        ->withErrors(['amateur_no' => 'このアマチュア識別番号はすでに使用されています。'])
+                        ->withInput();
+                }
+            }
+
+            $masterUpdate = [
+                'name' => $name,
+                'name_kana' => $nameKana !== '' ? $nameKana : null,
+                'gender' => $gender ?: null,
+                'dominant_arm' => $dominantArm ?: null,
+                'affiliation_name' => $affiliationName ?: null,
+                'equipment_contract' => $equipmentContract ?: null,
+                'note' => $masterNote !== '' ? $masterNote : null,
+                'updated_at' => $now,
+            ];
+
+            if ($hasAmateurNoColumn) {
+                $masterUpdate['amateur_no'] = $amateurNo;
+            }
+
             DB::table('amateur_bowlers')
                 ->where('id', $amateurBowler->id)
-                ->update([
-                    'name' => $name,
-                    'name_kana' => $nameKana !== '' ? $nameKana : null,
-                    'gender' => $gender ?: null,
-                    'dominant_arm' => $dominantArm ?: null,
-                    'affiliation_name' => $affiliationName ?: null,
-                    'equipment_contract' => $equipmentContract ?: null,
-                    'note' => $masterNote !== '' ? $masterNote : null,
-                    'updated_at' => $now,
-                ]);
+                ->update($masterUpdate);
 
             $amateurBowlerId = (int) $amateurBowler->id;
         } else {
-            $amateurBowlerId = (int) DB::table('amateur_bowlers')->insertGetId([
+            $insertPayload = [
                 'name' => $name,
                 'name_kana' => $nameKana !== '' ? $nameKana : null,
                 'gender' => $gender ?: null,
@@ -476,7 +545,22 @@ class TournamentEntryAdminController extends Controller
                 'is_active' => true,
                 'created_at' => $now,
                 'updated_at' => $now,
-            ]);
+            ];
+
+            if ($hasAmateurNoColumn) {
+                $amateurNo = $amateurNo !== '' ? $amateurNo : $this->nextAmateurNo();
+
+                if ($this->amateurNoExists($amateurNo)) {
+                    return redirect()
+                        ->route('tournaments.entries.index', $row->tournament_id)
+                        ->withErrors(['amateur_no' => 'このアマチュア識別番号はすでに使用されています。'])
+                        ->withInput();
+                }
+
+                $insertPayload['amateur_no'] = $amateurNo;
+            }
+
+            $amateurBowlerId = (int) DB::table('amateur_bowlers')->insertGetId($insertPayload);
         }
 
         $lane = isset($data['lane']) && $data['lane'] !== null && $data['lane'] !== '' ? (int) $data['lane'] : null;
@@ -893,6 +977,7 @@ class TournamentEntryAdminController extends Controller
                 'tp.source_note',
                 'tp.amateur_bowler_id',
                 'ab.name as master_name',
+                'ab.amateur_no as master_amateur_no',
                 'ab.name_kana as master_name_kana',
                 'ab.dominant_arm as master_dominant_arm',
                 'ab.affiliation_name as master_affiliation_name',
@@ -904,6 +989,57 @@ class TournamentEntryAdminController extends Controller
             ->orderBy('tp.lane_slot')
             ->orderBy('tp.id')
             ->get();
+    }
+
+    private function normalizeAmateurNo(string $value): string
+    {
+        $value = mb_convert_kana(trim($value), 'as', 'UTF-8');
+        $value = strtoupper(str_replace([' ', '　', '-', '_'], '', $value));
+
+        if ($value === '') {
+            return '';
+        }
+
+        if (preg_match('/^\d+$/', $value) === 1) {
+            return 'A' . str_pad($value, 6, '0', STR_PAD_LEFT);
+        }
+
+        if (preg_match('/^A(\d+)$/', $value, $matches) === 1) {
+            return 'A' . str_pad($matches[1], 6, '0', STR_PAD_LEFT);
+        }
+
+        return $value;
+    }
+
+    private function amateurNoExists(string $amateurNo, ?int $exceptId = null): bool
+    {
+        if ($amateurNo === '' || !Schema::hasColumn('amateur_bowlers', 'amateur_no')) {
+            return false;
+        }
+
+        return DB::table('amateur_bowlers')
+            ->where('amateur_no', $amateurNo)
+            ->when($exceptId !== null, fn ($query) => $query->where('id', '<>', $exceptId))
+            ->exists();
+    }
+
+    private function nextAmateurNo(): string
+    {
+        if (!Schema::hasTable('amateur_bowlers') || !Schema::hasColumn('amateur_bowlers', 'amateur_no')) {
+            return '';
+        }
+
+        $max = 0;
+        $codes = DB::table('amateur_bowlers')->pluck('amateur_no');
+
+        foreach ($codes as $code) {
+            $normalized = $this->normalizeAmateurNo((string) $code);
+            if (preg_match('/^A(\d+)$/', $normalized, $matches) === 1) {
+                $max = max($max, (int) $matches[1]);
+            }
+        }
+
+        return 'A' . str_pad((string) ($max + 1), 6, '0', STR_PAD_LEFT);
     }
 
     private function nextTournamentAmateurCode(Tournament $tournament): string
