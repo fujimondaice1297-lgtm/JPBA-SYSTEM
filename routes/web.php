@@ -235,6 +235,8 @@ Route::middleware(['auth','role:member,editor,admin'])->group(function () {
     Route::get('/tournament_results/pdf', [TournamentResultController::class, 'exportPdf'])->name('tournament_results.pdf');
     Route::get('/tournaments/{tournament}/result-snapshots/{snapshot}', [\App\Http\Controllers\TournamentResultSnapshotController::class, 'show'])
     ->name('tournaments.result_snapshots.show');
+    Route::get('/tournaments/{tournament}/result-snapshots/{snapshot}/pdf', [TournamentResultController::class, 'exportSnapshotPdf'])
+        ->name('tournaments.result_snapshots.pdf');
 
     // カレンダー（閲覧）
     Route::get('/calendar/{year?}', [CalendarController::class,'annual'])->whereNumber('year')->name('calendar.annual');
@@ -304,6 +306,15 @@ Route::middleware(['auth','role:editor,admin'])->group(function () {
     // 大会エントリー後続（管理）
     Route::get('/tournaments/{tournament}/entries', [\App\Http\Controllers\TournamentEntryAdminController::class, 'index'])
         ->name('tournaments.entries.index');
+    Route::get('/tournaments/{tournament}/amateur-participants', function ($tournament) {
+        return redirect(route('tournaments.entries.index', ['tournament' => $tournament]) . '#amateur-participants');
+    })->name('tournaments.amateur_participants.index');
+    Route::post('/tournaments/{tournament}/amateur-participants', [\App\Http\Controllers\TournamentEntryAdminController::class, 'storeAmateurParticipant'])
+        ->name('tournaments.amateur_participants.store');
+    Route::patch('/tournament_participants/{participant}/amateur', [\App\Http\Controllers\TournamentEntryAdminController::class, 'updateAmateurParticipant'])
+        ->name('tournaments.amateur_participants.update');
+    Route::delete('/tournament_participants/{participant}/amateur', [\App\Http\Controllers\TournamentEntryAdminController::class, 'destroyAmateurParticipant'])
+        ->name('tournaments.amateur_participants.destroy');
     Route::get('/tournaments/{tournament}/draws', [\App\Http\Controllers\TournamentEntryAdminController::class, 'draws'])
         ->name('tournaments.draws.index');
     Route::get('/tournaments/{tournament}/lane-movement-table', [\App\Http\Controllers\TournamentEntryAdminController::class, 'laneMovementTable'])

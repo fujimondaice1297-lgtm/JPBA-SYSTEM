@@ -11,6 +11,7 @@ use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class TournamentEntryAdminController extends Controller
 {
@@ -48,13 +49,17 @@ class TournamentEntryAdminController extends Controller
         );
 
         $summary = $this->buildSummary($tournament, $priorityLookup);
+        $amateurBowlers = $this->loadAmateurBowlersForSelect();
+        $amateurParticipants = $this->loadTournamentAmateurParticipants($tournament);
 
         return view('tournament_entries.admin_index', compact(
             'tournament',
             'entries',
             'summary',
             'status',
-            'keyword'
+            'keyword',
+            'amateurBowlers',
+            'amateurParticipants'
         ));
     }
 
@@ -250,6 +255,310 @@ class TournamentEntryAdminController extends Controller
         return redirect()
             ->route('tournaments.entries.index', $tournament->id)
             ->with('success', $message);
+    }
+
+    public function storeAmateurParticipant(Request $request, Tournament $tournament)
+    {
+        $data = $request->validate([
+            'amateur_bowler_id' => ['nullable', 'integer', 'min:1'],
+            'name' => ['nullable', 'string', 'max:255'],
+            'name_kana' => ['nullable', 'string', 'max:255'],
+            'gender' => ['nullable', 'string', 'in:M,F,X'],
+            'dominant_arm' => ['nullable', 'string', 'max:20'],
+            'affiliation_name' => ['nullable', 'string', 'max:255'],
+            'equipment_contract' => ['nullable', 'string', 'max:255'],
+            'lane' => ['nullable', 'integer', 'min:1', 'max:999'],
+            'lane_slot' => ['nullable', 'integer', 'min:1', 'max:9'],
+            'box_no' => ['nullable', 'integer', 'min:1', 'max:999'],
+            'sort_order' => ['nullable', 'integer', 'min:1', 'max:99999'],
+            'source_note' => ['nullable', 'string', 'max:2000'],
+            'master_note' => ['nullable', 'string', 'max:2000'],
+        ]);
+
+        $amateurBowlerId = !empty($data['amateur_bowler_id']) ? (int) $data['amateur_bowler_id'] : null;
+        $name = trim((string) ($data['name'] ?? ''));
+        $gender = $this->normalizeParticipantGender((string) ($data['gender'] ?? ($tournament->gender ?? '')));
+        $dominantArm = $this->normalizeDominantArm((string) ($data['dominant_arm'] ?? ''));
+        $affiliationName = trim((string) ($data['affiliation_name'] ?? ''));
+        $equipmentContract = trim((string) ($data['equipment_contract'] ?? ''));
+
+        $amateurBowler = null;
+
+        if ($amateurBowlerId) {
+            $amateurBowler = DB::table('amateur_bowlers')->where('id', $amateurBowlerId)->first();
+            if (!$amateurBowler) {
+                return redirect()
+                    ->route('tournaments.entries.index', $tournament->id)
+                    ->withErrors(['amateur_bowler_id' => '選択されたアマチュア選手が見つかりません。'])
+                    ->withInput();
+            }
+        }
+
+        if (!$amateurBowler && $name === '') {
+            return redirect()
+                ->route('tournaments.entries.index', $tournament->id)
+                ->withErrors(['name' => '新規登録する場合はアマチュア選手名を入力してください。'])
+                ->withInput();
+        }
+
+        $now = now();
+
+        if ($amateurBowler) {
+            $name = $name !== '' ? $name : trim((string) $amateurBowler->name);
+            $gender = $gender !== '' ? $gender : (trim((string) ($amateurBowler->gender ?? '')) ?: $this->normalizeParticipantGender((string) ($tournament->gender ?? '')));
+            $dominantArm = $dominantArm !== '' ? $dominantArm : trim((string) ($amateurBowler->dominant_arm ?? ''));
+            $affiliationName = $affiliationName !== '' ? $affiliationName : trim((string) ($amateurBowler->affiliation_name ?? ''));
+            $equipmentContract = $equipmentContract !== '' ? $equipmentContract : trim((string) ($amateurBowler->equipment_contract ?? ''));
+
+            DB::table('amateur_bowlers')
+                ->where('id', $amateurBowler->id)
+                ->update(array_filter([
+                    'name' => $name,
+                    'name_kana' => trim((string) ($data['name_kana'] ?? '')) ?: ($amateurBowler->name_kana ?? null),
+                    'gender' => $gender ?: ($amateurBowler->gender ?? null),
+                    'dominant_arm' => $dominantArm ?: null,
+                    'affiliation_name' => $affiliationName ?: null,
+                    'equipment_contract' => $equipmentContract ?: null,
+                    'note' => trim((string) ($data['master_note'] ?? '')) ?: ($amateurBowler->note ?? null),
+                    'updated_at' => $now,
+                ], fn ($value) => !is_null($value)));
+
+            $amateurBowlerId = (int) $amateurBowler->id;
+        } else {
+            $amateurBowlerId = (int) DB::table('amateur_bowlers')->insertGetId([
+                'name' => $name,
+                'name_kana' => trim((string) ($data['name_kana'] ?? '')) ?: null,
+                'gender' => $gender ?: $this->normalizeParticipantGender((string) ($tournament->gender ?? '')) ?: null,
+                'dominant_arm' => $dominantArm ?: null,
+                'affiliation_name' => $affiliationName ?: null,
+                'equipment_contract' => $equipmentContract ?: null,
+                'note' => trim((string) ($data['master_note'] ?? '')) ?: null,
+                'is_active' => true,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ]);
+        }
+
+        $lane = isset($data['lane']) && $data['lane'] !== null && $data['lane'] !== '' ? (int) $data['lane'] : null;
+        $laneSlot = isset($data['lane_slot']) && $data['lane_slot'] !== null && $data['lane_slot'] !== '' ? (int) $data['lane_slot'] : null;
+        $boxNo = isset($data['box_no']) && $data['box_no'] !== null && $data['box_no'] !== '' ? (int) $data['box_no'] : null;
+        $sortOrder = isset($data['sort_order']) && $data['sort_order'] !== null && $data['sort_order'] !== '' ? (int) $data['sort_order'] : null;
+
+        if (is_null($boxNo) && !is_null($lane)) {
+            $boxNo = max(1, intdiv(max(1, $lane) - 1, 2));
+        }
+
+        if (is_null($sortOrder) && !is_null($lane)) {
+            $sortOrder = ($lane * 10) + ($laneSlot ?? 0);
+        }
+
+        $participant = DB::table('tournament_participants')
+            ->where('tournament_id', $tournament->id)
+            ->where('participant_type', 'amateur')
+            ->where('amateur_bowler_id', $amateurBowlerId)
+            ->first();
+
+        $amateurCode = $participant?->pro_bowler_license_no ?: $this->nextTournamentAmateurCode($tournament);
+
+        $payload = [
+            'tournament_id' => $tournament->id,
+            'pro_bowler_license_no' => $amateurCode,
+            'pro_bowler_id' => null,
+            'amateur_bowler_id' => $amateurBowlerId,
+            'participant_type' => 'amateur',
+            'display_name' => $name,
+            'display_license_no' => 'アマ',
+            'display_dominant_arm' => $dominantArm ?: null,
+            'display_affiliation_name' => $affiliationName ?: null,
+            'display_equipment_contract' => $equipmentContract ?: null,
+            'gender' => $gender ?: $this->normalizeParticipantGender((string) ($tournament->gender ?? '')) ?: null,
+            'shift' => '予選',
+            'lane' => $lane,
+            'lane_slot' => $laneSlot,
+            'lane_label' => !is_null($lane) && !is_null($laneSlot) ? sprintf('%dL-%d', $lane, $laneSlot) : null,
+            'box_no' => $boxNo,
+            'sort_order' => $sortOrder,
+            'source_note' => trim((string) ($data['source_note'] ?? '')) ?: null,
+            'is_temporary' => true,
+            'updated_at' => $now,
+        ];
+
+        if ($participant) {
+            DB::table('tournament_participants')->where('id', $participant->id)->update($payload);
+            $message = 'アマチュア参加者を更新しました。';
+        } else {
+            $payload['created_at'] = $now;
+            DB::table('tournament_participants')->insert($payload);
+            $message = 'アマチュア参加者を登録しました。';
+        }
+
+        return redirect()
+            ->route('tournaments.entries.index', $tournament->id)
+            ->with('success', $message . ' [' . $amateurCode . ' ' . $name . ']');
+    }
+
+
+    public function updateAmateurParticipant(Request $request, $participant)
+    {
+        $participantId = (int) $participant;
+        $row = DB::table('tournament_participants')
+            ->where('id', $participantId)
+            ->where('participant_type', 'amateur')
+            ->first();
+
+        if (!$row) {
+            return redirect()->back()->with('error', '更新対象のアマチュア参加者が見つかりません。');
+        }
+
+        $data = $request->validate([
+            'amateur_bowler_id' => ['nullable', 'integer', 'min:1'],
+            'name' => ['required', 'string', 'max:255'],
+            'name_kana' => ['nullable', 'string', 'max:255'],
+            'gender' => ['nullable', 'string', 'in:M,F,X'],
+            'dominant_arm' => ['nullable', 'string', 'max:20'],
+            'affiliation_name' => ['nullable', 'string', 'max:255'],
+            'equipment_contract' => ['nullable', 'string', 'max:255'],
+            'lane' => ['nullable', 'integer', 'min:1', 'max:999'],
+            'lane_slot' => ['nullable', 'integer', 'min:1', 'max:9'],
+            'box_no' => ['nullable', 'integer', 'min:1', 'max:999'],
+            'sort_order' => ['nullable', 'integer', 'min:1', 'max:99999'],
+            'source_note' => ['nullable', 'string', 'max:2000'],
+            'master_note' => ['nullable', 'string', 'max:2000'],
+        ]);
+
+        $name = trim((string) ($data['name'] ?? ''));
+        $nameKana = trim((string) ($data['name_kana'] ?? ''));
+        $gender = $this->normalizeParticipantGender((string) ($data['gender'] ?? ($row->gender ?? '')));
+        $dominantArm = $this->normalizeDominantArm((string) ($data['dominant_arm'] ?? ''));
+        $affiliationName = trim((string) ($data['affiliation_name'] ?? ''));
+        $equipmentContract = trim((string) ($data['equipment_contract'] ?? ''));
+        $masterNote = trim((string) ($data['master_note'] ?? ''));
+
+        $amateurBowlerId = !empty($data['amateur_bowler_id'])
+            ? (int) $data['amateur_bowler_id']
+            : (!empty($row->amateur_bowler_id) ? (int) $row->amateur_bowler_id : null);
+
+        $now = now();
+        $amateurBowler = null;
+
+        if ($amateurBowlerId) {
+            $amateurBowler = DB::table('amateur_bowlers')->where('id', $amateurBowlerId)->first();
+            if (!$amateurBowler) {
+                return redirect()
+                    ->route('tournaments.entries.index', $row->tournament_id)
+                    ->withErrors(['amateur_bowler_id' => '選択されたアマチュア選手マスターが見つかりません。'])
+                    ->withInput();
+            }
+
+            DB::table('amateur_bowlers')
+                ->where('id', $amateurBowler->id)
+                ->update([
+                    'name' => $name,
+                    'name_kana' => $nameKana !== '' ? $nameKana : null,
+                    'gender' => $gender ?: null,
+                    'dominant_arm' => $dominantArm ?: null,
+                    'affiliation_name' => $affiliationName ?: null,
+                    'equipment_contract' => $equipmentContract ?: null,
+                    'note' => $masterNote !== '' ? $masterNote : null,
+                    'updated_at' => $now,
+                ]);
+
+            $amateurBowlerId = (int) $amateurBowler->id;
+        } else {
+            $amateurBowlerId = (int) DB::table('amateur_bowlers')->insertGetId([
+                'name' => $name,
+                'name_kana' => $nameKana !== '' ? $nameKana : null,
+                'gender' => $gender ?: null,
+                'dominant_arm' => $dominantArm ?: null,
+                'affiliation_name' => $affiliationName ?: null,
+                'equipment_contract' => $equipmentContract ?: null,
+                'note' => $masterNote !== '' ? $masterNote : null,
+                'is_active' => true,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ]);
+        }
+
+        $lane = isset($data['lane']) && $data['lane'] !== null && $data['lane'] !== '' ? (int) $data['lane'] : null;
+        $laneSlot = isset($data['lane_slot']) && $data['lane_slot'] !== null && $data['lane_slot'] !== '' ? (int) $data['lane_slot'] : null;
+        $boxNo = isset($data['box_no']) && $data['box_no'] !== null && $data['box_no'] !== '' ? (int) $data['box_no'] : null;
+        $sortOrder = isset($data['sort_order']) && $data['sort_order'] !== null && $data['sort_order'] !== '' ? (int) $data['sort_order'] : null;
+
+        if (is_null($boxNo) && !is_null($lane)) {
+            $boxNo = max(1, intdiv(max(1, $lane) - 1, 2));
+        }
+
+        if (is_null($sortOrder) && !is_null($lane)) {
+            $sortOrder = ($lane * 10) + ($laneSlot ?? 0);
+        }
+
+        $amateurCode = trim((string) ($row->pro_bowler_license_no ?? ''));
+        if ($amateurCode === '') {
+            $amateurCode = $this->nextTournamentAmateurCode(Tournament::findOrFail((int) $row->tournament_id));
+        }
+
+        DB::table('tournament_participants')
+            ->where('id', $participantId)
+            ->update([
+                'pro_bowler_license_no' => $amateurCode,
+                'pro_bowler_id' => null,
+                'amateur_bowler_id' => $amateurBowlerId,
+                'participant_type' => 'amateur',
+                'display_name' => $name,
+                'display_license_no' => 'アマ',
+                'display_dominant_arm' => $dominantArm ?: null,
+                'display_affiliation_name' => $affiliationName ?: null,
+                'display_equipment_contract' => $equipmentContract ?: null,
+                'gender' => $gender ?: null,
+                'lane' => $lane,
+                'lane_slot' => $laneSlot,
+                'lane_label' => !is_null($lane) && !is_null($laneSlot) ? sprintf('%dL-%d', $lane, $laneSlot) : null,
+                'box_no' => $boxNo,
+                'sort_order' => $sortOrder,
+                'source_note' => trim((string) ($data['source_note'] ?? '')) ?: null,
+                'is_temporary' => true,
+                'updated_at' => $now,
+            ]);
+
+        DB::table('game_scores')
+            ->where('tournament_participant_id', $participantId)
+            ->update([
+                'license_number' => 'アマ',
+                'entry_number' => $amateurCode,
+                'name' => $name,
+                'updated_at' => $now,
+            ]);
+
+        return redirect()
+            ->route('tournaments.entries.index', $row->tournament_id)
+            ->with('success', 'アマチュア参加者を更新しました。 [' . $amateurCode . ' ' . $name . ']');
+    }
+
+    public function destroyAmateurParticipant($participant)
+    {
+        $participantId = (int) $participant;
+        $row = DB::table('tournament_participants')
+            ->where('id', $participantId)
+            ->where('participant_type', 'amateur')
+            ->first();
+
+        if (!$row) {
+            return redirect()->back()->with('error', '削除対象のアマチュア参加者が見つかりません。');
+        }
+
+        $scoreCount = DB::table('game_scores')
+            ->where('tournament_participant_id', $participantId)
+            ->count();
+
+        if ($scoreCount > 0) {
+            return redirect()->back()->with('error', 'スコア入力済みのため削除できません。必要な場合は非表示運用または別途修正してください。');
+        }
+
+        DB::table('tournament_participants')->where('id', $participantId)->delete();
+
+        return redirect()
+            ->route('tournaments.entries.index', $row->tournament_id)
+            ->with('success', 'アマチュア参加者を削除しました。');
     }
 
     public function promoteWaitlist(TournamentEntry $entry)
@@ -541,6 +850,101 @@ class TournamentEntryAdminController extends Controller
             'missing_count' => count($missingEntries),
             'missing_entries' => array_slice($missingEntries, 0, 20),
         ];
+    }
+
+    private function loadAmateurBowlersForSelect(): Collection
+    {
+        if (!Schema::hasTable('amateur_bowlers')) {
+            return collect();
+        }
+
+        return DB::table('amateur_bowlers')
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->orderBy('id')
+            ->get();
+    }
+
+    private function loadTournamentAmateurParticipants(Tournament $tournament): Collection
+    {
+        if (!Schema::hasTable('amateur_bowlers') || !Schema::hasColumn('tournament_participants', 'amateur_bowler_id')) {
+            return collect();
+        }
+
+        return DB::table('tournament_participants as tp')
+            ->leftJoin('amateur_bowlers as ab', 'ab.id', '=', 'tp.amateur_bowler_id')
+            ->where('tp.tournament_id', $tournament->id)
+            ->where('tp.participant_type', 'amateur')
+            ->select([
+                'tp.id',
+                'tp.pro_bowler_license_no',
+                'tp.display_license_no',
+                'tp.display_name',
+                'tp.display_dominant_arm',
+                'tp.display_affiliation_name',
+                'tp.display_equipment_contract',
+                'tp.gender',
+                'tp.shift',
+                'tp.lane',
+                'tp.lane_slot',
+                'tp.lane_label',
+                'tp.box_no',
+                'tp.sort_order',
+                'tp.source_note',
+                'tp.amateur_bowler_id',
+                'ab.name as master_name',
+                'ab.name_kana as master_name_kana',
+                'ab.dominant_arm as master_dominant_arm',
+                'ab.affiliation_name as master_affiliation_name',
+                'ab.equipment_contract as master_equipment_contract',
+                'ab.note as master_note',
+            ])
+            ->orderByRaw('COALESCE(tp.sort_order, 999999)')
+            ->orderBy('tp.lane')
+            ->orderBy('tp.lane_slot')
+            ->orderBy('tp.id')
+            ->get();
+    }
+
+    private function nextTournamentAmateurCode(Tournament $tournament): string
+    {
+        $codes = DB::table('tournament_participants')
+            ->where('tournament_id', $tournament->id)
+            ->where('participant_type', 'amateur')
+            ->pluck('pro_bowler_license_no');
+
+        $max = 0;
+        foreach ($codes as $code) {
+            if (preg_match('/^AM-(\d+)$/i', trim((string) $code), $matches)) {
+                $max = max($max, (int) $matches[1]);
+            }
+        }
+
+        return 'AM-' . str_pad((string) ($max + 1), 3, '0', STR_PAD_LEFT);
+    }
+
+    private function normalizeParticipantGender(string $gender): string
+    {
+        $gender = strtoupper(trim($gender));
+
+        return in_array($gender, ['M', 'F', 'X'], true) ? $gender : '';
+    }
+
+    private function normalizeDominantArm(string $value): string
+    {
+        $value = trim($value);
+        if ($value === '') {
+            return '';
+        }
+
+        $upper = strtoupper($value);
+
+        return match ($upper) {
+            'R', 'RIGHT', '右投げ', '右' => '右',
+            'L', 'LEFT', '左投げ', '左' => '左',
+            'B', 'BOTH', '両', '両手' => '両',
+            default => $value,
+        };
     }
 
     private function buildTournamentPriorityLookup(Tournament $tournament): array

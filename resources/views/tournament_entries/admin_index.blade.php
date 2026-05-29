@@ -99,6 +99,284 @@
     </div>
   </div>
 
+  <div id="amateur-participants" class="card mb-4 border-primary">
+    <div class="card-header fw-bold text-primary">アマチュア参加者登録</div>
+    <div class="card-body">
+      <p class="small text-muted mb-3">
+        アマチュア選手はプロボウラーのプロフィールには登録せず、アマチュア選手マスターから大会参加者として呼び出します。
+        ここで登録した利き腕・所属・用品契約は、レーン移動表・速報・正式成績PDFの表示元になります。
+      </p>
+
+      <form method="POST" action="{{ route('tournaments.amateur_participants.store', $tournament->id) }}" class="mb-4">
+        @csrf
+        <div class="row g-3">
+          <div class="col-md-4">
+            <label class="form-label">既存アマチュア選手を呼び出す</label>
+            <select name="amateur_bowler_id" class="form-select">
+              <option value="">新規登録する / 既存を選ばない</option>
+              @php
+                $amateurBowlerOptions = $amateurBowlers ?? collect();
+              @endphp
+              @foreach ($amateurBowlerOptions as $amateurBowler)
+                <option value="{{ $amateurBowler->id }}" {{ (string) old('amateur_bowler_id') === (string) $amateurBowler->id ? 'selected' : '' }}>
+                  {{ $amateurBowler->name }}
+                  @if (!empty($amateurBowler->name_kana))
+                    （{{ $amateurBowler->name_kana }}）
+                  @endif
+                  @if (!empty($amateurBowler->affiliation_name))
+                    / {{ $amateurBowler->affiliation_name }}
+                  @endif
+                </option>
+              @endforeach
+            </select>
+            <div class="form-text">既存選手を選ぶと、空欄項目はマスター情報で補完します。</div>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">氏名</label>
+            <input type="text" name="name" value="{{ old('name') }}" class="form-control" maxlength="255" placeholder="例: 戸塚知菜">
+            <div class="form-text">新規登録時は必須。既存選択時は表示名の上書きに使えます。</div>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">フリガナ</label>
+            <input type="text" name="name_kana" value="{{ old('name_kana') }}" class="form-control" maxlength="255" placeholder="例: トツカ チナ">
+          </div>
+          <div class="col-md-2">
+            <label class="form-label">性別</label>
+            <select name="gender" class="form-select">
+              @php
+                $oldGender = old('gender', $tournament->gender ?? '');
+              @endphp
+              <option value="">未設定</option>
+              <option value="F" {{ $oldGender === 'F' ? 'selected' : '' }}>女子</option>
+              <option value="M" {{ $oldGender === 'M' ? 'selected' : '' }}>男子</option>
+              <option value="X" {{ $oldGender === 'X' ? 'selected' : '' }}>共通</option>
+            </select>
+          </div>
+
+          <div class="col-md-2">
+            <label class="form-label">利き腕</label>
+            <select name="dominant_arm" class="form-select">
+              @php
+                $oldDominantArm = old('dominant_arm');
+              @endphp
+              <option value="">未設定</option>
+              <option value="右" {{ $oldDominantArm === '右' ? 'selected' : '' }}>右</option>
+              <option value="左" {{ $oldDominantArm === '左' ? 'selected' : '' }}>左</option>
+              <option value="両" {{ $oldDominantArm === '両' ? 'selected' : '' }}>両</option>
+            </select>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">所属ボウリング場</label>
+            <input type="text" name="affiliation_name" value="{{ old('affiliation_name') }}" class="form-control" maxlength="255" placeholder="例: 山形ファミリーボウル">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">用品契約</label>
+            <input type="text" name="equipment_contract" value="{{ old('equipment_contract') }}" class="form-control" maxlength="255" placeholder="例: ABS / HI-SP など">
+          </div>
+          <div class="col-md-2">
+            <label class="form-label">開始レーン</label>
+            <input type="number" name="lane" value="{{ old('lane') }}" class="form-control" min="1" max="999" placeholder="例: 7">
+          </div>
+          <div class="col-md-2">
+            <label class="form-label">枠</label>
+            <input type="number" name="lane_slot" value="{{ old('lane_slot') }}" class="form-control" min="1" max="9" placeholder="例: 3">
+            <div class="form-text">入力すると 7L-3 のように表示します。</div>
+          </div>
+          <div class="col-md-2">
+            <label class="form-label">BOX</label>
+            <input type="number" name="box_no" value="{{ old('box_no') }}" class="form-control" min="1" max="999">
+          </div>
+          <div class="col-md-2">
+            <label class="form-label">表示順</label>
+            <input type="number" name="sort_order" value="{{ old('sort_order') }}" class="form-control" min="1" max="99999">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">大会内備考</label>
+            <input type="text" name="source_note" value="{{ old('source_note') }}" class="form-control" maxlength="2000" placeholder="例: 公式レーン表より登録">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">マスター備考</label>
+            <input type="text" name="master_note" value="{{ old('master_note') }}" class="form-control" maxlength="2000" placeholder="次回以降の検索用メモ">
+          </div>
+          <div class="col-md-2 d-flex align-items-end">
+            <button type="submit" class="btn btn-primary w-100">アマチュア登録</button>
+          </div>
+        </div>
+      </form>
+
+      <div class="table-responsive">
+        <table class="table table-sm table-bordered align-middle mb-0">
+          <thead>
+            <tr>
+              <th>表示順</th>
+              <th>大会内No</th>
+              <th>氏名</th>
+              <th>性別</th>
+              <th>利き腕</th>
+              <th>所属 / 用品契約</th>
+              <th>開始位置</th>
+              <th>備考</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            @php
+              $amateurParticipantRows = $amateurParticipants ?? collect();
+            @endphp
+            @forelse ($amateurParticipantRows as $amateurParticipant)
+              @php
+                $amateurEditId = 'amateur-edit-row-' . $amateurParticipant->id;
+                $amateurCurrentDominantArm = $amateurParticipant->display_dominant_arm ?? $amateurParticipant->master_dominant_arm ?? '';
+                $amateurCurrentAffiliation = $amateurParticipant->display_affiliation_name ?? $amateurParticipant->master_affiliation_name ?? '';
+                $amateurCurrentEquipment = $amateurParticipant->display_equipment_contract ?? $amateurParticipant->master_equipment_contract ?? '';
+              @endphp
+              <tr>
+                <td>{{ $amateurParticipant->sort_order ?? '-' }}</td>
+                <td>{{ $amateurParticipant->display_license_no ?? 'アマ' }}<br><span class="text-muted small">{{ $amateurParticipant->pro_bowler_license_no }}</span></td>
+                <td>
+                  <div class="fw-bold">{{ $amateurParticipant->display_name }}</div>
+                  @if (!empty($amateurParticipant->master_name_kana))
+                    <div class="text-muted small">{{ $amateurParticipant->master_name_kana }}</div>
+                  @endif
+                </td>
+                <td>{{ $amateurParticipant->gender ?? '-' }}</td>
+                <td>{{ $amateurCurrentDominantArm !== '' ? $amateurCurrentDominantArm : '-' }}</td>
+                <td>
+                  {{ $amateurCurrentAffiliation !== '' ? $amateurCurrentAffiliation : '-' }}
+                  @if (!empty($amateurCurrentEquipment))
+                    <br><span class="text-muted small">{{ $amateurCurrentEquipment }}</span>
+                  @endif
+                </td>
+                <td>
+                  {{ $amateurParticipant->lane_label ?? '-' }}
+                  @if (!is_null($amateurParticipant->box_no))
+                    <br><span class="text-muted small">BOX {{ $amateurParticipant->box_no }}</span>
+                  @endif
+                </td>
+                <td class="small">{{ $amateurParticipant->source_note ?? '-' }}</td>
+                <td>
+                  <div class="d-flex gap-1 flex-wrap">
+                    <button type="button"
+                            class="btn btn-sm btn-outline-primary"
+                            onclick="document.getElementById('{{ $amateurEditId }}').classList.toggle('d-none');">
+                      編集
+                    </button>
+                    <form method="POST" action="{{ route('tournaments.amateur_participants.destroy', $amateurParticipant->id) }}" class="m-0">
+                      @csrf
+                      @method('DELETE')
+                      <button type="submit"
+                              class="btn btn-sm btn-outline-danger"
+                              onclick="return confirm('このアマチュア参加者を削除します。スコア入力済みの場合は削除できません。よろしいですか？');">
+                        削除
+                      </button>
+                    </form>
+                  </div>
+                </td>
+              </tr>
+              <tr id="{{ $amateurEditId }}" class="d-none">
+                <td colspan="9" class="bg-light">
+                  <form method="POST" action="{{ route('tournaments.amateur_participants.update', $amateurParticipant->id) }}" class="py-2">
+                    @csrf
+                    @method('PATCH')
+                    <div class="row g-2 align-items-end">
+                      <div class="col-md-3">
+                        <label class="form-label small mb-1">アマチュア選手マスター</label>
+                        <select name="amateur_bowler_id" class="form-select form-select-sm">
+                          <option value="">マスター未選択 / 新規作成</option>
+                          @foreach ($amateurBowlerOptions as $amateurBowler)
+                            <option value="{{ $amateurBowler->id }}" {{ (string) $amateurParticipant->amateur_bowler_id === (string) $amateurBowler->id ? 'selected' : '' }}>
+                              {{ $amateurBowler->name }}
+                              @if (!empty($amateurBowler->name_kana))
+                                （{{ $amateurBowler->name_kana }}）
+                              @endif
+                              @if (!empty($amateurBowler->affiliation_name))
+                                / {{ $amateurBowler->affiliation_name }}
+                              @endif
+                            </option>
+                          @endforeach
+                        </select>
+                      </div>
+                      <div class="col-md-2">
+                        <label class="form-label small mb-1">氏名</label>
+                        <input type="text" name="name" value="{{ $amateurParticipant->display_name }}" class="form-control form-control-sm" maxlength="255" required>
+                      </div>
+                      <div class="col-md-2">
+                        <label class="form-label small mb-1">フリガナ</label>
+                        <input type="text" name="name_kana" value="{{ $amateurParticipant->master_name_kana }}" class="form-control form-control-sm" maxlength="255">
+                      </div>
+                      <div class="col-md-1">
+                        <label class="form-label small mb-1">性別</label>
+                        <select name="gender" class="form-select form-select-sm">
+                          <option value="">未設定</option>
+                          <option value="F" {{ ($amateurParticipant->gender ?? '') === 'F' ? 'selected' : '' }}>女子</option>
+                          <option value="M" {{ ($amateurParticipant->gender ?? '') === 'M' ? 'selected' : '' }}>男子</option>
+                          <option value="X" {{ ($amateurParticipant->gender ?? '') === 'X' ? 'selected' : '' }}>共通</option>
+                        </select>
+                      </div>
+                      <div class="col-md-1">
+                        <label class="form-label small mb-1">利き腕</label>
+                        <select name="dominant_arm" class="form-select form-select-sm">
+                          <option value="">未設定</option>
+                          <option value="右" {{ $amateurCurrentDominantArm === '右' ? 'selected' : '' }}>右</option>
+                          <option value="左" {{ $amateurCurrentDominantArm === '左' ? 'selected' : '' }}>左</option>
+                          <option value="両" {{ $amateurCurrentDominantArm === '両' ? 'selected' : '' }}>両</option>
+                        </select>
+                      </div>
+                      <div class="col-md-3">
+                        <label class="form-label small mb-1">所属ボウリング場</label>
+                        <input type="text" name="affiliation_name" value="{{ $amateurCurrentAffiliation }}" class="form-control form-control-sm" maxlength="255">
+                      </div>
+                      <div class="col-md-3">
+                        <label class="form-label small mb-1">用品契約</label>
+                        <input type="text" name="equipment_contract" value="{{ $amateurCurrentEquipment }}" class="form-control form-control-sm" maxlength="255">
+                      </div>
+                      <div class="col-md-1">
+                        <label class="form-label small mb-1">開始L</label>
+                        <input type="number" name="lane" value="{{ $amateurParticipant->lane }}" class="form-control form-control-sm" min="1" max="999">
+                      </div>
+                      <div class="col-md-1">
+                        <label class="form-label small mb-1">枠</label>
+                        <input type="number" name="lane_slot" value="{{ $amateurParticipant->lane_slot }}" class="form-control form-control-sm" min="1" max="9">
+                      </div>
+                      <div class="col-md-1">
+                        <label class="form-label small mb-1">BOX</label>
+                        <input type="number" name="box_no" value="{{ $amateurParticipant->box_no }}" class="form-control form-control-sm" min="1" max="999">
+                      </div>
+                      <div class="col-md-1">
+                        <label class="form-label small mb-1">表示順</label>
+                        <input type="number" name="sort_order" value="{{ $amateurParticipant->sort_order }}" class="form-control form-control-sm" min="1" max="99999">
+                      </div>
+                      <div class="col-md-3">
+                        <label class="form-label small mb-1">大会内備考</label>
+                        <input type="text" name="source_note" value="{{ $amateurParticipant->source_note }}" class="form-control form-control-sm" maxlength="2000">
+                      </div>
+                      <div class="col-md-3">
+                        <label class="form-label small mb-1">マスター備考</label>
+                        <input type="text" name="master_note" value="{{ $amateurParticipant->master_note }}" class="form-control form-control-sm" maxlength="2000">
+                      </div>
+                      <div class="col-md-2 d-flex gap-2">
+                        <button type="submit" class="btn btn-sm btn-primary flex-fill">保存</button>
+                        <button type="button"
+                                class="btn btn-sm btn-outline-secondary"
+                                onclick="document.getElementById('{{ $amateurEditId }}').classList.add('d-none');">
+                          閉じる
+                        </button>
+                      </div>
+                    </div>
+                  </form>
+                </td>
+              </tr>
+            @empty
+              <tr>
+                <td colspan="9" class="text-muted text-center">アマチュア参加者はまだ登録されていません。</td>
+              </tr>
+            @endforelse
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
   @if (($summary['priority_missing_count'] ?? 0) > 0)
     <div class="card border-danger mb-4">
       <div class="card-header fw-bold text-danger">優先出場者の未登録チェック</div>
@@ -116,12 +394,16 @@
                 <th>由来</th>
                 <th>ライセンスNo</th>
                 <th>氏名</th>
+                <th>参加権利</th>
                 <th>備考</th>
                 <th>操作</th>
               </tr>
             </thead>
             <tbody>
-              @foreach (($summary['priority_missing_entries'] ?? []) as $priorityMissing)
+              @php
+                $priorityMissingEntries = $summary['priority_missing_entries'] ?? [];
+              @endphp
+              @foreach ($priorityMissingEntries as $priorityMissing)
                 @php
                   $missingLicenseNo = trim((string) ($priorityMissing['license_no'] ?? ''));
                   $missingPrioritySort = (int) ($priorityMissing['priority_sort'] ?? 999999);

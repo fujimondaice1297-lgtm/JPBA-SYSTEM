@@ -380,6 +380,71 @@
 
 
 
+#### 2026-05-29 メモ（THE OPEN予選8G・アマチュアマスター登録・snapshot PDF出力）
+- [✓] THE OPENの予選第1シリーズ4Gを投入し、速報ページでアマチュア参加者がプロ選手へ誤置換される問題を発見した
+- [✓] `ScoreService` / `scores.result` を修正し、速報成績で `tournament_participant_id` を優先してアマチュア参加者を別人として表示できるようにした
+- [✓] THE OPENの予選第2シリーズ5G〜8Gを投入した
+  - 対象: `tournament_id = 11`
+  - stage: `予選`
+  - shift: `第2シリーズ`
+  - score行数: 360件
+  - 5〜8G総ピン: 74,161
+  - 予選前半8G上位確認: 1位 岩見彩乃 1,915 / 2位 幸木百合菜 1,852 / 3位 鶴井亜南 1,833
+- [✓] 正式成績反映ページで、アマ5名が `license_number = アマ` の1行へ合算される問題を修正した
+  - 修正後の `snapshot_id = 71` で、戸塚知菜 / 坂本真貴子 / 藤林華音 / 中村華世 / 野村緋那 が別行になることを確認した
+- [✓] 正式反映済みスナップショットから公式風PDFを出力するルートを追加した
+  - `GET /tournaments/{tournament}/result-snapshots/{snapshot}/pdf`
+  - route name: `tournaments.result_snapshots.pdf`
+  - PDF Blade: `resources/views/tournament_results/pdfs/snapshot_score.blade.php`
+- [✓] THE OPEN予選通算8G PDFで、前半4G / 後半4G / 8G T/PIN / AVG の公式風表を出力できることを確認した
+- [✓] アマチュア選手を毎回名前だけの一時参加者にせず、再利用可能なマスターとして扱う方針へ拡張した
+  - 新規テーブル: `amateur_bowlers`
+  - 追加カラム: `tournament_participants.amateur_bowler_id`
+  - DB変更に合わせて `docs/db/data_dictionary.md` を更新し、`docs/db/ER.dbml` を再生成した
+- [✓] 大会エントリー管理内に「アマチュア参加者登録」を追加した
+  - 既存アマチュア選手マスターから呼び出し可能
+  - 新規アマチュア選手の登録が可能
+  - 氏名 / フリガナ / 性別 / 利き腕 / 所属ボウリング場 / 用品契約 / 開始レーン / 枠 / BOX / 表示順 / 備考を扱えるようにした
+- [✓] アマチュア参加者一覧に編集ボタンを追加し、登録後に利き腕・所属・用品契約・開始位置などを変更できるようにした
+- [✓] アマチュア登録入口ルートを追加・確認した
+  - `GET /tournaments/{tournament}/amateur-participants`
+  - `POST /tournaments/{tournament}/amateur-participants`
+- [✓] アマチュア編集・削除ルートを確認した
+  - `PATCH /tournament_participants/{participant}/amateur`
+  - `DELETE /tournament_participants/{participant}/amateur`
+- [✓] THE OPENのアマチュア5名について、PDFに利き腕・所属が反映されることを確認した
+  - 戸塚知菜: 右 / （アソビックスびさい）
+  - 坂本真貴子: 右 / （ラピュタボウル宇治東）
+  - 藤林華音: 右 / （ボウルアロー八尾店）
+  - 中村華世: 右 / （NBF推薦）
+  - 野村緋那: 右 / （WAVE34）
+- [✓] 確認済みコマンド
+  - `php -l app/Http/Controllers/TournamentEntryAdminController.php`
+  - `php -l app/Http/Controllers/TournamentResultController.php`
+  - `php -l routes/web.php`
+  - `php artisan migrate`
+  - `php tools/generate_er_from_dictionary.php`
+  - `php artisan route:clear`
+  - `php artisan view:clear`
+  - `php artisan view:cache`
+  - `php artisan optimize:clear`
+  - `php artisan route:list --path=amateur-participants`
+  - `php artisan route:list --path=tournament_participants`
+  - `php artisan route:list --path=result-snapshots`
+- [ ] 今回差分をログ更新後にcommit / pushする
+- [ ] `storage/backups/` はコミット対象から除外する
+- [ ] THE OPENの予選後半9G〜16Gへ進む
+  - 9〜12G投入
+  - 13〜16G投入
+  - 予選16G通算ランキング確認
+  - ラウンドロビン進出者確認
+  - ラウンドロビン入力
+  - 決勝ステップラダー入力
+  - 最終成績反映
+  - ポイント・賞金・タイトル反映
+  - PDF確認
+
+
 ## Phase 3：ProTest（後回し）
 - [ ] 要件整理
 - [ ] スキーマ確定

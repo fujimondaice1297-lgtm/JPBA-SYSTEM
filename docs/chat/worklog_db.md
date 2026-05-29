@@ -1,3 +1,227 @@
+## 2026-05-29 THE OPEN予選8G・アマチュアマスター登録・snapshot PDF出力
+
+- 目的:
+  - `大岡産業レディース［THE OPEN］トーナメント ２０２５` のフォワードテストを、予選第1シリーズ4Gから予選前半8Gまで進める。
+  - プロ選手とアマチュア選手が混在する大会で、速報表示・正式反映・PDF出力の全てでアマチュアを別人として扱えるか確認する。
+  - アマチュア選手について、名前だけの一時参加者ではなく、再利用できるアマチュア選手マスターと大会ごとの参加者登録を用意する。
+  - 公式PDF風の予選8G成績PDFを、正式反映済みsnapshotから出力できるようにする。
+
+- 作業開始時の状態:
+  - 直前までにTHE OPENの大会作成、プロ/アマ混在参加者登録、2日間レーン移動表表示までは完了済み。
+  - 作業開始時点では `git status -sb` が `## main...origin/main` + `?? storage/backups/` のみで、通常コード差分はなかった。
+  - `storage/backups/` は引き続き作業用・一時投入スクリプト置き場であり、Gitコミット対象外。
+  - ProTest は今回も対象外。
+
+- 予選第1シリーズ4G投入と速報表示修正:
+  - THE OPEN公式の予選第1シリーズ4G成績をもとに、1G〜4Gを入力した。
+  - 入力後、速報ページではプロ選手の成績は表示されたが、アマチュア5名がアマとして表示されず、別のプロボウラーに置き換わる問題が発生した。
+  - DB上では、アマチュア5名は `tournament_participants` に以下のように正しく登録されていた。
+    - `AM-001` 野村緋那 / `19L-3`
+    - `AM-002` 坂本真貴子 / `7L-3`
+    - `AM-003` 戸塚知菜 / `25L-3`
+    - `AM-004` 藤林華音 / `13L-3`
+    - `AM-005` 中村華世 / `31L-3`
+  - `game_scores` 側にも、アマチュア5名分の4Gスコアが `tournament_participant_id` 付きで保存されていることを確認した。
+  - 原因は、速報表示側で `license_number` や氏名解決を優先し、`tournament_participant_id` による一時参加者判定が十分に効いていなかったこと。
+  - `app/Services/ScoreService.php` と `resources/views/scores/result.blade.php` を修正し、速報成績では `tournament_participant_id` / `entry_number` / `display_name` を優先してアマチュア参加者を表示するようにした。
+  - 修正後、速報ページでアマチュア5名が `Lic: アマ` として表示されることを確認し、先に1コミット済み。
+    - commit: `3c822fe`
+    - message: `fix: 速報成績でアマチュア参加者の表示を修正`
+
+- 予選第2シリーズ5G〜8G投入:
+  - `storage/backups/import_the_open_2025_eliminations_5_to_8g_scores.php` を一時投入スクリプトとして実行した。
+  - 実行結果:
+    - tournament_id: `11`
+    - stage: `予選`
+    - shift: `第2シリーズ`
+    - 対象: 予選第2シリーズ 5G〜8G
+    - 参加者数: 90
+    - 期待score行数: 360
+    - 実score行数: 360
+    - 期待5〜8G総ピン: 74,161
+    - 実5〜8G総ピン: 74,161
+  - 予選前半8Gの上位10名確認で、以下が表示された。
+    - 1位 岩見彩乃 1,915 pin
+    - 2位 幸木百合菜 1,852 pin
+    - 3位 鶴井亜南 1,833 pin
+    - 4位 松永裕美 1,814 pin
+    - 5位 久保田彩花 1,813 pin
+  - 投入件数と総ピンが一致したため、5G〜8G投入は成功と判断した。
+
+- 正式反映ページのアマチュア合算修正:
+  - 速報ページは正しく表示されたが、正式反映ページでは `アマ / 中村華世 / 7,513 / 40G` のように、アマ5名が1行へ合算される問題が発生した。
+  - 原因は、正式反映snapshot作成時の集計キーが `license_number = アマ` を同一選手として扱っていたこと。
+  - `tournament_result_snapshot_rows` には `tournament_participant_id` が無いため、snapshot保存時点でアマチュアを別人として集計し、`entry_number` / `amateur_name` / `display_name` に分けて保存する方針にした。
+  - `app/Services/TournamentResultSnapshotService.php` を修正し、集計キーを以下の優先順へ変更した。
+    - アマチュア・一時参加者: `tournament_participant_id` → `entry_number` → `name`
+    - プロ: `pro_bowler_id` → `license_number`
+  - 修正後、予選通算成績を再反映し、`snapshot_id = 71` でアマチュア5名が別行になることを確認した。
+    - 42位 戸塚知菜 / アマ / AM-003 / 1,622 / 8G / AVG 202.750
+    - 78位 坂本真貴子 / アマ / AM-002 / 1,519 / 8G / AVG 189.875
+    - 84位 藤林華音 / アマ / AM-004 / 1,483 / 8G / AVG 185.375
+    - 85位 中村華世 / アマ / AM-005 / 1,483 / 8G / AVG 185.375
+    - 88位 野村緋那 / アマ / AM-001 / 1,406 / 8G / AVG 175.750
+  - この修正は先に1コミット済み。
+    - commit: `8a81044`
+    - message: `fix: 正式成績反映でアマチュア参加者を別行集計に修正`
+
+- snapshot PDF出力:
+  - 正式反映済みスナップショットをもとに、公式風の途中成績PDFを出力できるルートを追加した。
+  - 追加ルート:
+    - `GET /tournaments/{tournament}/result-snapshots/{snapshot}/pdf`
+    - route name: `tournaments.result_snapshots.pdf`
+    - controller: `TournamentResultController@exportSnapshotPdf`
+  - 新規Blade:
+    - `resources/views/tournament_results/pdfs/snapshot_score.blade.php`
+  - PDFでは、予選通算8G成績として以下を表示する構成にした。
+    - 順位
+    - ライセンスNo
+    - 氏名
+    - 期
+    - 投
+    - 所属 / 用品契約
+    - 前半1G〜4G
+    - 前半T/PIN
+    - 前半AVG
+    - 前半順位
+    - 後半5G〜8G
+    - 後半T/PIN
+    - 後半AVG
+    - 後半順位
+    - 8G T/PIN
+    - AVG
+  - 日本語フォント問題が発生したため、Dompdfのboldフォント登録を避け、既存の日本語通常フォントを使って表示する方向へ戻した。
+  - 添付PDFでは3ページ構成で、アマチュア5名も別行で表示されることを確認した。
+  - PDF上のアマチュア欄は、後述のアマチュアマスター登録後に利き腕・所属が反映される状態になった。
+
+- アマチュア選手マスター登録機能:
+  - アマチュア選手は今後も同じ人が複数大会に出場する可能性があるため、完全な使い捨て一時参加者ではなく、再利用可能なマスターを作る方針に変更した。
+  - 新規migrationを追加し、以下を実装した。
+    - `database/migrations/2025_09_01_000090_create_amateur_bowlers_and_extend_tournament_participants.php`
+  - 新規テーブル:
+    - `amateur_bowlers`
+  - 追加カラム:
+    - `tournament_participants.amateur_bowler_id`
+  - `amateur_bowlers` には、氏名、フリガナ、性別、利き腕、所属ボウリング場、用品契約、備考などを保持する方針にした。
+  - `tournament_participants` は大会ごとの参加者として扱い、開始レーン、枠、BOX、表示順、大会内備考などを保持する。
+  - DB変更に合わせて、`docs/db/data_dictionary.md` を更新し、`php tools/generate_er_from_dictionary.php` で `docs/db/ER.dbml` を再生成した。
+
+- アマチュア参加者登録画面:
+  - `resources/views/tournament_entries/admin_index.blade.php` に「アマチュア参加者登録」カードを追加した。
+  - できること:
+    - 既存アマチュア選手マスターから呼び出し
+    - 新規アマチュア選手の登録
+    - 氏名 / フリガナ / 性別 / 利き腕 / 所属ボウリング場 / 用品契約 / 開始レーン / 枠 / BOX / 表示順 / 備考の登録
+  - 追加ルート:
+    - `GET /tournaments/{tournament}/amateur-participants`
+    - `POST /tournaments/{tournament}/amateur-participants`
+  - `/tournaments/11/amateur-participants` で、アマチュア登録欄へ直接移動できることを確認した。
+
+- アマチュア参加者編集:
+  - 登録後に利き腕・所属・用品契約などを修正できるよう、アマチュア参加者一覧に編集ボタンを追加した。
+  - 編集保存ルート:
+    - `PATCH /tournament_participants/{participant}/amateur`
+  - 削除ルート:
+    - `DELETE /tournament_participants/{participant}/amateur`
+  - 編集保存時は、アマチュア選手マスターと大会参加者情報の両方を更新する方針にした。
+  - 既存 `game_scores` の `name` / `entry_number` も必要に応じて追従させるようにした。
+  - 画面確認で、アマチュア参加者一覧に `編集 / 削除` が表示され、編集後の利き腕・所属が一覧へ反映されることを確認した。
+
+- アマチュア5名のPDF反映:
+  - THE OPENのアマチュア5名について、利き腕と所属を登録した。
+  - PDF出力で以下のように表示されることを確認した。
+    - 戸塚知菜: `アマ` / `右` / `（アソビックスびさい）`
+    - 坂本真貴子: `アマ` / `右` / `（ラピュタボウル宇治東）`
+    - 藤林華音: `アマ` / `右` / `（ボウルアロー八尾店）`
+    - 中村華世: `アマ` / `右` / `（NBF推薦）`
+    - 野村緋那: `アマ` / `右` / `（WAVE34）`
+  - 添付PDFでは、2ページ目に戸塚知菜・坂本真貴子、3ページ目に藤林華音・中村華世・野村緋那が表示されている。
+  - これにより、速報 / snapshot / PDF でアマチュアを別人として扱う流れは、予選8G時点で確認済み。
+
+- ルート確認:
+  - アマチュア登録入口:
+    - `php artisan route:list --path=amateur-participants`
+    - `GET|HEAD tournaments/{tournament}/amateur-participants`
+    - `POST tournaments/{tournament}/amateur-participants`
+  - アマチュア編集・削除:
+    - `php artisan route:list --path=tournament_participants`
+    - `PATCH tournament_participants/{participant}/amateur`
+    - `DELETE tournament_participants/{participant}/amateur`
+  - snapshot PDF:
+    - `php artisan route:list --path=result-snapshots`
+    - `GET|HEAD tournaments/{tournament}/result-snapshots/{snapshot}/pdf`
+
+- 確認済みコマンド:
+  - `php -l app/Http/Controllers/TournamentEntryAdminController.php`
+  - `php -l app/Http/Controllers/TournamentResultController.php`
+  - `php -l routes/web.php`
+  - `php artisan migrate`
+  - `php tools/generate_er_from_dictionary.php`
+  - `php artisan route:clear`
+  - `php artisan view:clear`
+  - `php artisan view:cache`
+  - `php artisan optimize:clear`
+  - `php artisan route:list --path=amateur-participants`
+  - `php artisan route:list --path=tournament_participants`
+  - `php artisan route:list --path=result-snapshots`
+  - `psql` による `tournament_participants` / `game_scores` / `tournament_result_snapshots` / `tournament_result_snapshot_rows` 確認
+
+- 今回触った主なファイル:
+  - `app/Http/Controllers/TournamentEntryAdminController.php`
+  - `app/Http/Controllers/TournamentResultController.php`
+  - `app/Services/ScoreService.php`
+  - `app/Services/TournamentResultSnapshotService.php`
+  - `database/migrations/2025_09_01_000090_create_amateur_bowlers_and_extend_tournament_participants.php`
+  - `docs/db/data_dictionary.md`
+  - `docs/db/ER.dbml`
+  - `resources/views/scores/result.blade.php`
+  - `resources/views/tournament_entries/admin_index.blade.php`
+  - `resources/views/tournament_results/pdfs/snapshot_score.blade.php`
+  - `routes/web.php`
+
+- DB / 辞書:
+  - 今回は `amateur_bowlers` テーブル追加と `tournament_participants.amateur_bowler_id` 追加を行ったため、DB変更あり。
+  - ルールどおり、migration / `docs/db/data_dictionary.md` / `docs/db/ER.dbml` をセットで更新した。
+  - `ER.dbml` は手編集せず、`php tools/generate_er_from_dictionary.php` で再生成した。
+
+- Git管理上の注意:
+  - `storage/backups/` は引き続きコミット対象外。
+  - 5G〜8G投入スクリプトなど、一時投入スクリプトはGitへ入れない。
+  - `resources/views/tournament_results/pdfs/snapshot_score.blade.php` は新規ファイルのため、`git diff --name-only` には出ず、`git status -sb` の未追跡ファイルとして確認する必要がある。
+  - `database/migrations/2025_09_01_000090_create_amateur_bowlers_and_extend_tournament_participants.php` も新規ファイルのため、コミット時に明示的に追加する必要がある。
+
+- 現時点で完了したこと:
+  - THE OPEN予選第1シリーズ4G入力。
+  - 速報ページのアマチュア表示修正。
+  - THE OPEN予選第2シリーズ5G〜8G投入。
+  - 予選前半8Gの速報ランキング確認。
+  - 正式反映ページでアマチュア5名が別行になる修正。
+  - 正式反映済みsnapshotから予選8G公式風PDFを出力するルート追加。
+  - アマチュア選手マスター `amateur_bowlers` の追加。
+  - 大会ごとのアマチュア参加者登録・編集・削除導線の追加。
+  - アマチュア5名の利き腕・所属を登録し、PDFへ反映確認。
+  - route / Blade cache / migrate / ER再生成まで確認済み。
+
+- 残タスク / 次に詰める候補:
+  1. 現在のログ更新後に、`git status -sb` / `git diff --name-only` を確認する。
+  2. `storage/backups/` を除外しつつ、今回差分をcommit / pushする。
+  3. THE OPENの予選後半9G〜16G入力へ進む。
+     - 9〜12G投入
+     - 13〜16G投入
+     - 予選16G通算ランキング確認
+  4. 予選16G通算成績の正式反映とPDF出力を確認する。
+  5. ラウンドロビン進出者確認、ラウンドロビン入力へ進む。
+  6. 決勝ステップラダー入力、最終成績反映、ポイント・賞金・タイトル反映へ進む。
+  7. アマチュアが予選16G、ラウンドロビン、最終成績、PDFまで破綻なく表示されるか確認する。
+  8. snapshot PDFの見た目は最低限通ったが、公式PDFの罫線・余白・文字サイズは後続でさらに調整する余地あり。
+
+- 現時点の判断:
+  - **THE OPENの予選8G時点では、プロ/アマ混在の速報表示、正式成績反映、snapshot PDF出力、アマチュアマスター登録・編集まで通った。**
+  - **アマチュアを単なる名前だけの一時参加者ではなく、再利用可能なマスターから大会参加者として呼び出す方向へ進めて問題ない。**
+  - **次はログ更新とコミットを行い、その後THE OPENの予選後半9G〜16Gフォワードテストへ進む。**
+
+---
+
 ## 2026-05-25 THE OPEN公式戦フォワードテスト・アマ対応・2日間レーン移動表調整
 
 - 目的:
