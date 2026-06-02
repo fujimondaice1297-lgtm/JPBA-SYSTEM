@@ -205,12 +205,14 @@ class TournamentResultSnapshotService
             && $hasParticipantTable
             && $this->hasColumn('tournament_participants', 'id');
 
+        $hasParticipantGender = $canJoinParticipants && $this->hasColumn('tournament_participants', 'gender');
+
         $select = [
             'g.id',
             'g.tournament_id',
             'g.stage',
             'g.shift',
-            'g.gender',
+            DB::raw($hasParticipantGender ? 'COALESCE(g.gender, tp.gender) as gender' : 'g.gender'),
             'g.license_number',
             'g.name',
             'g.entry_number',
@@ -252,7 +254,18 @@ class TournamentResultSnapshotService
         $query = DB::table('game_scores as g')
             ->select($select)
             ->where('g.tournament_id', $tournamentId)
-            ->when($gender !== null, fn ($q) => $q->where('g.gender', $gender))
+            ->when($gender !== null, function ($q) use ($gender, $hasParticipantGender) {
+                $q->where(function ($genderQuery) use ($gender, $hasParticipantGender) {
+                    $genderQuery->where('g.gender', $gender);
+
+                    if ($hasParticipantGender) {
+                        $genderQuery->orWhere(function ($fallbackQuery) use ($gender) {
+                            $fallbackQuery->whereNull('g.gender')
+                                ->where('tp.gender', $gender);
+                        });
+                    }
+                });
+            })
             ->when($shift !== null, fn ($q) => $q->where('g.shift', $shift))
             ->where(function ($outer) use ($sourceSets) {
                 foreach ($sourceSets as $set) {
@@ -440,13 +453,6 @@ class TournamentResultSnapshotService
 
         // pro_bowler_id が入っている行と、license_number だけの行が混在しても、
         // 同じ選手を別人扱いしないよう、プロはライセンスから正式プロを解決する。
-        //
-        // 例:
-        // - 予選 game_scores: pro_bowler_id = null / license_number = M00001289
-        // - 準決勝 game_scores: pro_bowler_id = 123 / license_number = M00001289
-        //
-        // 従来は license:M00001289 と pro_id:123 に分かれてしまい、
-        // carry + scratch が合算されなかった。
         $resolvedBowler = $this->resolveBowlerFromGameScoreRow($row);
 
         if ($resolvedBowler) {
@@ -489,7 +495,7 @@ class TournamentResultSnapshotService
             return 'temporary_entry:' . strtoupper($entryNumber);
         }
 
-        $name = $this->nullableTrim($row->participant_display_name)
+        $name = $this->nullableTrim($row->participant_display_name ?? null)
             ?? $this->nullableTrim($row->name);
 
         if ($name !== null) {
@@ -583,19 +589,12 @@ class TournamentResultSnapshotService
             $displayName = $this->nullableTrim($row->participant_display_name ?? null)
                 ?? $this->nullableTrim($row->name)
                 ?? $this->nullableTrim($row->entry_number)
-                ?? 'アマ';
-
-            $licenseNo = $this->nullableTrim($row->participant_display_license_no ?? null)
-                ?? $this->nullableTrim($row->license_number)
-                ?? 'アマ';
-
-            if ($licenseNo !== 'アマ' && preg_match('/^AM[-_]/i', (string) $licenseNo) === 1) {
-                $licenseNo = 'アマ';
-            }
+                ?? 'unknown';
 
             return [
                 'pro_bowler_id' => null,
-                'pro_bowler_license_no' => $licenseNo,
+                'pro_bowler_license_no' => $this->nullableTrim($row->participant_display_license_no ?? null)
+                    ?? $this->nullableTrim($row->license_number),
                 'amateur_name' => $displayName,
                 'display_name' => $displayName,
             ];
@@ -616,10 +615,6 @@ class TournamentResultSnapshotService
 
     private function resolveBowlerFromGameScoreRow(object $row): ?ProBowler
     {
-        if ($this->isTemporaryParticipantRow($row)) {
-            return null;
-        }
-
         if ($row->pro_bowler_id !== null) {
             $byId = ProBowler::query()->find((int) $row->pro_bowler_id);
             if ($byId) {

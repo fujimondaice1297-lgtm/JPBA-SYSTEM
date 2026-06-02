@@ -51,11 +51,12 @@
         .score-table th,
         .score-table td {
             border: 0.7px solid #111;
-            padding: 1.5px 2px;
+            padding: 1.1px 1.4px;
             text-align: center;
             vertical-align: middle;
             word-break: keep-all;
-            overflow-wrap: anywhere;
+            overflow-wrap: normal;
+            line-height: 1.05;
         }
 
         .score-table th {
@@ -92,6 +93,19 @@
         .sum-col { width: {{ $orientation === 'landscape' ? '4.6%' : '5.2%' }}; background: #fff8bf; }
         .avg-col { width: {{ $orientation === 'landscape' ? '4.0%' : '4.6%' }}; }
 
+
+        .affiliation-text {
+            display: inline-block;
+            width: 100%;
+            text-align: left;
+            line-height: 1.00;
+            white-space: nowrap;
+        }
+
+        .affiliation-normal { font-size: {{ $orientation === 'landscape' ? '6.0px' : '6.6px' }}; letter-spacing: -0.02em; }
+        .affiliation-small { font-size: {{ $orientation === 'landscape' ? '5.4px' : '6.0px' }}; letter-spacing: -0.05em; }
+        .affiliation-xsmall { font-size: {{ $orientation === 'landscape' ? '4.9px' : '5.4px' }}; letter-spacing: -0.08em; }
+
         .text-left { text-align: left !important; }
         .fw-bold { font-weight: normal; }
         .highlight { background: #fff8bf; }
@@ -103,6 +117,36 @@
 @php
     $formatPin = fn ($value) => $value === null ? '-' : number_format((int) $value);
     $formatAvg = fn ($value) => $value === null ? '-' : number_format((float) $value, 2);
+    $textLength = fn ($value) => function_exists('mb_strlen') ? mb_strlen((string) $value, 'UTF-8') : strlen((string) $value);
+    $textSubstr = fn ($value, int $start, int $length) => function_exists('mb_substr') ? mb_substr((string) $value, $start, $length, 'UTF-8') : substr((string) $value, $start, $length);
+    $compactAffiliation = function ($value) use ($orientation, $textLength, $textSubstr) {
+        $value = trim((string) ($value ?: '-'));
+        $value = str_replace(["\r", "\n", '　'], ['', '', ' '], $value);
+        $value = preg_replace('/\s+/u', ' ', $value) ?: '-';
+
+        if ($value === '') {
+            $value = '-';
+        }
+
+        $limit = $orientation === 'landscape' ? 24 : 30;
+        $length = $textLength($value);
+        $class = 'affiliation-normal';
+
+        if ($length > 28) {
+            $class = 'affiliation-xsmall';
+        } elseif ($length > 18) {
+            $class = 'affiliation-small';
+        }
+
+        if ($length > $limit) {
+            $value = $textSubstr($value, 0, max(1, $limit - 2)) . '..';
+        }
+
+        return [
+            'text' => $value,
+            'class' => $class,
+        ];
+    };
     $scoreAt = fn ($row, int $game) => $scoreMatrix[$row->id][$game] ?? null;
     $blockTotal = function ($row, array $games) use ($scoreAt) {
         $total = 0;
@@ -190,7 +234,8 @@
                     <td class="text-left fw-bold">{{ $row->display_name }}</td>
                     <td>{{ $profile['period'] ?? '' }}</td>
                     <td>{{ $profile['throw'] ?? '' }}</td>
-                    <td class="text-left">{{ $profile['affiliation'] ?? '-' }}</td>
+                    @php($affiliation = $compactAffiliation($profile['affiliation'] ?? '-'))
+                    <td><span class="affiliation-text {{ $affiliation['class'] }}">{{ $affiliation['text'] }}</span></td>
                     @foreach($seriesBlocks as $block)
                         @foreach($block['games'] as $game)
                             <td>{{ $formatPin($scoreAt($row, (int) $game)) }}</td>
@@ -242,7 +287,8 @@
                     <td class="text-left fw-bold">{{ $row->display_name }}</td>
                     <td>{{ $profile['period'] ?? '' }}</td>
                     <td>{{ $profile['throw'] ?? '' }}</td>
-                    <td class="text-left">{{ $profile['affiliation'] ?? '-' }}</td>
+                    @php($affiliation = $compactAffiliation($profile['affiliation'] ?? '-'))
+                    <td><span class="affiliation-text {{ $affiliation['class'] }}">{{ $affiliation['text'] }}</span></td>
                     <td class="highlight fw-bold">{{ $formatPin($row->carry_pin) }}</td>
                     <td>{{ $carryGames > 0 ? $formatAvg(((int) $row->carry_pin) / $carryGames) : '-' }}</td>
                     <td>{{ $carryRankMap[$row->id] ?? '-' }}</td>
