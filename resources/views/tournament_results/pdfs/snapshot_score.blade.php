@@ -6,7 +6,7 @@
     <title>{{ $tournament->name }} {{ $snapshot->result_name }}</title>
     <style>
         @page {
-            margin: {{ $orientation === 'landscape' ? '6mm 6mm 7mm 6mm' : '8mm 7mm 8mm 7mm' }};
+            margin: {{ $orientation === 'landscape' ? '5mm 5mm 6mm 5mm' : '8mm 7mm 8mm 7mm' }};
         }
 
         * {
@@ -16,30 +16,30 @@
         body {
             font-family: ipaexg, sans-serif;
             color: #111;
-            font-size: {{ $orientation === 'landscape' ? '7.2px' : '7.8px' }};
-            line-height: 1.18;
+            font-size: {{ $orientation === 'landscape' ? '6.7px' : '7.8px' }};
+            line-height: 1.08;
         }
 
         .pdf-title {
             text-align: center;
             font-weight: normal;
             letter-spacing: 0.10em;
-            font-size: {{ $orientation === 'landscape' ? '18px' : '20px' }};
-            margin: 0 0 3px;
+            font-size: {{ $orientation === 'landscape' ? '17px' : '20px' }};
+            margin: 0 0 2px;
         }
 
         .pdf-subtitle {
             text-align: center;
             font-weight: normal;
-            font-size: {{ $orientation === 'landscape' ? '12px' : '13px' }};
-            margin: 0 0 3px;
+            font-size: {{ $orientation === 'landscape' ? '11px' : '13px' }};
+            margin: 0 0 2px;
         }
 
         .pdf-meta {
             text-align: right;
-            font-size: 8px;
+            font-size: 7.5px;
             font-weight: normal;
-            margin-bottom: 4px;
+            margin-bottom: 3px;
         }
 
         table.score-table {
@@ -50,13 +50,13 @@
 
         .score-table th,
         .score-table td {
-            border: 0.7px solid #111;
-            padding: 1.1px 1.4px;
+            border: 0.55px solid #111;
+            padding: 0.8px 1.0px;
             text-align: center;
             vertical-align: middle;
             word-break: keep-all;
             overflow-wrap: normal;
-            line-height: 1.05;
+            line-height: 1.0;
         }
 
         .score-table th {
@@ -65,89 +65,61 @@
         }
 
         .score-table thead tr:first-child th {
-            border-top-width: 1.2px;
+            border-top-width: 1.0px;
         }
 
         .score-table tr td:first-child,
         .score-table tr th:first-child {
-            border-left-width: 1.2px;
+            border-left-width: 1.0px;
         }
 
         .score-table tr td:last-child,
         .score-table tr th:last-child {
-            border-right-width: 1.2px;
+            border-right-width: 1.0px;
         }
 
         .score-table tbody tr:last-child td {
-            border-bottom-width: 1.2px;
+            border-bottom-width: 1.0px;
         }
 
-        .rank-col { width: {{ $orientation === 'landscape' ? '3.6%' : '4.2%' }}; }
-        .license-col { width: {{ $orientation === 'landscape' ? '4.8%' : '6.0%' }}; }
-        .name-col { width: {{ $orientation === 'landscape' ? '8.0%' : '10.0%' }}; }
-        .period-col { width: {{ $orientation === 'landscape' ? '3.0%' : '3.7%' }}; }
-        .throw-col { width: {{ $orientation === 'landscape' ? '2.8%' : '3.2%' }}; }
-        .affiliation-col { width: {{ $orientation === 'landscape' ? '12.8%' : '15.0%' }}; }
+        .rank-col { width: {{ $orientation === 'landscape' ? '3.2%' : '4.2%' }}; }
+        .license-col { width: {{ $orientation === 'landscape' ? '4.4%' : '6.0%' }}; }
+        .name-col { width: {{ $orientation === 'landscape' ? '7.2%' : '10.0%' }}; }
+        .period-col { width: {{ $orientation === 'landscape' ? '2.9%' : '3.7%' }}; }
+        .throw-col { width: {{ $orientation === 'landscape' ? '2.7%' : '3.2%' }}; }
+        .affiliation-col { width: {{ $orientation === 'landscape' ? '14.4%' : '15.0%' }}; }
         .point-col { width: {{ $orientation === 'landscape' ? '4.0%' : '4.6%' }}; background: #fff8bf; }
-        .game-col { width: {{ $orientation === 'landscape' ? '3.0%' : '3.5%' }}; }
+        .game-col { width: {{ $orientation === 'landscape' ? '3.1%' : '3.5%' }}; }
         .sum-col { width: {{ $orientation === 'landscape' ? '4.6%' : '5.2%' }}; background: #fff8bf; }
-        .avg-col { width: {{ $orientation === 'landscape' ? '4.0%' : '4.6%' }}; }
-
-
-        .affiliation-text {
-            display: inline-block;
-            width: 100%;
-            text-align: left;
-            line-height: 1.00;
-            white-space: nowrap;
-        }
-
-        .affiliation-normal { font-size: {{ $orientation === 'landscape' ? '6.0px' : '6.6px' }}; letter-spacing: -0.02em; }
-        .affiliation-small { font-size: {{ $orientation === 'landscape' ? '5.4px' : '6.0px' }}; letter-spacing: -0.05em; }
-        .affiliation-xsmall { font-size: {{ $orientation === 'landscape' ? '4.9px' : '5.4px' }}; letter-spacing: -0.08em; }
+        .avg-col { width: {{ $orientation === 'landscape' ? '4.1%' : '4.6%' }}; }
 
         .text-left { text-align: left !important; }
         .fw-bold { font-weight: normal; }
         .highlight { background: #fff8bf; }
-        .small-note { margin-top: 6px; font-size: 7.5px; }
+        .small-note { margin-top: 5px; font-size: 7px; }
         .nowrap { white-space: nowrap; }
+        .affiliation-cell {
+            white-space: nowrap;
+            font-size: {{ $orientation === 'landscape' ? '5.5px' : '6.5px' }};
+            line-height: 1.0;
+        }
+        .affiliation-cell.is-short {
+            font-size: {{ $orientation === 'landscape' ? '5.7px' : '6.7px' }};
+        }
+        .affiliation-cell.is-long {
+            font-size: {{ $orientation === 'landscape' ? '5.0px' : '6.0px' }};
+        }
+        .affiliation-cell.is-very-long {
+            font-size: {{ $orientation === 'landscape' ? '4.6px' : '5.6px' }};
+        }
     </style>
 </head>
 <body>
 @php
     $formatPin = fn ($value) => $value === null ? '-' : number_format((int) $value);
     $formatAvg = fn ($value) => $value === null ? '-' : number_format((float) $value, 2);
-    $textLength = fn ($value) => function_exists('mb_strlen') ? mb_strlen((string) $value, 'UTF-8') : strlen((string) $value);
-    $textSubstr = fn ($value, int $start, int $length) => function_exists('mb_substr') ? mb_substr((string) $value, $start, $length, 'UTF-8') : substr((string) $value, $start, $length);
-    $compactAffiliation = function ($value) use ($orientation, $textLength, $textSubstr) {
-        $value = trim((string) ($value ?: '-'));
-        $value = str_replace(["\r", "\n", '　'], ['', '', ' '], $value);
-        $value = preg_replace('/\s+/u', ' ', $value) ?: '-';
-
-        if ($value === '') {
-            $value = '-';
-        }
-
-        $limit = $orientation === 'landscape' ? 24 : 30;
-        $length = $textLength($value);
-        $class = 'affiliation-normal';
-
-        if ($length > 28) {
-            $class = 'affiliation-xsmall';
-        } elseif ($length > 18) {
-            $class = 'affiliation-small';
-        }
-
-        if ($length > $limit) {
-            $value = $textSubstr($value, 0, max(1, $limit - 2)) . '..';
-        }
-
-        return [
-            'text' => $value,
-            'class' => $class,
-        ];
-    };
     $scoreAt = fn ($row, int $game) => $scoreMatrix[$row->id][$game] ?? null;
+
     $blockTotal = function ($row, array $games) use ($scoreAt) {
         $total = 0;
         $played = 0;
@@ -161,6 +133,7 @@
 
         return $played > 0 ? $total : null;
     };
+
     $blockAvg = function ($row, array $games) use ($scoreAt, $blockTotal) {
         $total = $blockTotal($row, $games);
         if ($total === null) {
@@ -175,6 +148,84 @@
         }
 
         return $played > 0 ? $total / $played : null;
+    };
+
+    $buildRankMap = function (array $games) use ($rows, $blockTotal) {
+        $totals = [];
+
+        foreach ($rows as $row) {
+            $total = $blockTotal($row, $games);
+            if ($total !== null) {
+                $totals[] = [
+                    'row_id' => $row->id,
+                    'total' => (int) $total,
+                    'ranking' => (int) ($row->ranking ?? 0),
+                ];
+            }
+        }
+
+        usort($totals, fn ($a, $b) => ($b['total'] <=> $a['total']) ?: ($a['ranking'] <=> $b['ranking']));
+
+        $rankMap = [];
+        $rank = 0;
+        $previous = null;
+        foreach ($totals as $index => $item) {
+            if ($previous === null || $item['total'] !== $previous) {
+                $rank = $index + 1;
+                $previous = $item['total'];
+            }
+            $rankMap[$item['row_id']] = $rank;
+        }
+
+        return $rankMap;
+    };
+
+    $summaryBlocks = [];
+    $detailBlocks = $seriesBlocks;
+
+    if ($isPreliminary && $totalGames > 8) {
+        $summaryBlocks[] = [
+            'label' => '前半8G',
+            'games' => range(1, 8),
+            'rank_map' => $buildRankMap(range(1, 8)),
+        ];
+
+        $detailBlocks = array_values(array_filter(
+            $seriesBlocks,
+            fn ($block) => (int) ($block['start'] ?? 0) >= 9
+        ));
+    }
+
+    $compactAffiliation = function ($value) use ($totalGames) {
+        $value = trim((string) $value);
+        if ($value === '') {
+            return '-';
+        }
+
+        $value = str_replace(['株式会社', '有限会社', '合同会社'], ['(株)', '(有)', '(同)'], $value);
+        $value = str_replace(['レジェンドスター株式会社', 'レジェンドスター'], ['ﾚｼﾞｪﾝﾄﾞｽﾀｰ', 'ﾚｼﾞｪﾝﾄﾞｽﾀｰ'], $value);
+        $value = str_replace(['ハイ・スポーツ社', 'ハイ･スポーツ社', 'HI-SP', 'ＨＩ－ＳＰ'], ['HI-SP', 'HI-SP', 'HI-SP', 'HI-SP'], $value);
+        $value = str_replace(['サンブリッジ', 'ラウンドワンジャパン'], ['ｻﾝﾌﾞﾘｯｼﾞ', 'ﾗｳﾝﾄﾞﾜﾝ'], $value);
+        $value = preg_replace('/\s+/u', '', $value) ?? $value;
+
+        $limit = $totalGames >= 16 ? 34 : ($totalGames >= 12 ? 36 : 42);
+
+        return mb_strimwidth($value, 0, $limit, '..', 'UTF-8');
+    };
+
+    $affiliationClass = function ($value) {
+        $width = mb_strwidth((string) $value, 'UTF-8');
+        if ($width >= 34) {
+            return 'affiliation-cell is-very-long';
+        }
+        if ($width >= 27) {
+            return 'affiliation-cell is-long';
+        }
+        if ($width <= 16) {
+            return 'affiliation-cell is-short';
+        }
+
+        return 'affiliation-cell';
     };
 @endphp
 
@@ -208,14 +259,22 @@
                 <th rowspan="2" class="period-col">期</th>
                 <th rowspan="2" class="throw-col">投</th>
                 <th rowspan="2" class="affiliation-col">所 属<br>/ 用品契約</th>
-                @foreach($seriesBlocks as $block)
+                @foreach($summaryBlocks as $block)
+                    <th colspan="3">{{ $block['label'] }}</th>
+                @endforeach
+                @foreach($detailBlocks as $block)
                     <th colspan="{{ count($block['games']) + 3 }}">{{ $block['label'] }}</th>
                 @endforeach
                 <th rowspan="2" class="sum-col">{{ $totalGames }}G<br>T/PIN</th>
                 <th rowspan="2" class="avg-col">AVG</th>
             </tr>
             <tr>
-                @foreach($seriesBlocks as $block)
+                @foreach($summaryBlocks as $block)
+                    <th class="sum-col">T/PIN</th>
+                    <th class="avg-col">AVG</th>
+                    <th class="rank-col">順位</th>
+                @endforeach
+                @foreach($detailBlocks as $block)
                     @foreach($block['games'] as $game)
                         <th class="game-col">{{ $game }}G</th>
                     @endforeach
@@ -228,15 +287,20 @@
         <tbody>
             @foreach($rows as $row)
                 @php($profile = $participantProfiles[$row->id] ?? [])
+                @php($affiliationDisplay = $compactAffiliation($profile['affiliation'] ?? '-'))
                 <tr>
                     <td>{{ $row->ranking }}</td>
                     <td>{{ $profile['license_display'] ?? ($row->pro_bowler_license_no ?? '-') }}</td>
                     <td class="text-left fw-bold">{{ $row->display_name }}</td>
                     <td>{{ $profile['period'] ?? '' }}</td>
                     <td>{{ $profile['throw'] ?? '' }}</td>
-                    @php($affiliation = $compactAffiliation($profile['affiliation'] ?? '-'))
-                    <td><span class="affiliation-text {{ $affiliation['class'] }}">{{ $affiliation['text'] }}</span></td>
-                    @foreach($seriesBlocks as $block)
+                    <td class="text-left {{ $affiliationClass($affiliationDisplay) }}">{{ $affiliationDisplay }}</td>
+                    @foreach($summaryBlocks as $block)
+                        <td class="highlight fw-bold">{{ $formatPin($blockTotal($row, $block['games'])) }}</td>
+                        <td>{{ $formatAvg($blockAvg($row, $block['games'])) }}</td>
+                        <td>{{ $block['rank_map'][$row->id] ?? '-' }}</td>
+                    @endforeach
+                    @foreach($detailBlocks as $block)
                         @foreach($block['games'] as $game)
                             <td>{{ $formatPin($scoreAt($row, (int) $game)) }}</td>
                         @endforeach
@@ -280,6 +344,7 @@
             @foreach($rows as $row)
                 @php($profile = $participantProfiles[$row->id] ?? [])
                 @php($stageAverage = $stageGames > 0 ? ((int) $row->scratch_pin / max(1, $stageGames)) : null)
+                @php($affiliationDisplay = $compactAffiliation($profile['affiliation'] ?? '-'))
                 <tr>
                     <td class="highlight">{{ $row->points !== null ? (int) $row->points . 'P' : '' }}</td>
                     <td>{{ $row->ranking }}</td>
@@ -287,8 +352,7 @@
                     <td class="text-left fw-bold">{{ $row->display_name }}</td>
                     <td>{{ $profile['period'] ?? '' }}</td>
                     <td>{{ $profile['throw'] ?? '' }}</td>
-                    @php($affiliation = $compactAffiliation($profile['affiliation'] ?? '-'))
-                    <td><span class="affiliation-text {{ $affiliation['class'] }}">{{ $affiliation['text'] }}</span></td>
+                    <td class="text-left {{ $affiliationClass($affiliationDisplay) }}">{{ $affiliationDisplay }}</td>
                     <td class="highlight fw-bold">{{ $formatPin($row->carry_pin) }}</td>
                     <td>{{ $carryGames > 0 ? $formatAvg(((int) $row->carry_pin) / $carryGames) : '-' }}</td>
                     <td>{{ $carryRankMap[$row->id] ?? '-' }}</td>
