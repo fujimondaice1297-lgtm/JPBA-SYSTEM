@@ -306,19 +306,20 @@ Route::middleware(['auth','role:editor,admin'])->group(function () {
     // 大会エントリー後続（管理）
     Route::get('/tournaments/{tournament}/entries', [\App\Http\Controllers\TournamentEntryAdminController::class, 'index'])
         ->name('tournaments.entries.index');
-    Route::get('/tournaments/{tournament}/amateur-participants', function ($tournament) {
-        return redirect(route('tournaments.entries.index', ['tournament' => $tournament]) . '#amateur-participants');
-    })->name('tournaments.amateur_participants.index');
-    Route::post('/tournaments/{tournament}/amateur-participants', [\App\Http\Controllers\TournamentEntryAdminController::class, 'storeAmateurParticipant'])
-        ->name('tournaments.amateur_participants.store');
-    Route::patch('/tournament_participants/{participant}/amateur', [\App\Http\Controllers\TournamentEntryAdminController::class, 'updateAmateurParticipant'])
-        ->name('tournaments.amateur_participants.update');
-    Route::delete('/tournament_participants/{participant}/amateur', [\App\Http\Controllers\TournamentEntryAdminController::class, 'destroyAmateurParticipant'])
-        ->name('tournaments.amateur_participants.destroy');
     Route::get('/tournaments/{tournament}/draws', [\App\Http\Controllers\TournamentEntryAdminController::class, 'draws'])
         ->name('tournaments.draws.index');
     Route::get('/tournaments/{tournament}/lane-movement-table', [\App\Http\Controllers\TournamentEntryAdminController::class, 'laneMovementTable'])
         ->name('tournaments.lane_movement_table.show');
+    Route::get('/tournaments/{tournament}/round-lane-assignments', [\App\Http\Controllers\TournamentRoundLaneAssignmentController::class, 'index'])
+        ->name('tournaments.round_lane_assignments.index');
+    Route::post('/tournaments/{tournament}/round-lane-assignments/generate', [\App\Http\Controllers\TournamentRoundLaneAssignmentController::class, 'generateFromSnapshot'])
+        ->name('tournaments.round_lane_assignments.generate');
+    Route::post('/tournaments/{tournament}/round-lane-assignments/update', [\App\Http\Controllers\TournamentRoundLaneAssignmentController::class, 'bulkUpdate'])
+        ->name('tournaments.round_lane_assignments.bulk_update');
+    Route::delete('/tournaments/{tournament}/round-lane-assignments/{assignment}', [\App\Http\Controllers\TournamentRoundLaneAssignmentController::class, 'destroy'])
+        ->name('tournaments.round_lane_assignments.destroy');
+    Route::get('/tournaments/{tournament}/round-lane-assignments/pdf', [\App\Http\Controllers\TournamentRoundLaneAssignmentController::class, 'pdf'])
+        ->name('tournaments.round_lane_assignments.pdf');
     Route::get('/tournaments/{tournament}/operation-logs', [\App\Http\Controllers\TournamentOperationLogController::class, 'index'])
         ->name('tournaments.operation_logs.index');
     Route::post('/tournaments/{tournament}/draws/bulk', [\App\Http\Controllers\DrawController::class, 'bulk'])
