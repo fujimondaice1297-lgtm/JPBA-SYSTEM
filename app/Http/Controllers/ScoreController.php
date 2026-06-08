@@ -26,69 +26,17 @@ final class ScoreController extends Controller
                 'id',
                 'name',
                 'result_flow_type',
+                'shootout_settings',
                 'round_robin_qualifier_count',
                 'round_robin_win_bonus',
                 'round_robin_tie_bonus',
                 'round_robin_position_round_enabled',
             ]);
 
-        $new = (array) session('stage_settings', []);
-        $old = (array) session('score_settings', []);
-
-        $stageSettingsMap = [];
-
-        foreach ($new as $tid => $st) {
-            $tid = (string) $tid;
-            foreach ((array) $st as $label => $g) {
-                $g = (int) $g;
-                if ($g > 0) {
-                    $stageSettingsMap[$tid][$label] = $g;
-                }
-            }
-        }
-
-        foreach ($old as $tid => $st) {
-            $tid = (string) $tid;
-            $pre   = (int) ($st['prelim'] ?? 0);
-            $semi  = (int) ($st['semi'] ?? 0);
-            $final = (int) ($st['final'] ?? 0);
-
-            if ($pre > 0) {
-                $stageSettingsMap[$tid]['予選'] = $stageSettingsMap[$tid]['予選'] ?? $pre;
-            }
-            if ($semi > 0) {
-                $stageSettingsMap[$tid]['準決勝'] = $stageSettingsMap[$tid]['準決勝'] ?? $semi;
-            }
-            if ($final > 0) {
-                $stageSettingsMap[$tid]['決勝'] = $stageSettingsMap[$tid]['決勝'] ?? $final;
-            }
-        }
-
-        foreach ($stageSettingsMap as $tid => $st) {
-            $clean = [];
-            foreach (['予選', '準々決勝', 'ラウンドロビン', '準決勝', '決勝', 'シュートアウト'] as $label) {
-                $g = (int) ($st[$label] ?? 0);
-                if ($g > 0) {
-                    $clean[$label] = $g;
-                }
-            }
-            $stageSettingsMap[$tid] = $clean;
-        }
-
-        foreach ($tournaments as $tournament) {
-            $tid = (string) $tournament->id;
-            $flowType = trim((string) ($tournament->result_flow_type ?? 'legacy_standard'));
-            if (in_array($flowType, ['prelim_to_rr_to_final', 'prelim_to_quarterfinal_to_rr_to_final'], true)) {
-                $stageSettingsMap[$tid] = $stageSettingsMap[$tid] ?? [];
-                if (!isset($stageSettingsMap[$tid]['ラウンドロビン'])) {
-                    $stageSettingsMap[$tid]['ラウンドロビン'] = 8;
-                }
-                if (!isset($stageSettingsMap[$tid]['決勝'])) {
-                    $stageSettingsMap[$tid]['決勝'] = 2;
-                }
-                $stageSettingsMap[$tid]['決勝ステップラダー'] = (int) $stageSettingsMap[$tid]['決勝'];
-            }
-        }
+        // 大会ごとの形式・既存スコア・保存済み設定から、速報入力用のステージ設定を自動構築する。
+        // これにより、速報入力ページを開くたびに「ステージ設定を保存」を押さなくても、
+        // 予選 / 準決勝 / ラウンドロビン / 決勝のゲーム数が反映される。
+        $stageSettingsMap = $this->buildAutomaticStageSettingsMap($tournaments);
 
         $playerLookupRows = ProBowler::query()
             ->select(['id', 'license_no', 'name_kanji'])
@@ -207,6 +155,24 @@ final class ScoreController extends Controller
             'final'  => (int) ($mapJA['決勝'] ?? 0),
         ];
         session()->put('score_settings', $allOld);
+
+        $tournament = Tournament::find($tid);
+        if ($tournament) {
+            $settings = $this->decodeTournamentJsonSettings($tournament->shootout_settings ?? null);
+            $existingProgress = (array) ($settings['stage_progress'] ?? []);
+            $stageSettings = $this->cleanStageSettings($mapJA);
+            $stageProgress = $this->stageProgressPayloadFromStageSettings($stageSettings, $existingProgress, $tournament);
+
+            if (!empty($stageProgress)) {
+                $settings['stage_progress'] = $stageProgress;
+                $settings['stage_game_counts'] = $stageSettings;
+            } else {
+                unset($settings['stage_progress'], $settings['stage_game_counts']);
+            }
+
+            $tournament->shootout_settings = !empty($settings) ? $settings : null;
+            $tournament->save();
+        }
 
         return back()->with('ok', 'ステージ設定を保存しました');
     }
@@ -399,6 +365,18 @@ final class ScoreController extends Controller
         $tournament_name = $t?->name ?? '大会名';
         $flowType = trim((string) ($t?->result_flow_type ?? 'legacy_standard')) ?: 'legacy_standard';
 
+        $stageSettingsMap = $t
+            ? $this->buildAutomaticStageSettingsMap(collect([$t]))
+            : [];
+        $stageSettings = $stageSettingsMap[(string) ($t?->id ?? 0)] ?? [];
+
+        if (!empty($stageSettings)) {
+            $opt['stage_settings'] = $stageSettings;
+            $opt['enabled_stages'] = array_keys($stageSettings);
+        }
+
+        $stageLinks = $this->buildStageNavigationLinks($t, $stageSettings, $r, (string) $opt['stage'], (int) $opt['upto_game']);
+
         $this->applyConfiguredCarryForRanking($opt, $t, $carryService);
 
         if ($opt['stage'] === 'ラウンドロビン') {
@@ -416,6 +394,7 @@ final class ScoreController extends Controller
                 'upto_game' => (int) $opt['upto_game'],
                 'shifts' => (string) $opt['shifts'],
                 'gender_filter' => (string) $opt['gender_filter'],
+                'stageLinks' => $stageLinks,
             ]);
         }
 
@@ -434,6 +413,7 @@ final class ScoreController extends Controller
                 'upto_game' => (int) $opt['upto_game'],
                 'shifts' => (string) $opt['shifts'],
                 'gender_filter' => (string) $opt['gender_filter'],
+                'stageLinks' => $stageLinks,
             ]);
         }
 
@@ -447,6 +427,7 @@ final class ScoreController extends Controller
                 'upto_game' => (int) $opt['upto_game'],
                 'shifts' => (string) $opt['shifts'],
                 'gender_filter' => (string) $opt['gender_filter'],
+                'stageLinks' => $stageLinks,
             ]);
         }
 
@@ -460,6 +441,7 @@ final class ScoreController extends Controller
                 'upto_game' => (int) $opt['upto_game'],
                 'shifts' => (string) $opt['shifts'],
                 'gender_filter' => (string) $opt['gender_filter'],
+                'stageLinks' => $stageLinks,
             ]);
         }
 
@@ -478,6 +460,7 @@ final class ScoreController extends Controller
             'carry_semifinal' => (int) $opt['carry_semifinal'],
             'shifts'          => (string) $opt['shifts'],
             'gender_filter'   => (string) $opt['gender_filter'],
+            'stageLinks'       => $stageLinks,
         ]);
     }
 
@@ -1579,6 +1562,378 @@ final class ScoreController extends Controller
     }
 
 
+    /**
+     * 大会の result_flow_type、保存済み設定、実際の game_scores から速報入力/結果移動用のステージ設定を作る。
+     *
+     * 優先順位:
+     * 1. 大会形式からの既定値
+     * 2. セッション保存済み設定
+     * 3. 実データの最大 game_number（既に投入済みならこれを最優先）
+     *
+     * @param Collection<int,Tournament> $tournaments
+     * @return array<string,array<string,int>>
+     */
+    private function buildAutomaticStageSettingsMap(Collection $tournaments): array
+    {
+        $map = [];
+
+        foreach ($tournaments as $tournament) {
+            $tid = (string) ($tournament->id ?? '');
+            if ($tid === '') {
+                continue;
+            }
+
+            // 1) result_flow_type から最低限の既定値を作る。
+            // 2) 大会作成・編集画面で保存した stage_progress を正本として上書きする。
+            // 3) 旧UIの session 設定は、stage_progress が無い大会だけの互換 fallback とする。
+            $defaults = $this->defaultStageSettingsForTournament($tournament);
+            $stored = $this->stageProgressSettingsForTournament($tournament);
+
+            $map[$tid] = !empty($stored)
+                ? array_replace($defaults, $stored)
+                : $defaults;
+        }
+
+        $new = (array) session('stage_settings', []);
+        foreach ($new as $tid => $stages) {
+            $tid = (string) $tid;
+            $map[$tid] = $map[$tid] ?? [];
+
+            // 大会設定が保存済みなら session は正本にしない。
+            $tournament = $tournaments->firstWhere('id', (int) $tid);
+            if ($tournament && !empty($this->stageProgressSettingsForTournament($tournament))) {
+                continue;
+            }
+
+            foreach ((array) $stages as $label => $games) {
+                $label = trim((string) $label);
+                $games = (int) $games;
+
+                if ($label !== '' && $games > 0) {
+                    $map[$tid][$label] = $games;
+                }
+            }
+        }
+
+        $old = (array) session('score_settings', []);
+        foreach ($old as $tid => $stages) {
+            $tid = (string) $tid;
+            $map[$tid] = $map[$tid] ?? [];
+
+            $tournament = $tournaments->firstWhere('id', (int) $tid);
+            if ($tournament && !empty($this->stageProgressSettingsForTournament($tournament))) {
+                continue;
+            }
+
+            $legacyMap = [
+                '予選' => (int) ($stages['prelim'] ?? 0),
+                '準決勝' => (int) ($stages['semi'] ?? 0),
+                '決勝' => (int) ($stages['final'] ?? 0),
+            ];
+
+            foreach ($legacyMap as $label => $games) {
+                if ($games > 0) {
+                    $map[$tid][$label] = $games;
+                }
+            }
+        }
+
+        foreach ($map as $tid => $stages) {
+            $map[$tid] = $this->cleanStageSettings($stages);
+        }
+
+        return $map;
+    }
+
+    /**
+     * 大会作成・編集画面で保存した進行ゲーム数設定を読む。
+     * 既存カラム名は shootout_settings だが、stage_progress は方式共通の大会進行設定として扱う。
+     *
+     * @return array<string,int>
+     */
+    private function stageProgressSettingsForTournament(Tournament $tournament): array
+    {
+        $settings = $this->decodeTournamentJsonSettings($tournament->shootout_settings ?? null);
+
+        $directStageGameCounts = (array) ($settings['stage_game_counts'] ?? []);
+        $directStageGameCounts = $this->cleanStageSettings($directStageGameCounts);
+        if (!empty($directStageGameCounts)) {
+            return $directStageGameCounts;
+        }
+
+        $progress = (array) ($settings['stage_progress'] ?? []);
+        $map = [];
+
+        $keyMap = [
+            'prelim_game_count' => '予選',
+            'quarterfinal_game_count' => '準々決勝',
+            'semifinal_game_count' => '準決勝',
+            'round_robin_game_count' => 'ラウンドロビン',
+            'final_game_count' => '決勝',
+            'single_elimination_game_count' => 'トーナメント',
+            'shootout_game_count' => 'シュートアウト',
+        ];
+
+        foreach ($keyMap as $progressKey => $stageLabel) {
+            $games = (int) ($progress[$progressKey] ?? 0);
+            if ($games > 0) {
+                $map[$stageLabel] = $games;
+            }
+        }
+
+        return $this->cleanStageSettings($map);
+    }
+
+    /**
+     * @return array<string,mixed>
+     */
+    private function decodeTournamentJsonSettings($value): array
+    {
+        if (is_array($value)) {
+            return $value;
+        }
+
+        if (is_object($value)) {
+            return (array) $value;
+        }
+
+        $raw = trim((string) $value);
+        if ($raw === '') {
+            return [];
+        }
+
+        $decoded = json_decode($raw, true);
+
+        return is_array($decoded) ? $decoded : [];
+    }
+
+    /**
+     * @param array<string,int> $stageSettings
+     * @param array<string,mixed> $existingProgress
+     * @return array<string,mixed>
+     */
+    private function stageProgressPayloadFromStageSettings(array $stageSettings, array $existingProgress = [], ?Tournament $tournament = null): array
+    {
+        $stageSettings = $this->cleanStageSettings($stageSettings);
+        $progress = $existingProgress;
+
+        $labelToKey = [
+            '予選' => 'prelim_game_count',
+            '準々決勝' => 'quarterfinal_game_count',
+            '準決勝' => 'semifinal_game_count',
+            'ラウンドロビン' => 'round_robin_game_count',
+            '決勝' => 'final_game_count',
+            'トーナメント' => 'single_elimination_game_count',
+            'シュートアウト' => 'shootout_game_count',
+        ];
+
+        foreach ($labelToKey as $label => $key) {
+            if (isset($stageSettings[$label]) && (int) $stageSettings[$label] > 0) {
+                $progress[$key] = (int) $stageSettings[$label];
+            }
+        }
+
+        $semifinalTotalGames = (int) ($progress['semifinal_total_game_count'] ?? 0);
+        if (
+            $semifinalTotalGames <= 0
+            && isset($stageSettings['予選'], $stageSettings['準決勝'])
+            && (int) $stageSettings['予選'] > 0
+            && (int) $stageSettings['準決勝'] > 0
+        ) {
+            $progress['semifinal_total_game_count'] = (int) $stageSettings['予選'] + (int) $stageSettings['準決勝'];
+        }
+
+        if ($tournament && trim((string) ($tournament->result_flow_type ?? '')) === 'prelim_to_rr_to_final') {
+            $progress['prelim_game_count'] = (int) ($progress['prelim_game_count'] ?? ($stageSettings['予選'] ?? 16));
+            $progress['semifinal_game_count'] = (int) ($progress['semifinal_game_count'] ?? ($stageSettings['準決勝'] ?? 4));
+            $progress['semifinal_total_game_count'] = (int) ($progress['semifinal_total_game_count'] ?? ($progress['prelim_game_count'] + $progress['semifinal_game_count']));
+            $progress['round_robin_game_count'] = (int) ($progress['round_robin_game_count'] ?? ($stageSettings['ラウンドロビン'] ?? 8));
+            $progress['final_game_count'] = (int) ($progress['final_game_count'] ?? ($stageSettings['決勝'] ?? 2));
+        }
+
+        foreach ($progress as $key => $value) {
+            if (is_numeric($value)) {
+                $progress[$key] = (int) $value;
+            }
+        }
+
+        return array_filter($progress, static fn ($value) => $value !== null && $value !== '' && $value !== []);
+    }
+
+    /**
+     * @return array<string,int>
+     */
+    private function defaultStageSettingsForTournament(Tournament $tournament): array
+    {
+        $flowType = trim((string) ($tournament->result_flow_type ?? 'legacy_standard')) ?: 'legacy_standard';
+
+        return match ($flowType) {
+            'prelim_to_rr_to_final' => [
+                '予選' => 16,
+                '準決勝' => 4,
+                'ラウンドロビン' => 8,
+                '決勝' => 2,
+            ],
+            'prelim_to_quarterfinal_to_rr_to_final' => [
+                '予選' => 8,
+                '準々決勝' => 4,
+                'ラウンドロビン' => 8,
+                '決勝' => 2,
+            ],
+            'prelim_to_shootout_to_final' => [
+                '予選' => 8,
+                'シュートアウト' => 3,
+            ],
+            'prelim_to_quarterfinal_to_shootout_to_final' => [
+                '予選' => 8,
+                '準々決勝' => 4,
+                'シュートアウト' => 3,
+            ],
+            'prelim_to_semifinal_to_shootout_to_final' => [
+                '予選' => 8,
+                '準決勝' => 4,
+                'シュートアウト' => 3,
+            ],
+            default => [
+                '予選' => 6,
+                '準決勝' => 3,
+                '決勝' => 2,
+            ],
+        };
+    }
+
+    /**
+     * @param array<string,mixed> $stages
+     * @return array<string,int>
+     */
+    private function cleanStageSettings(array $stages): array
+    {
+        $ordered = [];
+        foreach (['予選', '準々決勝', '準決勝', 'ラウンドロビン', '決勝', 'トーナメント', 'シュートアウト'] as $label) {
+            $games = (int) ($stages[$label] ?? 0);
+            if ($games > 0) {
+                $ordered[$label] = $games;
+            }
+        }
+
+        foreach ($stages as $label => $games) {
+            $label = trim((string) $label);
+            $games = (int) $games;
+
+            if ($label !== '' && $games > 0 && !isset($ordered[$label])) {
+                $ordered[$label] = $games;
+            }
+        }
+
+        return $ordered;
+    }
+
+    /**
+     * @param array<string,int> $stageSettings
+     * @return array<int,array{label:string,stage:string,upto_game:int,url:string,active:bool}>
+     */
+    private function buildStageNavigationLinks(
+        ?Tournament $tournament,
+        array $stageSettings,
+        Request $request,
+        string $currentStage,
+        int $currentUptoGame
+    ): array {
+        if (!$tournament || (int) ($tournament->id ?? 0) <= 0) {
+            return [];
+        }
+
+        $stageSettings = $this->cleanStageSettings($stageSettings);
+        if (empty($stageSettings)) {
+            return [];
+        }
+
+        $tournamentSettings = $this->decodeTournamentJsonSettings($tournament->shootout_settings ?? null);
+        $stageProgress = (array) ($tournamentSettings['stage_progress'] ?? []);
+        $semifinalTotalGames = (int) ($stageProgress['semifinal_total_game_count'] ?? 0);
+        if (
+            $semifinalTotalGames <= 0
+            && isset($stageSettings['予選'], $stageSettings['準決勝'])
+            && trim((string) ($tournament->result_flow_type ?? '')) === 'prelim_to_rr_to_final'
+        ) {
+            $semifinalTotalGames = (int) $stageSettings['予選'] + (int) $stageSettings['準決勝'];
+        }
+
+        $base = [
+            'tournament_id' => (int) $tournament->id,
+            'gender_filter' => trim((string) $request->get('gender_filter', $request->get('gender', ''))),
+            'shifts' => trim((string) $request->get('shifts', '')),
+            'border_type' => 'rank',
+            'per_point' => (int) $request->get('per_point', 200),
+        ];
+
+        $base = array_filter($base, static fn ($value) => $value !== null && $value !== '');
+
+        $items = [];
+        $add = function (string $label, string $stage, int $uptoGame, array $extra = []) use (&$items, $base, $currentStage, $currentUptoGame): void {
+            if ($uptoGame <= 0) {
+                return;
+            }
+
+            $query = array_merge($base, $extra, [
+                'stage' => $stage,
+                'upto_game' => $uptoGame,
+            ]);
+
+            $items[] = [
+                'label' => $label,
+                'stage' => $stage,
+                'upto_game' => $uptoGame,
+                'url' => route('scores.result', $query),
+                'active' => $stage === $currentStage && $uptoGame === $currentUptoGame,
+            ];
+        };
+
+        if (isset($stageSettings['予選'])) {
+            $add('予選 ' . $stageSettings['予選'] . 'G', '予選', (int) $stageSettings['予選']);
+        }
+
+        if (isset($stageSettings['準々決勝'])) {
+            $add('準々決勝 通算', '準々決勝', (int) $stageSettings['準々決勝'], [
+                'carry_prelim' => 1,
+            ]);
+        }
+
+        if (isset($stageSettings['準決勝'])) {
+            $semifinalGames = (int) $stageSettings['準決勝'];
+            $label = $semifinalTotalGames > $semifinalGames
+                ? '準決勝通算 ' . $semifinalTotalGames . 'G'
+                : '準決勝 ' . $semifinalGames . 'G';
+
+            $extra = $semifinalTotalGames > $semifinalGames
+                ? ['carry_prelim' => 1]
+                : [];
+
+            $add($label, '準決勝', $semifinalGames, $extra);
+        }
+
+        if (isset($stageSettings['ラウンドロビン'])) {
+            $add('ラウンドロビン', 'ラウンドロビン', (int) $stageSettings['ラウンドロビン']);
+        }
+
+        if (isset($stageSettings['決勝'])) {
+            $add('決勝', '決勝', (int) $stageSettings['決勝'], [
+                'carry_prelim' => 1,
+                'carry_semifinal' => 1,
+            ]);
+        }
+
+        if (isset($stageSettings['トーナメント'])) {
+            $add('トーナメント', 'トーナメント', (int) $stageSettings['トーナメント']);
+        }
+
+        if (isset($stageSettings['シュートアウト'])) {
+            $add('シュートアウト', 'シュートアウト', (int) $stageSettings['シュートアウト']);
+        }
+
+        return $items;
+    }
+
     private function applyConfiguredCarryForRanking(
         array &$opt,
         ?Tournament $tournament,
@@ -1591,20 +1946,60 @@ final class ScoreController extends Controller
         $stage = $carryService->normalizeStageLabel((string) ($opt['stage'] ?? ''));
         $opt['stage'] = $stage;
 
-        $stageGameCounts = $this->detectScoreStageGameCounts(
-            tournamentId: (int) ($opt['tournament_id'] ?? 0),
-            genderFilter: (string) ($opt['gender_filter'] ?? ''),
-            shifts: (string) ($opt['shifts'] ?? '')
-        );
+        $stageSettingsMap = $this->buildAutomaticStageSettingsMap(collect([$tournament]));
+        $stageGameCounts = $stageSettingsMap[(string) ((int) ($tournament->id ?? 0))] ?? [];
+
+        if (empty($stageGameCounts)) {
+            // 旧データで大会進行設定が未保存の場合だけ、実スコアから推定する。
+            // 新規運用では game_scores を設定正本にしない。
+            $stageGameCounts = $this->detectScoreStageGameCounts(
+                tournamentId: (int) ($opt['tournament_id'] ?? 0),
+                genderFilter: (string) ($opt['gender_filter'] ?? ''),
+                shifts: (string) ($opt['shifts'] ?? '')
+            );
+        }
 
         $opt['stage_settings'] = $stageGameCounts;
 
-        $sourceSets = $carryService->sourceSetsForStage(
-            tournament: $tournament,
-            stage: $stage,
-            stageGameCounts: $stageGameCounts,
-            currentUptoGame: max(1, (int) ($opt['upto_game'] ?? 1))
-        );
+        $currentUptoGame = max(1, (int) ($opt['upto_game'] ?? 1));
+        $flowType = trim((string) ($tournament->result_flow_type ?? ''));
+        $prelimGames = (int) ($stageGameCounts['予選'] ?? 0);
+        $semifinalGames = (int) ($stageGameCounts['準決勝'] ?? 0);
+
+        // THE OPEN 型は、準決勝スコアを game_number=17〜20 として保存している。
+        // 速報入力上の準決勝は4Gだが、準決勝通算リンクでは
+        // 予選1〜16G + 準決勝17〜20G を合算する必要がある。
+        if (
+            $flowType === 'prelim_to_rr_to_final'
+            && $stage === '準決勝'
+            && (int) ($opt['carry_prelim'] ?? 0) === 1
+            && $prelimGames > 0
+            && $semifinalGames > 0
+        ) {
+            $semifinalUptoGame = min($semifinalGames, $currentUptoGame);
+
+            $sourceSets = [
+                [
+                    'stage' => '予選',
+                    'game_from' => 1,
+                    'game_to' => $prelimGames,
+                    'bucket' => 'carry',
+                ],
+                [
+                    'stage' => '準決勝',
+                    'game_from' => $prelimGames + 1,
+                    'game_to' => $prelimGames + $semifinalUptoGame,
+                    'bucket' => 'scratch',
+                ],
+            ];
+        } else {
+            $sourceSets = $carryService->sourceSetsForStage(
+                tournament: $tournament,
+                stage: $stage,
+                stageGameCounts: $stageGameCounts,
+                currentUptoGame: $currentUptoGame
+            );
+        }
 
         if (empty($sourceSets)) {
             // result_carry_settings 未設定の大会は、従来の carry_prelim / carry_semifinal 指定を残す。

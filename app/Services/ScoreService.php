@@ -81,6 +81,10 @@ class ScoreService
                 continue;
             }
 
+            if (empty($sourceSets) && $stageName === $stage && $gameNo > $uptoGame) {
+                continue;
+            }
+
             $key = $this->normKey($r);
             if ($key === '') {
                 continue;
@@ -136,7 +140,19 @@ class ScoreService
                 foreach ($carryStages as $cs) {
                     $p['total'] += ($p['stage_totals'][$cs] ?? 0);
                 }
-                $p['total'] += ($p['stage_totals'][$stage] ?? 0);
+
+                // 現在ステージは「〇ゲーム目まで」の指定を必ず尊重する。
+                // ここで stage_totals をそのまま使うと、予選1G表示でも予選16G合計が出てしまう。
+                $currentStageTotal = 0;
+                foreach ((array) ($p['breakdown'][$stage] ?? []) as $gameNo => $score) {
+                    if ((int) $gameNo > $uptoGame) {
+                        continue;
+                    }
+
+                    $currentStageTotal += (int) $score;
+                }
+
+                $p['total'] += $currentStageTotal;
             }
 
             $countedScores = !empty($sourceSets)
@@ -228,7 +244,9 @@ class ScoreService
             $maxCountedGames = max($maxCountedGames, (int)($p['games_counted'] ?? count((array)($p['counted_scores'] ?? []))));
         }
 
-        $headerBaseGames = max($uptoGame + $carryBaseG, $maxCountedGames);
+        $headerBaseGames = $maxCountedGames > 0
+            ? $maxCountedGames
+            : ($uptoGame + $carryBaseG);
         if ($headerBaseGames <= 0) {
             $headerBaseGames = $uptoGame;
         }
@@ -239,6 +257,81 @@ class ScoreService
             foreach ($players as $p) {
                 $currentStageTotalGames = max($currentStageTotalGames, count((array)($p['breakdown'][$stage] ?? [])));
             }
+        }
+
+        $expectedCurrentStageScoreCount = min($uptoGame, max(1, $currentStageTotalGames));
+        $expectedCurrentStageGameNumbers = range(1, $expectedCurrentStageScoreCount);
+
+        // source_sets 指定がある場合は、表示上の「準決勝4G」ではなく、
+        // 実際にDBへ保存されている game_number 範囲を正として検査する。
+        // 例: THE OPEN 準決勝通算20G = 予選1〜16G + 準決勝17〜20G。
+        if (!empty($sourceSets)) {
+            $expectedFromSourceSets = [];
+
+            foreach ($sourceSets as $sourceSet) {
+                if ((string) ($sourceSet['stage'] ?? '') !== $stage) {
+                    continue;
+                }
+
+                $from = max(1, (int) ($sourceSet['game_from'] ?? 1));
+                $to = (int) ($sourceSet['game_to'] ?? 0);
+
+                if ($to < $from) {
+                    continue;
+                }
+
+                foreach (range($from, $to) as $gameNumber) {
+                    $expectedFromSourceSets[] = (int) $gameNumber;
+                }
+            }
+
+            $expectedFromSourceSets = array_values(array_unique($expectedFromSourceSets));
+            sort($expectedFromSourceSets, SORT_NUMERIC);
+
+            if ($expectedFromSourceSets !== []) {
+                $expectedCurrentStageGameNumbers = $expectedFromSourceSets;
+                $expectedCurrentStageScoreCount = count($expectedCurrentStageGameNumbers);
+            }
+        }
+
+        $expectedCurrentStageGameNumberMap = array_fill_keys($expectedCurrentStageGameNumbers, true);
+        $gameCountErrors = [];
+
+        foreach ($players as $p) {
+            $actualCurrentStageGameNumbers = [];
+            foreach ((array) ($p['breakdown'][$stage] ?? []) as $gameNo => $score) {
+                $gameNo = (int) $gameNo;
+
+                if ($gameNo <= 0 || !isset($expectedCurrentStageGameNumberMap[$gameNo]) || (int) $score <= 0) {
+                    continue;
+                }
+
+                $actualCurrentStageGameNumbers[$gameNo] = true;
+            }
+
+            $actualCurrentStageGameNumbers = array_keys($actualCurrentStageGameNumbers);
+            sort($actualCurrentStageGameNumbers, SORT_NUMERIC);
+
+            if ($actualCurrentStageGameNumbers === $expectedCurrentStageGameNumbers) {
+                continue;
+            }
+
+            $rawIds = (array) ($p['raw_ids'] ?? []);
+            $label = trim((string) ($rawIds['name'] ?? ''));
+            $license = trim((string) ($rawIds['license_number'] ?? ($rawIds['entry'] ?? '')));
+
+            if ($label === '') {
+                $label = trim((string) ($p['id'] ?? '不明な選手'));
+            }
+
+            $gameCountErrors[] = [
+                'player' => $label,
+                'license' => $license,
+                'expected_games' => $expectedCurrentStageScoreCount,
+                'actual_games' => count($actualCurrentStageGameNumbers),
+                'expected_game_numbers' => $expectedCurrentStageGameNumbers,
+                'actual_game_numbers' => $actualCurrentStageGameNumbers,
+            ];
         }
 
         return [
@@ -256,6 +349,8 @@ class ScoreService
                 'border_value'              => $borderValue,
                 'baseline_games'            => $headerBaseGames,
                 'current_stage_total_games' => $currentStageTotalGames,
+                'game_count_errors'        => $gameCountErrors,
+                'has_game_count_errors'    => !empty($gameCountErrors),
             ],
             'rows'         => $players,
             'border_index' => $borderIndex,
@@ -524,14 +619,35 @@ class ScoreService
 
     private function normKey(GameScore $r): string
     {
+        $participantId = (int)($r->tournament_participant_id ?? 0);
+        if ($participantId > 0) {
+            return 'tp:' . $participantId;
+        }
+
+        $proBowlerId = (int)($r->pro_bowler_id ?? 0);
+        if ($proBowlerId > 0) {
+            return 'pb:' . $proBowlerId;
+        }
+
+        $licenseNumber = trim((string)($r->license_number ?? ''));
+        $entryNumber = trim((string)($r->entry_number ?? ''));
+
+        if (preg_match('/^AM[-_]/i', $entryNumber) === 1) {
+            return 'am:' . strtoupper($entryNumber);
+        }
+
         $g = trim((string)$r->gender);
-        $digits = $this->digitsOnly($r->license_number);
+        if ($g === '' && preg_match('/^[MF]/i', $licenseNumber)) {
+            $g = strtoupper(substr($licenseNumber, 0, 1));
+        }
+
+        $digits = $this->digitsOnly($licenseNumber);
         if ($digits !== '') {
             return ($g !== '' ? ($g . '-') : '') . ltrim($digits, '0');
         }
 
-        if ($r->entry_number) {
-            return ($g !== '' ? ($g . '-') : '') . trim((string)$r->entry_number);
+        if ($entryNumber !== '') {
+            return ($g !== '' ? ($g . '-') : '') . $entryNumber;
         }
 
         if ($r->name) {

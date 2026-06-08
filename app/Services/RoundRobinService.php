@@ -40,9 +40,7 @@ final class RoundRobinService
         $roundRobinGames = max($configuredRoundRobinGames, $detectedMaxGame, 1);
         $uptoGame = min($uptoGame, $roundRobinGames);
 
-        $carrySnapshotCode = $flowType === 'prelim_to_quarterfinal_to_rr_to_final'
-            ? 'quarterfinal_total'
-            : 'prelim_total';
+        $carrySnapshotCode = $this->resolveCarrySnapshotCode($tournamentId, $flowType, $gender, $shift);
 
         $carryRows = $this->loadCarryRows($tournamentId, $carrySnapshotCode, $gender, $shift, $qualifierCount);
         $players = $this->seedPlayers($carryRows);
@@ -147,6 +145,36 @@ final class RoundRobinService
             ->max('game_number');
 
         return max((int) $maxGame, 0);
+    }
+
+
+    private function resolveCarrySnapshotCode(int $tournamentId, string $flowType, string $gender, string $shift): string
+    {
+        // RRの持込元は大会フロー名だけで決め打ちしない。
+        // THE OPENのように result_flow_type は prelim_to_rr_to_final でも、
+        // 実運用では「予選16G → 準決勝4G → RR」のケースがあるため、
+        // 既に current snapshot が存在する直前ステージを優先する。
+        $candidates = [
+            'semifinal_total',
+            'quarterfinal_total',
+            'prelim_total',
+        ];
+
+        foreach ($candidates as $resultCode) {
+            if ($this->findCarrySnapshot($tournamentId, $resultCode, $gender, $shift)) {
+                return $resultCode;
+            }
+        }
+
+        return match ($flowType) {
+            'prelim_to_semifinal_to_rr_to_final',
+            'prelim_to_semifinal_to_round_robin_to_final',
+            'prelim_to_semifinal_to_shootout_to_final' => 'semifinal_total',
+            'prelim_to_quarterfinal_to_rr_to_final',
+            'prelim_to_quarterfinal_to_round_robin_to_final',
+            'prelim_to_quarterfinal_to_shootout_to_final' => 'quarterfinal_total',
+            default => 'prelim_total',
+        };
     }
 
     private function loadCarryRows(int $tournamentId, string $resultCode, string $gender, string $shift, int $limit): array
@@ -325,6 +353,14 @@ final class RoundRobinService
 
     private function buildCircleRounds(array $seeds): array
     {
+        $seeds = array_values($seeds);
+
+        // JPBA公式PDFで使われる8名ラウンドロビンの標準対戦順。
+        // 8名以外は従来どおり円環法で自動生成する。
+        if (count($seeds) === 8) {
+            return $this->buildJpbaEightPlayerRounds($seeds);
+        }
+
         $slots = $seeds;
 
         if (count($slots) % 2 !== 0) {
@@ -351,6 +387,7 @@ final class RoundRobinService
                     'left_seed' => (int) $a,
                     'right_seed' => (int) $b,
                     'label' => $round . 'G',
+                    'lane_pair_label' => null,
                 ];
             }
 
@@ -360,6 +397,50 @@ final class RoundRobinService
             $moved = array_pop($slots);
             array_unshift($slots, $fixed);
             array_splice($slots, 1, 0, [$moved]);
+        }
+
+        return $rounds;
+    }
+
+    /**
+     * @param array<int,int> $seeds
+     * @return array<int,array<int,array<string,mixed>>>
+     */
+    private function buildJpbaEightPlayerRounds(array $seeds): array
+    {
+        $seed = [];
+        for ($i = 1; $i <= 8; $i++) {
+            $seed[$i] = (int) ($seeds[$i - 1] ?? $i);
+        }
+
+        $lanePairs = ['9L-10L', '15L-16L', '21L-22L', '27L-28L'];
+
+        $template = [
+            1 => [[8, 5], [6, 2], [7, 3], [1, 4]],
+            2 => [[3, 4], [7, 1], [5, 2], [8, 6]],
+            3 => [[7, 2], [8, 4], [1, 6], [5, 3]],
+            4 => [[6, 3], [1, 5], [8, 7], [4, 2]],
+            5 => [[1, 8], [2, 3], [6, 4], [7, 5]],
+            6 => [[5, 6], [4, 7], [2, 8], [3, 1]],
+            7 => [[2, 1], [3, 8], [4, 5], [6, 7]],
+        ];
+
+        $rounds = [];
+
+        foreach ($template as $gameNumber => $pairs) {
+            $roundPairs = [];
+
+            foreach ($pairs as $index => $pair) {
+                $roundPairs[] = [
+                    'game_number' => (int) $gameNumber,
+                    'left_seed' => $seed[(int) $pair[0]],
+                    'right_seed' => $seed[(int) $pair[1]],
+                    'label' => $gameNumber . 'G',
+                    'lane_pair_label' => $lanePairs[$index] ?? null,
+                ];
+            }
+
+            $rounds[] = $roundPairs;
         }
 
         return $rounds;
@@ -425,6 +506,7 @@ final class RoundRobinService
     private function buildPositionRound(array $players, int $gameNumber): array
     {
         $orderedSeeds = array_values(array_map(fn (array $player) => (int) $player['seed'], $players));
+        $lanePairs = ['9L-10L', '15L-16L', '21L-22L', '27L-28L'];
         $pairs = [];
 
         for ($i = 0; $i < count($orderedSeeds); $i += 2) {
@@ -436,7 +518,8 @@ final class RoundRobinService
                 'game_number' => $gameNumber,
                 'left_seed' => $orderedSeeds[$i],
                 'right_seed' => $orderedSeeds[$i + 1],
-                'label' => 'ポジションマッチ',
+                'label' => 'P.M.',
+                'lane_pair_label' => $lanePairs[(int) ($i / 2)] ?? null,
             ];
         }
 

@@ -864,19 +864,143 @@ final class TournamentResultSnapshotController extends Controller
         $players = (array) ($rr['players'] ?? []);
         $meta = (array) ($rr['meta'] ?? []);
         $roundRobinGames = (int) ($meta['round_robin_games'] ?? 0);
-        $carryGameCount = 0;
-        $carryStageNames = [];
 
-        foreach ($sourceSets as $set) {
-            if (($set['bucket'] ?? 'scratch') !== 'carry') {
-                continue;
+        // RRの持込元は、RoundRobinService側で current snapshot（例: semifinal_total）から解決する。
+        // THE OPEN のように「予選16G + 準決勝4G = 持込20G」の場合、
+        // 表示上は「予選16G」「準決勝までの持込20G」「RR8G」を並べて出す。
+        // ただし total_pin は「持込20G + RR8G」の通算28Gピンとし、
+        // Bonus込みの TOTAL POINT は tie_break_value に保持する。
+        $carryGameCount = 0;
+        foreach ($players as $playerForCarryCount) {
+            $carryGameCount = max($carryGameCount, (int) ($playerForCarryCount['carry_games'] ?? 0));
+        }
+
+        $carryStageNames = [];
+        $carrySnapshotCode = trim((string) ($meta['carry_snapshot_code'] ?? ''));
+        $actualSourceSets = [];
+
+        if ($carrySnapshotCode === 'semifinal_total') {
+            foreach ($sourceSets as $set) {
+                $stage = trim((string) ($set['stage'] ?? ''));
+
+                if ($stage !== '予選') {
+                    continue;
+                }
+
+                $gameFrom = (int) ($set['game_from'] ?? 1);
+                $gameTo = (int) ($set['game_to'] ?? 0);
+
+                if ($gameTo <= 0 || $gameTo < $gameFrom) {
+                    continue;
+                }
+
+                $actualSourceSets[] = [
+                    'stage' => '予選',
+                    'game_from' => max(1, $gameFrom),
+                    'game_to' => $gameTo,
+                    'bucket' => 'display',
+                ];
+
+                $carryStageNames[] = '予選';
             }
-            $carryGameCount += max(0, ((int) ($set['game_to'] ?? 0)) - ((int) ($set['game_from'] ?? 0)) + 1);
-            $stage = trim((string) ($set['stage'] ?? ''));
-            if ($stage !== '' && !in_array($stage, $carryStageNames, true)) {
+
+            $actualSourceSets[] = [
+                'stage' => '準決勝',
+                'game_from' => 1,
+                'game_to' => max(1, $carryGameCount),
+                'bucket' => 'carry',
+                'use_snapshot_carry_pin' => true,
+                'source_snapshot_code' => $carrySnapshotCode,
+            ];
+
+            $carryStageNames[] = '準決勝';
+        } elseif ($carrySnapshotCode === 'quarterfinal_total') {
+            foreach ($sourceSets as $set) {
+                $stage = trim((string) ($set['stage'] ?? ''));
+
+                if (!in_array($stage, ['予選'], true)) {
+                    continue;
+                }
+
+                $gameFrom = (int) ($set['game_from'] ?? 1);
+                $gameTo = (int) ($set['game_to'] ?? 0);
+
+                if ($gameTo <= 0 || $gameTo < $gameFrom) {
+                    continue;
+                }
+
+                $actualSourceSets[] = [
+                    'stage' => $stage,
+                    'game_from' => max(1, $gameFrom),
+                    'game_to' => $gameTo,
+                    'bucket' => 'display',
+                ];
+
+                $carryStageNames[] = $stage;
+            }
+
+            $actualSourceSets[] = [
+                'stage' => '準々決勝',
+                'game_from' => 1,
+                'game_to' => max(1, $carryGameCount),
+                'bucket' => 'carry',
+                'use_snapshot_carry_pin' => true,
+                'source_snapshot_code' => $carrySnapshotCode,
+            ];
+
+            $carryStageNames[] = '準々決勝';
+        } elseif ($carrySnapshotCode === 'prelim_total') {
+            $actualSourceSets[] = [
+                'stage' => '予選',
+                'game_from' => 1,
+                'game_to' => max(1, $carryGameCount),
+                'bucket' => 'carry',
+                'use_snapshot_carry_pin' => true,
+                'source_snapshot_code' => $carrySnapshotCode,
+            ];
+
+            $carryStageNames[] = '予選';
+        } else {
+            foreach ($sourceSets as $set) {
+                if (($set['bucket'] ?? 'scratch') !== 'carry') {
+                    continue;
+                }
+
+                $stage = trim((string) ($set['stage'] ?? ''));
+                $gameFrom = (int) ($set['game_from'] ?? 1);
+                $gameTo = (int) ($set['game_to'] ?? $carryGameCount);
+
+                if ($stage === '' || $gameTo <= 0 || $gameTo < $gameFrom) {
+                    continue;
+                }
+
+                $actualSourceSets[] = [
+                    'stage' => $stage,
+                    'game_from' => max(1, $gameFrom),
+                    'game_to' => $gameTo,
+                    'bucket' => 'carry',
+                ];
+
                 $carryStageNames[] = $stage;
             }
         }
+
+        $actualSourceSets[] = [
+            'stage' => 'ラウンドロビン',
+            'game_from' => 1,
+            'game_to' => max(1, $roundRobinGames),
+            'bucket' => 'scratch',
+        ];
+
+        $carryStageNames = array_values(array_unique(array_filter($carryStageNames, fn ($stage) => is_string($stage) && trim($stage) !== '')));
+
+        $calculationDefinition['source_sets'] = $actualSourceSets;
+        $calculationDefinition['round_robin'] = [
+            'carry_snapshot_code' => $carrySnapshotCode !== '' ? $carrySnapshotCode : null,
+            'carry_games' => $carryGameCount,
+            'round_robin_games' => $roundRobinGames,
+            'ranking_policy' => 'ranking uses carry_pin + round_robin_pin + bonus_points; total_pin stores carry_pin + round_robin_pin',
+        ];
 
         return DB::transaction(function () use ($definition, $players, $calculationDefinition, $roundRobinGames, $carryGameCount, $carryStageNames, $tournamentId, $gender, $shift) {
             $this->closeCurrentSnapshots(
@@ -912,8 +1036,10 @@ final class TournamentResultSnapshotController extends Controller
                 $bonusPoints = (int) ($row['bonus_points'] ?? 0);
                 $carryGames = (int) ($row['carry_games'] ?? 0);
                 $rrGames = count((array) ($row['rr_scores'] ?? []));
+                $totalPin = $carryPin + $rrPin;
+                $overallTotalPoints = (int) ($row['overall_total_points'] ?? ($totalPin + $bonusPoints));
                 $scoreAverage = ($carryGames + $rrGames) > 0
-                    ? round(($carryPin + $rrPin) / ($carryGames + $rrGames), 2)
+                    ? round($totalPin / ($carryGames + $rrGames), 2)
                     : null;
                 $licenseNo = $this->normalizeText($row['license_no'] ?? null);
                 $displayName = trim((string) ($row['display_name'] ?? ''));
@@ -931,10 +1057,10 @@ final class TournamentResultSnapshotController extends Controller
                     'entry_number' => null,
                     'scratch_pin' => $rrPin,
                     'carry_pin' => $carryPin,
-                    'total_pin' => (int) ($row['overall_total_points'] ?? 0),
+                    'total_pin' => $totalPin,
                     'games' => $carryGames + $rrGames,
                     'average' => $scoreAverage,
-                    'tie_break_value' => (float) ($row['overall_total_points'] ?? 0),
+                    'tie_break_value' => (float) $overallTotalPoints,
                     'points' => $bonusPoints,
                     'prize_money' => null,
                 ]);
@@ -1978,12 +2104,19 @@ final class TournamentResultSnapshotController extends Controller
         }
 
         $allowedRangesByStage = [];
+        $carryPinDisplayStages = [];
+
         foreach ($sourceSets as $set) {
             $stage = trim((string) ($set['stage'] ?? ''));
             $gameFrom = (int) ($set['game_from'] ?? 0);
             $gameTo = (int) ($set['game_to'] ?? 0);
 
             if ($stage === '' || $gameFrom <= 0 || $gameTo <= 0 || $gameTo < $gameFrom) {
+                continue;
+            }
+
+            if ((bool) ($set['use_snapshot_carry_pin'] ?? false)) {
+                $carryPinDisplayStages[$stage] = true;
                 continue;
             }
 
@@ -2001,6 +2134,12 @@ final class TournamentResultSnapshotController extends Controller
                 '準々決勝' => null,
                 '予選' => null,
             ];
+
+            foreach (array_keys($carryPinDisplayStages) as $carryStage) {
+                if (array_key_exists($carryStage, $result[(int) $row->id])) {
+                    $result[(int) $row->id][$carryStage] = (int) ($row->carry_pin ?? 0);
+                }
+            }
 
             foreach (array_keys($allowedRangesByStage) as $allowedStage) {
                 if (array_key_exists($allowedStage, $result[(int) $row->id])) {

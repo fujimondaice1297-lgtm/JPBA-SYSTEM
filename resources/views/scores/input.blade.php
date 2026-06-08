@@ -88,10 +88,11 @@
                 </select>
             </label>
             <button type="submit" class="bg-gray-200 text-black border px-3 py-1 rounded hover:bg-gray-300">ステージ設定を保存</button>
+            <span class="text-xs text-gray-500">※通常は大会形式と入力済みスコアから自動反映されます。手動変更したい場合だけ保存してください。</span>
         </div>
 
-        @php $defaults = ['予選'=>6,'準々決勝'=>4,'準決勝'=>3,'決勝'=>2]; @endphp
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+        @php $defaults = ['予選'=>16,'準々決勝'=>4,'準決勝'=>4,'ラウンドロビン'=>8,'決勝'=>2,'シュートアウト'=>3]; @endphp
+        <div class="grid grid-cols-2 md:grid-cols-6 gap-3">
             @foreach($defaults as $label => $defG)
                 <label class="border rounded p-2 flex items-center justify-between">
                     <span class="mr-2">
@@ -406,8 +407,8 @@ document.addEventListener('DOMContentLoaded', function () {
     const nameDatalist = document.getElementById('entryNameCandidates');
 
     const STORE_KEY = 'jpba:scores:input:last';
-    const STAGE_ORDER = ['予選', '準々決勝', '準決勝', '決勝'];
-    const DEFAULT_STAGE_MAP = { '予選': 6, '準々決勝': 4, '準決勝': 3, '決勝': 2 };
+    const STAGE_ORDER = ['予選', '準々決勝', '準決勝', 'ラウンドロビン', '決勝', 'トーナメント', 'シュートアウト'];
+    const DEFAULT_STAGE_MAP = { '予選': 16, '準決勝': 4, 'ラウンドロビン': 8, '決勝': 2 };
 
     function ensureStageMap(tid) {
         if (!stageMapByTournament[tid] || !Object.keys(stageMapByTournament[tid]).length) {
@@ -540,12 +541,13 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function showCarryOption() {
         const stageNow = sSel.value;
-        const on = (stageNow && stageNow !== '予選');
+        const on = ['準々決勝', '準決勝', '決勝'].includes(stageNow);
         carryWrap.style.display = on ? '' : 'none';
         carryHint.style.display = on ? '' : 'none';
 
         if (on) {
-            carryChk.checked = (localStorage.getItem(carryKey()) === '1');
+            const savedCarry = localStorage.getItem(carryKey());
+            carryChk.checked = (savedCarry === null) ? true : (savedCarry === '1');
         } else {
             carryChk.checked = false;
         }
@@ -553,7 +555,8 @@ document.addEventListener('DOMContentLoaded', function () {
         const showSemi = (stageNow === '決勝');
         carrySemiWrap.style.display = showSemi ? '' : 'none';
         if (showSemi) {
-            carrySemiChk.checked = (localStorage.getItem(carryKeySemi()) === '1');
+            const savedSemi = localStorage.getItem(carryKeySemi());
+            carrySemiChk.checked = (savedSemi === null) ? true : (savedSemi === '1');
         } else {
             carrySemiChk.checked = false;
         }

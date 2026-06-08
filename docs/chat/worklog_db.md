@@ -1,224 +1,489 @@
-## 2026-05-29 THE OPEN予選8G・アマチュアマスター登録・snapshot PDF出力
+## 2026-06-08 THE OPENラウンドロビン8G投入・速報/成績導線改善
 
 - 目的:
-  - `大岡産業レディース［THE OPEN］トーナメント ２０２５` のフォワードテストを、予選第1シリーズ4Gから予選前半8Gまで進める。
-  - プロ選手とアマチュア選手が混在する大会で、速報表示・正式反映・PDF出力の全てでアマチュアを別人として扱えるか確認する。
-  - アマチュア選手について、名前だけの一時参加者ではなく、再利用できるアマチュア選手マスターと大会ごとの参加者登録を用意する。
-  - 公式PDF風の予選8G成績PDFを、正式反映済みsnapshotから出力できるようにする。
+  - `大岡産業レディース［THE OPEN］トーナメント ２０２５` のラウンドロビン8Gを投入し、公式PDFのW-L-T / Bonus / RR合計 / GRAND TOTAL / TOTAL POINTと照合する。
+  - RR正式反映で、予選16G・準決勝通算20G・RR8Gが正しく表示されるようにする。
+  - 大会結果ページから、予選 / 準決勝通算 / ラウンドロビン / 決勝へ移動しやすくする。
+  - 速報入力ページで、毎回「ステージ設定を保存」を押さなくても、大会形式に応じたゲーム数が自動反映されるようにする。
+  - 予選途中速報や準決勝通算速報で、ゲーム数の混在・未入力誤判定・アマチュア合算事故を防ぐ。
 
 - 作業開始時の状態:
-  - 直前までにTHE OPENの大会作成、プロ/アマ混在参加者登録、2日間レーン移動表表示までは完了済み。
-  - 作業開始時点では `git status -sb` が `## main...origin/main` + `?? storage/backups/` のみで、通常コード差分はなかった。
-  - `storage/backups/` は引き続き作業用・一時投入スクリプト置き場であり、Gitコミット対象外。
+  - HEAD: `55485a1`
+  - 直前までに、THE OPEN予選16G、準決勝4G・通算20G、準決勝レーン移動表PDF、ラウンドロビン表示準備は完了済み。
+  - 未コミット差分として以下が存在した。
+    - `app/Http/Controllers/TournamentResultSnapshotController.php`
+    - `app/Services/RoundRobinService.php`
+    - `resources/views/scores/round_robin_result.blade.php`
+    - `docs/chat/progress_board.md`
+    - `docs/chat/worklog_db.md`
+  - `storage/backups/` は一時投入スクリプト・バックアップ置き場であり、Gitコミット対象外。
+
+- RR8G投入:
+  - `storage/backups/import_the_open_2025_round_robin_1_to_8g_scores.php` を作成した。
+  - 対象:
+    - tournament_id: `11`
+    - stage: `ラウンドロビン`
+    - shift: `ラウンドロビン`
+    - RR 1G〜7G + P.M.
+    - 8名 × 8G = 64行
+  - 人物照合では、`license_number` だけで照合せず、`tournament_participants.pro_bowler_license_no` / `pro_bowler_id` / `tournament_participant_id` を優先した。
+  - 投入前に、準決勝通算20G上位8名の持込スコアと一致するかを検証した。
+  - 投入結果:
+    - score行数: 64
+    - RR8G総ピン: 13,581
+    - 持込20G合計: 34,889
+    - 通算28G合計: 48,470
+    - Bonus合計: 960
+
+- RR投入スクリプトのTypeError対応:
+  - 初回実行時、投入処理自体は一度64行作成されたが、transaction末尾の表示ログで `Unsupported operand types: string + int` が発生した。
+  - 原因:
+    - `foreach ($calculatedStats as $index => $stat)` の `$index` が `F00000526` のようなライセンスNo文字列だった。
+    - その状態で `$index + 1` を行ったためTypeErrorになった。
+  - 対応:
+    - 表示順位用に `$displayRank = 1` を用意し、`$displayRank++` で表示するよう修正。
+  - Laravelのtransaction内で例外が出たため、初回投入分はrollbackされ、DBには残らなかった。
+  - 修正後に再実行し、正常終了した。
+
+- RR公式PDF照合:
+  - 修正後の投入ログで、公式PDFと以下が一致することを確認した。
+    - 1位 `F00000526` 久保田彩花
+      - RR 1,794
+      - GRAND 6,204
+      - Bonus 150
+      - W-L-T 5-3-0
+      - TOTAL POINT +754
+    - 2位 `F00000582` 中島瑞葵
+      - RR 1,781
+      - GRAND 6,171
+      - Bonus 105
+      - W-L-T 3-4-1
+      - TOTAL POINT +676
+    - 3位 `F00000586` 幸木百合菜
+      - RR 1,615
+      - GRAND 6,156
+      - Bonus 90
+      - W-L-T 3-5-0
+      - TOTAL POINT +646
+    - 4位 板倉奈智美 +629
+    - 5位 岩見彩乃 +596
+    - 6位 近藤菜帆 +462
+    - 7位 飯田菜々 +449
+    - 8位 野仲美咲 +418
+  - TV決勝進出予定上位3名が、久保田彩花 / 中島瑞葵 / 幸木百合菜になることを確認した。
+
+- ラウンドロビン画面確認:
+  - URL:
+    - `/scores/result?tournament_id=11&stage=ラウンドロビン&upto_game=8&gender_filter=F`
+  - 確認内容:
+    - 対戦表表示OK。
+    - RR進出者は準決勝通算20G上位8名。
+    - W-L-T / Bonus / RRスクラッチ / RR合計が表示される。
+    - 8G成績で久保田彩花 / 中島瑞葵 / 幸木百合菜が上位3名。
+    - 決勝ステップラダー進出者写真枠も同3名で表示。
+  - ここまでのRR8G表示はOKと判断した。
+
+- RR正式反映の修正:
+  - ラウンドロビン最終成績を正式反映したところ、当初は準決勝列が表示されない問題が発生した。
+  - その後、準決勝列を表示する修正で予選列が消える回帰が発生した。
+  - 最終的に、RR正式反映のsnapshot詳細では以下の表示に整理した。
+    - 予選: 予選16G
+    - 準決勝: 準決勝までの持込20G
+    - ラウンドロビン: RR8G
+    - トータルピン: 通算28G
+  - `total_pin` はBonus込みのTOTAL POINTではなく、通算28Gピンとして保存するよう修正した。
+  - Bonus込みのTOTAL POINTは `tie_break_value` 側へ保持するよう修正した。
+  - RRの順位判定ではTOTAL POINTを使い、表示上のトータルピンは実ピン合計に寄せた。
+
+- RR正式反映後の確認:
+  - ラウンドロビン最終成績 / 現行 snapshot で以下を確認した。
+    - 久保田彩花
+      - 予選 3,577
+      - 準決勝 4,410
+      - ラウンドロビン 1,794
+      - トータルピン 6,204
+      - 28G
+      - AVG 221.57
+    - 中島瑞葵
+      - 予選 3,615
+      - 準決勝 4,390
+      - ラウンドロビン 1,781
+      - トータルピン 6,171
+      - 28G
+      - AVG 220.39
+    - 幸木百合菜
+      - 予選 3,702
+      - 準決勝 4,541
+      - ラウンドロビン 1,615
+      - トータルピン 6,156
+      - 28G
+      - AVG 219.86
+  - 予選・準決勝・RRの各列が同時に表示され、公式PDFの通算値と整合した。
+
+- 大会結果ページの移動導線改善:
+  - 大会結果ページから、同一大会内の各ステージ成績へ移動しづらい問題を修正した。
+  - 大会内移動リンクとして以下を表示するようにした。
+    - 予選16G
+    - 準決勝通算20G
+    - ラウンドロビン
+    - 決勝
+  - 大会ごとの進行設定を見て、THE OPENでは上記リンクが自動表示されるようにした。
+  - 予選2G画面からも、準決勝通算20G / ラウンドロビン / 決勝へ移動できることを確認した。
+
+- 速報入力ページのゲーム数自動設定:
+  - 速報入力ページで、毎回「ステージ設定を保存」を押さないとゲーム数設定が反映されない問題を確認した。
+  - 当初、`game_scores` の件数からステージゲーム数を推測する案が出たが、スコア入力前に判断できないため不適切と判断した。
+  - 大会作成・編集時の進行設定を正本にする方針に戻した。
+  - ただし、THE OPENでは `tournaments.shootout_settings` が `null` であり、進行設定が保存されていないことを確認した。
+  - 既存列 `tournaments.shootout_settings` JSONを利用し、`stage_progress` / `stage_game_counts` として大会進行設定を保存するよう修正した。
+  - THE OPENで保存された設定:
+    - `prelim_game_count`: 16
+    - `semifinal_game_count`: 4
+    - `round_robin_game_count`: 8
+    - `final_game_count`: 2
+    - `semifinal_total_game_count`: 20
+    - stage_game_counts:
+      - `予選`: 16
+      - `準決勝`: 4
+      - `ラウンドロビン`: 8
+      - `決勝`: 2
+  - 速報入力ページでは以下が表示されることを確認した。
+    - 予選16G
+    - 準決勝4G
+    - ラウンドロビン8G
+    - 決勝2G
+  - 準決勝通算20Gは、速報入力の準決勝4Gとは分けて扱う。
+
+- 予選途中速報の修正:
+  - 予選2G表示で、予選16G全体が混ざってアマチュアが異常順位になる問題を修正した。
+  - `upto_game=2` の場合は2G分だけを集計するようにした。
+  - 確認結果:
+    - 小久保実希 255 / 280 = 535
+    - 久保田彩花 267 / 254 = 521
+    - 岩見彩乃 235 / 279 = 514
+  - 予選2Gのランキングで、16G全体が混ざらないことを確認した。
+  - 下4桁入力済み選手に対して `期待2G / 実0G` の誤警告が出ないことも確認した。
+
+- ゲーム数不一致検知:
+  - 速報ランキングで、期待ゲーム数と実入力ゲーム数が揃っていない場合に警告を出すようにした。
+  - 目的は、入力漏れ・重複・ステージ/ゲーム番号指定ミスを成績発表前に気づけるようにすること。
+  - 一時的に、下4桁 / フルライセンスNo / gender有無の違いで別選手扱いになり、入力済みなのに `期待2G / 実0G` となる誤警告が発生した。
+  - 人物キーを以下の優先順で統一する方針へ修正した。
+    - `tournament_participant_id`
+    - `pro_bowler_id`
+    - アマチュア識別
+    - 正規化ライセンス番号
+    - entry number
+    - 氏名
+  - 修正後、予選2G画面では誤警告が消えた。
+
+- 準決勝通算20G表示:
+  - 準決勝通算20Gリンクの初回確認では、`stage=準決勝&upto_game=4` として `game_number 1〜4` を見に行ってしまい、データなしになった。
+  - THE OPENの準決勝スコアは `game_number 17〜20` として保存しているため、準決勝通算では以下を合算する必要がある。
+    - 予選 `game_number 1〜16`
+    - 準決勝 `game_number 17〜20`
+  - 修正後、準決勝通算20Gの順位と合計が公式値と一致した。
+    - 1位 幸木百合菜 4,541
+    - 2位 久保田彩花 4,410
+    - 3位 岩見彩乃 4,401
+    - 4位 中島瑞葵 4,390
+  - 当初は20G分の内訳がすべて「予選」として表示されていたため、表示側を修正した。
+  - 最終的に、各選手の内訳が以下に分かれて表示されることを確認した。
+    - 予選: 16G分
+    - 準決勝: 4G分
+
+- 決勝ステップラダー確認:
+  - 決勝ボタンからステップラダー画面へ移動できることを確認した。
+  - 決勝スコア未入力のため、優勝者は未確定表示。
+  - ステップラダー進出者は、RR上位3名として以下が表示された。
+    - 久保田彩花
+    - 中島瑞葵
+    - 幸木百合菜
+
+- 触った主なファイル:
+  - `app/Http/Controllers/ScoreController.php`
+  - `app/Http/Controllers/TournamentController.php`
+  - `app/Http/Controllers/TournamentResultSnapshotController.php`
+  - `app/Services/RoundRobinService.php`
+  - `app/Services/ScoreService.php`
+  - `resources/views/scores/input.blade.php`
+  - `resources/views/scores/result.blade.php`
+  - `resources/views/scores/round_robin_result.blade.php`
+  - `docs/chat/progress_board.md`
+  - `docs/chat/worklog_db.md`
+
+- 確認済みコマンド:
+  - `php -l app/Http/Controllers/ScoreController.php`
+  - `php -l app/Http/Controllers/TournamentController.php`
+  - `php -l app/Http/Controllers/TournamentResultSnapshotController.php`
+  - `php -l app/Services/RoundRobinService.php`
+  - `php -l app/Services/ScoreService.php`
+  - `php artisan view:cache`
+  - `php artisan view:clear`
+
+- DB / 辞書:
+  - 今回は既存の `tournaments.shootout_settings` JSON、`game_scores`、snapshot、速報表示ロジックを使った修正。
+  - DBスキーマ変更は行っていない。
+  - そのため、`migrations` / `docs/db/data_dictionary.md` / `docs/db/ER.dbml` の更新は不要。
+  - `storage/backups/import_the_open_2025_round_robin_1_to_8g_scores.php` は一時投入スクリプトであり、Gitコミット対象外。
+
+- 現時点で完了したこと:
+  - THE OPENラウンドロビン8G投入。
+  - RR公式PDFとの照合。
+  - RR8G成績画面表示。
+  - RR正式反映の通算28G / 予選16G / 準決勝20G / RR8G表示修正。
+  - 大会結果ページの大会内移動リンク。
+  - 速報入力ページの大会別ゲーム数自動設定。
+  - 進行設定の `shootout_settings.stage_progress` 保存。
+  - 予選2Gなど途中速報の集計範囲修正。
+  - ゲーム数不一致検知。
+  - 準決勝通算20Gの合算・内訳表示修正。
+  - 決勝ステップラダー未確定画面確認。
+
+- 残タスク / 次に詰める候補:
+  1. 決勝ステップラダー2Gを入力する。
+  2. 優勝者・準優勝・3位を確認する。
+  3. 最終成績反映を行う。
+  4. ポイント・賞金・タイトル反映を確認する。
+  5. 大会成績PDFを確認する。
+  6. 今回差分をcommit / pushする。
+  7. `storage/backups/` はコミット対象外を維持する。
+
+- 現時点の判断:
+  - **THE OPENは、予選16G → 準決勝通算20G → ラウンドロビン8G → 決勝ステップラダー直前まで、公式値と照合しながら進められる状態になった。**
+  - **速報入力・速報ランキング・正式反映・大会内移動リンクの主要な使い勝手改善も完了。**
+  - **次は決勝ステップラダー入力と最終成績反映へ進む。**
+
+---
+
+## 2026-06-05 THE OPEN予選16G・準決勝20G・ラウンドロビン表示調整
+
+- 目的:
+  - `大岡産業レディース［THE OPEN］トーナメント ２０２５` のフォワードテストを、予選16G、準決勝4G・通算20G、ラウンドロビン表示準備まで進める。
+  - 公式PDFに近い予選通算PDF、準決勝レーン移動表PDF、ラウンドロビン対戦表・成績表を再現する。
+  - アマチュア選手の誤合算・誤紐づけ事故を再発させないよう、アマチュア識別番号とスコア紐づけガードを追加する。
+  - 次チャットでは、ラウンドロビン8Gの実スコア投入、勝敗ポイント確認、公式結果照合へ進める状態にする。
+
+- 作業開始時の状態:
+  - 直前までにTHE OPENの予選8G、アマチュアマスター登録、snapshot PDF出力までは完了済み。
+  - 作業中に複数回 commit / push を実施した。
+  - 現在のHEADは `55485a1`。
+  - 現在の作業ツリーは、通常差分3ファイル + `?? storage/backups/` の状態。
+  - `storage/backups/` は一時投入スクリプト・バックアップ置き場であり、Gitコミット対象外。
   - ProTest は今回も対象外。
 
-- 予選第1シリーズ4G投入と速報表示修正:
-  - THE OPEN公式の予選第1シリーズ4G成績をもとに、1G〜4Gを入力した。
-  - 入力後、速報ページではプロ選手の成績は表示されたが、アマチュア5名がアマとして表示されず、別のプロボウラーに置き換わる問題が発生した。
-  - DB上では、アマチュア5名は `tournament_participants` に以下のように正しく登録されていた。
-    - `AM-001` 野村緋那 / `19L-3`
-    - `AM-002` 坂本真貴子 / `7L-3`
-    - `AM-003` 戸塚知菜 / `25L-3`
-    - `AM-004` 藤林華音 / `13L-3`
-    - `AM-005` 中村華世 / `31L-3`
-  - `game_scores` 側にも、アマチュア5名分の4Gスコアが `tournament_participant_id` 付きで保存されていることを確認した。
-  - 原因は、速報表示側で `license_number` や氏名解決を優先し、`tournament_participant_id` による一時参加者判定が十分に効いていなかったこと。
-  - `app/Services/ScoreService.php` と `resources/views/scores/result.blade.php` を修正し、速報成績では `tournament_participant_id` / `entry_number` / `display_name` を優先してアマチュア参加者を表示するようにした。
-  - 修正後、速報ページでアマチュア5名が `Lic: アマ` として表示されることを確認し、先に1コミット済み。
-    - commit: `3c822fe`
-    - message: `fix: 速報成績でアマチュア参加者の表示を修正`
-
-- 予選第2シリーズ5G〜8G投入:
-  - `storage/backups/import_the_open_2025_eliminations_5_to_8g_scores.php` を一時投入スクリプトとして実行した。
-  - 実行結果:
+- 予選第3シリーズ9G〜12G投入:
+  - `storage/backups/import_the_open_2025_eliminations_9_to_12g_scores.php` を作成・実行した。
+  - 初回実行時に `tournament_participants.entry_number` が存在しないエラーが発生した。
+    - 原因: 投入スクリプト側が存在しない `entry_number` カラムを参照していた。
+    - 対応: `pro_bowler_license_no` / `display_license_no` / `display_name` / `tournament_participant_id` を基準にした照合へ修正した。
+  - 投入結果:
     - tournament_id: `11`
     - stage: `予選`
-    - shift: `第2シリーズ`
-    - 対象: 予選第2シリーズ 5G〜8G
+    - shift: `第3シリーズ`
+    - 対象: 予選第3シリーズ 9G〜12G
     - 参加者数: 90
     - 期待score行数: 360
     - 実score行数: 360
-    - 期待5〜8G総ピン: 74,161
-    - 実5〜8G総ピン: 74,161
-  - 予選前半8Gの上位10名確認で、以下が表示された。
-    - 1位 岩見彩乃 1,915 pin
-    - 2位 幸木百合菜 1,852 pin
-    - 3位 鶴井亜南 1,833 pin
-    - 4位 松永裕美 1,814 pin
-    - 5位 久保田彩花 1,813 pin
-  - 投入件数と総ピンが一致したため、5G〜8G投入は成功と判断した。
+    - 期待9〜12G総ピン: 71,113
+    - 実9〜12G総ピン: 71,113
+    - 期待1〜12G総ピン: 216,407
+    - 実1〜12G総ピン: 216,407
 
-- 正式反映ページのアマチュア合算修正:
-  - 速報ページは正しく表示されたが、正式反映ページでは `アマ / 中村華世 / 7,513 / 40G` のように、アマ5名が1行へ合算される問題が発生した。
-  - 原因は、正式反映snapshot作成時の集計キーが `license_number = アマ` を同一選手として扱っていたこと。
-  - `tournament_result_snapshot_rows` には `tournament_participant_id` が無いため、snapshot保存時点でアマチュアを別人として集計し、`entry_number` / `amateur_name` / `display_name` に分けて保存する方針にした。
-  - `app/Services/TournamentResultSnapshotService.php` を修正し、集計キーを以下の優先順へ変更した。
-    - アマチュア・一時参加者: `tournament_participant_id` → `entry_number` → `name`
-    - プロ: `pro_bowler_id` → `license_number`
-  - 修正後、予選通算成績を再反映し、`snapshot_id = 71` でアマチュア5名が別行になることを確認した。
-    - 42位 戸塚知菜 / アマ / AM-003 / 1,622 / 8G / AVG 202.750
-    - 78位 坂本真貴子 / アマ / AM-002 / 1,519 / 8G / AVG 189.875
-    - 84位 藤林華音 / アマ / AM-004 / 1,483 / 8G / AVG 185.375
-    - 85位 中村華世 / アマ / AM-005 / 1,483 / 8G / AVG 185.375
-    - 88位 野村緋那 / アマ / AM-001 / 1,406 / 8G / AVG 175.750
-  - この修正は先に1コミット済み。
-    - commit: `8a81044`
-    - message: `fix: 正式成績反映でアマチュア参加者を別行集計に修正`
+- アマチュア誤紐づけ事故と修復:
+  - 9〜12G投入後、アマチュアが1位に出る異常が発生した。
+  - 原因は、複数アマチュアが `license_number = アマ` として扱われ、同じ人として合算される・または誤紐づけされる余地が残っていたこと。
+  - 既に正式反映側の合算修正は入っていたが、投入・照合スクリプト側では再発余地があった。
+  - `psql` で `tournament_participants` のアマチュア5名を確認した。
+    - `AM-001` 野村緋那
+    - `AM-002` 坂本真貴子
+    - `AM-003` 戸塚知菜
+    - `AM-004` 藤林華音
+    - `AM-005` 中村華世
+  - `storage/backups/repair_the_open_2025_eliminations_9_to_12g_amateurs.php` を実行し、アマチュア第3シリーズ20行を削除・再投入した。
+  - 修復後のアマチュア12G:
+    - `AM-003` 戸塚知菜 2,367
+    - `AM-002` 坂本真貴子 2,245
+    - `AM-004` 藤林華音 2,185
+    - `AM-005` 中村華世 2,140
+    - `AM-001` 野村緋那 2,113
+  - 重複確認SQLで、同一 `tournament_participant_id` / game_number の重複が0件であることを確認した。
 
-- snapshot PDF出力:
-  - 正式反映済みスナップショットをもとに、公式風の途中成績PDFを出力できるルートを追加した。
-  - 追加ルート:
-    - `GET /tournaments/{tournament}/result-snapshots/{snapshot}/pdf`
-    - route name: `tournaments.result_snapshots.pdf`
-    - controller: `TournamentResultController@exportSnapshotPdf`
-  - 新規Blade:
-    - `resources/views/tournament_results/pdfs/snapshot_score.blade.php`
-  - PDFでは、予選通算8G成績として以下を表示する構成にした。
-    - 順位
-    - ライセンスNo
-    - 氏名
-    - 期
-    - 投
-    - 所属 / 用品契約
-    - 前半1G〜4G
-    - 前半T/PIN
-    - 前半AVG
-    - 前半順位
-    - 後半5G〜8G
-    - 後半T/PIN
-    - 後半AVG
-    - 後半順位
-    - 8G T/PIN
-    - AVG
-  - 日本語フォント問題が発生したため、Dompdfのboldフォント登録を避け、既存の日本語通常フォントを使って表示する方向へ戻した。
-  - 添付PDFでは3ページ構成で、アマチュア5名も別行で表示されることを確認した。
-  - PDF上のアマチュア欄は、後述のアマチュアマスター登録後に利き腕・所属が反映される状態になった。
+- アマチュア識別番号と再発防止:
+  - アマチュアにも再利用可能な識別番号を持たせる方針を固定した。
+  - `A000001` 形式のアマチュアマスターNoを扱うようにした。
+  - 大会内の `AM-001` などは大会内Noとして残す。
+  - アマチュアはライセンスNo欄では従来どおり `アマ` 表示。
+  - プロなら `期` が入る欄について、アマチュアは空欄ではなく `選手` と表示する方針にした。
+  - スコア照合・正式反映・PDF表示で、`license_number = アマ` を単一キーにしないガードを追加した。
+  - この作業は commit / push 済み。
+    - commit: `18108ac`
+    - message: `fix: アマチュア識別番号とスコア誤紐づけ防止を追加`
 
-- アマチュア選手マスター登録機能:
-  - アマチュア選手は今後も同じ人が複数大会に出場する可能性があるため、完全な使い捨て一時参加者ではなく、再利用可能なマスターを作る方針に変更した。
-  - 新規migrationを追加し、以下を実装した。
-    - `database/migrations/2025_09_01_000090_create_amateur_bowlers_and_extend_tournament_participants.php`
+- 予選第4シリーズ13G〜16G投入:
+  - `storage/backups/import_the_open_2025_eliminations_13_to_16g_scores.php` を作成・実行した。
+  - 投入結果:
+    - 対象: 予選第4シリーズ 13G〜16G
+    - 参加者数: 90
+    - 期待score行数: 360
+    - 実score行数: 360
+    - 期待13〜16G総ピン: 74,741
+    - 実13〜16G総ピン: 74,741
+    - 期待1〜16G総ピン: 291,148
+    - 実1〜16G総ピン: 291,148
+  - 予選16G上位10名確認:
+    - 1位 幸木百合菜 3,702 / AVG 231.38
+    - 2位 中島瑞葵 3,615 / AVG 225.94
+    - 3位 久保田彩花 3,577 / AVG 223.56
+    - 4位 岩見彩乃 3,564 / AVG 222.75
+    - 5位 石田万音 3,503 / AVG 218.94
+    - 6位 鶴井亜南 3,489 / AVG 218.06
+    - 7位 緒方彩音 3,489 / AVG 218.06
+    - 8位 飯田菜々 3,483 / AVG 217.69
+  - アマチュア16Gも5名別々に表示されることを確認した。
+
+- 予選通算PDFの調整:
+  - 12G / 16GのPDFで列が増えすぎ、Dompdfのメモリ超過が発生した。
+  - 方針を変更し、後半出力時は前半8Gの詳細を再掲しない。
+  - 前半8Gは `前半8G T/PIN / AVG / 順位` としてまとめ表示する。
+  - 9G〜12G、13G〜16Gはゲーム別に表示する。
+  - 16G通算PDFは2ページ構成で表示できることを確認した。
+  - この作業は commit / push 済み。
+    - commit: `6ea83d5`
+    - message: `fix: 予選通算PDFの前半8Gをまとめ表示に変更`
+
+- 準決勝4G・通算20G投入:
+  - `storage/backups/import_the_open_2025_semifinal_17_to_20g_scores.php` を作成・実行した。
+  - 準決勝参加者は予選16G上位30名。
+  - 投入結果:
+    - 対象: 準決勝4G・通算20G
+    - 削除済み既存score行数: 0
+    - 参加者数: 30
+    - 期待score行数: 120
+    - 実score行数: 120
+    - 期待準決勝4G総ピン: 23,263
+    - 実準決勝4G総ピン: 23,263
+    - 期待準決勝参加者30名 予選16G合計: 102,740
+    - 実準決勝参加者30名 予選16G合計: 102,740
+    - 期待準決勝参加者30名 通算20G合計: 126,003
+    - 実準決勝参加者30名 通算20G合計: 126,003
+  - 準決勝上位8名確認:
+    - 1位 幸木百合菜 4,541
+    - 2位 久保田彩花 4,410
+    - 3位 岩見彩乃 4,401
+    - 4位 中島瑞葵 4,390
+    - 5位 板倉奈智美 4,296
+    - 6位 飯田菜々 4,296
+    - 7位 野仲美咲 4,295
+    - 8位 近藤菜帆 4,260
+
+- 準決勝レーン移動表:
+  - 準決勝進出者30名をもとに、前日などに出す準決勝用レーン移動表を作れるようにした。
   - 新規テーブル:
-    - `amateur_bowlers`
-  - 追加カラム:
-    - `tournament_participants.amateur_bowler_id`
-  - `amateur_bowlers` には、氏名、フリガナ、性別、利き腕、所属ボウリング場、用品契約、備考などを保持する方針にした。
-  - `tournament_participants` は大会ごとの参加者として扱い、開始レーン、枠、BOX、表示順、大会内備考などを保持する。
-  - DB変更に合わせて、`docs/db/data_dictionary.md` を更新し、`php tools/generate_er_from_dictionary.php` で `docs/db/ER.dbml` を再生成した。
+    - `tournament_round_lane_assignments`
+  - 新規Controller:
+    - `app/Http/Controllers/TournamentRoundLaneAssignmentController.php`
+  - 新規Blade:
+    - `resources/views/tournament_round_lane_assignments/index.blade.php`
+    - `resources/views/tournament_round_lane_assignments/pdf.blade.php`
+  - 新規migration:
+    - `database/migrations/2025_09_01_000092_create_tournament_round_lane_assignments_table.php`
+  - DB変更があるため、`docs/db/data_dictionary.md` を更新し、`docs/db/ER.dbml` を再生成した。
+  - `storage/backups/seed_the_open_2025_semifinal_lane_assignments.php` はTHE OPEN用の一時投入スクリプトであり、コミット対象外。
+  - PDF文字化けでは、表ヘッダーの `th` だけが `????` になる問題が発生した。
+  - 最終的に、PDFの表ヘッダーも `td` にし、太字を避けることで文字化けを解消した。
+  - この作業は commit / push 済み。
+    - commit: `55485a1`
+    - message: `feat: ラウンド別レーン割当と準決勝レーン表PDFを追加`
 
-- アマチュア参加者登録画面:
-  - `resources/views/tournament_entries/admin_index.blade.php` に「アマチュア参加者登録」カードを追加した。
-  - できること:
-    - 既存アマチュア選手マスターから呼び出し
-    - 新規アマチュア選手の登録
-    - 氏名 / フリガナ / 性別 / 利き腕 / 所属ボウリング場 / 用品契約 / 開始レーン / 枠 / BOX / 表示順 / 備考の登録
-  - 追加ルート:
-    - `GET /tournaments/{tournament}/amateur-participants`
-    - `POST /tournaments/{tournament}/amateur-participants`
-  - `/tournaments/11/amateur-participants` で、アマチュア登録欄へ直接移動できることを確認した。
+- ラウンドロビン表示修正:
+  - 添付されたラウンドロビン対戦表・結果PDFを基準に、既存の `RoundRobinService` / `round_robin_result.blade.php` を調整した。
+  - DB変更は行わず、既存の `game_scores.stage = ラウンドロビン` を正本として使う方針。
+  - `RoundRobinService` の持込元を `prelim_total` 固定ではなく、存在する場合は `semifinal_total` を優先するよう修正した。
+  - THE OPENは、予選16G → 準決勝4G → 準決勝通算20G → ラウンドロビン8名という流れのため、RR進出者は `semifinal_total` 上位8名から作る。
+  - 公式PDFに合わせ、8名総当たり7G + P.M. の対戦表を表示するようにした。
+  - レーン表示:
+    - `9L-10L`
+    - `15L-16L`
+    - `21L-22L`
+    - `27L-28L`
+  - P.M. は `1位vs2位 / 3位vs4位 / 5位vs6位 / 7位vs8位` として表示する。
+  - 当初、`resolveCarrySnapshotCode()` 未定義エラーが発生したため、メソッドを追加して解消した。
+  - `TournamentResultSnapshotController` も、RR正式反映時のゲーム数が実際の持込ゲーム数 + RRゲーム数になるよう調整中。
+  - ただし、RR正式反映はまだ未実行。次チャットで実スコア投入後に確認する。
 
-- アマチュア参加者編集:
-  - 登録後に利き腕・所属・用品契約などを修正できるよう、アマチュア参加者一覧に編集ボタンを追加した。
-  - 編集保存ルート:
-    - `PATCH /tournament_participants/{participant}/amateur`
-  - 削除ルート:
-    - `DELETE /tournament_participants/{participant}/amateur`
-  - 編集保存時は、アマチュア選手マスターと大会参加者情報の両方を更新する方針にした。
-  - 既存 `game_scores` の `name` / `entry_number` も必要に応じて追従させるようにした。
-  - 画面確認で、アマチュア参加者一覧に `編集 / 削除` が表示され、編集後の利き腕・所属が一覧へ反映されることを確認した。
-
-- アマチュア5名のPDF反映:
-  - THE OPENのアマチュア5名について、利き腕と所属を登録した。
-  - PDF出力で以下のように表示されることを確認した。
-    - 戸塚知菜: `アマ` / `右` / `（アソビックスびさい）`
-    - 坂本真貴子: `アマ` / `右` / `（ラピュタボウル宇治東）`
-    - 藤林華音: `アマ` / `右` / `（ボウルアロー八尾店）`
-    - 中村華世: `アマ` / `右` / `（NBF推薦）`
-    - 野村緋那: `アマ` / `右` / `（WAVE34）`
-  - 添付PDFでは、2ページ目に戸塚知菜・坂本真貴子、3ページ目に藤林華音・中村華世・野村緋那が表示されている。
-  - これにより、速報 / snapshot / PDF でアマチュアを別人として扱う流れは、予選8G時点で確認済み。
-
-- ルート確認:
-  - アマチュア登録入口:
-    - `php artisan route:list --path=amateur-participants`
-    - `GET|HEAD tournaments/{tournament}/amateur-participants`
-    - `POST tournaments/{tournament}/amateur-participants`
-  - アマチュア編集・削除:
-    - `php artisan route:list --path=tournament_participants`
-    - `PATCH tournament_participants/{participant}/amateur`
-    - `DELETE tournament_participants/{participant}/amateur`
-  - snapshot PDF:
-    - `php artisan route:list --path=result-snapshots`
-    - `GET|HEAD tournaments/{tournament}/result-snapshots/{snapshot}/pdf`
+- 現在の表示確認:
+  - URL:
+    - `/scores/result?tournament_id=11&stage=ラウンドロビン&upto_game=8&gender_filter=F`
+  - 表示確認済み:
+    - 上段に対戦表が表示される
+    - RR進出者が準決勝通算20G上位8名になっている
+    - ROUND 1 の想定組み合わせが表示される
+    - P.M. が表上に表示される
+    - スコア未入力のため、8G成績は `W-L-T 0-0-0 / Bonus 0 / RR合計 0`
+  - ここまでの画面表示は問題なしと判断した。
 
 - 確認済みコマンド:
-  - `php -l app/Http/Controllers/TournamentEntryAdminController.php`
-  - `php -l app/Http/Controllers/TournamentResultController.php`
-  - `php -l routes/web.php`
-  - `php artisan migrate`
-  - `php tools/generate_er_from_dictionary.php`
-  - `php artisan route:clear`
-  - `php artisan view:clear`
+  - `php -l app/Services/RoundRobinService.php`
+  - `php -l app/Http/Controllers/TournamentResultSnapshotController.php`
   - `php artisan view:cache`
-  - `php artisan optimize:clear`
-  - `php artisan route:list --path=amateur-participants`
-  - `php artisan route:list --path=tournament_participants`
-  - `php artisan route:list --path=result-snapshots`
-  - `psql` による `tournament_participants` / `game_scores` / `tournament_result_snapshots` / `tournament_result_snapshot_rows` 確認
+  - `php artisan view:clear`
 
-- 今回触った主なファイル:
-  - `app/Http/Controllers/TournamentEntryAdminController.php`
-  - `app/Http/Controllers/TournamentResultController.php`
-  - `app/Services/ScoreService.php`
-  - `app/Services/TournamentResultSnapshotService.php`
-  - `database/migrations/2025_09_01_000090_create_amateur_bowlers_and_extend_tournament_participants.php`
-  - `docs/db/data_dictionary.md`
-  - `docs/db/ER.dbml`
-  - `resources/views/scores/result.blade.php`
-  - `resources/views/tournament_entries/admin_index.blade.php`
-  - `resources/views/tournament_results/pdfs/snapshot_score.blade.php`
-  - `routes/web.php`
+- 現在の未コミット差分:
+  - `app/Http/Controllers/TournamentResultSnapshotController.php`
+  - `app/Services/RoundRobinService.php`
+  - `resources/views/scores/round_robin_result.blade.php`
+  - `storage/backups/` は未追跡だがコミット対象外
 
 - DB / 辞書:
-  - 今回は `amateur_bowlers` テーブル追加と `tournament_participants.amateur_bowler_id` 追加を行ったため、DB変更あり。
-  - ルールどおり、migration / `docs/db/data_dictionary.md` / `docs/db/ER.dbml` をセットで更新した。
-  - `ER.dbml` は手編集せず、`php tools/generate_er_from_dictionary.php` で再生成した。
+  - 現在の未コミット差分3ファイルは、既存ラウンドロビン表示・正式反映処理の修正であり、DBスキーマ変更は行っていない。
+  - したがって、現時点では `migrations` / `docs/db/data_dictionary.md` / `docs/db/ER.dbml` の追加更新は不要。
+  - ただし、準決勝レーン移動表機能ではDB追加があったため、そちらは commit `55485a1` で migration / dictionary / ER をセット更新済み。
 
-- Git管理上の注意:
-  - `storage/backups/` は引き続きコミット対象外。
-  - 5G〜8G投入スクリプトなど、一時投入スクリプトはGitへ入れない。
-  - `resources/views/tournament_results/pdfs/snapshot_score.blade.php` は新規ファイルのため、`git diff --name-only` には出ず、`git status -sb` の未追跡ファイルとして確認する必要がある。
-  - `database/migrations/2025_09_01_000090_create_amateur_bowlers_and_extend_tournament_participants.php` も新規ファイルのため、コミット時に明示的に追加する必要がある。
+- 次チャット開始時の最重要確認:
+  1. まず必ず以下を確認する。
+     - `git status -sb`
+     - `git rev-parse --short HEAD`
+     - `git diff --name-only`
+  2. 想定状態:
+     - HEAD: `55485a1`
+     - 差分:
+       - `app/Http/Controllers/TournamentResultSnapshotController.php`
+       - `app/Services/RoundRobinService.php`
+       - `resources/views/scores/round_robin_result.blade.php`
+       - `?? storage/backups/`
+  3. `storage/backups/` はコミット対象外。
+  4. 次に進む前に、現差分をコミットするか、RRスコア投入まで進めてからまとめてコミットするかを決める。
 
-- 現時点で完了したこと:
-  - THE OPEN予選第1シリーズ4G入力。
-  - 速報ページのアマチュア表示修正。
-  - THE OPEN予選第2シリーズ5G〜8G投入。
-  - 予選前半8Gの速報ランキング確認。
-  - 正式反映ページでアマチュア5名が別行になる修正。
-  - 正式反映済みsnapshotから予選8G公式風PDFを出力するルート追加。
-  - アマチュア選手マスター `amateur_bowlers` の追加。
-  - 大会ごとのアマチュア参加者登録・編集・削除導線の追加。
-  - アマチュア5名の利き腕・所属を登録し、PDFへ反映確認。
-  - route / Blade cache / migrate / ER再生成まで確認済み。
+- 次にやること:
+  1. ラウンドロビン8Gのスコア投入スクリプトを作る。
+     - 公式PDFのRR結果を基準にする。
+     - RR 1G〜7G + P.M. を `game_scores.stage = ラウンドロビン` に保存する。
+     - 1選手8G、8名で64行が想定。
+  2. 投入後、以下を確認する。
+     - W-L-T
+     - Bonus
+     - RRスクラッチ
+     - RR合計
+     - 持込20G
+     - GRAND TOTAL / TOTAL POINT
+     - TV決勝進出上位3名
+  3. 公式結果PDFと一致することを確認する。
+     - 1位 久保田彩花
+     - 2位 中島瑞葵
+     - 3位 幸木百合菜
+     - ※最終的なTOTAL POINTは添付PDFと照合する
+  4. RR正式反映を行い、snapshotの `games_count` が28G相当になるか確認する。
+  5. 決勝ステップラダー入力へ進む。
+  6. 最終成績反映、ポイント・賞金・タイトル反映、PDF確認へ進む。
 
-- 残タスク / 次に詰める候補:
-  1. 現在のログ更新後に、`git status -sb` / `git diff --name-only` を確認する。
-  2. `storage/backups/` を除外しつつ、今回差分をcommit / pushする。
-  3. THE OPENの予選後半9G〜16G入力へ進む。
-     - 9〜12G投入
-     - 13〜16G投入
-     - 予選16G通算ランキング確認
-  4. 予選16G通算成績の正式反映とPDF出力を確認する。
-  5. ラウンドロビン進出者確認、ラウンドロビン入力へ進む。
-  6. 決勝ステップラダー入力、最終成績反映、ポイント・賞金・タイトル反映へ進む。
-  7. アマチュアが予選16G、ラウンドロビン、最終成績、PDFまで破綻なく表示されるか確認する。
-  8. snapshot PDFの見た目は最低限通ったが、公式PDFの罫線・余白・文字サイズは後続でさらに調整する余地あり。
-
-- 現時点の判断:
-  - **THE OPENの予選8G時点では、プロ/アマ混在の速報表示、正式成績反映、snapshot PDF出力、アマチュアマスター登録・編集まで通った。**
-  - **アマチュアを単なる名前だけの一時参加者ではなく、再利用可能なマスターから大会参加者として呼び出す方向へ進めて問題ない。**
-  - **次はログ更新とコミットを行い、その後THE OPENの予選後半9G〜16Gフォワードテストへ進む。**
+- 次チャットへの注意:
+  - 同じアマチュア合算事故を絶対に繰り返さない。
+  - RRスコア投入でも `license_number` だけで照合しない。
+  - プロは `pro_bowler_license_no` / `pro_bowler_id`、アマは `tournament_participant_id` / `amateur_bowler_id` / `AM-xxx` を優先する。
+  - 既存長尺ファイルを短縮版で全文上書きしない。
+  - 変更提案前に必ず差分ファイルだけを基準にする。
+  - DB変更が必要になった場合だけ、`migrations` / `docs/db/data_dictionary.md` / `docs/db/ER.dbml` をセットで更新する。
 
 ---
 

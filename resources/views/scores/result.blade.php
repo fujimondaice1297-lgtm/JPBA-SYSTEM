@@ -29,6 +29,19 @@
     }
     $baseTextHdr = $headerBaseGames . 'G × 200 = ' . number_format($headerBaseGames * $perPoint) . ' pin';
 
+    // 準決勝通算リンクでは、内部的には stage=準決勝 / upto_game=4 でも、
+    // 画面上は「予選16G + 準決勝4G = 20G通算」として見せる。
+    // 集計値はScoreService側で正しく20G合算済みなので、ここでは表示ラベルだけを整える。
+    $isSemifinalTotalDisplay = (
+        $stage === '準決勝'
+        && ((int) request('carry_prelim', $carry_prelim ?? 0) === 1)
+        && $headerBaseGames > $uptoGame
+    );
+    $displayStageTitle = $isSemifinalTotalDisplay ? '準決勝通算' : $stage;
+    $displayTargetTitle = $isSemifinalTotalDisplay
+        ? $headerBaseGames . 'G通算（予選' . max(0, $headerBaseGames - $uptoGame) . 'G + 準決勝' . $uptoGame . 'G）'
+        : $uptoGame . 'G まで';
+
     $totals = [];
     foreach ($rows as $r) {
         $totals[] = (int)($r['total'] ?? $r['sum'] ?? 0);
@@ -377,7 +390,7 @@
     <div class="title-big">速報ランキング</div>
     <div class="title-big" style="margin-top:.2rem;">{{ $tournamentName }}</div>
     <div class="subtitle">
-        ステージ：{{ $stage }} ／ 集計対象：{{ $uptoGame }}G まで　／　基準：{{ $baseTextHdr }}
+        ステージ：{{ $displayStageTitle }} ／ 集計対象：{{ $displayTargetTitle }}　／　基準：{{ $baseTextHdr }}
     </div>
     <div class="subtitle">
         同点時は、対象ゲームのスコア差が少ない選手を上位表示
@@ -496,6 +509,19 @@
         $photo = $isAmateur ? null : ($prof['portrait_url'] ?? null);
 
         $bk = (array)($p['breakdown'] ?? []);
+
+        // 準決勝通算20Gの集計結果が、表示用breakdownでは予選側に20Gまとめて入る場合がある。
+        // その場合だけ、表示上は「予選16G」と「準決勝4G」に分割して見せる。
+        if ($isSemifinalTotalDisplay && empty($bk['準決勝']) && !empty($bk['予選'])) {
+            $mergedSemifinalTotalScores = array_values((array) $bk['予選']);
+            $prelimDisplayGameCount = max(0, $headerBaseGames - $uptoGame);
+
+            if (count($mergedSemifinalTotalScores) >= $headerBaseGames && $prelimDisplayGameCount > 0) {
+                $bk['予選'] = array_slice($mergedSemifinalTotalScores, 0, $prelimDisplayGameCount);
+                $bk['準決勝'] = array_slice($mergedSemifinalTotalScores, $prelimDisplayGameCount, $uptoGame);
+            }
+        }
+
         $stageLines = [];
         $baseGamesPerRow = 0;
 
@@ -510,6 +536,10 @@
                     $baseGamesPerRow += count($scores);
                 }
             }
+        }
+
+        if ($isSemifinalTotalDisplay) {
+            $baseGamesPerRow = $headerBaseGames;
         }
 
         if ($baseGamesPerRow === 0 && !empty($p['games'])) {

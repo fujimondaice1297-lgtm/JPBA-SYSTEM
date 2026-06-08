@@ -267,10 +267,9 @@ class TournamentController extends Controller
 
     private function normalizeShootoutSettings(Request $request, bool $usesShootout, ?int $shootoutQualifierCount): ?array
     {
-        if (!$usesShootout) {
-            return null;
-        }
-
+        // 既存カラム名は shootout_settings だが、stage_progress は
+        // シュートアウト専用ではなく「大会進行ゲーム数設定」として共通利用する。
+        // そのため、RR方式など usesShootout=false の大会でも stage_progress は保存する。
         $shootoutSettingsRaw = trim((string) $request->input('shootout_settings', ''));
         $settings = [];
 
@@ -286,12 +285,21 @@ class TournamentController extends Controller
             $settings = $decodedShootoutSettings;
         }
 
-        $stageProgress = $this->normalizeShootoutStageProgress($request, $shootoutQualifierCount);
+        $stageProgress = $this->normalizeShootoutStageProgress(
+            request: $request,
+            shootoutQualifierCount: $usesShootout ? $shootoutQualifierCount : null
+        );
 
         if (!empty($stageProgress)) {
             $settings['stage_progress'] = $stageProgress;
         } else {
             unset($settings['stage_progress']);
+        }
+
+        if (!$usesShootout && isset($settings['stage_progress'])) {
+            $settings = [
+                'stage_progress' => $settings['stage_progress'],
+            ];
         }
 
         return !empty($settings) ? $settings : null;

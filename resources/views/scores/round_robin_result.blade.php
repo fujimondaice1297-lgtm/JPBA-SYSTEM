@@ -5,6 +5,14 @@
     $meta = (array) ($rr['meta'] ?? []);
     $players = (array) ($rr['players'] ?? []);
     $matrix = (array) ($rr['matrix'] ?? []);
+    $rounds = (array) ($rr['rounds'] ?? []);
+    $playerBySeed = [];
+    foreach ($players as $playerForMap) {
+        $seedForMap = (int) ($playerForMap['seed'] ?? 0);
+        if ($seedForMap > 0) {
+            $playerBySeed[$seedForMap] = $playerForMap;
+        }
+    }
     $uptoGame = (int) ($meta['upto_game'] ?? $upto_game ?? 1);
     $roundRobinGames = (int) ($meta['round_robin_games'] ?? 8);
     $winBonus = (int) ($meta['win_bonus'] ?? 30);
@@ -15,6 +23,8 @@
     $snapshotIndexUrl = request('tournament_id')
         ? route('tournaments.result_snapshots.index', ['tournament' => request('tournament_id')])
         : null;
+
+    $stageLinks = (isset($stageLinks) && is_array($stageLinks)) ? $stageLinks : [];
 
 
     $seedService = app(\App\Services\ProBowlerSeedService::class);
@@ -139,6 +149,20 @@
         return null;
     };
 
+    $roundRobinMatchPlayerLabel = function (?int $seed) use (&$playerBySeed): string {
+        if ($seed === null || $seed <= 0 || !isset($playerBySeed[$seed])) {
+            return '—';
+        }
+
+        $player = (array) $playerBySeed[$seed];
+        $name = trim((string) ($player['display_name'] ?? ''));
+        $seedNo = (int) ($player['seed'] ?? $seed);
+
+        return $name !== '' ? ($seedNo . ' ' . $name) : ((string) $seedNo);
+    };
+
+    $roundRobinLaneColumns = ['9L-10L', '15L-16L', '21L-22L', '27L-28L'];
+
     $resolveTournamentPhotoUrl = function (array $player) use ($resolveDefaultPhotoUrl) {
         $tournamentId = (int) request('tournament_id');
         $participantKey = trim((string) ($player['participant_key'] ?? ''));
@@ -214,7 +238,15 @@
     .rr-tie { color:#92400e; font-weight:700; }
     .rr-nav { display:flex; gap:.6rem; flex-wrap:wrap; margin-bottom:1rem; }
     .rr-nav a { text-decoration:none; padding:.35rem .6rem; border:1px solid #d1d5db; border-radius:.5rem; background:#f9fafb; }
+    .rr-stage-move { display:flex; gap:.4rem; align-items:center; flex-wrap:wrap; margin:.25rem 0; }
+    .rr-stage-move-label { color:#374151; font-size:.86rem; font-weight:700; }
+    .rr-stage-move a.rr-stage-active { background:#1d4ed8; color:#fff; border-color:#1d4ed8; }
     .rr-note { color:#374151; font-size:.92rem; margin-top:.5rem; }
+    .rr-official-match-table th,
+    .rr-official-match-table td { min-width: 9rem; }
+    .rr-official-match-table th:first-child,
+    .rr-official-match-table td:first-child { min-width: 4.2rem; }
+    .rr-match-versus { color:#6b7280; font-size:.82rem; padding:0 .2rem; }
 
     .rr-step-qualifiers {
         margin: 1.25rem 0 1.5rem;
@@ -323,6 +355,17 @@
             <a class="btn btn-outline-primary" href="{{ $snapshotIndexUrl }}">正式成績反映ページへ</a>
         @endif
 
+        @if(!empty($stageLinks))
+            <div class="rr-stage-move">
+                <span class="rr-stage-move-label">大会内移動：</span>
+                @foreach($stageLinks as $stageLink)
+                    <a class="btn btn-outline-secondary {{ !empty($stageLink['active']) ? 'rr-stage-active' : '' }}" href="{{ $stageLink['url'] }}">
+                        {{ $stageLink['label'] }}
+                    </a>
+                @endforeach
+            </div>
+        @endif
+
         <a class="btn btn-outline-secondary" href="{{ route('scores.result', array_filter([
             'tournament_id' => request('tournament_id'),
             'stage' => 'ラウンドロビン',
@@ -371,6 +414,55 @@
 
         <div id="rr-matchups" class="rr-table-wrap">
             <h4>対戦表</h4>
+
+            @if(!empty($rounds))
+                <table class="rr-table rr-official-match-table mb-3">
+                    <thead>
+                        <tr>
+                            <th>ROUND</th>
+                            @foreach($roundRobinLaneColumns as $laneColumn)
+                                <th>{{ $laneColumn }}</th>
+                            @endforeach
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($rounds as $roundPairs)
+                            @php
+                                $roundPairs = array_values((array) $roundPairs);
+                                $roundLabel = trim((string) ($roundPairs[0]['label'] ?? ''));
+                                if ($roundLabel === '') {
+                                    $roundLabel = (string) ($loop->iteration);
+                                }
+                            @endphp
+                            <tr>
+                                <td>{{ $roundLabel }}</td>
+                                @foreach($roundRobinLaneColumns as $laneColumn)
+                                    @php
+                                        $pairForLane = null;
+                                        foreach ($roundPairs as $candidatePair) {
+                                            if ((string) ($candidatePair['lane_pair_label'] ?? '') === $laneColumn) {
+                                                $pairForLane = (array) $candidatePair;
+                                                break;
+                                            }
+                                        }
+                                        if ($pairForLane === null) {
+                                            $pairForLane = (array) ($roundPairs[$loop->index] ?? []);
+                                        }
+                                        $leftSeed = isset($pairForLane['left_seed']) ? (int) $pairForLane['left_seed'] : null;
+                                        $rightSeed = isset($pairForLane['right_seed']) ? (int) $pairForLane['right_seed'] : null;
+                                    @endphp
+                                    <td>
+                                        {{ $roundRobinMatchPlayerLabel($leftSeed) }}
+                                        <span class="rr-match-versus">VS</span>
+                                        {{ $roundRobinMatchPlayerLabel($rightSeed) }}
+                                    </td>
+                                @endforeach
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            @endif
+
             <table class="rr-table">
                 <thead>
                     <tr>
@@ -411,7 +503,7 @@
                     @endforeach
                 </tbody>
             </table>
-            <div class="rr-note">JPBAの「対戦表」を基準にしつつ、同一マス内でゲーム番号・スコア・勝敗をまとめて確認できる形にしています。</div>
+            <div class="rr-note">上段は公式PDFのROUND別対戦表、下段は各選手から見た対戦結果マトリクスです。</div>
         </div>
 
         @if(count($stepLadderEntrants) > 0)
