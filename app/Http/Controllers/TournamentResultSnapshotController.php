@@ -1550,10 +1550,30 @@ final class TournamentResultSnapshotController extends Controller
             ? $this->loadSnapshotRowsAsArrays((int) $roundRobinSnapshot->id)
             : [];
 
-        $baseSnapshot = $this->findStepLadderBaseSnapshot($tournamentId, $gender, $shift);
-        $baseRows = $baseSnapshot
-            ? $this->loadSnapshotRowsAsArrays((int) $baseSnapshot->id)
-            : [];
+        $baseSnapshots = $this->findStepLadderBaseSnapshots($tournamentId, $gender, $shift);
+        $baseRows = [];
+
+        /*
+         * ステップラダー最終成績の非進出者は、単一snapshotだけで繰り下げると誤る。
+         * THE OPENのような「予選16G → 準決勝通算20G → RR → 決勝SL」では、
+         * 9〜30位は準決勝通算20G、31位以降は予選16Gを保持する必要がある。
+         * そのため、準決勝通算 → 予選通算の順に読み、同一選手は先に見つかった上位ステージ側を正とする。
+         */
+        $registeredBaseKeys = [];
+        foreach ($baseSnapshots as $baseSnapshot) {
+            foreach ($this->loadSnapshotRowsAsArrays((int) $baseSnapshot->id) as $row) {
+                $key = $this->identityKeyFromSnapshotArray($row);
+                if ($key !== '' && isset($registeredBaseKeys[$key])) {
+                    continue;
+                }
+
+                $baseRows[] = $row;
+
+                if ($key !== '') {
+                    $registeredBaseKeys[$key] = true;
+                }
+            }
+        }
 
         $lookupRows = [];
         foreach (array_merge($roundRobinRows, $baseRows) as $row) {
@@ -1629,22 +1649,41 @@ final class TournamentResultSnapshotController extends Controller
         return $finalRows;
     }
 
-    private function findStepLadderBaseSnapshot(int $tournamentId, ?string $gender, ?string $shift): ?object
+    /**
+     * ステップラダー最終成績の繰り下げ用snapshotを、上位ステージから順に返す。
+     *
+     * 例:
+     * - THE OPEN: 準決勝通算20G → 予選16G
+     *   9〜30位は準決勝通算20G、31位以降は予選16Gとして残す。
+     *
+     * @return array<int,object>
+     */
+    private function findStepLadderBaseSnapshots(int $tournamentId, ?string $gender, ?string $shift): array
     {
         $flowType = trim((string) DB::table('tournaments')->where('id', $tournamentId)->value('result_flow_type'));
 
-        $codes = $flowType === 'prelim_to_quarterfinal_to_rr_to_final'
-            ? ['quarterfinal_total', 'prelim_total', 'semifinal_total', 'round_robin_total']
-            : ['prelim_total', 'quarterfinal_total', 'semifinal_total', 'round_robin_total'];
+        $codes = match ($flowType) {
+            'prelim_to_quarterfinal_to_rr_to_final' => [
+                'quarterfinal_total',
+                'semifinal_total',
+                'prelim_total',
+            ],
+            default => [
+                'semifinal_total',
+                'quarterfinal_total',
+                'prelim_total',
+            ],
+        };
 
+        $snapshots = [];
         foreach (array_values(array_unique($codes)) as $code) {
             $snapshot = $this->findCurrentSnapshotByCode($tournamentId, $code, $gender, $shift);
             if ($snapshot) {
-                return $snapshot;
+                $snapshots[] = $snapshot;
             }
         }
 
-        return null;
+        return $snapshots;
     }
 
     private function findCurrentSnapshotByCode(int $tournamentId, string $resultCode, ?string $gender, ?string $shift): ?object

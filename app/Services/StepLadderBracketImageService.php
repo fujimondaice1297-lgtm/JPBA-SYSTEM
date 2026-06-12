@@ -140,6 +140,7 @@ class StepLadderBracketImageService
         $championName = $finalDone ? $displayName($finalWinner) : '未確定';
 
         // 勝者線：1回戦
+        // テンプレート枠の端に合わせるため、太線は imageline の丸めではなく矩形で描画する。
         if ($semiDone && $isSemiTopWinner) {
             $this->drawLine($canvas, 854, 506, 1105, 506, $red, 8);
         } elseif ($semiDone && $isSemiBottomWinner) {
@@ -149,11 +150,12 @@ class StepLadderBracketImageService
         }
 
         // 勝者線：優勝決定戦
+        // 右側の優勝枠へ赤線が入り込みすぎないよう、優勝枠左端の手前で止める。
         if ($finalDone && $isFinalTopWinner) {
-            $this->drawLine($canvas, 959, 330, 1237, 330, $red, 8);
+            $this->drawLine($canvas, 959, 330, 1227, 330, $red, 8);
         } elseif ($finalDone && $isFinalBottomWinner) {
             $this->drawLine($canvas, 1105, 506, 1105, 330, $red, 8);
-            $this->drawLine($canvas, 1105, 330, 1237, 330, $red, 8);
+            $this->drawLine($canvas, 1105, 330, 1227, 330, $red, 8);
         }
 
         // 氏名
@@ -192,6 +194,22 @@ class StepLadderBracketImageService
 
     private function drawLine($image, int $x1, int $y1, int $x2, int $y2, int $color, int $thickness): void
     {
+        $half = max(1, (int) floor($thickness / 2));
+
+        if ($y1 === $y2) {
+            $left = min($x1, $x2);
+            $right = max($x1, $x2);
+            imagefilledrectangle($image, $left, $y1 - $half, $right, $y1 + $half, $color);
+            return;
+        }
+
+        if ($x1 === $x2) {
+            $top = min($y1, $y2);
+            $bottom = max($y1, $y2);
+            imagefilledrectangle($image, $x1 - $half, $top, $x1 + $half, $bottom, $color);
+            return;
+        }
+
         imagesetthickness($image, $thickness);
         imageline($image, $x1, $y1, $x2, $y2, $color);
         imagesetthickness($image, 1);

@@ -48,12 +48,19 @@
             return '-';
         }
 
+        $compact = $normalizeText($name);
+
+        // 外国名・カタカナ名は途中に全角スペースを入れるとPDF表で2行化しやすい。
+        // 例: チョン・ヨンヒャン。中黒を含む氏名は1セル1行で出す。
+        if ($compact !== '' && preg_match('/[・･]/u', $compact)) {
+            return $compact;
+        }
+
         if (preg_match('/[\s　]+/u', $name)) {
             $parts = preg_split('/[\s　]+/u', $name, -1, PREG_SPLIT_NO_EMPTY);
             return !empty($parts) ? implode('　', $parts) : $name;
         }
 
-        $compact = $normalizeText($name);
         $length = mb_strlen($compact, 'UTF-8');
         if ($length <= 2) {
             return $compact;
@@ -151,6 +158,7 @@
     $prelimQualifierCount = $readStageInt('prelim_qualifier_count', $autoSemifinalQualifierCount($prelimPlayerCount));
     $semifinalGameCount = $readStageInt('semifinal_game_count', 4);
     $semifinalTotalGameCount = $readStageInt('semifinal_total_game_count', ($prelimGameCount ?? 8) + ($semifinalGameCount ?? 4));
+    $roundRobinGameCount = $readStageInt('round_robin_game_count', 8);
     $semifinalQualifierCount = $readStageInt('semifinal_qualifier_count', isset($tournament) && isset($tournament->shootout_qualifier_count) ? (int) $tournament->shootout_qualifier_count : 8);
 
     $isShootoutFlow = in_array($flowType, [
@@ -435,36 +443,11 @@
             $latestByResultCode[$code] = $snapshotSet;
         }
     }
-    $orderedCodes = ['semifinal_total', 'prelim_total'];
+    $orderedCodes = ['round_robin_total', 'semifinal_total', 'prelim_total'];
     $pdfScoreSnapshots = [];
     foreach ($orderedCodes as $code) {
         if (isset($latestByResultCode[$code])) {
             $pdfScoreSnapshots[] = $latestByResultCode[$code];
-        }
-    }
-
-    $gameScoreMap = [];
-    $gameScoreRowsForPdf = collect();
-    if (isset($tournament) && isset($tournament->id)) {
-        try {
-            $gameScoreRows = \Illuminate\Support\Facades\DB::table('game_scores')
-                ->where('tournament_id', $tournament->id)
-                ->whereIn('stage', ['予選', '準決勝'])
-                ->orderBy('stage')
-                ->orderBy('game_number')
-                ->get();
-            $gameScoreRowsForPdf = $gameScoreRows;
-            foreach ($gameScoreRows as $gameScoreRow) {
-                $stage = trim((string) ($gameScoreRow->stage ?? ''));
-                $gameNumber = (int) ($gameScoreRow->game_number ?? 0);
-                if ($stage === '' || $gameNumber <= 0) continue;
-                $licenseKey = strtoupper(trim((string) ($gameScoreRow->license_number ?? '')));
-                $nameKey = $normalizeText($gameScoreRow->name ?? '');
-                if ($licenseKey !== '') $gameScoreMap[$stage]['license'][$licenseKey][$gameNumber] = (int) ($gameScoreRow->score ?? 0);
-                if ($nameKey !== '') $gameScoreMap[$stage]['name'][$nameKey][$gameNumber] = (int) ($gameScoreRow->score ?? 0);
-            }
-        } catch (\Throwable $e) {
-            $gameScoreMap = [];
         }
     }
 
@@ -473,6 +456,36 @@
         $digits = preg_replace('/\D+/u', '', trim((string) $license)) ?? '';
         return $digits === '' ? '' : ltrim($digits, '0');
     };
+
+    $gameScoreMap = [];
+    $gameScoreRowsForPdf = collect();
+    if (isset($tournament) && isset($tournament->id)) {
+        try {
+            $gameScoreRows = \Illuminate\Support\Facades\DB::table('game_scores')
+                ->where('tournament_id', $tournament->id)
+                ->whereIn('stage', ['予選', '準決勝', 'ラウンドロビン'])
+                ->orderBy('stage')
+                ->orderBy('game_number')
+                ->get();
+            $gameScoreRowsForPdf = $gameScoreRows;
+            foreach ($gameScoreRows as $gameScoreRow) {
+                $stage = trim((string) ($gameScoreRow->stage ?? ''));
+                $gameNumber = (int) ($gameScoreRow->game_number ?? 0);
+                if ($stage === '' || $gameNumber <= 0) continue;
+
+                $licenseRaw = trim((string) ($gameScoreRow->license_number ?? ''));
+                $licenseKey = $normalizeLicenseKey($licenseRaw);
+                $tailKey = $licenseTailKey($licenseRaw);
+                $nameKey = $normalizeText($gameScoreRow->name ?? '');
+
+                if ($licenseKey !== '') $gameScoreMap[$stage]['license'][$licenseKey][$gameNumber] = (int) ($gameScoreRow->score ?? 0);
+                if ($tailKey !== '') $gameScoreMap[$stage]['tail'][$tailKey][$gameNumber] = (int) ($gameScoreRow->score ?? 0);
+                if ($nameKey !== '') $gameScoreMap[$stage]['name'][$nameKey][$gameNumber] = (int) ($gameScoreRow->score ?? 0);
+            }
+        } catch (\Throwable $e) {
+            $gameScoreMap = [];
+        }
+    }
 
     $snapshotMetaById = [];
     foreach ($pdfScoreSnapshots as $snapshotSetForMeta) {
@@ -491,45 +504,59 @@
     $proBowlerInfoById = [];
     $proBowlerInfoByLicense = [];
     $proBowlerInfoByTail = [];
+    $proBowlerInfoByName = [];
     try {
-        $proBowlerIds = [];
-        $licenseCandidates = [];
-        foreach ($resultRows as $result) {
-            $id = $result->pro_bowler_id ?? optional($result->player ?? null)->id ?? optional($result->bowler ?? null)->id ?? null;
-            if ($id) $proBowlerIds[] = (int) $id;
-            $licenseCandidates[] = $result->pro_bowler_license_no ?? optional($result->player ?? null)->license_no ?? optional($result->bowler ?? null)->license_no ?? null;
-        }
-        foreach ($pdfScoreSnapshots as $snapshotSet) {
-            foreach (($snapshotSet['rows'] ?? []) as $row) {
-                $id = $row->pro_bowler_id ?? ($row['pro_bowler_id'] ?? null);
-                if ($id) $proBowlerIds[] = (int) $id;
-                $licenseCandidates[] = $row->pro_bowler_license_no ?? ($row['pro_bowler_license_no'] ?? null) ?? null;
-            }
-        }
-        foreach ($gameScoreRowsForPdf as $gameScoreRow) {
-            if (!empty($gameScoreRow->pro_bowler_id)) $proBowlerIds[] = (int) $gameScoreRow->pro_bowler_id;
-            $licenseCandidates[] = $gameScoreRow->license_number ?? null;
-        }
-        $proBowlerIds = array_values(array_unique(array_filter($proBowlerIds)));
-        $licenseCandidates = array_values(array_unique(array_filter(array_map($normalizeLicenseKey, $licenseCandidates))));
-        $query = \Illuminate\Support\Facades\DB::table('pro_bowlers');
-        if (count($proBowlerIds) > 0 || count($licenseCandidates) > 0) {
-            $query->where(function ($q) use ($proBowlerIds, $licenseCandidates) {
-                if (count($proBowlerIds) > 0) $q->whereIn('id', $proBowlerIds);
-                if (count($licenseCandidates) > 0) $q->orWhereIn('license_no', $licenseCandidates);
-            });
-            foreach ($query->get() as $proBowlerInfo) {
-                $proBowlerInfoById[(int) $proBowlerInfo->id] = $proBowlerInfo;
-                $licenseKey = $normalizeLicenseKey($proBowlerInfo->license_no ?? '');
-                if ($licenseKey !== '') $proBowlerInfoByLicense[$licenseKey] = $proBowlerInfo;
-                $tailKey = $licenseTailKey($proBowlerInfo->license_no ?? '');
-                if ($tailKey !== '') $proBowlerInfoByTail[$tailKey] = $proBowlerInfo;
-            }
+        // PDF詳細表ではスナップショット側が下4桁だけ持つケースがあるため、
+        // ここでは必要最小限の全プロマスタを読み、id / full license / 下4桁 / 氏名で引けるようにする。
+        foreach (\Illuminate\Support\Facades\DB::table('pro_bowlers')->get() as $proBowlerInfo) {
+            $proBowlerInfoById[(int) $proBowlerInfo->id] = $proBowlerInfo;
+
+            $licenseKey = $normalizeLicenseKey($proBowlerInfo->license_no ?? '');
+            if ($licenseKey !== '') $proBowlerInfoByLicense[$licenseKey] = $proBowlerInfo;
+
+            $tailKey = $licenseTailKey($proBowlerInfo->license_no ?? '');
+            if ($tailKey !== '') $proBowlerInfoByTail[$tailKey] = $proBowlerInfo;
+
+            $licenseNoNumTail = $licenseTailKey($proBowlerInfo->license_no_num ?? '');
+            if ($licenseNoNumTail !== '') $proBowlerInfoByTail[$licenseNoNumTail] = $proBowlerInfo;
+
+            $nameKey = $normalizeText($proBowlerInfo->name_kanji ?? '');
+            if ($nameKey !== '') $proBowlerInfoByName[$nameKey] = $proBowlerInfo;
         }
     } catch (\Throwable $e) {
         $proBowlerInfoById = [];
         $proBowlerInfoByLicense = [];
         $proBowlerInfoByTail = [];
+        $proBowlerInfoByName = [];
+    }
+
+    $participantInfoByProId = [];
+    $participantInfoByLicense = [];
+    $participantInfoByTail = [];
+    $participantInfoByName = [];
+    if (isset($tournament) && isset($tournament->id)) {
+        try {
+            if (\Illuminate\Support\Facades\Schema::hasTable('tournament_participants')) {
+                foreach (\Illuminate\Support\Facades\DB::table('tournament_participants')->where('tournament_id', $tournament->id)->get() as $participantInfo) {
+                    $participantProId = (int) ($participantInfo->pro_bowler_id ?? 0);
+                    if ($participantProId > 0) $participantInfoByProId[$participantProId] = $participantInfo;
+
+                    $participantLicense = trim((string) ($participantInfo->pro_bowler_license_no ?? $participantInfo->display_license_no ?? ''));
+                    $participantLicenseKey = $normalizeLicenseKey($participantLicense);
+                    $participantTailKey = $licenseTailKey($participantLicense);
+                    if ($participantLicenseKey !== '') $participantInfoByLicense[$participantLicenseKey] = $participantInfo;
+                    if ($participantTailKey !== '') $participantInfoByTail[$participantTailKey] = $participantInfo;
+
+                    $participantNameKey = $normalizeText($participantInfo->display_name ?? '');
+                    if ($participantNameKey !== '') $participantInfoByName[$participantNameKey] = $participantInfo;
+                }
+            }
+        } catch (\Throwable $e) {
+            $participantInfoByProId = [];
+            $participantInfoByLicense = [];
+            $participantInfoByTail = [];
+            $participantInfoByName = [];
+        }
     }
 
     $snapshotValue = function ($row, array $keys, $default = '') {
@@ -562,7 +589,7 @@
         return $formatPersonName($snapshotValue($row, ['display_name', 'name', 'amateur_name'], '-'));
     };
 
-    $snapshotInfo = function ($row) use ($snapshotValue, $snapshotLicenseRaw, $normalizeLicenseKey, $licenseTailKey, $proBowlerInfoById, $proBowlerInfoByLicense, $proBowlerInfoByTail) {
+    $snapshotInfo = function ($row) use ($snapshotValue, $snapshotLicenseRaw, $snapshotName, $normalizeLicenseKey, $licenseTailKey, $normalizeText, $proBowlerInfoById, $proBowlerInfoByLicense, $proBowlerInfoByTail, $proBowlerInfoByName) {
         $id = $snapshotValue($row, ['pro_bowler_id'], '');
         if ($id !== '' && isset($proBowlerInfoById[(int) $id])) return $proBowlerInfoById[(int) $id];
         $license = $snapshotLicenseRaw($row);
@@ -570,6 +597,25 @@
         if ($licenseKey !== '' && isset($proBowlerInfoByLicense[$licenseKey])) return $proBowlerInfoByLicense[$licenseKey];
         $tailKey = $licenseTailKey($license);
         if ($tailKey !== '' && isset($proBowlerInfoByTail[$tailKey])) return $proBowlerInfoByTail[$tailKey];
+        $nameKey = $normalizeText($snapshotName($row));
+        if ($nameKey !== '' && isset($proBowlerInfoByName[$nameKey])) return $proBowlerInfoByName[$nameKey];
+        return null;
+    };
+
+    $snapshotParticipantInfo = function ($row) use ($snapshotValue, $snapshotLicenseRaw, $normalizeLicenseKey, $licenseTailKey, $normalizeText, $snapshotName, $participantInfoByProId, $participantInfoByLicense, $participantInfoByTail, $participantInfoByName) {
+        $id = $snapshotValue($row, ['pro_bowler_id'], '');
+        if ($id !== '' && isset($participantInfoByProId[(int) $id])) return $participantInfoByProId[(int) $id];
+
+        $license = $snapshotLicenseRaw($row);
+        $licenseKey = $normalizeLicenseKey($license);
+        if ($licenseKey !== '' && isset($participantInfoByLicense[$licenseKey])) return $participantInfoByLicense[$licenseKey];
+
+        $tailKey = $licenseTailKey($license);
+        if ($tailKey !== '' && isset($participantInfoByTail[$tailKey])) return $participantInfoByTail[$tailKey];
+
+        $nameKey = $normalizeText($snapshotName($row));
+        if ($nameKey !== '' && isset($participantInfoByName[$nameKey])) return $participantInfoByName[$nameKey];
+
         return null;
     };
 
@@ -588,10 +634,11 @@
         return $formatPeriodDigits($period);
     };
 
-    $snapshotArm = function ($row) use ($snapshotValue, $snapshotInfo, $infoValue, $snapshotMeta) {
+    $snapshotArm = function ($row) use ($snapshotValue, $snapshotInfo, $snapshotParticipantInfo, $infoValue, $snapshotMeta) {
         $arm = $snapshotValue($row, ['arm', 'dominant_arm', 'dominant_hand', 'throwing_arm'], '');
         $meta = $snapshotMeta($row);
         if ($arm === '' && is_array($meta) && !empty($meta['arm'])) $arm = (string) $meta['arm'];
+        if ($arm === '') $arm = $infoValue($snapshotParticipantInfo($row), ['display_dominant_arm', 'dominant_arm', 'dominant_hand', 'throwing_arm'], '');
         if ($arm === '') $arm = $infoValue($snapshotInfo($row), ['dominant_arm', 'dominant_hand', 'throwing_arm', 'handedness', 'arm'], '');
         $arm = trim((string) $arm);
         if ($arm === '') return '-';
@@ -601,10 +648,18 @@
         return $arm;
     };
 
-    $snapshotBelong = function ($row) use ($snapshotInfo, $infoValue, $snapshotMeta, $joinAffiliationParts) {
+    $snapshotBelong = function ($row) use ($snapshotInfo, $snapshotParticipantInfo, $infoValue, $snapshotMeta, $joinAffiliationParts) {
         $meta = $snapshotMeta($row);
         if (is_array($meta) && !empty($meta['affiliation'])) {
             return $joinAffiliationParts((string) $meta['affiliation']);
+        }
+
+        $participant = $snapshotParticipantInfo($row);
+        $organization = $infoValue($participant, ['display_affiliation_name', 'affiliation', 'belonging', 'organization_name', 'organization', 'center_name'], '');
+        $equipment = $infoValue($participant, ['display_equipment_contract', 'equipment_contract', 'equipment', 'equipment_sponsor'], '');
+
+        if ($organization !== '' || $equipment !== '') {
+            return $joinAffiliationParts($organization, $equipment);
         }
 
         $info = $snapshotInfo($row);
@@ -621,11 +676,24 @@
         return 'snapshot-belong-cell';
     };
 
-    $snapshotScoreFor = function ($stage, $row, int $gameNumber) use ($snapshotValue, $snapshotName, $normalizeText, $gameScoreMap) {
-        $license = strtoupper(trim((string) $snapshotValue($row, ['pro_bowler_license_no', 'license_number', 'license_no'], '')));
-        if ($license !== '' && isset($gameScoreMap[$stage]['license'][$license][$gameNumber])) return $gameScoreMap[$stage]['license'][$license][$gameNumber];
+    $snapshotScoreFor = function ($stage, $row, int $gameNumber) use ($snapshotValue, $snapshotName, $normalizeText, $normalizeLicenseKey, $licenseTailKey, $gameScoreMap, $prelimGameCount) {
+        $licenseRaw = trim((string) $snapshotValue($row, ['pro_bowler_license_no', 'license_number', 'license_no'], ''));
+        $license = $normalizeLicenseKey($licenseRaw);
+        $tailKey = $licenseTailKey($licenseRaw);
         $nameKey = $normalizeText($snapshotName($row));
-        if ($nameKey !== '' && isset($gameScoreMap[$stage]['name'][$nameKey][$gameNumber])) return $gameScoreMap[$stage]['name'][$nameKey][$gameNumber];
+
+        $lookupGameNumbers = [$gameNumber];
+        if ($stage === '準決勝' && $gameNumber >= 1 && $gameNumber <= 4) {
+            $carryOffset = (int) ($prelimGameCount ?: 16);
+            $lookupGameNumbers[] = $carryOffset + $gameNumber;
+        }
+
+        foreach (array_values(array_unique($lookupGameNumbers)) as $lookupGameNumber) {
+            if ($license !== '' && isset($gameScoreMap[$stage]['license'][$license][$lookupGameNumber])) return $gameScoreMap[$stage]['license'][$license][$lookupGameNumber];
+            if ($tailKey !== '' && isset($gameScoreMap[$stage]['tail'][$tailKey][$lookupGameNumber])) return $gameScoreMap[$stage]['tail'][$tailKey][$lookupGameNumber];
+            if ($nameKey !== '' && isset($gameScoreMap[$stage]['name'][$nameKey][$lookupGameNumber])) return $gameScoreMap[$stage]['name'][$nameKey][$lookupGameNumber];
+        }
+
         return null;
     };
 
@@ -724,6 +792,7 @@
         'prelimQualifierCount' => $prelimQualifierCount,
         'semifinalGameCount' => $semifinalGameCount,
         'semifinalTotalGameCount' => $semifinalTotalGameCount,
+        'roundRobinGameCount' => $roundRobinGameCount,
         'semifinalQualifierCount' => $semifinalQualifierCount,
         'snapshotValue' => $snapshotValue,
         'snapshotLicense' => $snapshotLicense,

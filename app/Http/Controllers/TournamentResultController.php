@@ -1204,13 +1204,13 @@ private function loadPdfScoreSnapshots(Tournament $tournament): array
     $snapshotRows = DB::table('tournament_result_snapshots')
         ->where('tournament_id', $tournament->id)
         ->where('is_current', true)
-        ->whereIn('result_code', ['prelim_total', 'semifinal_total'])
+        ->whereIn('result_code', ['prelim_total', 'semifinal_total', 'round_robin_total'])
         ->orderByDesc('id')
         ->get()
         ->groupBy('result_code')
         ->map(fn ($rows) => $rows->first());
 
-    $orderedCodes = ['semifinal_total', 'prelim_total'];
+    $orderedCodes = ['round_robin_total', 'semifinal_total', 'prelim_total'];
     $snapshots = [];
 
     foreach ($orderedCodes as $code) {
@@ -1226,9 +1226,31 @@ private function loadPdfScoreSnapshots(Tournament $tournament): array
             ->orderBy('id')
             ->get();
 
+        $isPreliminary = $this->isPreliminarySnapshot($snapshot);
+        $stageName = $this->resolveSnapshotStageName($snapshot);
+        $totalGames = max(0, (int) ($snapshot->games_count ?? 0));
+        $carryGames = max(0, (int) ($snapshot->carry_game_count ?? 0));
+        $stageGames = $isPreliminary ? $totalGames : max(0, $totalGames - $carryGames);
+
+        if ($stageGames <= 0) {
+            $stageGames = $totalGames > 0 ? $totalGames : 0;
+        }
+
+        $scoreMatrix = $this->buildSnapshotScoreMatrix($tournament, $rows, $stageName, $stageGames, $carryGames);
+        $participantProfiles = $this->buildSnapshotParticipantProfiles($rows, $tournament);
+        $carryRankMap = (!$isPreliminary && $carryGames > 0) ? $this->buildCarryRankMap($rows) : [];
+
         $snapshots[] = [
             'snapshot' => $snapshot,
             'rows' => $rows,
+            'is_preliminary' => $isPreliminary,
+            'stage_name' => $stageName,
+            'total_games' => $totalGames,
+            'carry_games' => $carryGames,
+            'stage_games' => $stageGames,
+            'score_matrix' => $scoreMatrix,
+            'participant_profiles' => $participantProfiles,
+            'carry_rank_map' => $carryRankMap,
         ];
     }
 
@@ -1577,7 +1599,7 @@ private function attachResultPdfDisplayFields($results): void
             $stageGames = $totalGames > 0 ? $totalGames : 0;
         }
 
-        $scoreMatrix = $this->buildSnapshotScoreMatrix($tournament, $rows, $stageName, $stageGames);
+        $scoreMatrix = $this->buildSnapshotScoreMatrix($tournament, $rows, $stageName, $stageGames, $carryGames);
         $seriesBlocks = $this->buildSeriesBlocks($scoreMatrix, $rows, $stageGames);
         $participantProfiles = $this->buildSnapshotParticipantProfiles($rows, $tournament);
 
@@ -1645,27 +1667,60 @@ private function attachResultPdfDisplayFields($results): void
         return ($stageGames <= 4 && $totalGames <= 12) ? 'portrait' : 'landscape';
     }
 
-    private function buildSnapshotScoreMatrix(Tournament $tournament, $rows, string $stageName, int $stageGames): array
+    private function buildSnapshotScoreMatrix(Tournament $tournament, $rows, string $stageName, int $stageGames, int $carryGames = 0): array
     {
         if ($stageGames <= 0 || $rows->isEmpty()) {
             return [];
         }
 
-        $scoreRows = DB::table('game_scores')
-            ->where('tournament_id', $tournament->id)
-            ->where('stage', $stageName)
-            ->whereBetween('game_number', [1, $stageGames])
-            ->orderBy('game_number')
-            ->get();
+        $scoreQuery = function (int $fromGame, int $toGame) use ($tournament, $stageName) {
+            return DB::table('game_scores')
+                ->where('tournament_id', $tournament->id)
+                ->where('stage', $stageName)
+                ->whereBetween('game_number', [$fromGame, $toGame])
+                ->orderBy('game_number')
+                ->get();
+        };
+
+        /*
+         * THE OPEN の準決勝は、速報・正式反映では通算20Gとして扱うが、
+         * game_scores 側の準決勝スコアは 17G〜20G に保存されている。
+         * PDF詳細表では 1G〜4G として表示する必要があるため、
+         * 非予選かつ carryGames がある場合は carryGames+1 から取得し、
+         * 表示用のゲーム番号へ引き直す。
+         *
+         * 旧データで準決勝が 1G〜4G に保存されている場合も壊さないよう、
+         * 17G〜20G が無ければ 1G〜4G をフォールバックで読む。
+         */
+        $dbGameOffset = 0;
+        if ($carryGames > 0 && $stageName !== '予選') {
+            $scoreRows = $scoreQuery($carryGames + 1, $carryGames + $stageGames);
+            $dbGameOffset = $scoreRows->isNotEmpty() ? $carryGames : 0;
+
+            if ($scoreRows->isEmpty()) {
+                $scoreRows = $scoreQuery(1, $stageGames);
+            }
+        } else {
+            $scoreRows = $scoreQuery(1, $stageGames);
+        }
 
         $scoreBuckets = [];
         foreach ($scoreRows as $scoreRow) {
+            $gameNumber = (int) $scoreRow->game_number;
+            $displayGameNumber = $dbGameOffset > 0 && $gameNumber > $dbGameOffset
+                ? $gameNumber - $dbGameOffset
+                : $gameNumber;
+
+            if ($displayGameNumber < 1 || $displayGameNumber > $stageGames) {
+                continue;
+            }
+
             foreach ($this->snapshotScoreKeys($scoreRow) as $key) {
                 if ($key === '') {
                     continue;
                 }
 
-                $scoreBuckets[$key][(int) $scoreRow->game_number] = (int) $scoreRow->score;
+                $scoreBuckets[$key][$displayGameNumber] = (int) $scoreRow->score;
             }
         }
 
@@ -1879,28 +1934,296 @@ private function attachResultPdfDisplayFields($results): void
 
     private function buildSnapshotParticipantProfiles($rows, Tournament $tournament): array
     {
-        $proBowlerIds = $rows
+        $rowsCollection = collect($rows);
+
+        $periodColumn = $this->detectProBowlerPeriodColumn();
+        $throwColumn = $this->detectProBowlerThrowColumn();
+
+        $proOrganizationColumns = [
+            'organization_name',
+            'affiliation_name',
+            'belonging_name',
+            'belonging',
+            'belongs_to',
+            'center_name',
+            'shop_name',
+            'company_name',
+            'workplace_name',
+        ];
+
+        $proEquipmentColumns = [
+            'equipment_contract',
+            'equipment_contract_name',
+            'goods_contract',
+            '用品契約',
+            'ball_contract',
+            'sponsor_name',
+            'sponsor',
+        ];
+
+        $participantOrganizationColumns = [
+            'display_affiliation_name',
+            'affiliation_name',
+            'organization_name',
+            'belonging_name',
+            'belonging',
+            'center_name',
+        ];
+
+        $participantEquipmentColumns = [
+            'display_equipment_contract',
+            'equipment_contract',
+            'equipment_contract_name',
+            'goods_contract',
+            'sponsor_name',
+        ];
+
+        $participantThrowColumns = [
+            'display_dominant_arm',
+            'dominant_arm',
+            'throwing_hand',
+            'throw_hand',
+            'handedness',
+        ];
+
+        $existingColumns = function (string $table, array $columns): array {
+            if (!Schema::hasTable($table)) {
+                return [];
+            }
+
+            return collect($columns)
+                ->filter(fn ($column) => Schema::hasColumn($table, $column))
+                ->values()
+                ->all();
+        };
+
+        $firstValue = function (?object $source, array $columns): string {
+            if (!$source) {
+                return '';
+            }
+
+            foreach ($columns as $column) {
+                $value = trim((string) ($source->{$column} ?? ''));
+                if ($value !== '' && $value !== '-') {
+                    return $value;
+                }
+            }
+
+            return '';
+        };
+
+        $proSelect = array_values(array_unique(array_filter(array_merge(
+            ['id', 'license_no', 'license_no_num', 'name_kanji'],
+            [$periodColumn, $throwColumn],
+            $existingColumns('pro_bowlers', $proOrganizationColumns),
+            $existingColumns('pro_bowlers', $proEquipmentColumns)
+        ))));
+
+        $participantSelect = array_values(array_unique(array_filter(array_merge(
+            [
+                'id',
+                'tournament_id',
+                'pro_bowler_id',
+                'pro_bowler_license_no',
+                'display_name',
+                'participant_type',
+                'amateur_bowler_id',
+            ],
+            $existingColumns('tournament_participants', $participantOrganizationColumns),
+            $existingColumns('tournament_participants', $participantEquipmentColumns),
+            $existingColumns('tournament_participants', $participantThrowColumns)
+        ))));
+
+        $proBowlerIds = $rowsCollection
             ->pluck('pro_bowler_id')
             ->filter()
             ->map(fn ($id) => (int) $id)
             ->unique()
             ->values();
 
-        $periodColumn = $this->detectProBowlerPeriodColumn();
-        $throwColumn = $this->detectProBowlerThrowColumn();
+        $rowLicenses = $rowsCollection
+            ->pluck('pro_bowler_license_no')
+            ->map(fn ($license) => trim((string) $license))
+            ->filter(fn ($license) => $license !== '' && $license !== 'アマ')
+            ->unique()
+            ->values();
 
-        $select = array_values(array_unique(array_filter([
-            'id',
-            'license_no',
-            'organization_name',
-            'equipment_contract',
-            $periodColumn,
-            $throwColumn,
-        ])));
+        $rowLicenseLast4s = $rowLicenses
+            ->map(fn ($license) => $this->licenseLastDigits($license))
+            ->filter()
+            ->unique()
+            ->values();
 
-        $proBowlers = $proBowlerIds->isEmpty()
-            ? collect()
-            : ProBowler::query()->select($select)->whereIn('id', $proBowlerIds->all())->get()->keyBy('id');
+        $rowNames = $rowsCollection
+            ->map(fn ($row) => trim((string) ($row->display_name ?? $row->amateur_name ?? '')))
+            ->filter()
+            ->unique()
+            ->values();
+
+        $proBowlers = collect();
+        if (!empty($proSelect) && ($proBowlerIds->isNotEmpty() || $rowLicenses->isNotEmpty() || $rowLicenseLast4s->isNotEmpty() || $rowNames->isNotEmpty())) {
+            $proQuery = ProBowler::query()->select($proSelect);
+            $proQuery->where(function ($query) use ($proBowlerIds, $rowLicenses, $rowLicenseLast4s, $rowNames): void {
+                $hasCondition = false;
+
+                if ($proBowlerIds->isNotEmpty()) {
+                    $query->whereIn('id', $proBowlerIds->all());
+                    $hasCondition = true;
+                }
+
+                if (Schema::hasColumn('pro_bowlers', 'license_no') && $rowLicenses->isNotEmpty()) {
+                    $method = $hasCondition ? 'orWhereIn' : 'whereIn';
+                    $query->{$method}('license_no', $rowLicenses->all());
+                    $hasCondition = true;
+                }
+
+                if (Schema::hasColumn('pro_bowlers', 'license_no_num') && $rowLicenseLast4s->isNotEmpty()) {
+                    $method = $hasCondition ? 'orWhereIn' : 'whereIn';
+                    $query->{$method}('license_no_num', $rowLicenseLast4s->all());
+                    $hasCondition = true;
+                }
+
+                if (Schema::hasColumn('pro_bowlers', 'name_kanji') && $rowNames->isNotEmpty()) {
+                    $method = $hasCondition ? 'orWhereIn' : 'whereIn';
+                    $query->{$method}('name_kanji', $rowNames->all());
+                }
+            });
+
+            $proBowlers = $proQuery->get();
+        }
+
+        $proById = $proBowlers->keyBy('id');
+        $proByLicense = [];
+        $proByLast4 = [];
+        $proByName = [];
+
+        foreach ($proBowlers as $bowler) {
+            $license = trim((string) ($bowler->license_no ?? ''));
+            if ($license !== '') {
+                $proByLicense[$this->normalizeSnapshotKey($license)] = $bowler;
+                $last4 = $this->licenseLastDigits($license);
+                if ($last4 !== '') {
+                    $proByLast4[$last4] = $bowler;
+                }
+            }
+
+            $licenseNoNum = trim((string) ($bowler->license_no_num ?? ''));
+            if ($licenseNoNum !== '') {
+                $proByLast4[$this->licenseLastDigits($licenseNoNum)] = $bowler;
+            }
+
+            $name = trim((string) ($bowler->name_kanji ?? ''));
+            if ($name !== '') {
+                $proByName[$this->normalizeSnapshotName($name)] = $bowler;
+            }
+        }
+
+        $participants = collect();
+        if (!empty($participantSelect) && Schema::hasTable('tournament_participants')) {
+            $participants = DB::table('tournament_participants')
+                ->where('tournament_id', $tournament->id)
+                ->select($participantSelect)
+                ->get();
+        }
+
+        $participantByProId = [];
+        $participantByLicense = [];
+        $participantByLast4 = [];
+        $participantByName = [];
+
+        foreach ($participants as $participant) {
+            $participantProId = (int) ($participant->pro_bowler_id ?? 0);
+            if ($participantProId > 0) {
+                $participantByProId[$participantProId] = $participant;
+            }
+
+            $license = trim((string) ($participant->pro_bowler_license_no ?? ''));
+            if ($license !== '') {
+                $participantByLicense[$this->normalizeSnapshotKey($license)] = $participant;
+                $last4 = $this->licenseLastDigits($license);
+                if ($last4 !== '') {
+                    $participantByLast4[$last4] = $participant;
+                }
+            }
+
+            $name = trim((string) ($participant->display_name ?? ''));
+            if ($name !== '') {
+                $participantByName[$this->normalizeSnapshotName($name)] = $participant;
+            }
+        }
+
+        $findParticipant = function (object $row) use ($participantByProId, $participantByLicense, $participantByLast4, $participantByName): ?object {
+            $proBowlerId = (int) ($row->pro_bowler_id ?? 0);
+            if ($proBowlerId > 0 && isset($participantByProId[$proBowlerId])) {
+                return $participantByProId[$proBowlerId];
+            }
+
+            $license = trim((string) ($row->pro_bowler_license_no ?? ''));
+            if ($license !== '' && $license !== 'アマ') {
+                $licenseKey = $this->normalizeSnapshotKey($license);
+                if (isset($participantByLicense[$licenseKey])) {
+                    return $participantByLicense[$licenseKey];
+                }
+
+                $last4 = $this->licenseLastDigits($license);
+                if ($last4 !== '' && isset($participantByLast4[$last4])) {
+                    return $participantByLast4[$last4];
+                }
+            }
+
+            $name = trim((string) ($row->display_name ?? $row->amateur_name ?? ''));
+            if ($name !== '') {
+                $nameKey = $this->normalizeSnapshotName($name);
+                if (isset($participantByName[$nameKey])) {
+                    return $participantByName[$nameKey];
+                }
+            }
+
+            return null;
+        };
+
+        $findBowler = function (object $row, ?object $participant = null) use ($proById, $proByLicense, $proByLast4, $proByName): ?object {
+            $participantProId = (int) ($participant->pro_bowler_id ?? 0);
+            if ($participantProId > 0 && $proById->has($participantProId)) {
+                return $proById->get($participantProId);
+            }
+
+            $proBowlerId = (int) ($row->pro_bowler_id ?? 0);
+            if ($proBowlerId > 0 && $proById->has($proBowlerId)) {
+                return $proById->get($proBowlerId);
+            }
+
+            foreach ([$row->pro_bowler_license_no ?? '', $participant->pro_bowler_license_no ?? ''] as $license) {
+                $license = trim((string) $license);
+                if ($license === '' || $license === 'アマ') {
+                    continue;
+                }
+
+                $licenseKey = $this->normalizeSnapshotKey($license);
+                if (isset($proByLicense[$licenseKey])) {
+                    return $proByLicense[$licenseKey];
+                }
+
+                $last4 = $this->licenseLastDigits($license);
+                if ($last4 !== '' && isset($proByLast4[$last4])) {
+                    return $proByLast4[$last4];
+                }
+            }
+
+            foreach ([$row->display_name ?? '', $participant->display_name ?? ''] as $name) {
+                $name = trim((string) $name);
+                if ($name === '') {
+                    continue;
+                }
+
+                $nameKey = $this->normalizeSnapshotName($name);
+                if (isset($proByName[$nameKey])) {
+                    return $proByName[$nameKey];
+                }
+            }
+
+            return null;
+        };
 
         $amateurProfiles = $this->buildSnapshotAmateurProfileLookup($tournament);
 
@@ -1910,28 +2233,38 @@ private function attachResultPdfDisplayFields($results): void
             $entryNumber = trim((string) ($row->entry_number ?? ''));
             $amateurName = trim((string) ($row->amateur_name ?? ''));
             $displayName = trim((string) ($row->display_name ?? ''));
-            $isAmateur = $license === 'アマ' || str_starts_with(strtoupper($entryNumber), 'AM-') || $amateurName !== '';
+            $participant = $findParticipant($row);
 
-            $bowler = null;
-            $proBowlerId = (int) ($row->pro_bowler_id ?? 0);
-            if (!$isAmateur && $proBowlerId > 0 && $proBowlers->has($proBowlerId)) {
-                $bowler = $proBowlers->get($proBowlerId);
-            }
+            $isAmateur = $license === 'アマ'
+                || str_starts_with(strtoupper($entryNumber), 'AM-')
+                || $amateurName !== ''
+                || (string) ($participant->participant_type ?? '') === 'amateur';
 
             $amateurProfile = $isAmateur
                 ? $this->findSnapshotAmateurProfile($amateurProfiles, $entryNumber, $displayName, $amateurName)
                 : null;
 
             if ($isAmateur) {
-                $throw = $this->formatThrowingHandLabel($amateurProfile['dominant_arm'] ?? '');
-                $affiliation = $this->buildAffiliationDisplay(
-                    trim((string) ($amateurProfile['affiliation_name'] ?? '')),
-                    trim((string) ($amateurProfile['equipment_contract'] ?? ''))
-                );
+                $throwValue = $amateurProfile['dominant_arm'] ?? '';
+                if ($throwValue === '') {
+                    $throwValue = $firstValue($participant, $participantThrowColumns);
+                }
+
+                $affiliationName = trim((string) ($amateurProfile['affiliation_name'] ?? ''));
+                $equipmentContract = trim((string) ($amateurProfile['equipment_contract'] ?? ''));
+
+                if ($affiliationName === '') {
+                    $affiliationName = $firstValue($participant, $participantOrganizationColumns);
+                }
+                if ($equipmentContract === '') {
+                    $equipmentContract = $firstValue($participant, $participantEquipmentColumns);
+                }
+
+                $affiliation = $this->buildAffiliationDisplay($affiliationName, $equipmentContract);
 
                 $profiles[$row->id] = [
                     'period' => '選手',
-                    'throw' => $throw,
+                    'throw' => $this->formatThrowingHandLabel($throwValue),
                     'affiliation' => $affiliation !== '' ? $affiliation : '-',
                     'license_display' => 'アマ',
                 ];
@@ -1939,25 +2272,38 @@ private function attachResultPdfDisplayFields($results): void
                 continue;
             }
 
+            $bowler = $findBowler($row, $participant);
+
             $period = $bowler && $periodColumn ? $this->formatBowlerPeriodLabel($bowler->{$periodColumn} ?? null) : null;
-            $throw = $bowler && $throwColumn ? $this->formatThrowingHandLabel($bowler->{$throwColumn} ?? null) : '';
-            $affiliation = $bowler
-                ? $this->buildAffiliationDisplay(
-                    trim((string) ($bowler->organization_name ?? '')),
-                    trim((string) ($bowler->equipment_contract ?? ''))
-                )
-                : '-';
+
+            $throwValue = $firstValue($participant, $participantThrowColumns);
+            if ($throwValue === '' && $bowler && $throwColumn) {
+                $throwValue = trim((string) ($bowler->{$throwColumn} ?? ''));
+            }
+
+            $organization = $firstValue($participant, $participantOrganizationColumns);
+            $equipment = $firstValue($participant, $participantEquipmentColumns);
+
+            if ($organization === '') {
+                $organization = $firstValue($bowler, $proOrganizationColumns);
+            }
+            if ($equipment === '') {
+                $equipment = $firstValue($bowler, $proEquipmentColumns);
+            }
+
+            $affiliation = $this->buildAffiliationDisplay($organization, $equipment);
 
             $profiles[$row->id] = [
                 'period' => $period ?? '',
-                'throw' => $throw,
-                'affiliation' => $affiliation,
+                'throw' => $this->formatThrowingHandLabel($throwValue),
+                'affiliation' => $affiliation !== '' ? $affiliation : '-',
                 'license_display' => $this->formatSnapshotLicenseForPdf($license),
             ];
         }
 
         return $profiles;
     }
+
 
     private function buildSnapshotAmateurProfileLookup(Tournament $tournament): array
     {
@@ -2087,16 +2433,34 @@ private function attachResultPdfDisplayFields($results): void
 
     private function makePdfWithJapaneseFont(string $view, array $data, string $downloadName, string $orientation = 'portrait')
     {
+        /*
+         * THE OPENのように、入賞者リスト・ステップラダー画像・スコアシート画像を
+         * 1つのPDFにまとめると、dompdfの描画中に128MBを超えて落ちることがある。
+         * PDF生成リクエストだけメモリ上限と実行時間を引き上げ、dompdfの一時ディレクトリも
+         * Laravel配下へ固定する。
+         */
+        if (function_exists('ini_set')) {
+            @ini_set('memory_limit', '512M');
+            @ini_set('max_execution_time', '300');
+        }
+
+        $dompdfTempDir = storage_path('framework/cache/dompdf');
+        if (!is_dir($dompdfTempDir)) {
+            @mkdir($dompdfTempDir, 0775, true);
+        }
+
         $pdf = Pdf::loadView($view, $data)->setPaper('a4', $orientation === 'landscape' ? 'landscape' : 'portrait');
 
         $dompdf = $pdf->getDomPDF();
         $options = $dompdf->getOptions();
 
+        $options->set('tempDir', $dompdfTempDir);
         $options->set('fontDir', storage_path('fonts'));
         $options->set('fontCache', storage_path('fonts'));
         $options->set('defaultFont', 'ipaexg');
         $options->set('isRemoteEnabled', true);
         $options->set('isHtml5ParserEnabled', true);
+        $options->set('isFontSubsettingEnabled', true);
         $options->set('chroot', base_path());
 
         $fontPath = storage_path('fonts/ipaexg.ttf');
