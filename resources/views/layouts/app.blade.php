@@ -32,6 +32,41 @@
             }
             .mobile-tabbar .btn { flex: 1; border-radius: 0; min-height: 48px; }
         }
+
+        .jpba-layout-with-menu {
+            display: flex;
+            align-items: flex-start;
+            gap: 1.5rem;
+        }
+
+        .jpba-side-menu {
+            flex: 0 0 220px;
+            width: 220px;
+        }
+
+        .jpba-side-menu a {
+            white-space: nowrap;
+            display: block;
+            padding: 5px 10px;
+        }
+
+        .jpba-main-content {
+            flex: 1 1 auto;
+            min-width: 0;
+        }
+
+        @media (max-width: 768px) {
+            .jpba-layout-with-menu {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .jpba-side-menu {
+                width: 100%;
+                flex-basis: auto;
+            }
+        }
+
     </style>
 
     @laravelPWA
@@ -56,7 +91,8 @@
                         <li class="nav-item"><a class="nav-link" href="{{ route('registered_balls.index') }}">ボール登録</a></li>
 
                         @if($u?->isEditor() || $u?->isAdmin())
-                            <li class="nav-item"><a class="nav-link" href="{{ route('pro_bowlers.index') }}">全プロデータ</a></li>
+                            <li class="nav-item"><a class="nav-link" href="{{ route('pro_bowlers.list') }}">全プロデータ</a></li>
+                            <li class="nav-item"><a class="nav-link" href="{{ route('tournament_pro.index') }}">今年度シードプロ</a></li>
                             <li class="nav-item"><a class="nav-link" href="{{ route('tournaments.index') }}">大会管理</a></li>
                             <li class="nav-item"><a class="nav-link" href="{{ route('approved_balls.index') }}">承認ボール管理</a></li>
                             <li class="nav-item"><a class="nav-link" href="{{ route('scores.input') }}">速報入力</a></li>
@@ -98,9 +134,21 @@
         </div>
     @endif
 
-    <div class="container mt-4">
-        @yield('content')
-    </div>
+    @auth
+        <div class="container-fluid mt-4 px-3 px-md-4">
+            <div class="jpba-layout-with-menu">
+                @include('partials.side_menu')
+
+                <main class="jpba-main-content">
+                    @yield('content')
+                </main>
+            </div>
+        </div>
+    @else
+        <div class="container mt-4">
+            @yield('content')
+        </div>
+    @endauth
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     @vite(['resources/js/app.js'])

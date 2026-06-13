@@ -63,7 +63,11 @@
       $currentDir  = strtolower((string)request('dir', 'asc')) === 'desc' ? 'desc' : 'asc';
       $perPage     = (int)request('per_page', 50);
       $memberClassSelected = (string)request('member_class', '');
-      $officialEligibleSelected = (string)request('official_tournament_eligible', '');
+      $renewalStatusSelected = (string)request('renewal_status', 'renewed');
+      $officialEligibleSelected = (string)request('official_tournament_eligible', '1');
+      $genderSelected = in_array((string)request('gender', '男性'), ['男性', '女性'], true)
+          ? (string)request('gender', '男性')
+          : '男性';
 
       $sortIcon = function(string $col) use ($currentSort, $currentDir) {
           if ($currentSort !== $col) return '';
@@ -94,8 +98,9 @@
             </div>
 
             <div class="col-md-2">
-                <input type="text" name="license_no" class="form-control" placeholder="ライセンスNo（部分一致）"
+                <input type="text" name="license_no" class="form-control" placeholder="ライセンスNo（下4桁）"
                        value="{{ request('license_no') }}">
+                <small class="text-muted">※下4桁検索は性別指定が必須</small>
             </div>
 
             <div class="col-md-2">
@@ -144,11 +149,11 @@
             </div>
 
             <div class="col-md-2">
-                <select name="gender" class="form-select">
-                    <option value="">性別を選んでください</option>
-                    <option value="男性" {{ request('gender')==='男性' ? 'selected' : '' }}>男性</option>
-                    <option value="女性" {{ request('gender')==='女性' ? 'selected' : '' }}>女性</option>
+                <select name="gender" class="form-select" required>
+                    <option value="男性" {{ $genderSelected === '男性' ? 'selected' : '' }}>男性</option>
+                    <option value="女性" {{ $genderSelected === '女性' ? 'selected' : '' }}>女性</option>
                 </select>
+                <small class="text-muted">※ライセンスNo.重複防止のため必須</small>
             </div>
 
             <div class="col-md-2">
@@ -172,10 +177,19 @@
             </div>
 
             <div class="col-md-2">
+                <select name="renewal_status" class="form-select">
+                    <option value="renewed" {{ $renewalStatusSelected === 'renewed' ? 'selected' : '' }}>更新状態：更新済</option>
+                    <option value="pending" {{ $renewalStatusSelected === 'pending' ? 'selected' : '' }}>更新状態：未更新</option>
+                    <option value="expired" {{ $renewalStatusSelected === 'expired' ? 'selected' : '' }}>更新状態：期限切れ</option>
+                    <option value="all" {{ $renewalStatusSelected === 'all' ? 'selected' : '' }}>更新状態：すべて</option>
+                </select>
+            </div>
+
+            <div class="col-md-2">
                 <select name="official_tournament_eligible" class="form-select">
-                    <option value="">公式戦対象（全て）</option>
-                    <option value="1" {{ $officialEligibleSelected === '1' ? 'selected' : '' }}>出場可</option>
-                    <option value="0" {{ $officialEligibleSelected === '0' ? 'selected' : '' }}>対象外</option>
+                    <option value="1" {{ $officialEligibleSelected === '1' ? 'selected' : '' }}>公式戦：出場可</option>
+                    <option value="0" {{ $officialEligibleSelected === '0' ? 'selected' : '' }}>公式戦：出場不可</option>
+                    <option value="all" {{ $officialEligibleSelected === 'all' ? 'selected' : '' }}>公式戦：すべて</option>
                 </select>
             </div>
 
@@ -286,10 +300,9 @@
                     </th>
                     <th>会員区分</th>
                     <th>公式戦</th>
-                    <th>インストラクター同期</th>
+                    <th>保有インストラクター資格</th>
                     <th>褒章</th>
                     <th>地区長</th>
-                    <th>インストラクター級</th>
                     <th>スポーツコーチ</th>
                 </tr>
             </thead>
@@ -297,12 +310,27 @@
                 @forelse ($bowlers ?? [] as $bowler)
                     @php
                         $editUrl = route('pro_bowlers.edit', $bowler->id) . '?return=' . urlencode($returnUrl);
+                        $heldInstructorQualificationLabel = '保有なし';
+                        if (($bowler->a_class_status ?? null) === '有') {
+                            $heldInstructorQualificationLabel = 'A級';
+                        } elseif (($bowler->b_class_status ?? null) === '有') {
+                            $heldInstructorQualificationLabel = 'B級';
+                        } elseif (($bowler->c_class_status ?? null) === '有') {
+                            $heldInstructorQualificationLabel = 'C級';
+                        }
+
+                        $displayLicenseNo = '-';
+                        if (($bowler->license_no_num ?? null) !== null && $bowler->license_no_num !== '') {
+                            $displayLicenseNo = str_pad((string) ((int) $bowler->license_no_num), 4, '0', STR_PAD_LEFT);
+                        } elseif (preg_match('/(\d{1,4})$/', (string) ($bowler->license_no ?? ''), $matches)) {
+                            $displayLicenseNo = str_pad($matches[1], 4, '0', STR_PAD_LEFT);
+                        }
                     @endphp
                     <tr data-id="{{ $bowler->id }}">
                         {{-- ライセンスNo. --}}
                         <td>
                             <a href="{{ $editUrl }}" class="text-decoration-none text-dark">
-                                {{ $bowler->license_no ?? '-' }}
+                                {{ $displayLicenseNo }}
                             </a>
                         </td>
 
@@ -357,13 +385,10 @@
                             </a>
                         </td>
 
-                        {{-- インストラクター同期 --}}
+                        {{-- 保有インストラクター資格 --}}
                         <td>
                             <a href="{{ $editUrl }}" class="text-decoration-none text-dark">
-                                <div>{{ $bowler->current_instructor_sync_state_label }}</div>
-                                <small class="text-muted">
-                                    {{ $bowler->current_instructor_type_label }} / {{ $bowler->current_instructor_source_label }}
-                                </small>
+                                {{ $heldInstructorQualificationLabel }}
                             </a>
                         </td>
 
@@ -385,12 +410,6 @@
                             </a>
                         </td>
 
-                        {{-- インストラクター級 --}}
-                        <td>
-                            <a href="{{ $editUrl }}" class="text-decoration-none text-dark">
-                                {{ $bowler->instructor_grade_label ?? '-' }}
-                            </a>
-                        </td>
 
                         {{-- スポーツコーチ --}}
                         <td>
@@ -400,7 +419,7 @@
                         </td>
                     </tr>
                 @empty
-                    <tr><td colspan="13" class="text-center">データがありません。</td></tr>
+                    <tr><td colspan="12" class="text-center">データがありません。</td></tr>
                 @endforelse
             </tbody>
         </table>

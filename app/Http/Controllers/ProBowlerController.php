@@ -32,6 +32,27 @@ class ProBowlerController extends Controller
                 'records as eight_hundred_count' => fn ($q) => $q->where('record_type', 'eight_hundred'),
             ]);
 
+        $renewalStatusFilter = trim((string) $request->query('renewal_status', 'renewed'));
+        $officialTournamentEligibleFilter = trim((string) $request->query('official_tournament_eligible', '1'));
+        $genderFilter = trim((string) $request->query('gender', '男性'));
+        if (!in_array($genderFilter, ['男性', '女性'], true)) {
+            $genderFilter = '男性';
+        }
+
+        if ($renewalStatusFilter === 'renewed') {
+            $query->whereHas('currentInstructorRegistry', fn ($q) => $q->where('renewal_status', 'renewed'));
+        } elseif ($renewalStatusFilter === 'pending') {
+            $query->whereHas('currentInstructorRegistry', fn ($q) => $q->where('renewal_status', 'pending'));
+        } elseif ($renewalStatusFilter === 'expired') {
+            $query->whereHas('currentInstructorRegistry', fn ($q) => $q->where('renewal_status', 'expired'));
+        }
+
+        if ($officialTournamentEligibleFilter === '1') {
+            $query->where('can_enter_official_tournament', true);
+        } elseif ($officialTournamentEligibleFilter === '0') {
+            $query->where('can_enter_official_tournament', false);
+        }
+
         if ($titleYear) {
             $query->withCount([
                 'officialTitles as titles_count_'.$titleYear => fn ($q) => $q->where('year', $titleYear),
@@ -45,8 +66,11 @@ class ProBowlerController extends Controller
 
         if ($request->filled('license_no')) {
             $licenseKeyword = trim((string) $request->license_no);
+            $normalizedLicenseKeyword = preg_replace('/[^0-9]/', '', $licenseKeyword);
             if (strtoupper($licenseKeyword) === 'T') {
                 $query->where('member_class', 'pro_instructor');
+            } elseif ($normalizedLicenseKeyword !== '' && strlen($normalizedLicenseKeyword) <= 4) {
+                $query->where('license_no_num', (int) $normalizedLicenseKeyword);
             } else {
                 $query->where('license_no', 'like', '%'.$licenseKeyword.'%');
             }
@@ -58,9 +82,7 @@ class ProBowlerController extends Controller
         if ($request->filled('district')) {
             $query->whereHas('district', fn ($q) => $q->where('label', $request->district));
         }
-        if ($request->filled('gender')) {
-            $query->where('sex', $request->gender === '男性' ? 1 : 2);
-        }
+        $query->where('sex', $genderFilter === '男性' ? 1 : 2);
         if ($request->filled('term_from')) {
             $query->where('kibetsu', '>=', $request->term_from);
         }
@@ -286,6 +308,7 @@ class ProBowlerController extends Controller
             'coach_name',
             'membership_type',
             'member_class',
+            'renewal_status',
             'official_tournament_eligible',
             'include_inactive',
             'per_page',
@@ -335,6 +358,20 @@ class ProBowlerController extends Controller
             $query->where('is_active', true);
         }
 
+        $renewalStatusFilter = trim((string) ($filters['renewal_status'] ?? ''));
+        if (!$request->has('renewal_status') || $renewalStatusFilter === '') {
+            $renewalStatusFilter = 'renewed';
+            $filters['renewal_status'] = 'renewed';
+        }
+
+        if ($renewalStatusFilter === 'renewed') {
+            $query->whereHas('currentInstructorRegistry', fn ($q) => $q->where('renewal_status', 'renewed'));
+        } elseif ($renewalStatusFilter === 'pending') {
+            $query->whereHas('currentInstructorRegistry', fn ($q) => $q->where('renewal_status', 'pending'));
+        } elseif ($renewalStatusFilter === 'expired') {
+            $query->whereHas('currentInstructorRegistry', fn ($q) => $q->where('renewal_status', 'expired'));
+        }
+
         $membershipType = trim((string) ($filters['membership_type'] ?? ''));
         if ($membershipType !== '') {
             $query->where('membership_type', $membershipType);
@@ -370,6 +407,11 @@ class ProBowlerController extends Controller
         }
 
         $officialTournamentEligible = trim((string) ($filters['official_tournament_eligible'] ?? ''));
+        if (!$request->has('official_tournament_eligible') || $officialTournamentEligible === '') {
+            $officialTournamentEligible = '1';
+            $filters['official_tournament_eligible'] = '1';
+        }
+
         if ($officialTournamentEligible === '1') {
             $query->where('can_enter_official_tournament', true);
         } elseif ($officialTournamentEligible === '0') {
@@ -378,8 +420,11 @@ class ProBowlerController extends Controller
 
         if (!empty($filters['license_no'])) {
             $license = trim((string) $filters['license_no']);
+            $normalizedLicense = preg_replace('/[^0-9]/', '', $license);
             if ($memberClassFilter === '' && strtoupper($license) === 'T') {
                 $query->where('member_class', 'pro_instructor');
+            } elseif ($normalizedLicense !== '' && strlen($normalizedLicense) <= 4) {
+                $query->where('license_no_num', (int) $normalizedLicense);
             } else {
                 $query->where('license_no', 'like', "%{$license}%");
             }
@@ -433,18 +478,18 @@ class ProBowlerController extends Controller
         }
 
         $sexFilter = $filters['sex'] ?? null;
+        $genderFilter = trim((string) ($filters['gender'] ?? ''));
 
-        if (!empty($filters['gender'])) {
-            $gender = $filters['gender'];
-            if ($gender === '男性') {
-                $query->where('sex', 1);
-            }
-            if ($gender === '女性') {
-                $query->where('sex', 2);
-            }
-        } elseif ($sexFilter !== null && $sexFilter !== '' && in_array((int) $sexFilter, [1, 2], true)) {
-            $query->where('sex', (int) $sexFilter);
+        if ($genderFilter === '' && $sexFilter !== null && $sexFilter !== '' && in_array((int) $sexFilter, [1, 2], true)) {
+            $genderFilter = ((int) $sexFilter === 1) ? '男性' : '女性';
         }
+        if (!in_array($genderFilter, ['男性', '女性'], true)) {
+            $genderFilter = '男性';
+        }
+        $filters['gender'] = $genderFilter;
+        $filters['sex'] = $genderFilter === '男性' ? 1 : 2;
+
+        $query->where('sex', $genderFilter === '男性' ? 1 : 2);
 
         if (!empty($filters['age_from']) || !empty($filters['age_to'])) {
             $today = now();
