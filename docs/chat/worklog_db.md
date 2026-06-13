@@ -6632,223 +6632,162 @@ User::where('email','domaine-d@i.softbank.jp')->exists(); // true
 
 ---
 
-## 2026-06-13 選手データ一覧整備・共通メニュー化・今年度シードプロ方針整理
+## 2026-06-13 2025最終ランキング正本化 → 2026年度シード生成方針の固定
 
 - 目的:
-  - THE OPENフォワードテスト完了後、管理画面全体の導線と選手データ一覧を実運用に近い形へ整える。
-  - 選手データ一覧は、初期表示で「現在会員更新済み、かつ公式戦出場可」の競技対象選手だけを表示する。
-  - ライセンスNoは内部では `M00001297` / `F00000526` のようなフル値を維持しつつ、画面表示上は男女とも下4桁に統一する。
-  - 全プロデータ画面にだけあった左側Menuを共通化し、他ページでも同じ導線を表示する。
-  - 未接続だった左側Menuのリンクを既存ページへ接続する。
-  - `トーナメントプロデータ` という曖昧な名称をやめ、今後のシード運用に合わせて `今年度シードプロ` へ変更する。
-  - 今年度シードプロ画面の正本は、会員種別名ではなく `pro_bowler_seed_lists` / `pro_bowler_seed_list_players` とする。
+  - `今年度シードプロ` 画面へ表示する正本データを、選手マスタの会員種別名ではなく、年度別ランキング・年度別シード・大会別シードの正本テーブルへ寄せる。
+  - 2026年度シードプロを、2025年度最終ポイントランキングから生成できる状態にする。
+  - 来年以降も、公式戦がすべて終わった時点で当該年度の最終ランキングを確定し、翌年度のシード生成へ使える運用にする。
+  - 方針がぶれないよう、ランキング確定 → 翌年度シード生成 → 永久/準永久/歴代優勝者枠の扱いを作業ログへ固定する。
 
 - 作業開始時の状態:
-  - THE OPEN最終PDF整合作業は commit / push 済み。
+  - 選手データ検索・共通Menu・今年度シードプロ導線は commit / push 済み。
   - commit:
-    - `857cf8f`
-  - commit message:
-    - `fix: THE OPEN大会成績PDFのRR・準決勝・ステップラダー表示を修正`
-  - push後の `git status -sb` は通常差分なし。
+    - `60d314a`
+    - `feat: 選手データ検索と今年度シードプロ導線を整備`
+  - `git status -sb` は `## main...origin/main`
+  - `git diff --name-only` は空。
   - 未追跡は `storage/backups/` のみ。
-  - `storage/backups/` は一時投入スクリプト・バックアップ置き場のため、引き続きコミット対象外。
+  - `storage/backups/` はバックアップ・一時投入スクリプト置き場であり、引き続きGitコミット対象外。
+  - DBスキーマ変更はまだ行っていない。
 
-- 選手データ一覧の初期表示変更:
-  - 画面:
-    - `/pro_bowlers`
-    - `/pro_bowlers/list`
-  - 初期表示の条件を、全員ライセンス順ではなく、会員更新済み・公式戦出場可の選手に寄せた。
-  - 検索条件に `更新状態` を追加した。
-    - 更新済
-    - 未更新
-    - 期限切れ
-    - すべて
-  - 検索条件に `公式戦` を追加した。
-    - 出場可
-    - 出場不可
-    - すべて
-  - デフォルトは `更新済` / `出場可` とした。
-  - `期別` 検索欄に初期値 `52` が入っていたため、空欄に戻した。
-  - DB追加は行わず、既存の `pro_bowlers.can_enter_official_tournament` や更新状態関連の既存情報を使う方針にした。
+- 直前までに完了している関連作業:
+  - 選手データ一覧のデフォルト表示を、会員更新済み・公式戦出場可の選手に寄せた。
+  - 検索条件へ `更新状態` と `公式戦` を追加した。
+  - 期検索のデフォルト値をブランクにする方針にした。
+  - 同期元表示を削除した。
+  - インストラクター同期表示を、保有インストラクター資格の最上位表示へ変更した。
+    - A級 / B級 / C級の順で最上位を表示。
+    - 保有資格がない場合は `保有なし` と表示。
+  - ライセンスNoは内部では `M/F` 付き9桁を維持し、表示上は下4桁に寄せた。
+  - 下4桁表示・検索の重複対策として、性別指定を必須条件として扱う方針にした。
+  - 左側Menuを共通化し、未接続リンクを既存ルートへ接続した。
+  - `トーナメントプロデータ` の名称を `今年度シードプロ` へ変更した。
+  - `/tournament_pro` は `今年度シードプロ` 画面として再利用する方針にした。
+  - 空データでも崩れない入口画面まで作成済み。
 
-- 同期元表示の削除:
-  - 一覧に出ていた `同期元` 列は運用者向けには不要と判断し、削除した。
-  - `インストラクター同期` という表示も運用上わかりにくいため、表示内容を見直した。
+- ユーザー確認で固定した重要方針:
+  - 現DBにある `pro_bowler_ranking_snapshots = 1件` / `pro_bowler_ranking_rows = 24件` は、2025年公式最終ランキングではない。
+  - これはテストで生成した24名分のデータであり、削除して構わない。
+  - まず必要なのは、2025年度の公式最終ポイントランキング。
+  - 来年以降は、システム内のポイントランキングの仕組みを使用し、該当年度の公式戦がすべて終わった時点で「最終ランキング」として確定させる。
+  - その確定ランキングを翌年度のシードプロ選出へ使う。
+  - 2025年度分については、以下のJPBA公式PDFを外部正本として取り込む。
+    - 男子: `https://www.jpba.or.jp/information/tournament/ranking/2025/M/M_PointRanking_251220.pdf`
+    - 女子: `https://www.jpba.or.jp/information/tournament/ranking/2025/W/W_PointRanking_251213.pdf`
 
-- 保有インストラクター資格表示:
-  - `インストラクター同期` の列名を `保有インストラクター資格` へ変更した。
-  - 選手編集画面のインストラクター情報にあるA級 / B級 / C級をもとに、保有資格の最上位を表示する方針にした。
-  - 表示優先順位:
-    1. A級
-    2. B級
-    3. C級
-  - A級 / B級 / C級のいずれもない場合は `保有なし` と表示する。
-  - 近年はC級も取得していないプロが存在するため、空欄ではなく `保有なし` と明示する方針にした。
+- 公式PDFの扱い:
+  - 男子PDF:
+    - `２０２５男子プロボウリング 最終ポイントランキング`
+    - `HANDA CUP 第59回全日本プロボウリング選手権大会 終了`
+    - 基準日: `2025.12.23`
+  - 女子PDF:
+    - `２０２５女子プロボウリング 最終ポイントランキング`
+    - `HANDA CUP 第57回全日本女子プロボウリング選手権大会 終了`
+    - 基準日: `2025.12.13`
+  - これらは、2026年度シード生成のための2025年最終ランキング正本として扱う。
+  - PDF取込時は、順位 / ライセンスNo / 氏名 / 期 / 所属・用品契約 / TM数 / G数 / 総T/PIN / AVG / ポイント / 獲得賞金額などを可能な範囲で保持する。
+  - CSV化や手動整形を使う場合でも、source_url と notes へ公式PDF由来であることを残す。
 
-- ライセンスNoの下4桁表示:
-  - 選手データ一覧のライセンスNo表示を、男女とも下4桁表示に変更した。
-  - 例:
-    - `M00001297` → `1297`
-    - `F00000526` → `0526`
-  - 内部管理値は従来どおり `M` / `F` から始まるフルライセンスNoを維持する。
-  - 下4桁は男女で重複する可能性があるため、検索時は性別選択を必須扱いにした。
-  - 初期表示では男性をデフォルトにし、性別未指定のまま下4桁検索して重複する事故を避ける方針にした。
-  - 上部固定メニューからの `全プロデータ` と、左側Menuからの `全プロデータ` のリンク先が異なっていたため、正しい一覧である `/pro_bowlers/list` へ寄せる方針にした。
-
-- 左側Menuの共通化:
-  - これまでは、全プロデータ画面だけに左側Menuが直書きされていた。
-  - 他ページでも同じMenuを常時表示したいという要望に合わせ、Blade共通パーツへ切り出した。
-  - 新規:
-    - `resources/views/partials/side_menu.blade.php`
-  - 変更:
-    - `resources/views/layouts/app.blade.php`
-    - `resources/views/pro_bowlers/index.blade.php`
-  - `layouts.app` から `partials.side_menu` を読み込む構成にし、各ページへ共通表示されるようにした。
-  - 全プロデータ画面の直書きMenuは削除し、二重表示を防いだ。
-  - 大会一覧、エントリー選択、プロ登録ボール一覧などでも左側Menuが表示されることを確認した。
-
-- 左側Menuの未接続リンク整理:
-  - `side_menu.blade.php` 内で `href="#"` のままだったリンクを洗い出した。
-  - 以下の6件が未接続だった。
-    - `INFORMATION`
-    - `会員用INFORMATION`
-    - `トーナメントプロデータ`
-    - `TP登録会受講情報`
-    - `プログループ管理`
-    - `大会別使用ボール登録`
-  - 既存ルートを確認し、以下へ接続した。
-    - `INFORMATION` → `route('informations.index')`
-    - `会員用INFORMATION` → `route('informations.member')`
-    - `トーナメントプロデータ` → `route('tournament_pro.index')`
-    - `TP登録会受講情報` → `route('tp_registration.index')`
-    - `プログループ管理` → `route('pro_groups.index')`
-    - `大会別使用ボール登録` → `route('used_balls.index')`
-  - ユーザー側で以下URLを開き、画面が表示されることを確認した。
-    - `/info`
-    - `/member/info`
-    - `/tournament_pro`
-    - `/tp_registration`
-    - `/pro_groups`
-    - `/used_balls`
-
-- `トーナメントプロデータ` から `今年度シードプロ` への名称変更:
-  - 旧Menu名 `トーナメントプロデータ` は、会員種別名ベースの曖昧な分類に見えるため、今後のシード運用に合わせて `今年度シードプロ` へ名称変更する方針にした。
-  - 上部固定メニューにも `今年度シードプロ` を追加した。
-  - `/tournament_pro` は既存の仮ページを再利用し、今年度シードプロ画面へ変更した。
-  - `TournamentProController` は、`pro_bowler_seed_lists` / `pro_bowler_seed_list_players` を参照する構成へ変更した。
-  - 画面では年度・性別で絞り込みできるようにした。
-  - 現在はシードリストが空のため、各枠は `登録はまだありません` と表示される。
-
-- シード系テーブルの確認:
-  - Tinkerで以下を確認した。
-    - `pro_bowler_seed_lists` は存在する
-    - `pro_bowler_seed_list_players` は存在する
-    - `tournament_seed_players` は存在する
-  - ただし、現在のローカルDBでは以下が空。
+- 添付ファイル確認:
+  - `RankingController.php` は現状 `rankings.index` を返すだけの仮ページ。
+  - `resources/views/rankings/index.blade.php` も仮表示のみ。
+  - したがって、公式ランキング取込・確定snapshot作成のUI / Controllerはまだ未整備。
+  - `ProBowlerRankingSnapshot.php` には、年度・性別・ランキング種別・確定フラグ・source_url・notesを保持するfillableがある。
+  - `ProBowlerRankingRow.php` には、順位・選手ID・ライセンスNo・氏名・期・所属/用品契約・ポイント・ゲーム数・総ピン・AVG・賞金を保持するfillableがある。
+  - `2025_09_02_000213_create_pro_bowler_ranking_and_seed_tables.php` では、以下テーブルが既に作成されている。
+    - `pro_bowler_ranking_snapshots`
+    - `pro_bowler_ranking_rows`
     - `pro_bowler_seed_lists`
     - `pro_bowler_seed_list_players`
-  - 以前、2026年男子 / 女子シード一覧の生成確認は実施済みだが、フォワードテスト前の大会運用データ初期化でランキング / シード系テーブルも削除対象に含めたため、現在DB上は空と判断した。
+    - `tournament_seed_players`
+  - 現時点では、この既存スキーマで2025公式ランキング取込と2026シード生成に進める可能性が高い。
 
-- シード表示方針の再整理:
-  - 男子には `第1シード` / `第2シード` の分類を作らない。
-  - 男子は前年度ランキング等から作る `上位24名` を今年度シードとして扱う。
-  - 女子は `第1シード` / `第2シード` を扱う。
-  - 永久シードは、一度登録したら原則外れない。
-  - 準永久シードは、永久シードへ格上げされた場合のみ準永久シードから外れる。
-  - したがって、今後は単なる会員種別名ではなく、ランキング・年度別シードリスト・永久/準永久・大会別追加シードを分けて管理する必要がある。
+- 今後の正本フロー:
+  1. 大会結果・ポイントランキングを蓄積する。
+  2. その年度の公式戦がすべて終了したら、年度最終ランキングとして確定snapshotを作成する。
+  3. snapshotは `pro_bowler_ranking_snapshots` に保存する。
+     - `ranking_year`: 対象年度
+     - `gender`: M / F
+     - `ranking_type`: point
+     - `ranking_scope`: annual
+     - `as_of_date`: 公式ランキング確定日
+     - `is_final`: true
+     - `source_url`: 公式PDFまたはシステム内確定元
+  4. ranking rows は `pro_bowler_ranking_rows` に保存する。
+  5. 翌年度シードリストを `pro_bowler_seed_lists` / `pro_bowler_seed_list_players` に生成する。
+  6. 大会ごとの追加シードは `tournament_seed_players` で扱う。
+  7. 大会エントリー、優先出場者リスト、PDF、S表示はこれらの正本を参照する。
 
-- 公式ページの確認:
-  - JPBA公式の `2026年 トーナメントシード` ページを登録元候補として扱う。
-    - `https://www.jpba.or.jp/information/tournament/seed.html`
-  - 永久シードはJPBA公式の永久シードプロページを参照する。
-    - `https://www.jpba.or.jp/information/tournament/LEseed.html`
-  - 公式ページを直接アプリ内から自動取得するか、管理画面/CSV/手入力で登録するかは次工程で判断する。
-  - 当面は、公式情報を人間が確認しながら既存の年度別シード管理画面へ投入する方針が安全と判断した。
+- 男子シードの扱い:
+  - 男子に「第1シード / 第2シード」の分類は使わない。
+  - 男子は前年度最終ランキング上位24名を翌年度シードとして扱う。
+  - 2026年度男子シードは、2025男子最終ポイントランキングから上位24名を抽出する。
+  - seed_category は既存仕様を活かし、まずは `TS` などの既存カテゴリで運用する方針。
+  - 追加カラムは現時点では作らない。
 
-- 今後の作業順:
-  1. シード選手のデータ基となる2025年度ランキングを作成する。
-     - `pro_bowler_ranking_snapshots`
-     - `pro_bowler_ranking_rows`
-     を使う想定。
-  2. 2025年度ランキングを基に、2026年度のシード選手リストを生成する。
-     - `pro_bowler_seed_lists`
-     - `pro_bowler_seed_list_players`
-     を使う想定。
-  3. 永久シードプロを登録する。
-     - 永久シードは原則として登録後に外れない。
-  4. 過去のタイトル数から準永久シードを登録する。
-     - 準永久シードは永久シードへ格上げされた場合のみ外れる。
-  5. 準永久シードへの登録画面、ならびに準永久シードから永久シードへの格上げ機能を作成する。
-  6. 大会ごとに `歴代優勝者シード` の枠がある大会があるため、歴代優勝者シードの登録画面、ならびにリストを作成する。
+- 女子シードの扱い:
+  - 女子は公式運用に合わせて `第1シード / 第2シード` を扱う。
+  - ただし、DBカラム追加を先に行うのではなく、既存の `seed_category` / `seed_rank` / `priority_order` / `note` で表現できるかを先に確認する。
+  - 具体的な境界・分類は、公式シードページや公式資料を確認してから投入する。
+  - 必要になった場合だけ、表示分類カラムの追加を検討する。
+  - その場合は必ず `migrations` / `docs/db/data_dictionary.md` / `docs/db/ER.dbml` をセット更新する。
+
+- 永久シード / 準永久シード:
+  - 永久シードは一度登録したら原則外れない。
+  - 準永久シードは、永久シードに格上げされた場合のみ外れる。
+  - これらはランキング由来シードとは別枠として扱う。
+  - 保存先は年度別シード一覧側に含めるか、大会別優先枠側に出すかを、画面設計時に整理する。
+  - ただし運用上は、永久 / 準永久の履歴が消えないようにすることを優先する。
+
+- 歴代優勝者シード:
+  - 大会ごとに `歴代優勝者シード` の枠がある大会がある。
+  - これは年度別ランキングシードとは別枠。
+  - 後続で、歴代優勝者シードの登録画面とリストを作成する。
+  - 保存先は原則として `tournament_seed_players` を使う。
+  - 大会単位で対象者を管理し、優先出場者PDFやエントリー管理へ反映できるようにする。
+
+- 現時点の作業順:
+  1. 現DBに残っているテスト用 ranking snapshot / rows を削除する。
+  2. 2025男子最終ポイントランキングPDFを取り込む。
+  3. 2025女子最終ポイントランキングPDFを取り込む。
+  4. `pro_bowler_ranking_snapshots` / `pro_bowler_ranking_rows` に2025年男子・女子の確定ランキングを保存する。
+  5. 2025確定ランキングから2026年度シードリストを生成する。
+  6. 永久シードプロを登録する。
+  7. 過去タイトル数などから準永久シードを登録する。
+  8. 準永久シード登録画面と、準永久シードから永久シードへの格上げ機能を作る。
+  9. 大会ごとの歴代優勝者シード登録画面とリストを作る。
 
 - DB / 辞書:
-  - 今回ここまでの画面・導線整理ではDBスキーマ変更は行っていない。
-  - 既存のランキング / シード系テーブルを使う前提で進めている。
-  - そのため、現時点では以下の更新は不要。
+  - 現時点ではDBスキーマ変更なしで進める。
+  - `pro_bowler_ranking_snapshots` / `pro_bowler_ranking_rows` / `pro_bowler_seed_lists` / `pro_bowler_seed_list_players` / `tournament_seed_players` は既に存在する。
+  - そのため、今回の作業ログ更新時点では以下の更新は不要。
     - `database/migrations`
     - `docs/db/data_dictionary.md`
     - `docs/db/ER.dbml`
-  - ただし、次工程で `第1/第2シード区分` や `永久/準永久の格上げ履歴` を既存カラムだけで安全に表現できない場合は、DB追加を検討する。
-  - DB変更が必要になった場合は、必ず `migrations` / `docs/db/data_dictionary.md` / `docs/db/ER.dbml` をセット更新する。
+  - ただし、今後 `display_seed_class` のような分類カラムが必要になった場合は、必ず3点セットで更新する。
 
-- 触った主なファイル:
-  - `app/Http/Controllers/ProBowlerController.php`
-  - `app/Http/Controllers/TournamentProController.php`
-  - `resources/views/layouts/app.blade.php`
-  - `resources/views/partials/side_menu.blade.php`
-  - `resources/views/pro_bowlers/index.blade.php`
-  - `resources/views/pro_bowlers/list.blade.php`
-  - `resources/views/tournament_pro/index.blade.php`
+- 今回確認した主なファイル:
+  - `app/Http/Controllers/RankingController.php`
+  - `resources/views/rankings/index.blade.php`
+  - `app/Models/ProBowlerRankingSnapshot.php`
+  - `app/Models/ProBowlerRankingRow.php`
+  - `database/migrations/2025_09_02_000213_create_pro_bowler_ranking_and_seed_tables.php`
+  - `docs/chat/progress_board.md`
+  - `docs/chat/worklog_db.md`
 
-- 確認済みコマンド:
-  - `php -l app/Http/Controllers/ProBowlerController.php`
-  - `php -l app/Http/Controllers/TournamentProController.php`
-  - `php artisan view:cache`
-  - `php artisan view:clear`
-  - `git status -sb`
-  - `git rev-parse --short HEAD`
-  - `git diff --name-only`
-  - Tinkerによる `pro_bowler_seed_lists` / `pro_bowler_seed_list_players` / `tournament_seed_players` の存在確認
-  - Tinkerによるシードリスト件数確認
-
-- 現在の未コミット差分:
-  - `app/Http/Controllers/ProBowlerController.php`
-  - `app/Http/Controllers/TournamentProController.php`
-  - `resources/views/layouts/app.blade.php`
-  - `resources/views/pro_bowlers/index.blade.php`
-  - `resources/views/pro_bowlers/list.blade.php`
-  - `resources/views/tournament_pro/index.blade.php`
-  - `resources/views/partials/side_menu.blade.php` は新規未追跡
-  - `storage/backups/` は未追跡だがコミット対象外
-
-- 現時点で完了したこと:
-  - THE OPEN最終PDF整合の差分をcommit / pushした。
-  - 選手データ一覧のデフォルト表示を、更新済・公式戦出場可へ変更した。
-  - 期別検索の初期値を空欄へ戻した。
-  - 同期元表示を削除した。
-  - 保有インストラクター資格の最上位表示を追加した。
-  - ライセンスNoを下4桁表示へ変更し、性別指定を必須扱いにした。
-  - 左側Menuを共通化した。
-  - 左側Menuの未接続リンクを既存画面へ接続した。
-  - `トーナメントプロデータ` を `今年度シードプロ` へ名称変更した。
-  - `/tournament_pro` を今年度シードプロ画面として再利用した。
-  - シードリストが空でも崩れない画面を作成した。
-  - シードプロ管理の次作業順を整理した。
-
-- 残タスク / 次に詰める候補:
-  1. 2025年度ランキングを作成・登録する。
-  2. 2025年度ランキングから2026年度シードリストを生成する。
-  3. 永久シードプロを登録する。
-  4. 過去タイトル数から準永久シードを登録する。
-  5. 準永久シード登録画面と、永久シードへの格上げ機能を作成する。
-  6. 大会別の歴代優勝者シード登録画面とリストを作成する。
-  7. 今年度シードプロ画面で、男子は上位24名、女子は第1/第2シード、永久/準永久シードを正しく表示する。
-  8. 現在の未コミット差分を、ログ更新後に `git status -sb` / `git diff --name-only` で確認する。
-  9. `storage/backups/` を除外したまま、今回差分をcommit / pushする。
+- Git管理上の注意:
+  - 作業ログ更新後は、必ず以下を確認する。
+    - `git status -sb`
+    - `git diff --name-only`
+  - `storage/backups/` は今回もコミット対象外。
+  - 公式PDFから作った一時CSVや取込補助スクリプトを `storage/backups/` に置く場合も、Gitへ入れない。
+  - 本採用する取込コマンド / Controller / Blade だけを差分対象にする。
 
 - 現時点の判断:
-  - **選手データ一覧と共通Menuの導線整理は、画面確認まで完了。**
-  - **今年度シードプロ画面は、空データでも表示できる入口まで作成済み。**
-  - **次は、シード表示そのものではなく、正本データである2025年度ランキングと2026年度シードリストの再作成から進める。**
-  - **DBスキーマ変更はまだ行っていないため、現時点では辞書・ER更新は不要。**
+  - **今年度シードプロ画面の入口は作成済み。**
+  - **次に必要なのは表示調整ではなく、正本データである2025年度最終ランキングの作成。**
+  - **2025年度ランキングは公式PDFを正本として取り込み、2026年度シード生成へ使う。**
+  - **来年以降は、システム内のポイントランキングを年度末に確定snapshot化し、それを翌年度シード生成に使う。**
+  - **男子は上位24名、女子は第1 / 第2シード、永久 / 準永久 / 歴代優勝者は別枠という方針で進める。**
 

@@ -1335,55 +1335,82 @@
   - ランキング / シード反映確認
 
 
-#### 2026-06-13 メモ（選手データ一覧整備・共通メニュー化・今年度シードプロ方針整理）
-- [✓] THE OPEN最終PDF整合後の差分を commit / push 済み
-  - commit: `857cf8f`
-  - message: `fix: THE OPEN大会成績PDFのRR・準決勝・ステップラダー表示を修正`
-  - push後の通常差分はなく、`storage/backups/` のみ未追跡として残した
-- [✓] 選手データ一覧の初期表示を、会員更新済み・公式戦出場可の選手に寄せる方針へ変更した
-  - 検索条件に `更新状態` を追加
-  - 検索条件に `公式戦` を追加
-  - デフォルトは `更新済` / `出場可`
-  - `期別` の初期値は空欄に戻した
-- [✓] 選手データ一覧から同期元表示を削除した
-- [✓] `インストラクター同期` 表示を `保有インストラクター資格` へ変更した
-  - A級 > B級 > C級 の順で最上位資格を表示
-  - どれもない場合は `保有なし`
-- [✓] 選手データ一覧のライセンスNo表示を、男女とも下4桁表示へ変更した
-  - 内部管理は従来どおり `M/F` から始まるフルライセンスNoを維持
-  - 下4桁検索時の重複防止のため、性別選択を必須扱いにした
-- [✓] 左側メニューを共通パーツ化した
-  - `resources/views/partials/side_menu.blade.php`
-  - `resources/views/layouts/app.blade.php` から常時表示
-  - 全プロデータ画面の直書きメニューは削除
-- [✓] 左側メニューの未接続リンクを既存ルートへ接続した
-  - `INFORMATION`
-  - `会員用INFORMATION`
-  - `トーナメントプロデータ`
-  - `TP登録会受講情報`
-  - `プログループ管理`
-  - `大会別使用ボール登録`
-- [✓] `トーナメントプロデータ` の名称を `今年度シードプロ` へ変更した
-- [✓] `/tournament_pro` を `今年度シードプロ` 画面として再利用する方針にした
-  - 正本は `pro_bowler_seed_lists` / `pro_bowler_seed_list_players`
-  - 現時点では該当データが空のため、画面上は登録なし表示
-- [✓] シードプロの表示方針を再整理した
-  - 男子は `第1シード / 第2シード` に分けず、上位24名として扱う
-  - 女子は `第1シード / 第2シード` の区分を扱う
+#### 2026-06-13 メモ（2025最終ランキング正本化 → 2026年度シード生成方針 固定）
+- [✓] 選手データ検索・共通Menu・今年度シードプロ導線は commit / push 済み
+  - commit: `60d314a`
+  - message: `feat: 選手データ検索と今年度シードプロ導線を整備`
+- [✓] 現在の作業ツリーは通常差分なし
+  - `git status -sb`: `## main...origin/main`
+  - 未追跡は `storage/backups/` のみ
+  - `storage/backups/` は引き続きコミット対象外
+- [✓] 現DBに残っている `pro_bowler_ranking_snapshots = 1件` / `pro_bowler_ranking_rows = 24件` は、ユーザー確認により「2025年公式最終ランキング」ではなくテスト生成データと判定
+  - 公式ランキング投入前に削除してよい
+- [✓] 2026年度シード生成の正本フローを固定した
+  - 大会結果・ポイント集計
+  - 該当年度の公式戦がすべて終了
+  - その年度の最終ポイントランキングを確定snapshot化
+  - 翌年度のシードプロリストを生成
+  - 大会エントリー・優先出場・S表示・PDFへ利用する
+- [✓] 2025年度分は、システム内集計だけでなくJPBA公式PDFを外部正本として取り込む
+  - 男子: `https://www.jpba.or.jp/information/tournament/ranking/2025/M/M_PointRanking_251220.pdf`
+  - 女子: `https://www.jpba.or.jp/information/tournament/ranking/2025/W/W_PointRanking_251213.pdf`
+- [✓] 既存テーブルは今回の方針に概ね対応済み
+  - `pro_bowler_ranking_snapshots`
+  - `pro_bowler_ranking_rows`
+  - `pro_bowler_seed_lists`
+  - `pro_bowler_seed_list_players`
+  - `tournament_seed_players`
+- [✓] 添付コード確認では、ランキング画面 `RankingController` / `rankings.index` は現状ほぼ仮ページ
+  - 2025公式ランキング取込・ランキング確定UI / コマンドは後続で整備する
+- [✓] 既存migration / Model では、ランキングsnapshotに以下を保持できる
+  - `ranking_year`
+  - `gender`
+  - `ranking_type`
+  - `ranking_scope`
+  - `as_of_date`
+  - `is_final`
+  - `source_url`
+  - `notes`
+- [✓] 既存ranking rows では、公式ランキングPDFの主要列を保持できる
+  - `ranking_rank`
+  - `license_no`
+  - `name_kanji`
+  - `name_kana`
+  - `kibetsu`
+  - `organization_name`
+  - `equipment_contract`
+  - `points`
+  - `games`
+  - `total_pin`
+  - `average`
+  - `prize_money`
+  - `sort_order`
+- [✓] 男子シードの扱いを固定した
+  - 男子に「第1シード / 第2シード」の分類は使わない
+  - 男子は前年度最終ランキング上位24名を翌年度シードとして扱う
+- [✓] 女子シードの扱いを固定した
+  - 女子は公式運用に合わせて `第1シード / 第2シード` を扱う
+  - 具体的な境界・分類は公式シードページ / 公式資料を確認してから投入する
+- [✓] 永久シード / 準永久シードの扱いを固定した
   - 永久シードは一度登録したら原則外れない
-  - 準永久シードは永久シードへ格上げされた場合のみ外れる
-- [✓] 現在のシード系テーブル状態を確認した
-  - `pro_bowler_seed_lists` は存在するが空
-  - `pro_bowler_seed_list_players` は存在するが空
-  - `tournament_seed_players` は存在
-- [ ] 次の作業順を確定した
-  1. シード選手の基となる2025年度ランキングを作成する
-  2. 2025年度ランキングを基に2026年度シード選手リストを生成する
-  3. 永久シードプロを登録する
-  4. 過去タイトル数から準永久シードを登録する
-  5. 準永久シード登録画面と、準永久シードから永久シードへの格上げ機能を作成する
-  6. 大会ごとの歴代優勝者シード登録画面とリストを作成する
-- [ ] ここから先は、まず2025年度ランキング作成・再投入から着手する
-- [ ] DBカラム追加が必要になった場合のみ、`migrations` / `docs/db/data_dictionary.md` / `docs/db/ER.dbml` をセット更新する
-- [ ] `storage/backups/` は引き続きコミット対象外を維持する
+  - 準永久シードは、永久シードへ格上げされた場合のみ外す
+  - ランキング由来シードとは別枠として管理する
+- [✓] 大会別の歴代優勝者シードは、年度別ランキングシードとは別枠で扱う
+  - 後続で登録画面・リストを作成する
+  - 保存先は原則 `tournament_seed_players` 側を使う
+- [✓] 現時点ではDBスキーマ変更なしで進める
+  - `migrations`
+  - `docs/db/data_dictionary.md`
+  - `docs/db/ER.dbml`
+  は今回更新不要
+- [ ] 次にやること
+  1. テスト生成済みのランキングsnapshot / rowsを削除する
+  2. 2025男子最終ポイントランキングPDFを取り込める形式にする
+  3. 2025女子最終ポイントランキングPDFを取り込める形式にする
+  4. `pro_bowler_ranking_snapshots` / `pro_bowler_ranking_rows` に、2025年男子・女子の確定ランキングを保存する
+  5. 2025確定ランキングから2026年度シードリストを生成する
+  6. 永久シード / 準永久シードの登録導線を作る
+  7. 準永久シードから永久シードへの格上げ機能を作る
+  8. 大会別歴代優勝者シードの登録画面・リストを作る
+- [ ] DBカラム追加が必要になった場合のみ、必ず `migrations` / `docs/db/data_dictionary.md` / `docs/db/ER.dbml` をセットで更新する
 
