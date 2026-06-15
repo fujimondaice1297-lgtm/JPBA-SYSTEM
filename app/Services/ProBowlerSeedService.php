@@ -75,6 +75,10 @@ class ProBowlerSeedService
             ]);
             $seedList->save();
 
+            ProBowlerSeedListPlayer::query()
+                ->where('seed_list_id', $seedList->id)
+                ->delete();
+
             $rows = $rankingSnapshot->rows()
                 ->where('ranking_rank', '<=', $topCount)
                 ->orderBy('ranking_rank')

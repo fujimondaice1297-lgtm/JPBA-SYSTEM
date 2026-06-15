@@ -70,6 +70,8 @@ class ProBowlerSeedListController extends Controller
     {
         $seedList->load(['players.bowler']);
 
+        $rankingRowsByKey = $this->buildRankingRowsByKey($seedList->players);
+
         $players = $seedList->players
             ->sortBy(function (ProBowlerSeedListPlayer $player) {
                 return sprintf(
@@ -80,26 +82,43 @@ class ProBowlerSeedListController extends Controller
                 );
             })
             ->values()
-            ->map(function (ProBowlerSeedListPlayer $player) {
+            ->map(function (ProBowlerSeedListPlayer $player) use ($rankingRowsByKey) {
+                $rankingRow = $this->findRankingRowForSeedPlayer($player, $rankingRowsByKey);
+                $licenseNo = $player->license_no ?: $player->bowler?->license_no;
+
                 return [
                     'id' => $player->id,
                     'seed_rank' => $player->seed_rank,
                     'priority_order' => $player->priority_order,
-                    'license_no' => $player->license_no,
-                    'name_kanji' => $player->bowler?->name_kanji,
-                    'name_kana' => $player->bowler?->name_kana,
+                    'license_no' => $licenseNo,
+                    'display_license_no' => $this->formatDisplayLicenseNo($licenseNo),
+                    'name_kanji' => $player->bowler?->name_kanji ?: $rankingRow?->name_kanji,
+                    'name_kana' => $player->bowler?->name_kana ?: $rankingRow?->name_kana,
+                    'kibetsu' => $this->formatKibetsu($rankingRow?->kibetsu ?? $player->bowler?->kibetsu),
+                    'points' => $this->formatPointsForDisplay($rankingRow?->points),
+                    'prize_money' => $this->formatPrizeMoneyForDisplay($rankingRow?->prize_money),
                     'seed_category' => $player->seed_category,
                     'ranking_rank' => $player->ranking_rank,
-                    'point_text' => $this->pointTextFromNote($player->note),
                     'note' => $player->note,
                     'is_active' => (bool) $player->is_active,
                 ];
             });
 
+        $genderLabels = $this->genderLabels();
+
+        $genderSwitchSeedLists = ProBowlerSeedList::query()
+            ->where('seed_year', $seedList->seed_year)
+            ->where('seed_list_type', $seedList->seed_list_type)
+            ->orderByRaw("CASE WHEN gender = 'M' THEN 1 WHEN gender = 'F' THEN 2 ELSE 9 END")
+            ->orderBy('gender')
+            ->get()
+            ->keyBy('gender');
+
         return view('pro_bowler_seed_lists.show', [
             'seedList' => $seedList,
             'players' => $players,
-            'genderLabels' => $this->genderLabels(),
+            'genderLabels' => $genderLabels,
+            'genderSwitchSeedLists' => $genderSwitchSeedLists,
             'seedCategoryLabels' => $this->seedCategoryLabels(),
         ]);
     }
@@ -108,9 +127,9 @@ class ProBowlerSeedListController extends Controller
      * 前年度ポイントランキングから、翌年度の年度別シード一覧を自動生成する。
      *
      * 通常運用：
-     * - 大会ごとにポイントを tournament_results.points へ反映
-     * - 年度末に ranking_year のポイント合計でランキングを確定
-     * - 翌年度の seed_year / gender ごとに上位24名をシード登録
+     * - 年度末に /rankings から公式最終ポイントランキングを snapshot 確定する
+     * - 翌年度の seed_year / gender ごとに、確定 snapshot からシード登録する
+     * - 公式 snapshot がまだ無い場合だけ、既存の tournament_results 集計から生成する
      */
     public function generateFromPointRanking(Request $request)
     {
@@ -126,6 +145,38 @@ class ProBowlerSeedListController extends Controller
         $gender = $validated['gender'];
         $baseRankingYear = (int) $validated['base_ranking_year'];
         $topCount = (int) $validated['base_top_count'];
+        $genderLabel = $this->genderLabels()[$gender] ?? $gender;
+
+        $officialSnapshot = ProBowlerRankingSnapshot::query()
+            ->where('ranking_year', $baseRankingYear)
+            ->where('gender', $gender)
+            ->where('ranking_type', 'points')
+            ->where('ranking_scope', 'official_tournament')
+            ->where('is_final', true)
+            ->withCount('rows')
+            ->orderByDesc('as_of_date')
+            ->orderByDesc('id')
+            ->first();
+
+        if ($officialSnapshot && (int) $officialSnapshot->rows_count > 0) {
+            $seedList = app(ProBowlerSeedService::class)->createSeedListFromRanking(
+                rankingSnapshot: $officialSnapshot,
+                seedYear: $seedYear,
+                gender: $gender,
+                topCount: $topCount,
+                options: [
+                    'notes' => $validated['notes']
+                        ?: "{$baseRankingYear}年公式最終ポイントランキング上位{$topCount}名から自動生成",
+                    'source_url' => $officialSnapshot->source_url,
+                    'as_of_date' => $officialSnapshot->as_of_date,
+                    'is_active' => true,
+                ]
+            );
+
+            return redirect()
+                ->route('pro_bowler_seed_lists.show', $seedList)
+                ->with('status', "{$baseRankingYear}年{$genderLabel}公式最終ポイントランキング上位{$seedList->players()->count()}名から、{$seedYear}年{$genderLabel}シードを生成しました。");
+        }
 
         $rankingRows = $this->buildPointRankingRows(
             rankingYear: $baseRankingYear,
@@ -137,7 +188,7 @@ class ProBowlerSeedListController extends Controller
             return back()
                 ->withInput()
                 ->withErrors([
-                    'base_ranking_year' => '指定された年度・性別のポイントランキング対象者が見つかりませんでした。大会成績一覧でポイント再計算が済んでいるか確認してください。',
+                    'base_ranking_year' => '指定された年度・性別の確定ランキングが見つかりませんでした。先に「公式ランキング管理」で年度末ランキングを取り込むか、大会成績一覧でポイント再計算が済んでいるか確認してください。',
                 ]);
         }
 
@@ -229,8 +280,6 @@ class ProBowlerSeedListController extends Controller
                 ]);
             }
         });
-
-        $genderLabel = $this->genderLabels()[$gender] ?? $gender;
 
         return redirect()
             ->route('pro_bowler_seed_lists.index')
@@ -527,6 +576,89 @@ class ProBowlerSeedListController extends Controller
             'year' => $rankingYear,
             'gender' => $gender,
         ], false);
+    }
+
+
+    private function buildRankingRowsByKey($seedPlayers)
+    {
+        $pairs = collect($seedPlayers)
+            ->filter(fn ($player) => $player->ranking_snapshot_id && $player->ranking_rank)
+            ->map(fn ($player) => [
+                'ranking_snapshot_id' => (int) $player->ranking_snapshot_id,
+                'ranking_rank' => (int) $player->ranking_rank,
+            ])
+            ->unique(fn ($pair) => $pair['ranking_snapshot_id'] . ':' . $pair['ranking_rank'])
+            ->values();
+
+        if ($pairs->isEmpty()) {
+            return collect();
+        }
+
+        return ProBowlerRankingRow::query()
+            ->whereIn('ranking_snapshot_id', $pairs->pluck('ranking_snapshot_id')->unique()->values())
+            ->whereIn('ranking_rank', $pairs->pluck('ranking_rank')->unique()->values())
+            ->get()
+            ->keyBy(fn (ProBowlerRankingRow $row) => $this->rankingRowKey((int) $row->ranking_snapshot_id, (int) $row->ranking_rank));
+    }
+
+    private function findRankingRowForSeedPlayer(ProBowlerSeedListPlayer $player, $rankingRowsByKey): ?ProBowlerRankingRow
+    {
+        if (! $player->ranking_snapshot_id || ! $player->ranking_rank) {
+            return null;
+        }
+
+        return $rankingRowsByKey->get($this->rankingRowKey((int) $player->ranking_snapshot_id, (int) $player->ranking_rank));
+    }
+
+    private function rankingRowKey(int $rankingSnapshotId, int $rankingRank): string
+    {
+        return $rankingSnapshotId . ':' . $rankingRank;
+    }
+
+    private function formatDisplayLicenseNo(?string $licenseNo): string
+    {
+        $licenseNo = strtoupper(trim((string) $licenseNo));
+
+        if ($licenseNo === '') {
+            return '-';
+        }
+
+        $last4 = mb_substr($licenseNo, -4);
+
+        return $last4 !== '' ? $last4 : $licenseNo;
+    }
+
+    private function formatKibetsu(mixed $kibetsu): string
+    {
+        if ($kibetsu === null || $kibetsu === '') {
+            return '-';
+        }
+
+        return ((int) $kibetsu) . '期';
+    }
+
+    private function formatPointsForDisplay(mixed $points): string
+    {
+        if ($points === null || $points === '') {
+            return '-';
+        }
+
+        $number = (float) $points;
+
+        if (floor($number) === $number) {
+            return number_format((int) $number);
+        }
+
+        return rtrim(rtrim(number_format($number, 2, '.', ','), '0'), '.');
+    }
+
+    private function formatPrizeMoneyForDisplay(mixed $prizeMoney): string
+    {
+        if ($prizeMoney === null || $prizeMoney === '') {
+            return '-';
+        }
+
+        return number_format((int) $prizeMoney) . '円';
     }
 
     private function pointTextFromNote(?string $note): string

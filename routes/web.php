@@ -216,6 +216,7 @@ Route::middleware(['auth','role:member,editor,admin'])->group(function () {
     Route::get('/tournament_pro', [TournamentProController::class, 'index'])->name('tournament_pro.index');
     Route::get('/tp_registration', [TpRegistrationController::class, 'index'])->name('tp_registration.index');
     Route::get('/rankings', [RankingController::class, 'index'])->name('rankings.index');
+    Route::post('/rankings/import-official', [RankingController::class, 'storeOfficialRanking'])->name('rankings.import_official');
     Route::get('/perfect_records', [PerfectRecordController::class, 'index'])->name('perfect_records.index');
     Route::get('/pro_groups', [ProGroupController::class, 'index'])->name('pro_groups.index');
     Route::get('/certificates', [CertificateController::class, 'index'])->name('certificates.index');
