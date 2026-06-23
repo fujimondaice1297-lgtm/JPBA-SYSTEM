@@ -657,6 +657,58 @@ registered_balls,9,updated_at,timestamp without time zone,YES
 registered_balls,10,expires_at,date,YES
 registered_balls,11,inspection_number,character varying,YES
 registered_balls,12,pro_bowler_id,bigint,YES
+score_import_batches,1,id,bigint,NO
+score_import_batches,2,tournament_id,bigint,NO
+score_import_batches,3,import_type,character varying,NO
+score_import_batches,4,source_filename,character varying,YES
+score_import_batches,5,stored_path,text,YES
+score_import_batches,6,status,character varying,NO
+score_import_batches,7,parser_version,character varying,YES
+score_import_batches,8,imported_by,bigint,YES
+score_import_batches,9,confirmed_by,bigint,YES
+score_import_batches,10,row_count,integer,NO
+score_import_batches,11,accepted_row_count,integer,NO
+score_import_batches,12,rejected_row_count,integer,NO
+score_import_batches,13,parsed_at,timestamp without time zone,YES
+score_import_batches,14,confirmed_at,timestamp without time zone,YES
+score_import_batches,15,error_message,text,YES
+score_import_batches,16,notes,text,YES
+score_import_batches,17,created_at,timestamp without time zone,YES
+score_import_batches,18,updated_at,timestamp without time zone,YES
+score_import_row_candidates,1,id,bigint,NO
+score_import_row_candidates,2,score_import_row_id,bigint,NO
+score_import_row_candidates,3,candidate_type,character varying,NO
+score_import_row_candidates,4,candidate_value,character varying,YES
+score_import_row_candidates,5,tournament_participant_id,bigint,YES
+score_import_row_candidates,6,pro_bowler_id,bigint,YES
+score_import_row_candidates,7,confidence,numeric,YES
+score_import_row_candidates,8,rank,integer,YES
+score_import_row_candidates,9,payload,json,YES
+score_import_row_candidates,10,is_selected,boolean,NO
+score_import_row_candidates,11,created_at,timestamp without time zone,YES
+score_import_row_candidates,12,updated_at,timestamp without time zone,YES
+score_import_rows,1,id,bigint,NO
+score_import_rows,2,score_import_batch_id,bigint,NO
+score_import_rows,3,row_number,integer,NO
+score_import_rows,4,raw_payload,json,YES
+score_import_rows,5,parse_status,character varying,NO
+score_import_rows,6,confidence,numeric,YES
+score_import_rows,7,tournament_participant_id,bigint,YES
+score_import_rows,8,pro_bowler_id,bigint,YES
+score_import_rows,9,license_number,character varying,YES
+score_import_rows,10,name,character varying,YES
+score_import_rows,11,entry_number,character varying,YES
+score_import_rows,12,stage,character varying,YES
+score_import_rows,13,shift,character varying,YES
+score_import_rows,14,gender,character varying,YES
+score_import_rows,15,game_number,integer,YES
+score_import_rows,16,score,smallint,YES
+score_import_rows,17,error_message,text,YES
+score_import_rows,18,reviewed_by,bigint,YES
+score_import_rows,19,reviewed_at,timestamp without time zone,YES
+score_import_rows,20,confirmed_game_score_id,bigint,YES
+score_import_rows,21,created_at,timestamp without time zone,YES
+score_import_rows,22,updated_at,timestamp without time zone,YES
 sessions,1,id,character varying,NO
 sessions,2,user_id,bigint,YES
 sessions,3,ip_address,character varying,YES

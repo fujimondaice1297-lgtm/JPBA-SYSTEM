@@ -22,6 +22,9 @@ JPBA SYSTEM Database Data Dictionary
   - [distribution_patterns](#distribution_patterns)
   - [districts](#districts)
   - [game_scores](#game_scores)
+  - [score_import_batches](#score_import_batches)
+  - [score_import_rows](#score_import_rows)
+  - [score_import_row_candidates](#score_import_row_candidates)
   - [group_mail_recipients](#group_mail_recipients)
   - [group_mailouts](#group_mailouts)
   - [group_members](#group_members)
@@ -262,6 +265,103 @@ JPBA公認ボールのマスタ。
 - `(tournament_id, stage, COALESCE(shift, ''), game_number, tournament_participant_id)` unique where tournament_participant_id is not null
   - 同一大会・同一ステージ・同一シフト・同一ゲーム・同一参加者の重複スコアを防ぐ。
 
+---
+
+## score_import_batches
+
+### 役割
+スコア取込（CSV / Excel / 写真OCR / 手入力補助）の1回分の処理単位を保持するステージング親テーブル。
+解析結果をいきなり `game_scores` へ書かず、管理者確認・差戻し・再取込の状態を残すために使う。
+
+### 主キー
+- id (bigint)
+
+### 主要カラム
+- tournament_id（対象大会）
+- import_type（`csv` / `excel` / `photo_ocr` / `manual` など）
+- source_filename / stored_path（元ファイル名と保存先）
+- status（`draft` / `parsed` / `reviewing` / `confirmed` / `cancelled` / `failed` など）
+- parser_version（解析ロジックのバージョン）
+- imported_by / confirmed_by（取込者・確定者）
+- row_count / accepted_row_count / rejected_row_count
+- parsed_at / confirmed_at
+- error_message / notes
+
+### 外部キー（FK）
+- tournament_id -> tournaments.id
+- imported_by -> users.id
+- confirmed_by -> users.id
+
+### 注意（運用方針）
+- OCRやCSV解析の信頼度が低い場合でも、このテーブルに処理単位を残し、確定前の確認画面で止める。
+- `confirmed_at` が入るまでは `game_scores` / `tournament_results` への本反映済みとは扱わない。
+
+---
+
+## score_import_rows
+
+### 役割
+スコア取込バッチ内の1行・1セル相当の解析結果を保持するステージング明細テーブル。
+スコア、氏名、ライセンス番号、ゲーム番号などを確認し、確定時に `game_scores` へ反映する。
+
+### 主キー
+- id (bigint)
+
+### 主要カラム
+- score_import_batch_id（取込バッチ）
+- row_number（元ファイル上の行番号または解析順）
+- raw_payload（元データ・OCR JSON等）
+- parse_status（`pending` / `parsed` / `needs_review` / `accepted` / `rejected` など）
+- confidence（解析信頼度）
+- tournament_participant_id / pro_bowler_id
+- license_number / name / entry_number
+- stage / shift / gender
+- game_number / score
+- reviewed_by / reviewed_at
+- confirmed_game_score_id（確定後に作成または更新したスコア行）
+- error_message
+
+### 外部キー（FK）
+- score_import_batch_id -> score_import_batches.id
+- tournament_participant_id -> tournament_participants.id
+- pro_bowler_id -> pro_bowlers.id
+- reviewed_by -> users.id
+- confirmed_game_score_id -> game_scores.id
+
+### 注意（運用方針）
+- 人物判定は `tournament_participant_id` を最優先し、次に `pro_bowler_id`、最後に表示用文字列で確認する。
+- `confirmed_game_score_id` が入っていない行は、本番スコアへ未反映として扱う。
+
+---
+
+## score_import_row_candidates
+
+### 役割
+取込行に対して、人物候補・ライセンス候補・スコアセル候補など複数の解析候補を保持するテーブル。
+OCRや名寄せで迷った候補を保存し、管理者が選択した結果を `score_import_rows` へ反映するために使う。
+
+### 主キー
+- id (bigint)
+
+### 主要カラム
+- score_import_row_id（対象取込行）
+- candidate_type（`participant` / `pro_bowler` / `license` / `name` / `score_cell` など）
+- candidate_value（候補文字列）
+- tournament_participant_id / pro_bowler_id
+- confidence（候補信頼度）
+- rank（候補順位）
+- payload（解析器固有の詳細）
+- is_selected（管理者が採用した候補）
+
+### 外部キー（FK）
+- score_import_row_id -> score_import_rows.id
+- tournament_participant_id -> tournament_participants.id
+- pro_bowler_id -> pro_bowlers.id
+
+### 注意（運用方針）
+- `is_selected = true` は最終判断の記録として使う。候補履歴は残し、OCR改善や誤認識分析に利用できるようにする。
+
+---
 
 ## group_mail_recipients
 

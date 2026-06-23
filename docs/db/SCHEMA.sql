@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict ITIHB0yWCdb7UdoTLC1AhGnxUKEA2Jl93CBIQ09b5OF3U33sQYAIhYTiW1OPPzO
+\restrict fPt0vw5Q1omp24LBHD72xG2fOKHt1NUkktAVlxgByZIJSOJyLH3k7IKfWgRuVoI
 
 -- Dumped from database version 18.2
 -- Dumped by pg_dump version 18.2
@@ -3126,6 +3126,151 @@ ALTER SEQUENCE public.registered_balls_id_seq OWNED BY public.registered_balls.i
 
 
 --
+-- Name: score_import_batches; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.score_import_batches (
+    id bigint NOT NULL,
+    tournament_id bigint NOT NULL,
+    import_type character varying(50) DEFAULT 'csv'::character varying NOT NULL,
+    source_filename character varying(255),
+    stored_path text,
+    status character varying(50) DEFAULT 'draft'::character varying NOT NULL,
+    parser_version character varying(50),
+    imported_by bigint,
+    confirmed_by bigint,
+    row_count integer DEFAULT 0 NOT NULL,
+    accepted_row_count integer DEFAULT 0 NOT NULL,
+    rejected_row_count integer DEFAULT 0 NOT NULL,
+    parsed_at timestamp(0) without time zone,
+    confirmed_at timestamp(0) without time zone,
+    error_message text,
+    notes text,
+    created_at timestamp(0) without time zone,
+    updated_at timestamp(0) without time zone
+);
+
+
+ALTER TABLE public.score_import_batches OWNER TO postgres;
+
+--
+-- Name: score_import_batches_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.score_import_batches_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.score_import_batches_id_seq OWNER TO postgres;
+
+--
+-- Name: score_import_batches_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.score_import_batches_id_seq OWNED BY public.score_import_batches.id;
+
+
+--
+-- Name: score_import_row_candidates; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.score_import_row_candidates (
+    id bigint NOT NULL,
+    score_import_row_id bigint NOT NULL,
+    candidate_type character varying(50) NOT NULL,
+    candidate_value character varying(255),
+    tournament_participant_id bigint,
+    pro_bowler_id bigint,
+    confidence numeric(5,2),
+    rank integer,
+    payload json,
+    is_selected boolean DEFAULT false NOT NULL,
+    created_at timestamp(0) without time zone,
+    updated_at timestamp(0) without time zone
+);
+
+
+ALTER TABLE public.score_import_row_candidates OWNER TO postgres;
+
+--
+-- Name: score_import_row_candidates_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.score_import_row_candidates_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.score_import_row_candidates_id_seq OWNER TO postgres;
+
+--
+-- Name: score_import_row_candidates_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.score_import_row_candidates_id_seq OWNED BY public.score_import_row_candidates.id;
+
+
+--
+-- Name: score_import_rows; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.score_import_rows (
+    id bigint NOT NULL,
+    score_import_batch_id bigint NOT NULL,
+    row_number integer NOT NULL,
+    raw_payload json,
+    parse_status character varying(50) DEFAULT 'pending'::character varying NOT NULL,
+    confidence numeric(5,2),
+    tournament_participant_id bigint,
+    pro_bowler_id bigint,
+    license_number character varying(50),
+    name character varying(255),
+    entry_number character varying(50),
+    stage character varying(50),
+    shift character varying(20),
+    gender character varying(10),
+    game_number integer,
+    score smallint,
+    error_message text,
+    reviewed_by bigint,
+    reviewed_at timestamp(0) without time zone,
+    confirmed_game_score_id bigint,
+    created_at timestamp(0) without time zone,
+    updated_at timestamp(0) without time zone
+);
+
+
+ALTER TABLE public.score_import_rows OWNER TO postgres;
+
+--
+-- Name: score_import_rows_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.score_import_rows_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.score_import_rows_id_seq OWNER TO postgres;
+
+--
+-- Name: score_import_rows_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.score_import_rows_id_seq OWNED BY public.score_import_rows.id;
+
+
+--
 -- Name: sessions; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -4912,6 +5057,27 @@ ALTER TABLE ONLY public.registered_balls ALTER COLUMN id SET DEFAULT nextval('pu
 
 
 --
+-- Name: score_import_batches id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.score_import_batches ALTER COLUMN id SET DEFAULT nextval('public.score_import_batches_id_seq'::regclass);
+
+
+--
+-- Name: score_import_row_candidates id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.score_import_row_candidates ALTER COLUMN id SET DEFAULT nextval('public.score_import_row_candidates_id_seq'::regclass);
+
+
+--
+-- Name: score_import_rows id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.score_import_rows ALTER COLUMN id SET DEFAULT nextval('public.score_import_rows_id_seq'::regclass);
+
+
+--
 -- Name: sexes id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
@@ -5703,6 +5869,30 @@ ALTER TABLE ONLY public.registered_balls
 
 
 --
+-- Name: score_import_batches score_import_batches_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.score_import_batches
+    ADD CONSTRAINT score_import_batches_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: score_import_row_candidates score_import_row_candidates_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.score_import_row_candidates
+    ADD CONSTRAINT score_import_row_candidates_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: score_import_rows score_import_rows_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.score_import_rows
+    ADD CONSTRAINT score_import_rows_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: sessions sessions_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -5716,6 +5906,14 @@ ALTER TABLE ONLY public.sessions
 
 ALTER TABLE ONLY public.sexes
     ADD CONSTRAINT sexes_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: score_import_rows sir_batch_row_unique; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.score_import_rows
+    ADD CONSTRAINT sir_batch_row_unique UNIQUE (score_import_batch_id, row_number);
 
 
 --
@@ -6451,6 +6649,111 @@ CREATE INDEX sessions_user_id_index ON public.sessions USING btree (user_id);
 
 
 --
+-- Name: sib_confirmed_at_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX sib_confirmed_at_idx ON public.score_import_batches USING btree (confirmed_at);
+
+
+--
+-- Name: sib_confirmed_by_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX sib_confirmed_by_idx ON public.score_import_batches USING btree (confirmed_by);
+
+
+--
+-- Name: sib_imported_by_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX sib_imported_by_idx ON public.score_import_batches USING btree (imported_by);
+
+
+--
+-- Name: sib_parsed_at_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX sib_parsed_at_idx ON public.score_import_batches USING btree (parsed_at);
+
+
+--
+-- Name: sib_tournament_status_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX sib_tournament_status_idx ON public.score_import_batches USING btree (tournament_id, status);
+
+
+--
+-- Name: sir_batch_status_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX sir_batch_status_idx ON public.score_import_rows USING btree (score_import_batch_id, parse_status);
+
+
+--
+-- Name: sir_bowler_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX sir_bowler_idx ON public.score_import_rows USING btree (pro_bowler_id);
+
+
+--
+-- Name: sir_confirmed_score_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX sir_confirmed_score_idx ON public.score_import_rows USING btree (confirmed_game_score_id);
+
+
+--
+-- Name: sir_participant_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX sir_participant_idx ON public.score_import_rows USING btree (tournament_participant_id);
+
+
+--
+-- Name: sir_reviewed_by_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX sir_reviewed_by_idx ON public.score_import_rows USING btree (reviewed_by);
+
+
+--
+-- Name: sir_stage_game_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX sir_stage_game_idx ON public.score_import_rows USING btree (stage, game_number);
+
+
+--
+-- Name: sirc_bowler_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX sirc_bowler_idx ON public.score_import_row_candidates USING btree (pro_bowler_id);
+
+
+--
+-- Name: sirc_participant_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX sirc_participant_idx ON public.score_import_row_candidates USING btree (tournament_participant_id);
+
+
+--
+-- Name: sirc_row_rank_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX sirc_row_rank_idx ON public.score_import_row_candidates USING btree (score_import_row_id, rank);
+
+
+--
+-- Name: sirc_row_selected_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX sirc_row_selected_idx ON public.score_import_row_candidates USING btree (score_import_row_id, is_selected);
+
+
+--
 -- Name: t_entries_bowler_idx; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -6900,6 +7203,94 @@ ALTER TABLE ONLY public.pro_dsp
 
 
 --
+-- Name: score_import_batches score_import_batches_confirmed_by_foreign; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.score_import_batches
+    ADD CONSTRAINT score_import_batches_confirmed_by_foreign FOREIGN KEY (confirmed_by) REFERENCES public.users(id) ON DELETE SET NULL;
+
+
+--
+-- Name: score_import_batches score_import_batches_imported_by_foreign; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.score_import_batches
+    ADD CONSTRAINT score_import_batches_imported_by_foreign FOREIGN KEY (imported_by) REFERENCES public.users(id) ON DELETE SET NULL;
+
+
+--
+-- Name: score_import_batches score_import_batches_tournament_id_foreign; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.score_import_batches
+    ADD CONSTRAINT score_import_batches_tournament_id_foreign FOREIGN KEY (tournament_id) REFERENCES public.tournaments(id) ON DELETE CASCADE;
+
+
+--
+-- Name: score_import_row_candidates score_import_row_candidates_pro_bowler_id_foreign; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.score_import_row_candidates
+    ADD CONSTRAINT score_import_row_candidates_pro_bowler_id_foreign FOREIGN KEY (pro_bowler_id) REFERENCES public.pro_bowlers(id) ON DELETE SET NULL;
+
+
+--
+-- Name: score_import_row_candidates score_import_row_candidates_score_import_row_id_foreign; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.score_import_row_candidates
+    ADD CONSTRAINT score_import_row_candidates_score_import_row_id_foreign FOREIGN KEY (score_import_row_id) REFERENCES public.score_import_rows(id) ON DELETE CASCADE;
+
+
+--
+-- Name: score_import_row_candidates score_import_row_candidates_tournament_participant_id_foreign; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.score_import_row_candidates
+    ADD CONSTRAINT score_import_row_candidates_tournament_participant_id_foreign FOREIGN KEY (tournament_participant_id) REFERENCES public.tournament_participants(id) ON DELETE SET NULL;
+
+
+--
+-- Name: score_import_rows score_import_rows_confirmed_game_score_id_foreign; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.score_import_rows
+    ADD CONSTRAINT score_import_rows_confirmed_game_score_id_foreign FOREIGN KEY (confirmed_game_score_id) REFERENCES public.game_scores(id) ON DELETE SET NULL;
+
+
+--
+-- Name: score_import_rows score_import_rows_pro_bowler_id_foreign; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.score_import_rows
+    ADD CONSTRAINT score_import_rows_pro_bowler_id_foreign FOREIGN KEY (pro_bowler_id) REFERENCES public.pro_bowlers(id) ON DELETE SET NULL;
+
+
+--
+-- Name: score_import_rows score_import_rows_reviewed_by_foreign; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.score_import_rows
+    ADD CONSTRAINT score_import_rows_reviewed_by_foreign FOREIGN KEY (reviewed_by) REFERENCES public.users(id) ON DELETE SET NULL;
+
+
+--
+-- Name: score_import_rows score_import_rows_score_import_batch_id_foreign; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.score_import_rows
+    ADD CONSTRAINT score_import_rows_score_import_batch_id_foreign FOREIGN KEY (score_import_batch_id) REFERENCES public.score_import_batches(id) ON DELETE CASCADE;
+
+
+--
+-- Name: score_import_rows score_import_rows_tournament_participant_id_foreign; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.score_import_rows
+    ADD CONSTRAINT score_import_rows_tournament_participant_id_foreign FOREIGN KEY (tournament_participant_id) REFERENCES public.tournament_participants(id) ON DELETE SET NULL;
+
+
+--
 -- Name: stage_settings stage_settings_tournament_id_foreign; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -7167,5 +7558,5 @@ ALTER TABLE ONLY public.users
 -- PostgreSQL database dump complete
 --
 
-\unrestrict ITIHB0yWCdb7UdoTLC1AhGnxUKEA2Jl93CBIQ09b5OF3U33sQYAIhYTiW1OPPzO
+\unrestrict fPt0vw5Q1omp24LBHD72xG2fOKHt1NUkktAVlxgByZIJSOJyLH3k7IKfWgRuVoI
 

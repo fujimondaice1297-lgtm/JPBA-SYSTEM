@@ -1,7 +1,7 @@
 # Columns by table (generated)
 
 - Source: `docs/db/columns_public.csv`
-- Generated: 2026-06-23 22:55:58
+- Generated: 2026-06-23 23:58:38
 
 > ⚠️ このファイルは自動生成です。手で編集しないでください。
 
@@ -977,6 +977,73 @@
 | 10 | expires_at | date | YES |
 | 11 | inspection_number | character varying | YES |
 | 12 | pro_bowler_id | bigint | YES |
+
+## score_import_batches (18 columns)
+
+| # | column | type | nullable |
+|---:|---|---|---|
+| 1 | id | bigint | NO |
+| 2 | tournament_id | bigint | NO |
+| 3 | import_type | character varying | NO |
+| 4 | source_filename | character varying | YES |
+| 5 | stored_path | text | YES |
+| 6 | status | character varying | NO |
+| 7 | parser_version | character varying | YES |
+| 8 | imported_by | bigint | YES |
+| 9 | confirmed_by | bigint | YES |
+| 10 | row_count | integer | NO |
+| 11 | accepted_row_count | integer | NO |
+| 12 | rejected_row_count | integer | NO |
+| 13 | parsed_at | timestamp without time zone | YES |
+| 14 | confirmed_at | timestamp without time zone | YES |
+| 15 | error_message | text | YES |
+| 16 | notes | text | YES |
+| 17 | created_at | timestamp without time zone | YES |
+| 18 | updated_at | timestamp without time zone | YES |
+
+## score_import_row_candidates (12 columns)
+
+| # | column | type | nullable |
+|---:|---|---|---|
+| 1 | id | bigint | NO |
+| 2 | score_import_row_id | bigint | NO |
+| 3 | candidate_type | character varying | NO |
+| 4 | candidate_value | character varying | YES |
+| 5 | tournament_participant_id | bigint | YES |
+| 6 | pro_bowler_id | bigint | YES |
+| 7 | confidence | numeric | YES |
+| 8 | rank | integer | YES |
+| 9 | payload | json | YES |
+| 10 | is_selected | boolean | NO |
+| 11 | created_at | timestamp without time zone | YES |
+| 12 | updated_at | timestamp without time zone | YES |
+
+## score_import_rows (22 columns)
+
+| # | column | type | nullable |
+|---:|---|---|---|
+| 1 | id | bigint | NO |
+| 2 | score_import_batch_id | bigint | NO |
+| 3 | row_number | integer | NO |
+| 4 | raw_payload | json | YES |
+| 5 | parse_status | character varying | NO |
+| 6 | confidence | numeric | YES |
+| 7 | tournament_participant_id | bigint | YES |
+| 8 | pro_bowler_id | bigint | YES |
+| 9 | license_number | character varying | YES |
+| 10 | name | character varying | YES |
+| 11 | entry_number | character varying | YES |
+| 12 | stage | character varying | YES |
+| 13 | shift | character varying | YES |
+| 14 | gender | character varying | YES |
+| 15 | game_number | integer | YES |
+| 16 | score | smallint | YES |
+| 17 | error_message | text | YES |
+| 18 | reviewed_by | bigint | YES |
+| 19 | reviewed_at | timestamp without time zone | YES |
+| 20 | confirmed_game_score_id | bigint | YES |
+| 21 | created_at | timestamp without time zone | YES |
+| 22 | updated_at | timestamp without time zone | YES |
 
 ## sessions (6 columns)
 

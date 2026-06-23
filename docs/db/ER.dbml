@@ -1,5 +1,5 @@
 // Auto-generated from docs/db/data_dictionary.md
-// Generated at: 2026-06-03T23:36:10+09:00
+// Generated at: 2026-06-23T23:58:28+09:00
 
 Project JPBA_SYSTEM {
   database_type: 'PostgreSQL'
@@ -149,6 +149,18 @@ Table registered_balls {
   // columns omitted (see docs/db/columns_by_table.md)
 }
 
+Table score_import_batches {
+  // columns omitted (see docs/db/columns_by_table.md)
+}
+
+Table score_import_row_candidates {
+  // columns omitted (see docs/db/columns_by_table.md)
+}
+
+Table score_import_rows {
+  // columns omitted (see docs/db/columns_by_table.md)
+}
+
 Table sessions {
   // columns omitted (see docs/db/columns_by_table.md)
 }
@@ -290,6 +302,17 @@ Ref: pro_bowlers.sex > sexes.id
 Ref: pro_dsp.pro_bowler_id > pro_bowlers.id
 Ref: registered_balls.approved_ball_id > approved_balls.id
 Ref: registered_balls.pro_bowler_id > pro_bowlers.id
+Ref: score_import_batches.confirmed_by > users.id
+Ref: score_import_batches.imported_by > users.id
+Ref: score_import_batches.tournament_id > tournaments.id
+Ref: score_import_row_candidates.pro_bowler_id > pro_bowlers.id
+Ref: score_import_row_candidates.score_import_row_id > score_import_rows.id
+Ref: score_import_row_candidates.tournament_participant_id > tournament_participants.id
+Ref: score_import_rows.confirmed_game_score_id > game_scores.id
+Ref: score_import_rows.pro_bowler_id > pro_bowlers.id
+Ref: score_import_rows.reviewed_by > users.id
+Ref: score_import_rows.score_import_batch_id > score_import_batches.id
+Ref: score_import_rows.tournament_participant_id > tournament_participants.id
 Ref: sessions.user_id > users.id
 Ref: tournament_auto_draw_logs.tournament_id > tournaments.id
 Ref: tournament_awards.tournament_id > tournaments.id

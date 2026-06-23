@@ -105,11 +105,17 @@ flowchart LR
 - 取込先は直接 `game_scores` ではなく、確認用の一時テーブルにする。
 - 画面上で照合結果を確認してから `game_scores` へ確定反映する。
 
-推奨テーブル案:
+追加済みのステージングテーブル:
 
 - `score_import_batches`
 - `score_import_rows`
 - `score_import_row_candidates`
+
+次の実装候補:
+
+- CSVアップロードを `score_import_batches` / `score_import_rows` へ保存するサービス
+- 取込行と `tournament_participants` / `pro_bowlers` の照合サービス
+- 管理画面で `needs_review` の行だけ修正し、確認後に `game_scores` へ反映する画面
 
 ### Phase 3: OCR/写真解析
 

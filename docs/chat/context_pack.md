@@ -45,3 +45,14 @@
 - docs/chat/automation_roadmap.md
 - docs/db/PREFLIGHT.md
 - docs/db/SCHEMA.sql
+
+---
+
+## 2026-06-23 追記: スコア取込ステージング
+
+- CSV / Excel / 写真OCR / 手入力補助の解析結果を、直接 `game_scores` に書かず確認できるようにするため、以下のDB土台を追加。
+  - `score_import_batches`
+  - `score_import_rows`
+  - `score_import_row_candidates`
+- 目的は「OCR結果・CSV解析結果を保存 -> 管理者確認 -> `game_scores` 確定反映」という流れを作ること。
+- 次の候補作業は、CSVアップロードサービス、名寄せ/照合サービス、確認画面、確定反映サービス。
