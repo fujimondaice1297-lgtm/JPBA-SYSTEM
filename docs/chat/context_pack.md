@@ -27,8 +27,12 @@
 - [x] `docs/db/SCHEMA.sql` と `docs/db/columns_by_table.md` の古さを現DBで確認する
 - [x] `pg_dump -s` で `docs/db/SCHEMA.sql` を更新する
 - [x] カラム一覧資料を再生成する
-- [ ] 大会別 `歴代優勝者シード` の登録画面・リスト作成へ進む
+- [x] 大会別 `歴代優勝者シード` の登録画面・リスト作成へ進む
+- [x] 大会終了処理チェックリストを `大会運用ログ` へ追加する
+- [x] 自動化ロードマップを `docs/chat/automation_roadmap.md` として追加する
 - [ ] 年度別シード / 永久シード / 大会別追加シードが、エントリー管理・優先出場PDF・大会PDFの `S` 表示に正しく接続されるか回帰確認する
+- [ ] 大会終了処理チェックリストの不足検知を詳しくする（未入力選手、ゲーム不足、未反映配分など）
+- [ ] CSV/Excel取込用の一時テーブル設計へ進む。写真OCRはその後の段階にする
 
 ## 6. 参照してほしい資料
 - docs/db/data_dictionary.md
@@ -37,5 +41,6 @@
 - docs/db/refs_skipped.md
 - docs/chat/worklog_db.md（追記済み）
 - docs/chat/progress_board.md
+- docs/chat/automation_roadmap.md
 - docs/db/PREFLIGHT.md
 - docs/db/SCHEMA.sql

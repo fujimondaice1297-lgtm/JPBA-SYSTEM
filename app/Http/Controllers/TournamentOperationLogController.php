@@ -3,12 +3,17 @@
 namespace App\Http\Controllers;
 
 use App\Models\Tournament;
+use App\Services\TournamentAutomationReadinessService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class TournamentOperationLogController extends Controller
 {
-    public function index(Request $request, Tournament $tournament)
+    public function index(
+        Request $request,
+        Tournament $tournament,
+        TournamentAutomationReadinessService $automationReadiness
+    )
     {
         $this->authorizeEditorOrAdmin();
 
@@ -60,6 +65,8 @@ class TournamentOperationLogController extends Controller
             ->paginate(20, ['*'], 'auto_draw_page')
             ->withQueryString();
 
+        $automationSummary = $automationReadiness->build($tournament);
+
         return view('tournament_entries.operation_logs', compact(
             'tournament',
             'reminderKind',
@@ -69,6 +76,7 @@ class TournamentOperationLogController extends Controller
             'autoDrawSummary',
             'reminderLogs',
             'autoDrawLogs',
+            'automationSummary',
         ));
     }
 

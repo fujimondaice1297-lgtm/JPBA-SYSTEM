@@ -14,6 +14,193 @@
     </div>
   </div>
 
+  @if (session('success'))
+    <div class="alert alert-success">{{ session('success') }}</div>
+  @endif
+
+  @if ($errors->any())
+    <div class="alert alert-danger">
+      <ul class="mb-0">
+        @foreach ($errors->all() as $error)
+          <li>{{ $error }}</li>
+        @endforeach
+      </ul>
+    </div>
+  @endif
+
+  @php
+    $automationSummary = $automationSummary ?? [];
+    $readiness = $automationSummary['readiness'] ?? [];
+    $entries = $automationSummary['entries'] ?? [];
+    $scores = $automationSummary['scores'] ?? [];
+    $snapshots = $automationSummary['snapshots'] ?? [];
+    $results = $automationSummary['results'] ?? [];
+    $awards = $automationSummary['awards'] ?? [];
+    $titles = $automationSummary['titles'] ?? [];
+    $seeds = $automationSummary['seeds'] ?? [];
+    $statusBadges = [
+      'done' => ['class' => 'bg-success', 'label' => '完了'],
+      'ready' => ['class' => 'bg-primary', 'label' => '実行可'],
+      'warning' => ['class' => 'bg-warning text-dark', 'label' => '要確認'],
+      'waiting' => ['class' => 'bg-secondary', 'label' => '待ち'],
+    ];
+    $badgeFor = fn ($key) => $statusBadges[$key] ?? $statusBadges['waiting'];
+    $fullFinalSnapshot = $snapshots['full_final_snapshot'] ?? null;
+  @endphp
+
+  <div class="card mb-4">
+    <div class="card-header fw-bold d-flex justify-content-between align-items-center flex-wrap gap-2">
+      <span>大会終了処理チェックリスト</span>
+      <span class="text-muted small">DB正本から公開・PDF・タイトル・シードへつなぐ制御盤</span>
+    </div>
+    <div class="card-body">
+      <div class="row g-3 mb-3">
+        <div class="col-md-3">
+          <div class="border rounded p-3 h-100">
+            <div class="text-muted small">エントリー</div>
+            <div class="fs-4 fw-bold">{{ $entries['entry_count'] ?? 0 }}</div>
+            <div class="small text-muted">チェックイン: {{ $entries['checked_in_count'] ?? 0 }}</div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="border rounded p-3 h-100">
+            <div class="text-muted small">スコア行</div>
+            <div class="fs-4 fw-bold">{{ $scores['score_count'] ?? 0 }}</div>
+            <div class="small text-muted">入力済み選手目安: {{ $scores['scored_player_count'] ?? 0 }}</div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="border rounded p-3 h-100">
+            <div class="text-muted small">最終成績</div>
+            <div class="fs-4 fw-bold">{{ $results['final_results_count'] ?? 0 }}</div>
+            <div class="small text-muted">優勝者行: {{ $results['winner_count'] ?? 0 }}</div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="border rounded p-3 h-100">
+            <div class="text-muted small">シード候補</div>
+            <div class="fs-4 fw-bold">{{ $seeds['active_seed_source_count'] ?? 0 }}</div>
+            <div class="small text-muted">
+              年度別 {{ $seeds['annual_seed_player_count'] ?? 0 }} / 大会別 {{ $seeds['tournament_seed_player_count'] ?? 0 }}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      @if (!empty($scores['stage_rows']))
+        <div class="mb-3">
+          <div class="small text-muted mb-2">スコア入力ステージ</div>
+          <div class="d-flex flex-wrap gap-2">
+            @foreach ($scores['stage_rows'] as $stageRow)
+              <span class="badge text-bg-light border">
+                {{ $stageRow['stage'] }}: {{ $stageRow['games_count'] }}G / {{ $stageRow['rows_count'] }}行
+              </span>
+            @endforeach
+          </div>
+        </div>
+      @endif
+
+      <div class="table-responsive mb-3">
+        <table class="table table-sm align-middle">
+          <thead>
+            <tr>
+              <th style="width: 180px;">処理</th>
+              <th style="width: 90px;">状態</th>
+              <th>確認内容</th>
+              <th style="width: 260px;">操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="fw-bold">1. エントリー確認</td>
+              @php($badge = $badgeFor($readiness['entries'] ?? 'waiting'))
+              <td><span class="badge {{ $badge['class'] }}">{{ $badge['label'] }}</span></td>
+              <td>出場者・シフト・レーン・使用ボールの前提を確認します。</td>
+              <td><a href="{{ route('tournaments.entries.index', $tournament->id) }}" class="btn btn-sm btn-outline-dark">エントリー一覧</a></td>
+            </tr>
+            <tr>
+              <td class="fw-bold">2. スコア入力</td>
+              @php($badge = $badgeFor($readiness['scores'] ?? 'waiting'))
+              <td><span class="badge {{ $badge['class'] }}">{{ $badge['label'] }}</span></td>
+              <td>`game_scores` を速報・順位計算の正本として入力します。</td>
+              <td>
+                <div class="d-flex flex-wrap gap-2">
+                  <a href="{{ route('scores.input', ['tournament_id' => $tournament->id]) }}" class="btn btn-sm btn-outline-primary">入力</a>
+                  <a href="{{ route('scores.result', ['tournament_id' => $tournament->id]) }}" class="btn btn-sm btn-outline-secondary">速報</a>
+                </div>
+              </td>
+            </tr>
+            <tr>
+              <td class="fw-bold">3. 正式成績反映</td>
+              @php($badge = $badgeFor($readiness['snapshots'] ?? 'waiting'))
+              <td><span class="badge {{ $badge['class'] }}">{{ $badge['label'] }}</span></td>
+              <td>
+                @if ($fullFinalSnapshot)
+                  全体条件の最終snapshotあり: {{ $fullFinalSnapshot->result_name ?? 'final' }}
+                  / 行数 {{ $snapshots['full_final_row_count'] ?? 0 }}
+                @else
+                  全体条件の `final_total` snapshot を作ると、最終成績へ同期できます。
+                @endif
+              </td>
+              <td><a href="{{ route('tournaments.result_snapshots.index', $tournament->id) }}" class="btn btn-sm btn-outline-success">正式成績反映</a></td>
+            </tr>
+            <tr>
+              <td class="fw-bold">4. 賞金・ポイント</td>
+              @php($badge = $badgeFor($readiness['awards'] ?? 'waiting'))
+              <td><span class="badge {{ $badge['class'] }}">{{ $badge['label'] }}</span></td>
+              <td>
+                配分: ポイント {{ $awards['point_distribution_count'] ?? 0 }} / 賞金 {{ $awards['prize_distribution_count'] ?? 0 }}
+                ・反映済み行: ポイント {{ $awards['point_applied_rows'] ?? 0 }} / 賞金 {{ $awards['prize_applied_rows'] ?? 0 }}
+              </td>
+              <td>
+                <form method="POST" action="{{ route('tournaments.results.apply_awards_points', $tournament->id) }}" class="d-inline">
+                  @csrf
+                  <button type="submit" class="btn btn-sm btn-outline-danger">賞金・ポイント反映</button>
+                </form>
+              </td>
+            </tr>
+            <tr>
+              <td class="fw-bold">5. タイトル同期</td>
+              @php($badge = $badgeFor($readiness['titles'] ?? 'waiting'))
+              <td><span class="badge {{ $badge['class'] }}">{{ $badge['label'] }}</span></td>
+              <td>優勝者を `pro_bowler_titles` へ同期します。同期済み: {{ $titles['title_count'] ?? 0 }} 件</td>
+              <td>
+                <form method="POST" action="{{ route('tournaments.results.sync', $tournament->id) }}" class="d-inline">
+                  @csrf
+                  <input type="hidden" name="year" value="{{ $automationSummary['tournament_year'] ?? $tournament->year }}">
+                  <button type="submit" class="btn btn-sm btn-outline-primary">タイトル同期</button>
+                </form>
+              </td>
+            </tr>
+            <tr>
+              <td class="fw-bold">6. シード確認</td>
+              @php($badge = $badgeFor($readiness['seeds'] ?? 'waiting'))
+              <td><span class="badge {{ $badge['class'] }}">{{ $badge['label'] }}</span></td>
+              <td>年度別シードと大会別追加シードを確認し、PDFの `S` 表示へつなげます。</td>
+              <td><a href="{{ route('tournaments.seed_players.index', $tournament->id) }}" class="btn btn-sm btn-outline-info">シード設定</a></td>
+            </tr>
+            <tr>
+              <td class="fw-bold">7. PDF確認</td>
+              @php($badge = $badgeFor($readiness['pdf'] ?? 'waiting'))
+              <td><span class="badge {{ $badge['class'] }}">{{ $badge['label'] }}</span></td>
+              <td>最終成績PDF・優先出場PDFを確認します。</td>
+              <td>
+                <div class="d-flex flex-wrap gap-2">
+                  <a href="{{ route('tournaments.results.pdf', $tournament->id) }}" class="btn btn-sm btn-outline-secondary">成績PDF</a>
+                  <a href="{{ route('tournaments.seed_players.pdf', $tournament->id) }}" class="btn btn-sm btn-outline-secondary">シードPDF</a>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="small text-muted">
+        ここでは自動実行前の確認を優先します。写真OCRやCSV取込は、まず確認用の一時データへ入れてから `game_scores` に確定反映する流れにします。
+      </div>
+    </div>
+  </div>
+
   <form method="GET" action="{{ route('tournaments.operation_logs.index', $tournament->id) }}" class="card mb-4">
     <div class="card-header fw-bold">絞り込み</div>
     <div class="card-body row g-3 align-items-end">
