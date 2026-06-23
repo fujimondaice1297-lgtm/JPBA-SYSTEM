@@ -93,8 +93,8 @@
         [
             'no' => '⑤',
             'key' => 'official_winner',
-            'title' => '公認T/M歴代優勝者シードプロ',
-            'title_lines' => ['公認T/M歴代優勝者シードプロ'],
+            'title' => '当該年度・前年度優勝者シードプロ',
+            'title_lines' => ['当該年度・前年度優勝者シードプロ'],
             'note' => '※特殊T/M除く',
             'source_types' => ['current_year_winner', 'previous_year_winner'],
             'keywords' => ['当該年度優勝者', '前年度優勝者', 'CS1', 'CS2'],

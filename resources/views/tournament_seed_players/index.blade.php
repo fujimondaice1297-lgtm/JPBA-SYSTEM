@@ -194,6 +194,55 @@
         </div>
     </div>
 
+    @php
+        $seedPlayersBySourceType = $seedPlayers->groupBy('seed_source_type');
+    @endphp
+    <div class="card mb-4">
+        <div class="card-header fw-bold">PDF枠別 登録状況</div>
+        <div class="card-body">
+            <div class="row g-3">
+                @foreach($seedSourceOptions as $sourceType => $sourceLabel)
+                    @php
+                        $playersInSection = $seedPlayersBySourceType->get($sourceType, collect());
+                    @endphp
+                    <div class="col-lg-6">
+                        <div class="border rounded p-3 h-100">
+                            <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+                                <div class="fw-semibold">{{ $sourceLabel }}</div>
+                                <span @class(['badge', 'text-bg-secondary' => $playersInSection->isEmpty(), 'text-bg-primary' => $playersInSection->isNotEmpty()])>
+                                    {{ $playersInSection->count() }}名
+                                </span>
+                            </div>
+
+                            @if($playersInSection->isEmpty())
+                                <div class="small text-muted">未登録</div>
+                            @else
+                                <ul class="list-unstyled mb-0 small">
+                                    @foreach($playersInSection as $sectionPlayer)
+                                        @php
+                                            $sectionBowlerName = $sectionPlayer->bowler->name_kanji
+                                                ?? $sectionPlayer->bowler->name
+                                                ?? $sectionPlayer->bowler->display_name
+                                                ?? '-';
+                                            $sectionLicenseNo = $sectionPlayer->license_no ? mb_substr(strtoupper(trim($sectionPlayer->license_no)), -4) : '-';
+                                        @endphp
+                                        <li class="d-flex justify-content-between gap-2 py-1 border-top">
+                                            <span>{{ $sectionBowlerName }}</span>
+                                            <span class="text-muted text-nowrap">{{ $sectionLicenseNo }}</span>
+                                        </li>
+                                    @endforeach
+                                </ul>
+                            @endif
+                        </div>
+                    </div>
+                @endforeach
+            </div>
+            <div class="small text-muted mt-3">
+                ここは大会別追加シードだけの登録状況です。年度別TSは上の「大会優先出場者一覧（自動生成）」とPDF左側①に反映されます。
+            </div>
+        </div>
+    </div>
+
     <div class="card">
         <div class="card-header fw-bold">現在の大会別シード</div>
         <div class="card-body p-0">

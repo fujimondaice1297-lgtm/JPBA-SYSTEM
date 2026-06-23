@@ -7144,3 +7144,12 @@ User::where('email','domaine-d@i.softbank.jp')->exists(); // true
   1. 大会別 `歴代優勝者シード` の登録画面・リストを作成する。
   2. 年度別シード / 永久シード / 大会別追加シードが、エントリー管理・優先出場PDF・大会PDFの `S` 表示に正しく接続されるか回帰確認する。
   3. 必要に応じて、今回差分をcommit / pushする。
+
+- 続けて実施した大会別シード画面整備:
+  - 既存の大会別シード設定画面は、`seed_source_type = past_champion` を選べる状態だったため、DB追加なしで画面改善を行った。
+  - `resources/views/tournament_seed_players/index.blade.php` に `PDF枠別 登録状況` を追加した。
+    - シード理由 / PDF枠ごとに登録者数を表示
+    - 登録済み選手の氏名とライセンスNo下4桁を表示
+    - 未登録枠は `未登録` として表示
+  - `resources/views/tournament_seed_players/pdf.blade.php` の⑤枠見出しが②枠と同じ `公認T/M歴代優勝者シードプロ` になっていたため、`当該年度・前年度優勝者シードプロ` へ修正した。
+  - `php artisan view:cache` でBladeコンパイル確認済み。
