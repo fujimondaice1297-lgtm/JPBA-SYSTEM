@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ScoreImportBatch;
 use App\Models\Tournament;
 use App\Services\TournamentAutomationReadinessService;
 use Illuminate\Http\Request;
@@ -66,6 +67,21 @@ class TournamentOperationLogController extends Controller
             ->withQueryString();
 
         $automationSummary = $automationReadiness->build($tournament);
+        $scoreImportBatches = ScoreImportBatch::query()
+            ->where('tournament_id', $tournament->id)
+            ->withCount([
+                'rows',
+                'rows as parsed_rows_count' => function ($query) {
+                    $query->where('parse_status', 'parsed');
+                },
+                'rows as needs_review_rows_count' => function ($query) {
+                    $query->where('parse_status', 'needs_review');
+                },
+            ])
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
+            ->limit(5)
+            ->get();
 
         return view('tournament_entries.operation_logs', compact(
             'tournament',
@@ -77,6 +93,7 @@ class TournamentOperationLogController extends Controller
             'reminderLogs',
             'autoDrawLogs',
             'automationSummary',
+            'scoreImportBatches',
         ));
     }
 

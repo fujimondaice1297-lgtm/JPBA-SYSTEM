@@ -325,6 +325,8 @@ Route::middleware(['auth','role:editor,admin'])->group(function () {
         ->name('tournaments.round_lane_assignments.pdf');
     Route::get('/tournaments/{tournament}/operation-logs', [\App\Http\Controllers\TournamentOperationLogController::class, 'index'])
         ->name('tournaments.operation_logs.index');
+    Route::post('/tournaments/{tournament}/score-imports/csv', [\App\Http\Controllers\TournamentScoreImportController::class, 'storeCsv'])
+        ->name('tournaments.score_imports.csv.store');
     Route::post('/tournaments/{tournament}/draws/bulk', [\App\Http\Controllers\DrawController::class, 'bulk'])
         ->name('tournaments.draws.bulk');
     Route::get('/tournaments/{tournament}/draw-reminders/create', [\App\Http\Controllers\TournamentDrawReminderController::class, 'create'])

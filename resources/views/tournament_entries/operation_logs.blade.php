@@ -254,6 +254,88 @@
     </div>
   </div>
 
+  <div class="card mb-4">
+    <div class="card-header fw-bold d-flex justify-content-between align-items-center flex-wrap gap-2">
+      <span>スコアCSV一時取込</span>
+      <span class="text-muted small">確認後に `game_scores` へ反映するための下書き保存</span>
+    </div>
+    <div class="card-body">
+      <form method="POST" action="{{ route('tournaments.score_imports.csv.store', $tournament->id) }}" enctype="multipart/form-data" class="row g-3 align-items-end mb-4">
+        @csrf
+        <div class="col-md-4">
+          <label for="score_csv" class="form-label">CSVファイル</label>
+          <input type="file" name="csv" id="score_csv" class="form-control" accept=".csv,.txt" required>
+        </div>
+        <div class="col-md-2">
+          <label for="default_stage" class="form-label">既定ステージ</label>
+          <input type="text" name="default_stage" id="default_stage" class="form-control" value="{{ old('default_stage') }}" placeholder="予選">
+        </div>
+        <div class="col-md-2">
+          <label for="default_game_number" class="form-label">既定G</label>
+          <input type="number" name="default_game_number" id="default_game_number" class="form-control" min="1" max="99" value="{{ old('default_game_number') }}">
+        </div>
+        <div class="col-md-2">
+          <label for="default_shift" class="form-label">既定シフト</label>
+          <input type="text" name="default_shift" id="default_shift" class="form-control" value="{{ old('default_shift') }}">
+        </div>
+        <div class="col-md-2">
+          <label for="default_gender" class="form-label">既定性別</label>
+          <input type="text" name="default_gender" id="default_gender" class="form-control" value="{{ old('default_gender') }}" placeholder="M / F">
+        </div>
+        <div class="col-12">
+          <button type="submit" class="btn btn-outline-primary">CSVを一時取込</button>
+          <span class="text-muted small ms-2">対応列: license_number / name / entry_number / stage / game_number / score など</span>
+        </div>
+      </form>
+
+      @if (($scoreImportBatches ?? collect())->isNotEmpty())
+        <div class="table-responsive">
+          <table class="table table-sm align-middle mb-0">
+            <thead>
+              <tr>
+                <th style="width: 90px;">ID</th>
+                <th>ファイル</th>
+                <th style="width: 120px;">状態</th>
+                <th style="width: 120px;">取込行</th>
+                <th style="width: 120px;">要確認</th>
+                <th style="width: 180px;">取込日時</th>
+              </tr>
+            </thead>
+            <tbody>
+              @foreach ($scoreImportBatches as $batch)
+                <tr>
+                  <td>#{{ $batch->id }}</td>
+                  <td>
+                    <div class="fw-semibold">{{ $batch->source_filename ?? '-' }}</div>
+                    @if ($batch->error_message)
+                      <div class="small text-danger">{{ $batch->error_message }}</div>
+                    @endif
+                  </td>
+                  <td>
+                    @php
+                      $statusClass = match ($batch->status) {
+                        'parsed' => 'text-bg-success',
+                        'reviewing' => 'text-bg-warning',
+                        'failed' => 'text-bg-danger',
+                        default => 'text-bg-secondary',
+                      };
+                    @endphp
+                    <span class="badge {{ $statusClass }}">{{ $batch->status }}</span>
+                  </td>
+                  <td>{{ number_format((int) ($batch->rows_count ?? 0)) }}</td>
+                  <td>{{ number_format((int) ($batch->needs_review_rows_count ?? 0)) }}</td>
+                  <td>{{ optional($batch->created_at)->format('Y-m-d H:i') }}</td>
+                </tr>
+              @endforeach
+            </tbody>
+          </table>
+        </div>
+      @else
+        <div class="text-muted small">この大会のスコアCSV一時取込はまだありません。</div>
+      @endif
+    </div>
+  </div>
+
   <form method="GET" action="{{ route('tournaments.operation_logs.index', $tournament->id) }}" class="card mb-4">
     <div class="card-header fw-bold">絞り込み</div>
     <div class="card-body row g-3 align-items-end">
