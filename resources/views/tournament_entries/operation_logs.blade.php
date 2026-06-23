@@ -38,6 +38,8 @@
     $awards = $automationSummary['awards'] ?? [];
     $titles = $automationSummary['titles'] ?? [];
     $seeds = $automationSummary['seeds'] ?? [];
+    $diagnostics = $automationSummary['diagnostics'] ?? [];
+    $diagnosticIssues = $diagnostics['issues'] ?? [];
     $statusBadges = [
       'done' => ['class' => 'bg-success', 'label' => '完了'],
       'ready' => ['class' => 'bg-primary', 'label' => '実行可'],
@@ -87,6 +89,32 @@
         </div>
       </div>
 
+      <div class="mb-3">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+          <div class="fw-bold">要確認リスト</div>
+          <span class="badge text-bg-light border">{{ $diagnostics['issue_count'] ?? 0 }} 件</span>
+        </div>
+        @if (!empty($diagnosticIssues))
+          <div class="list-group">
+            @foreach ($diagnosticIssues as $issue)
+              @php
+                $issueClass = ($issue['severity'] ?? '') === 'warning'
+                  ? 'text-bg-warning'
+                  : 'text-bg-info';
+              @endphp
+              <div class="list-group-item d-flex justify-content-between align-items-start gap-3 flex-wrap">
+                <div>
+                  <span class="badge {{ $issueClass }} me-2">{{ $issue['label'] ?? '確認' }}</span>
+                  <span>{{ $issue['message'] ?? '' }}</span>
+                </div>
+              </div>
+            @endforeach
+          </div>
+        @else
+          <div class="alert alert-success mb-0">現時点で大きな不足は検出されていません。</div>
+        @endif
+      </div>
+
       @if (!empty($scores['stage_rows']))
         <div class="mb-3">
           <div class="small text-muted mb-2">スコア入力ステージ</div>
@@ -122,7 +150,15 @@
               <td class="fw-bold">2. スコア入力</td>
               @php($badge = $badgeFor($readiness['scores'] ?? 'waiting'))
               <td><span class="badge {{ $badge['class'] }}">{{ $badge['label'] }}</span></td>
-              <td>`game_scores` を速報・順位計算の正本として入力します。</td>
+              <td>
+                `game_scores` を速報・順位計算の正本として入力します。
+                @if (($diagnostics['score_entry_gap'] ?? 0) > 0)
+                  <div class="small text-warning">エントリー人数との差分: {{ $diagnostics['score_entry_gap'] }} 名</div>
+                @endif
+                @if (!empty($diagnostics['incomplete_stage_rows']))
+                  <div class="small text-warning">ステージ設定に対して未完了の入力があります。</div>
+                @endif
+              </td>
               <td>
                 <div class="d-flex flex-wrap gap-2">
                   <a href="{{ route('scores.input', ['tournament_id' => $tournament->id]) }}" class="btn btn-sm btn-outline-primary">入力</a>
@@ -141,6 +177,9 @@
                 @else
                   全体条件の `final_total` snapshot を作ると、最終成績へ同期できます。
                 @endif
+                @if (($diagnostics['final_sync_gap'] ?? 0) !== 0)
+                  <div class="small text-warning">snapshot行数と最終成績件数に差分があります。</div>
+                @endif
               </td>
               <td><a href="{{ route('tournaments.result_snapshots.index', $tournament->id) }}" class="btn btn-sm btn-outline-success">正式成績反映</a></td>
             </tr>
@@ -150,7 +189,11 @@
               <td><span class="badge {{ $badge['class'] }}">{{ $badge['label'] }}</span></td>
               <td>
                 配分: ポイント {{ $awards['point_distribution_count'] ?? 0 }} / 賞金 {{ $awards['prize_distribution_count'] ?? 0 }}
+                ・対象行: ポイント {{ $awards['point_target_rows'] ?? 0 }} / 賞金 {{ $awards['prize_target_rows'] ?? 0 }}
                 ・反映済み行: ポイント {{ $awards['point_applied_rows'] ?? 0 }} / 賞金 {{ $awards['prize_applied_rows'] ?? 0 }}
+                @if (($diagnostics['award_pending'] ?? false) === true)
+                  <div class="small text-warning">未反映の賞金・ポイントが残っている可能性があります。</div>
+                @endif
               </td>
               <td>
                 <form method="POST" action="{{ route('tournaments.results.apply_awards_points', $tournament->id) }}" class="d-inline">
@@ -163,7 +206,12 @@
               <td class="fw-bold">5. タイトル同期</td>
               @php($badge = $badgeFor($readiness['titles'] ?? 'waiting'))
               <td><span class="badge {{ $badge['class'] }}">{{ $badge['label'] }}</span></td>
-              <td>優勝者を `pro_bowler_titles` へ同期します。同期済み: {{ $titles['title_count'] ?? 0 }} 件</td>
+              <td>
+                優勝者を `pro_bowler_titles` へ同期します。同期済み: {{ $titles['title_count'] ?? 0 }} 件
+                @if (($diagnostics['title_pending'] ?? false) === true)
+                  <div class="small text-warning">優勝者行に対してタイトル履歴が不足しています。</div>
+                @endif
+              </td>
               <td>
                 <form method="POST" action="{{ route('tournaments.results.sync', $tournament->id) }}" class="d-inline">
                   @csrf
@@ -176,7 +224,12 @@
               <td class="fw-bold">6. シード確認</td>
               @php($badge = $badgeFor($readiness['seeds'] ?? 'waiting'))
               <td><span class="badge {{ $badge['class'] }}">{{ $badge['label'] }}</span></td>
-              <td>年度別シードと大会別追加シードを確認し、PDFの `S` 表示へつなげます。</td>
+              <td>
+                年度別シードと大会別追加シードを確認し、PDFの `S` 表示へつなげます。
+                @if (($diagnostics['seed_missing'] ?? false) === true)
+                  <div class="small text-warning">この大会年度・性別で有効なシード元が見つかっていません。</div>
+                @endif
+              </td>
               <td><a href="{{ route('tournaments.seed_players.index', $tournament->id) }}" class="btn btn-sm btn-outline-info">シード設定</a></td>
             </tr>
             <tr>

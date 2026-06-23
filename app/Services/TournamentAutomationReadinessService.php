@@ -22,6 +22,7 @@ class TournamentAutomationReadinessService
         $awards = $this->awardSummary($tournamentId);
         $titles = $this->titleSummary($tournamentId);
         $seeds = $this->seedSummary($tournamentId, $tournamentYear, $gender);
+        $diagnostics = $this->diagnostics($entries, $scores, $snapshots, $results, $awards, $titles, $seeds);
 
         return [
             'tournament_year' => $tournamentYear,
@@ -33,7 +34,8 @@ class TournamentAutomationReadinessService
             'awards' => $awards,
             'titles' => $titles,
             'seeds' => $seeds,
-            'readiness' => $this->readiness($entries, $scores, $snapshots, $results, $awards, $titles, $seeds),
+            'diagnostics' => $diagnostics,
+            'readiness' => $this->readiness($entries, $scores, $snapshots, $results, $awards, $titles, $seeds, $diagnostics),
         ];
     }
 
@@ -44,24 +46,29 @@ class TournamentAutomationReadinessService
         array $results,
         array $awards,
         array $titles,
-        array $seeds
+        array $seeds,
+        array $diagnostics
     ): array {
         $hasFinalResults = $results['final_results_count'] > 0;
         $hasDistribution = $awards['point_distribution_count'] > 0 || $awards['prize_distribution_count'] > 0;
         $hasAppliedAward = $awards['point_applied_rows'] > 0 || $awards['prize_applied_rows'] > 0;
         $hasSeedSource = $seeds['annual_seed_player_count'] > 0 || $seeds['tournament_seed_player_count'] > 0;
+        $hasScoreGaps = $diagnostics['score_entry_gap'] > 0 || ! empty($diagnostics['incomplete_stage_rows']);
+        $hasFinalSyncGap = $diagnostics['final_sync_gap'] !== 0;
+        $hasAwardPending = $diagnostics['award_pending'];
+        $hasTitlePending = $diagnostics['title_pending'];
 
         return [
             'entries' => $entries['entry_count'] > 0 ? 'done' : 'waiting',
-            'scores' => $scores['score_count'] > 0 ? 'done' : 'waiting',
+            'scores' => $scores['score_count'] > 0 ? ($hasScoreGaps ? 'warning' : 'done') : 'waiting',
             'snapshots' => $snapshots['full_final_snapshot'] !== null
-                ? 'done'
+                ? ($hasFinalSyncGap ? 'warning' : 'done')
                 : ($snapshots['current_snapshot_count'] > 0 ? 'warning' : 'waiting'),
-            'results' => $hasFinalResults ? 'done' : 'waiting',
+            'results' => $hasFinalResults ? ($hasFinalSyncGap ? 'warning' : 'done') : 'waiting',
             'awards' => ! $hasFinalResults
                 ? 'waiting'
-                : ($hasDistribution ? ($hasAppliedAward ? 'done' : 'ready') : 'warning'),
-            'titles' => ! $hasFinalResults ? 'waiting' : ($titles['title_count'] > 0 ? 'done' : 'ready'),
+                : ($hasDistribution ? ($hasAppliedAward ? ($hasAwardPending ? 'warning' : 'done') : 'ready') : 'warning'),
+            'titles' => ! $hasFinalResults ? 'waiting' : ($titles['title_count'] > 0 ? ($hasTitlePending ? 'warning' : 'done') : 'ready'),
             'seeds' => $hasSeedSource ? 'done' : 'warning',
             'pdf' => $hasFinalResults ? 'ready' : 'waiting',
         ];
@@ -93,10 +100,13 @@ class TournamentAutomationReadinessService
                 'score_count' => 0,
                 'scored_player_count' => 0,
                 'stage_rows' => [],
+                'stage_settings' => [],
+                'incomplete_stage_rows' => [],
             ];
         }
 
         $base = DB::table('game_scores')->where('tournament_id', $tournamentId);
+        $stageSettings = $this->stageSettings($tournamentId);
 
         $identityRows = (clone $base)
             ->select(['tournament_participant_id', 'pro_bowler_id', 'license_number', 'name'])
@@ -141,10 +151,36 @@ class TournamentAutomationReadinessService
             ])
             ->all();
 
+        $stageRowsByStage = collect($stageRows)->keyBy('stage');
+        $incompleteStageRows = collect($stageSettings)
+            ->filter(function (array $setting) use ($stageRowsByStage): bool {
+                if (! $setting['enabled'] || $setting['total_games'] <= 0) {
+                    return false;
+                }
+
+                $actual = $stageRowsByStage->get($setting['stage']);
+
+                return $actual === null || (int) ($actual['max_game'] ?? 0) < $setting['total_games'];
+            })
+            ->map(function (array $setting) use ($stageRowsByStage): array {
+                $actual = $stageRowsByStage->get($setting['stage']);
+
+                return [
+                    'stage' => $setting['stage'],
+                    'expected_games' => $setting['total_games'],
+                    'actual_max_game' => $actual ? (int) ($actual['max_game'] ?? 0) : 0,
+                    'rows_count' => $actual ? (int) ($actual['rows_count'] ?? 0) : 0,
+                ];
+            })
+            ->values()
+            ->all();
+
         return [
             'score_count' => (int) (clone $base)->count(),
             'scored_player_count' => (int) $scoredPlayerCount,
             'stage_rows' => $stageRows,
+            'stage_settings' => $stageSettings,
+            'incomplete_stage_rows' => $incompleteStageRows,
         ];
     }
 
@@ -220,6 +256,20 @@ class TournamentAutomationReadinessService
 
         $pointColumns = $this->existingColumns('tournament_results', ['points', 'award_points', 'step_points']);
         $prizeColumns = $this->existingColumns('tournament_results', ['prize_money']);
+        $rankColumn = $this->firstExistingColumn('tournament_results', [
+            'ranking',
+            'rank',
+            'position',
+            'placing',
+            'result_rank',
+            'order_no',
+        ]);
+        $pointTargetRows = $resultBase !== null && $rankColumn !== null && Schema::hasTable('point_distributions')
+            ? $this->countResultRowsForDistributionRanks($resultBase, $rankColumn, 'point_distributions', $tournamentId)
+            : 0;
+        $prizeTargetRows = $resultBase !== null && $rankColumn !== null && Schema::hasTable('prize_distributions')
+            ? $this->countResultRowsForDistributionRanks($resultBase, $rankColumn, 'prize_distributions', $tournamentId)
+            : 0;
 
         return [
             'point_distribution_count' => Schema::hasTable('point_distributions')
@@ -234,6 +284,8 @@ class TournamentAutomationReadinessService
             'prize_applied_rows' => $resultBase !== null && $prizeColumns !== []
                 ? $this->countRowsWithAnyPositiveColumn($resultBase, $prizeColumns)
                 : 0,
+            'point_target_rows' => $pointTargetRows,
+            'prize_target_rows' => $prizeTargetRows,
         ];
     }
 
@@ -290,6 +342,127 @@ class TournamentAutomationReadinessService
         ];
     }
 
+    private function diagnostics(
+        array $entries,
+        array $scores,
+        array $snapshots,
+        array $results,
+        array $awards,
+        array $titles,
+        array $seeds
+    ): array {
+        $scoreEntryGap = max(0, (int) $entries['entry_count'] - (int) $scores['scored_player_count']);
+        $incompleteStageRows = $scores['incomplete_stage_rows'] ?? [];
+
+        $fullFinalRowCount = (int) ($snapshots['full_final_row_count'] ?? 0);
+        $finalResultsCount = (int) ($results['final_results_count'] ?? 0);
+        $finalSyncGap = $fullFinalRowCount > 0
+            ? $fullFinalRowCount - $finalResultsCount
+            : 0;
+
+        $awardPending = $finalResultsCount > 0 && (
+            (
+                (int) ($awards['point_target_rows'] ?? 0) > 0
+                && (int) ($awards['point_applied_rows'] ?? 0) < (int) ($awards['point_target_rows'] ?? 0)
+            )
+            || (
+                (int) ($awards['prize_target_rows'] ?? 0) > 0
+                && (int) ($awards['prize_applied_rows'] ?? 0) < (int) ($awards['prize_target_rows'] ?? 0)
+            )
+        );
+
+        $titlePending = (int) ($results['winner_count'] ?? 0) > 0
+            && (int) ($titles['title_count'] ?? 0) < (int) ($results['winner_count'] ?? 0);
+
+        $seedMissing = (int) ($seeds['active_seed_source_count'] ?? 0) === 0;
+
+        $issues = [];
+
+        if ((int) $entries['entry_count'] === 0) {
+            $issues[] = [
+                'severity' => 'warning',
+                'label' => 'エントリー未登録',
+                'message' => '参加者がまだ登録されていません。',
+            ];
+        } elseif ($scoreEntryGap > 0 && (int) $scores['score_count'] > 0) {
+            $issues[] = [
+                'severity' => 'warning',
+                'label' => 'スコア未入力候補',
+                'message' => 'エントリー人数に対して、スコア入力済み選手が ' . $scoreEntryGap . ' 名少ない可能性があります。',
+            ];
+        }
+
+        foreach ($incompleteStageRows as $row) {
+            $issues[] = [
+                'severity' => 'warning',
+                'label' => 'ステージ未完了',
+                'message' => $row['stage'] . ' は設定 ' . $row['expected_games'] . 'G に対して、入力は ' . $row['actual_max_game'] . 'G までです。',
+            ];
+        }
+
+        if ($finalSyncGap !== 0) {
+            $label = $finalSyncGap > 0 ? '最終成績不足' : '最終成績過多';
+            $issues[] = [
+                'severity' => 'warning',
+                'label' => $label,
+                'message' => '全体final snapshot行数 ' . $fullFinalRowCount . ' 件に対して、最終成績は ' . $finalResultsCount . ' 件です。',
+            ];
+        }
+
+        if ($awardPending) {
+            $issues[] = [
+                'severity' => 'info',
+                'label' => '賞金・ポイント未反映',
+                'message' => '配分設定に対して、最終成績へ未反映の行が残っている可能性があります。',
+            ];
+        }
+
+        if ($titlePending) {
+            $issues[] = [
+                'severity' => 'info',
+                'label' => 'タイトル同期待ち',
+                'message' => '優勝者行に対して、タイトル履歴の登録件数が不足しています。',
+            ];
+        }
+
+        if ($seedMissing) {
+            $issues[] = [
+                'severity' => 'info',
+                'label' => 'シード未設定',
+                'message' => '年度別シードまたは大会別追加シードが見つかりません。',
+            ];
+        }
+
+        return [
+            'score_entry_gap' => $scoreEntryGap,
+            'incomplete_stage_rows' => $incompleteStageRows,
+            'final_sync_gap' => $finalSyncGap,
+            'award_pending' => $awardPending,
+            'title_pending' => $titlePending,
+            'seed_missing' => $seedMissing,
+            'issues' => $issues,
+            'issue_count' => count($issues),
+        ];
+    }
+
+    private function stageSettings(int $tournamentId): array
+    {
+        if (! Schema::hasTable('stage_settings')) {
+            return [];
+        }
+
+        return DB::table('stage_settings')
+            ->where('tournament_id', $tournamentId)
+            ->orderBy('stage')
+            ->get(['stage', 'total_games', 'enabled'])
+            ->map(fn ($row): array => [
+                'stage' => trim((string) ($row->stage ?? '')) ?: '未設定',
+                'total_games' => max(0, (int) ($row->total_games ?? 0)),
+                'enabled' => (bool) ($row->enabled ?? false),
+            ])
+            ->all();
+    }
+
     private function countRowsWithAnyPositiveColumn($baseQuery, array $columns): int
     {
         $query = clone $baseQuery;
@@ -301,6 +474,26 @@ class TournamentAutomationReadinessService
         });
 
         return (int) $query->count();
+    }
+
+    private function countResultRowsForDistributionRanks($resultBase, string $rankColumn, string $distributionTable, int $tournamentId): int
+    {
+        $ranks = DB::table($distributionTable)
+            ->where('tournament_id', $tournamentId)
+            ->pluck('rank')
+            ->map(fn ($rank): int => (int) $rank)
+            ->filter(fn (int $rank): bool => $rank > 0)
+            ->unique()
+            ->values()
+            ->all();
+
+        if ($ranks === []) {
+            return 0;
+        }
+
+        return (int) (clone $resultBase)
+            ->whereIn($rankColumn, $ranks)
+            ->count();
     }
 
     private function existingColumns(string $table, array $columns): array
