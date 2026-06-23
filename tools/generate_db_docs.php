@@ -19,7 +19,7 @@ if (!$fh) {
     exit(1);
 }
 
-$header = fgetcsv($fh);
+$header = fgetcsv($fh, 0, ',', '"', '\\');
 if ($header === false) {
     fwrite(STDERR, "ERROR: CSV is empty.\n");
     exit(1);
@@ -42,7 +42,7 @@ foreach ($required as $r) {
 }
 
 $tables = []; // table_name => rows
-while (($row = fgetcsv($fh)) !== false) {
+while (($row = fgetcsv($fh, 0, ',', '"', '\\')) !== false) {
     $table = $row[$index['table_name']] ?? '';
     if ($table === '') continue;
 

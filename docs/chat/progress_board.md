@@ -1445,3 +1445,21 @@
 - [ ] 公式ランキング取込画面を、今回限りの補助画面として残すか、年度末確定ランキング管理画面として整理するか決める
 - [ ] 大会別 `歴代優勝者シード` の登録画面・リストを作成する
 - [ ] 年度別シード / 永久シード / 大会別追加シードが、エントリー管理・優先出場PDF・大会PDFの `S` 表示に正しく接続されるか回帰確認する
+
+#### 2026-06-23 メモ（Codex直接編集開始・DB正本スナップショット更新）
+
+- [✓] 元フォルダを直接編集する前提で作業開始
+- [✓] 本番でも登録されていた `__debug` ルートを `local` 環境限定へ修正
+- [✓] `docs/chat/context_pack.md` を現在状況が分かる引き継ぎメモへ更新
+- [✓] `php artisan migrate:status` で `2025_09_02_000213_create_pro_bowler_ranking_and_seed_tables` が適用済みであることを確認
+- [✓] 現DBから `docs/db/SCHEMA.sql` を再生成
+- [✓] 現DBから `docs/db/columns_public.csv` を再生成
+- [✓] `php tools/generate_db_docs.php` で `docs/db/columns_by_table.md` を再生成
+- [✓] `SCHEMA.sql` / `columns_by_table.md` にランキング・シード系テーブルが反映されたことを確認
+- [✓] `tools/generate_db_docs.php` の `fgetcsv()` 警告を解消
+- [✓] 確認済み
+  - `php -l routes/web.php`
+  - `php -l tools/generate_db_docs.php`
+  - `APP_ENV=production` 相当で `__debug` ルートが出ないこと
+- [ ] 次の自然な作業は、大会別 `歴代優勝者シード` の登録画面・リスト作成
+- [ ] 年度別シード / 永久シード / 大会別追加シードの `S` 表示回帰確認は後続

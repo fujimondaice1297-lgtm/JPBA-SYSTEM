@@ -7091,3 +7091,56 @@ User::where('email','domaine-d@i.softbank.jp')->exists(); // true
   - **次は、シード表示そのものではなく、正本データである2025年度ランキングと2026年度シードリストの再作成から進める。**
   - **DBスキーマ変更はまだ行っていないため、現時点では辞書・ER更新は不要。**
 
+---
+
+## 2026-06-23 Codex引き継ぎ整備・DB正本スナップショット更新
+
+- 目的:
+  - Codexで元リポジトリを直接編集できる前提になったため、作業開始時に迷わないよう引き継ぎ資料とDB正本スナップショットを整える。
+  - `docs/db/data_dictionary.md` / `docs/db/ER.dbml` にはランキング・シード系テーブルがある一方、`docs/db/SCHEMA.sql` / `docs/db/columns_by_table.md` に未反映だったため、現DB基準へ更新する。
+
+- 作業開始時の状態:
+  - branch: `main`
+  - HEAD: `4a91069 docs: シードプロ整備と永久シード登録の作業ログを更新`
+  - 通常差分なし
+  - 未追跡: `storage/backups/`
+  - `storage/backups/` はバックアップ・一時投入スクリプト置き場のためGit管理に入れない方針を維持。
+
+- 実施内容:
+  - `routes/web.php` の `__debug` ルートを `app()->environment('local')` 限定へ変更した。
+    - 本番環境でミドルウェア一覧やルートミドルウェア情報が見えないようにするため。
+    - `/_dev/*` は既にlocal限定だったため維持。
+  - `docs/chat/context_pack.md` を空欄の多い雛形から、現在の作業状態・次タスク・注意点が分かる内容へ更新した。
+  - `php artisan migrate:status` で、`2025_09_02_000213_create_pro_bowler_ranking_and_seed_tables` が実DBに適用済みであることを確認した。
+  - `pg_dump -s` で `docs/db/SCHEMA.sql` を現DBから再生成した。
+  - `psql` の `information_schema.columns` から `docs/db/columns_public.csv` を再生成した。
+  - `php tools/generate_db_docs.php` で `docs/db/columns_by_table.md` を再生成した。
+  - `tools/generate_db_docs.php` の `fgetcsv()` 呼び出しにescape引数を明示し、PHPのDeprecated警告を解消した。
+
+- 確認結果:
+  - `docs/db/SCHEMA.sql` に以下が反映された。
+    - `pro_bowler_ranking_snapshots`
+    - `pro_bowler_ranking_rows`
+    - `pro_bowler_seed_lists`
+    - `pro_bowler_seed_list_players`
+    - `tournament_seed_players`
+  - `docs/db/columns_by_table.md` に同テーブルのカラム一覧が反映された。
+  - `php -l routes/web.php` は通過。
+  - `php -l tools/generate_db_docs.php` は通過。
+  - `APP_ENV=production php artisan route:list --path=__debug` 相当の確認で、`__debug` ルートが表示されないことを確認した。
+  - `APP_ENV=local` では `__debug` / `_dev` ルートが表示されることを確認した。
+
+- 触ったファイル:
+  - `routes/web.php`
+  - `docs/chat/context_pack.md`
+  - `docs/db/SCHEMA.sql`
+  - `docs/db/columns_public.csv`
+  - `docs/db/columns_by_table.md`
+  - `tools/generate_db_docs.php`
+  - `docs/chat/worklog_db.md`
+  - `docs/chat/progress_board.md`
+
+- 次の自然な作業:
+  1. 大会別 `歴代優勝者シード` の登録画面・リストを作成する。
+  2. 年度別シード / 永久シード / 大会別追加シードが、エントリー管理・優先出場PDF・大会PDFの `S` 表示に正しく接続されるか回帰確認する。
+  3. 必要に応じて、今回差分をcommit / pushする。

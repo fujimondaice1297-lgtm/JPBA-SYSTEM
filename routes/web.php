@@ -144,22 +144,24 @@ if (app()->environment('local')) {
 /* ========================
    一時デバッグ（確認後に削除）
 ======================== */
-Route::get('/__debug/mw', function () {
-    $k = app(HttpKernel::class);
-    $ref = new \ReflectionClass($k);
-    $prop = $ref->getProperty('middlewareAliases');
-    $prop->setAccessible(true);
-    return response()->json($prop->getValue($k));
-});
-Route::get('/__debug/router', fn() => response()->json(app('router')->getMiddleware()));
-// 認証済みの自分を確認
-Route::middleware('auth')->get('/__debug/me', function () {
-    $u = auth()->user();
-    return response()->json(['id'=>$u?->id,'email'=>$u?->email,'role'=>$u?->role]);
-});
-// RoleMiddleware が通るかワンピン
-Route::middleware(['auth','role:member,editor,admin'])
-    ->get('/__debug/ping', fn() => 'role-ok');
+if (app()->environment('local')) {
+    Route::get('/__debug/mw', function () {
+        $k = app(HttpKernel::class);
+        $ref = new \ReflectionClass($k);
+        $prop = $ref->getProperty('middlewareAliases');
+        $prop->setAccessible(true);
+        return response()->json($prop->getValue($k));
+    });
+    Route::get('/__debug/router', fn() => response()->json(app('router')->getMiddleware()));
+    // 認証済みの自分を確認
+    Route::middleware('auth')->get('/__debug/me', function () {
+        $u = auth()->user();
+        return response()->json(['id'=>$u?->id,'email'=>$u?->email,'role'=>$u?->role]);
+    });
+    // RoleMiddleware が通るかワンピン
+    Route::middleware(['auth','role:member,editor,admin'])
+        ->get('/__debug/ping', fn() => 'role-ok');
+}
 
 /* ========================
    トップ
