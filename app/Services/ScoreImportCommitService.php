@@ -65,6 +65,14 @@ class ScoreImportCommitService
             }
 
             $this->refreshBatchStatus($batch->fresh(), $user);
+            app(ScoreImportOperationLogger::class)->log($batch->fresh(), 'commit', [
+                'status' => 'success',
+                'target_row_count' => $summary['created'] + $summary['updated'] + $summary['skipped'],
+                'created_count' => $summary['created'],
+                'updated_count' => $summary['updated'],
+                'skipped_count' => $summary['skipped'],
+                'payload' => $summary,
+            ], $user);
         });
 
         return $summary;

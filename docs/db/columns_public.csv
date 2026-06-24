@@ -675,6 +675,21 @@ score_import_batches,15,error_message,text,YES
 score_import_batches,16,notes,text,YES
 score_import_batches,17,created_at,timestamp without time zone,YES
 score_import_batches,18,updated_at,timestamp without time zone,YES
+score_import_operation_logs,1,id,bigint,NO
+score_import_operation_logs,2,tournament_id,bigint,NO
+score_import_operation_logs,3,score_import_batch_id,bigint,YES
+score_import_operation_logs,4,action,character varying,NO
+score_import_operation_logs,5,status,character varying,NO
+score_import_operation_logs,6,actor_user_id,bigint,YES
+score_import_operation_logs,7,target_row_count,integer,NO
+score_import_operation_logs,8,created_count,integer,NO
+score_import_operation_logs,9,updated_count,integer,NO
+score_import_operation_logs,10,skipped_count,integer,NO
+score_import_operation_logs,11,message,text,YES
+score_import_operation_logs,12,payload,json,YES
+score_import_operation_logs,13,occurred_at,timestamp without time zone,NO
+score_import_operation_logs,14,created_at,timestamp without time zone,YES
+score_import_operation_logs,15,updated_at,timestamp without time zone,YES
 score_import_row_candidates,1,id,bigint,NO
 score_import_row_candidates,2,score_import_row_id,bigint,NO
 score_import_row_candidates,3,candidate_type,character varying,NO

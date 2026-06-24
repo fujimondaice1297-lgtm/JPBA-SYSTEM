@@ -1,7 +1,7 @@
 # Columns by table (generated)
 
 - Source: `docs/db/columns_public.csv`
-- Generated: 2026-06-23 23:58:38
+- Generated: 2026-06-24 17:20:25
 
 > ⚠️ このファイルは自動生成です。手で編集しないでください。
 
@@ -1000,6 +1000,26 @@
 | 16 | notes | text | YES |
 | 17 | created_at | timestamp without time zone | YES |
 | 18 | updated_at | timestamp without time zone | YES |
+
+## score_import_operation_logs (15 columns)
+
+| # | column | type | nullable |
+|---:|---|---|---|
+| 1 | id | bigint | NO |
+| 2 | tournament_id | bigint | NO |
+| 3 | score_import_batch_id | bigint | YES |
+| 4 | action | character varying | NO |
+| 5 | status | character varying | NO |
+| 6 | actor_user_id | bigint | YES |
+| 7 | target_row_count | integer | NO |
+| 8 | created_count | integer | NO |
+| 9 | updated_count | integer | NO |
+| 10 | skipped_count | integer | NO |
+| 11 | message | text | YES |
+| 12 | payload | json | YES |
+| 13 | occurred_at | timestamp without time zone | NO |
+| 14 | created_at | timestamp without time zone | YES |
+| 15 | updated_at | timestamp without time zone | YES |
 
 ## score_import_row_candidates (12 columns)
 

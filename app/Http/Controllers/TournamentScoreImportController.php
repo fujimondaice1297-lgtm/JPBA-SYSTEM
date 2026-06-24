@@ -7,6 +7,7 @@ use App\Models\ScoreImportRow;
 use App\Models\Tournament;
 use App\Services\ScoreImportCommitService;
 use App\Services\ScoreImportCsvStageService;
+use App\Services\ScoreImportOperationLogger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Throwable;
@@ -81,6 +82,12 @@ class TournamentScoreImportController extends Controller
             'rejected' => $scoreImport->rows()->where('parse_status', 'rejected')->count(),
             'confirmed' => $scoreImport->rows()->whereNotNull('confirmed_game_score_id')->count(),
         ];
+        $operationLogs = $scoreImport->operationLogs()
+            ->with('actor')
+            ->orderByDesc('occurred_at')
+            ->orderByDesc('id')
+            ->limit(20)
+            ->get();
 
         return view('score_imports.show', compact(
             'tournament',
@@ -88,6 +95,7 @@ class TournamentScoreImportController extends Controller
             'rows',
             'status',
             'summary',
+            'operationLogs',
         ));
     }
 
@@ -96,7 +104,8 @@ class TournamentScoreImportController extends Controller
         Tournament $tournament,
         ScoreImportBatch $scoreImport,
         ScoreImportRow $scoreImportRow,
-        ScoreImportCommitService $committer
+        ScoreImportCommitService $committer,
+        ScoreImportOperationLogger $operationLogger
     ) {
         $this->authorizeEditorOrAdmin();
         $this->ensureBatchBelongsToTournament($scoreImport, $tournament);
@@ -185,6 +194,18 @@ class TournamentScoreImportController extends Controller
         }
 
         $committer->refreshBatchStatus($scoreImport->fresh(), auth()->user());
+        $operationLogger->log($scoreImport->fresh(), 'row_update', [
+            'status' => 'success',
+            'target_row_count' => 1,
+            'updated_count' => 1,
+            'payload' => [
+                'row_id' => $scoreImportRow->id,
+                'row_number' => $scoreImportRow->row_number,
+                'parse_status' => $payload['parse_status'],
+                'selected_candidate_id' => $selectedCandidateId,
+                'error_message' => $payload['error_message'],
+            ],
+        ], auth()->user());
 
         return redirect()
             ->route('tournaments.score_imports.show', [$tournament->id, $scoreImport->id])
@@ -195,7 +216,8 @@ class TournamentScoreImportController extends Controller
         Request $request,
         Tournament $tournament,
         ScoreImportBatch $scoreImport,
-        ScoreImportCommitService $committer
+        ScoreImportCommitService $committer,
+        ScoreImportOperationLogger $operationLogger
     ) {
         $this->authorizeEditorOrAdmin();
         $this->ensureBatchBelongsToTournament($scoreImport, $tournament);
@@ -277,6 +299,17 @@ class TournamentScoreImportController extends Controller
         }
 
         $committer->refreshBatchStatus($scoreImport->fresh(), auth()->user());
+        $operationLogger->log($scoreImport->fresh(), 'bulk_update', [
+            'status' => 'success',
+            'target_row_count' => $updated,
+            'updated_count' => $updated,
+            'payload' => [
+                'row_ids' => array_values($validated['row_ids']),
+                'field_values' => $fieldValues,
+                'bulk_parse_status' => $requestedStatus,
+                'apply_empty_only' => $applyEmptyOnly,
+            ],
+        ], auth()->user());
 
         return redirect()
             ->route('tournaments.score_imports.show', [$tournament->id, $scoreImport->id])

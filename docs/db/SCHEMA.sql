@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict fPt0vw5Q1omp24LBHD72xG2fOKHt1NUkktAVlxgByZIJSOJyLH3k7IKfWgRuVoI
+\restrict k0RvuSlLHfh4jhWh0NfIBVtyRmLYNP6vmnbG2N6uPAYQuJCOmxwX9TeCbh5lZme
 
 -- Dumped from database version 18.2
 -- Dumped by pg_dump version 18.2
@@ -3175,6 +3175,52 @@ ALTER SEQUENCE public.score_import_batches_id_seq OWNED BY public.score_import_b
 
 
 --
+-- Name: score_import_operation_logs; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.score_import_operation_logs (
+    id bigint NOT NULL,
+    tournament_id bigint NOT NULL,
+    score_import_batch_id bigint,
+    action character varying(50) NOT NULL,
+    status character varying(50) DEFAULT 'success'::character varying NOT NULL,
+    actor_user_id bigint,
+    target_row_count integer DEFAULT 0 NOT NULL,
+    created_count integer DEFAULT 0 NOT NULL,
+    updated_count integer DEFAULT 0 NOT NULL,
+    skipped_count integer DEFAULT 0 NOT NULL,
+    message text,
+    payload json,
+    occurred_at timestamp(0) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    created_at timestamp(0) without time zone,
+    updated_at timestamp(0) without time zone
+);
+
+
+ALTER TABLE public.score_import_operation_logs OWNER TO postgres;
+
+--
+-- Name: score_import_operation_logs_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.score_import_operation_logs_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.score_import_operation_logs_id_seq OWNER TO postgres;
+
+--
+-- Name: score_import_operation_logs_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.score_import_operation_logs_id_seq OWNED BY public.score_import_operation_logs.id;
+
+
+--
 -- Name: score_import_row_candidates; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -5064,6 +5110,13 @@ ALTER TABLE ONLY public.score_import_batches ALTER COLUMN id SET DEFAULT nextval
 
 
 --
+-- Name: score_import_operation_logs id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.score_import_operation_logs ALTER COLUMN id SET DEFAULT nextval('public.score_import_operation_logs_id_seq'::regclass);
+
+
+--
 -- Name: score_import_row_candidates id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
@@ -5877,6 +5930,14 @@ ALTER TABLE ONLY public.score_import_batches
 
 
 --
+-- Name: score_import_operation_logs score_import_operation_logs_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.score_import_operation_logs
+    ADD CONSTRAINT score_import_operation_logs_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: score_import_row_candidates score_import_row_candidates_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -6684,6 +6745,34 @@ CREATE INDEX sib_tournament_status_idx ON public.score_import_batches USING btre
 
 
 --
+-- Name: siol_action_status_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX siol_action_status_idx ON public.score_import_operation_logs USING btree (action, status);
+
+
+--
+-- Name: siol_actor_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX siol_actor_idx ON public.score_import_operation_logs USING btree (actor_user_id);
+
+
+--
+-- Name: siol_batch_occurred_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX siol_batch_occurred_idx ON public.score_import_operation_logs USING btree (score_import_batch_id, occurred_at);
+
+
+--
+-- Name: siol_tournament_occurred_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX siol_tournament_occurred_idx ON public.score_import_operation_logs USING btree (tournament_id, occurred_at);
+
+
+--
 -- Name: sir_batch_status_idx; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -7227,6 +7316,30 @@ ALTER TABLE ONLY public.score_import_batches
 
 
 --
+-- Name: score_import_operation_logs score_import_operation_logs_actor_user_id_foreign; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.score_import_operation_logs
+    ADD CONSTRAINT score_import_operation_logs_actor_user_id_foreign FOREIGN KEY (actor_user_id) REFERENCES public.users(id) ON DELETE SET NULL;
+
+
+--
+-- Name: score_import_operation_logs score_import_operation_logs_score_import_batch_id_foreign; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.score_import_operation_logs
+    ADD CONSTRAINT score_import_operation_logs_score_import_batch_id_foreign FOREIGN KEY (score_import_batch_id) REFERENCES public.score_import_batches(id) ON DELETE CASCADE;
+
+
+--
+-- Name: score_import_operation_logs score_import_operation_logs_tournament_id_foreign; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.score_import_operation_logs
+    ADD CONSTRAINT score_import_operation_logs_tournament_id_foreign FOREIGN KEY (tournament_id) REFERENCES public.tournaments(id) ON DELETE CASCADE;
+
+
+--
 -- Name: score_import_row_candidates score_import_row_candidates_pro_bowler_id_foreign; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -7558,5 +7671,5 @@ ALTER TABLE ONLY public.users
 -- PostgreSQL database dump complete
 --
 
-\unrestrict fPt0vw5Q1omp24LBHD72xG2fOKHt1NUkktAVlxgByZIJSOJyLH3k7IKfWgRuVoI
+\unrestrict k0RvuSlLHfh4jhWh0NfIBVtyRmLYNP6vmnbG2N6uPAYQuJCOmxwX9TeCbh5lZme
 

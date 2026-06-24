@@ -125,12 +125,37 @@ class ScoreImportCsvStageService
                 'parsed_at' => now(),
             ]);
 
+            app(ScoreImportOperationLogger::class)->log($batch->fresh(), 'csv_stage', [
+                'status' => 'failed',
+                'message' => $e->getMessage(),
+                'payload' => [
+                    'source_filename' => $batch->source_filename,
+                    'stored_path' => $batch->stored_path,
+                ],
+            ], $user);
+
             throw $e;
         } finally {
             fclose($handle);
         }
 
-        return $batch->fresh();
+        $batch = $batch->fresh();
+
+        app(ScoreImportOperationLogger::class)->log($batch, 'csv_stage', [
+            'status' => $batch->status === 'failed' ? 'failed' : 'success',
+            'target_row_count' => $batch->row_count,
+            'created_count' => $batch->row_count,
+            'skipped_count' => $batch->rejected_row_count,
+            'message' => $batch->error_message,
+            'payload' => [
+                'source_filename' => $batch->source_filename,
+                'stored_path' => $batch->stored_path,
+                'accepted_row_count' => $batch->accepted_row_count,
+                'rejected_row_count' => $batch->rejected_row_count,
+            ],
+        ], $user);
+
+        return $batch;
     }
 
     private function resolveColumns(array $header): array

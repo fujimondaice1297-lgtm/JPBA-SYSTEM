@@ -118,7 +118,8 @@ flowchart LR
 - 管理画面で `needs_review` の行だけ修正し、確認後に `game_scores` へ反映する画面（初期実装済み）
 - `score_import_rows` から `game_scores` へ確定反映するサービス（初期実装済み）
 - 複数行一括修正（ステージ / G / シフト / 性別 / 状態）の初期実装済み
-- 次は、反映ログの保存、取込詳細画面の操作性改善を進める
+- 反映ログの保存（`score_import_operation_logs`）の初期実装済み
+- 次は、取込詳細画面の操作性改善、CSV列パターンの拡張、OCR前提の画像取込設計を進める
 
 ### Phase 3: OCR/写真解析
 

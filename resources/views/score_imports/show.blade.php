@@ -144,6 +144,58 @@
     </div>
   </div>
 
+  <div class="card mb-4">
+    <div class="card-header fw-bold">操作ログ</div>
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-sm align-middle mb-0">
+          <thead>
+            <tr>
+              <th style="width: 160px;">日時</th>
+              <th style="width: 140px;">操作</th>
+              <th style="width: 110px;">状態</th>
+              <th style="width: 160px;">実行者</th>
+              <th>件数</th>
+              <th>メッセージ</th>
+            </tr>
+          </thead>
+          <tbody>
+            @forelse (($operationLogs ?? collect()) as $log)
+              @php
+                $logStatusClass = $log->status === 'failed' ? 'text-bg-danger' : 'text-bg-success';
+              @endphp
+              <tr>
+                <td>{{ optional($log->occurred_at)->format('Y-m-d H:i') }}</td>
+                <td><span class="badge text-bg-light border">{{ $log->action }}</span></td>
+                <td><span class="badge {{ $logStatusClass }}">{{ $log->status }}</span></td>
+                <td>{{ $log->actor?->name ?? '-' }}</td>
+                <td>
+                  対象 {{ number_format((int) $log->target_row_count) }}
+                  / 新規 {{ number_format((int) $log->created_count) }}
+                  / 更新 {{ number_format((int) $log->updated_count) }}
+                  / 除外 {{ number_format((int) $log->skipped_count) }}
+                </td>
+                <td>
+                  {{ $log->message ?: '-' }}
+                  @if (!empty($log->payload))
+                    <details class="small mt-1">
+                      <summary>詳細</summary>
+                      <pre class="small bg-light border rounded p-2 mt-2 mb-0">{{ json_encode($log->payload, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) }}</pre>
+                    </details>
+                  @endif
+                </td>
+              </tr>
+            @empty
+              <tr>
+                <td colspan="6" class="text-muted p-3">この取込の操作ログはまだありません。</td>
+              </tr>
+            @endforelse
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
   <div class="card">
     <div class="card-header fw-bold">取込行</div>
     <div class="card-body p-0">

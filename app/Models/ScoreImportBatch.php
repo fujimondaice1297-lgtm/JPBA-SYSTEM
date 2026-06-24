@@ -51,4 +51,9 @@ class ScoreImportBatch extends Model
     {
         return $this->hasMany(ScoreImportRow::class);
     }
+
+    public function operationLogs()
+    {
+        return $this->hasMany(ScoreImportOperationLog::class);
+    }
 }
