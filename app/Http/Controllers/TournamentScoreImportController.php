@@ -191,6 +191,98 @@ class TournamentScoreImportController extends Controller
             ->with('success', '取込行を更新しました。');
     }
 
+    public function bulkUpdateRows(
+        Request $request,
+        Tournament $tournament,
+        ScoreImportBatch $scoreImport,
+        ScoreImportCommitService $committer
+    ) {
+        $this->authorizeEditorOrAdmin();
+        $this->ensureBatchBelongsToTournament($scoreImport, $tournament);
+
+        $validated = $request->validate([
+            'row_ids' => ['required', 'array', 'min:1'],
+            'row_ids.*' => ['integer'],
+            'bulk_parse_status' => ['nullable', 'string', 'in:accepted,needs_review,rejected'],
+            'bulk_stage' => ['nullable', 'string', 'max:50'],
+            'bulk_shift' => ['nullable', 'string', 'max:20'],
+            'bulk_gender' => ['nullable', 'string', 'max:10'],
+            'bulk_game_number' => ['nullable', 'integer', 'min:1', 'max:99'],
+            'apply_empty_only' => ['nullable', 'boolean'],
+        ]);
+
+        $applyEmptyOnly = $request->boolean('apply_empty_only');
+        $requestedStatus = (string) ($validated['bulk_parse_status'] ?? '');
+        $fieldValues = [
+            'stage' => $request->filled('bulk_stage') ? $this->nullableString($validated['bulk_stage']) : null,
+            'shift' => $request->filled('bulk_shift') ? $this->nullableString($validated['bulk_shift']) : null,
+            'gender' => $request->filled('bulk_gender') ? $this->nullableString($validated['bulk_gender']) : null,
+            'game_number' => $request->filled('bulk_game_number') ? (int) $validated['bulk_game_number'] : null,
+        ];
+
+        $rows = $scoreImport->rows()
+            ->whereIn('id', $validated['row_ids'])
+            ->whereNull('confirmed_game_score_id')
+            ->orderBy('row_number')
+            ->get();
+
+        if ($rows->isEmpty()) {
+            return back()->withErrors([
+                'row_ids' => '更新できる未反映行が選択されていません。',
+            ]);
+        }
+
+        $updated = 0;
+        foreach ($rows as $row) {
+            $payload = [
+                'tournament_participant_id' => $row->tournament_participant_id,
+                'pro_bowler_id' => $row->pro_bowler_id,
+                'license_number' => $row->license_number,
+                'name' => $row->name,
+                'entry_number' => $row->entry_number,
+                'stage' => $row->stage,
+                'shift' => $row->shift,
+                'gender' => $row->gender,
+                'game_number' => $row->game_number,
+                'score' => $row->score,
+                'reviewed_by' => auth()->id(),
+                'reviewed_at' => now(),
+            ];
+
+            foreach ($fieldValues as $field => $value) {
+                if ($value === null) {
+                    continue;
+                }
+
+                if (! $applyEmptyOnly || $this->isBlank($payload[$field] ?? null)) {
+                    $payload[$field] = $value;
+                }
+            }
+
+            $issues = $this->rowIssues($payload);
+            $payload['parse_status'] = match ($requestedStatus) {
+                'rejected' => 'rejected',
+                'needs_review' => 'needs_review',
+                'accepted' => empty($issues) ? 'accepted' : 'needs_review',
+                default => $row->parse_status === 'rejected'
+                    ? 'rejected'
+                    : (empty($issues) ? 'accepted' : 'needs_review'),
+            };
+            $payload['error_message'] = empty($issues) || $payload['parse_status'] === 'rejected'
+                ? null
+                : implode(', ', $issues);
+
+            $row->update($payload);
+            $updated++;
+        }
+
+        $committer->refreshBatchStatus($scoreImport->fresh(), auth()->user());
+
+        return redirect()
+            ->route('tournaments.score_imports.show', [$tournament->id, $scoreImport->id])
+            ->with('success', sprintf('%d 行を一括更新しました。', $updated));
+    }
+
     public function commit(
         Tournament $tournament,
         ScoreImportBatch $scoreImport,
@@ -249,6 +341,11 @@ class TournamentScoreImportController extends Controller
         $value = trim((string) ($value ?? ''));
 
         return $value === '' ? null : $value;
+    }
+
+    private function isBlank(mixed $value): bool
+    {
+        return trim((string) ($value ?? '')) === '';
     }
 
     private function authorizeEditorOrAdmin(): void

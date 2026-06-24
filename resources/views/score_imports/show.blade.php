@@ -102,6 +102,48 @@
     </div>
   </form>
 
+  <div class="card mb-4">
+    <div class="card-header fw-bold">選択行の一括修正</div>
+    <div class="card-body">
+      <form id="bulk-update-rows" method="POST" action="{{ route('tournaments.score_imports.rows.bulk_update', [$tournament->id, $scoreImport->id]) }}" class="row g-3 align-items-end">
+        @csrf
+        @method('PATCH')
+        <div class="col-md-2">
+          <label class="form-label">ステージ</label>
+          <input type="text" name="bulk_stage" class="form-control" placeholder="予選">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">G</label>
+          <input type="number" name="bulk_game_number" class="form-control" min="1" max="99">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">シフト</label>
+          <input type="text" name="bulk_shift" class="form-control">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">性別</label>
+          <input type="text" name="bulk_gender" class="form-control" placeholder="M / F">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">状態</label>
+          <select name="bulk_parse_status" class="form-select">
+            <option value="">自動判定</option>
+            <option value="accepted">確認済み</option>
+            <option value="needs_review">要確認</option>
+            <option value="rejected">除外</option>
+          </select>
+        </div>
+        <div class="col-md-2">
+          <div class="form-check mb-2">
+            <input type="checkbox" name="apply_empty_only" value="1" id="apply_empty_only" class="form-check-input" checked>
+            <label for="apply_empty_only" class="form-check-label">空欄だけ</label>
+          </div>
+          <button type="submit" class="btn btn-outline-primary w-100">選択行に適用</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <div class="card">
     <div class="card-header fw-bold">取込行</div>
     <div class="card-body p-0">
@@ -109,7 +151,12 @@
         <table class="table table-sm align-middle mb-0">
           <thead>
             <tr>
-              <th style="width: 130px;">行</th>
+              <th style="width: 150px;">
+                <div class="form-check">
+                  <input type="checkbox" id="score-import-check-all" class="form-check-input">
+                  <label for="score-import-check-all" class="form-check-label">行</label>
+                </div>
+              </th>
               <th style="min-width: 220px;">候補</th>
               <th style="min-width: 240px;">選手</th>
               <th style="min-width: 260px;">スコア</th>
@@ -129,6 +176,12 @@
               @endphp
               <tr>
                 <td>
+                  @if (! $row->confirmed_game_score_id)
+                    <div class="form-check mb-2">
+                      <input form="bulk-update-rows" type="checkbox" name="row_ids[]" value="{{ $row->id }}" class="form-check-input js-score-import-row-check" id="score-import-row-check-{{ $row->id }}">
+                      <label for="score-import-row-check-{{ $row->id }}" class="form-check-label">選択</label>
+                    </div>
+                  @endif
                   <div class="fw-semibold">#{{ $row->row_number }}</div>
                   <div class="small text-muted">ID {{ $row->id }}</div>
                   <span class="badge {{ $rowStatusClass }}">{{ $row->parse_status }}</span>
@@ -243,4 +296,18 @@
     @endif
   </div>
 </div>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const checkAll = document.getElementById('score-import-check-all');
+    if (!checkAll) {
+      return;
+    }
+
+    checkAll.addEventListener('change', function () {
+      document.querySelectorAll('.js-score-import-row-check:not(:disabled)').forEach(function (checkbox) {
+        checkbox.checked = checkAll.checked;
+      });
+    });
+  });
+</script>
 @endsection

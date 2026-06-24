@@ -68,3 +68,4 @@
 - `ScoreImportCommitService` を追加し、確認済みの `score_import_rows` を `game_scores` へ作成/更新できるようにした。
 - `score_imports.show` 画面を追加し、候補選択、行修正、除外、反映済み確認をできるようにした。
 - 未照合・不足行は `needs_review` のまま残し、確定反映時にも `game_scores` へ入れない。
+- 取込詳細画面に複数行一括修正を追加。選択行へステージ、ゲーム番号、シフト、性別、状態をまとめて適用できる。
