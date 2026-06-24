@@ -299,6 +299,7 @@
                 <th style="width: 120px;">取込行</th>
                 <th style="width: 120px;">要確認</th>
                 <th style="width: 180px;">取込日時</th>
+                <th style="width: 100px;">操作</th>
               </tr>
             </thead>
             <tbody>
@@ -325,6 +326,9 @@
                   <td>{{ number_format((int) ($batch->rows_count ?? 0)) }}</td>
                   <td>{{ number_format((int) ($batch->needs_review_rows_count ?? 0)) }}</td>
                   <td>{{ optional($batch->created_at)->format('Y-m-d H:i') }}</td>
+                  <td>
+                    <a href="{{ route('tournaments.score_imports.show', [$tournament->id, $batch->id]) }}" class="btn btn-sm btn-outline-primary">詳細</a>
+                  </td>
                 </tr>
               @endforeach
             </tbody>

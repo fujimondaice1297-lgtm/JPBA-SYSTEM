@@ -62,3 +62,9 @@
 - `ScoreImportCsvStageService` と `TournamentScoreImportController` を追加し、運用ログ画面からCSVを一時取込できるようにした。
 - CSVは `score_import_batches` / `score_import_rows` / `score_import_row_candidates` に保存する。まだ `game_scores` へは直接反映しない。
 - 次の候補作業は、取込詳細画面、`needs_review` 行の修正画面、確認済み行の `game_scores` 確定反映。
+
+## 2026-06-24 追記: スコア取込詳細・確定反映
+
+- `ScoreImportCommitService` を追加し、確認済みの `score_import_rows` を `game_scores` へ作成/更新できるようにした。
+- `score_imports.show` 画面を追加し、候補選択、行修正、除外、反映済み確認をできるようにした。
+- 未照合・不足行は `needs_review` のまま残し、確定反映時にも `game_scores` へ入れない。

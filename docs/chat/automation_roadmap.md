@@ -115,8 +115,9 @@ flowchart LR
 
 - CSVアップロードを `score_import_batches` / `score_import_rows` へ保存するサービス（実装済み）
 - 取込行と `tournament_participants` / `pro_bowlers` の照合サービス（初期実装済み）
-- 管理画面で `needs_review` の行だけ修正し、確認後に `game_scores` へ反映する画面
-- `score_import_rows` から `game_scores` へ確定反映するサービス
+- 管理画面で `needs_review` の行だけ修正し、確認後に `game_scores` へ反映する画面（初期実装済み）
+- `score_import_rows` から `game_scores` へ確定反映するサービス（初期実装済み）
+- 次は、取込詳細画面の操作性改善、複数行一括修正、反映ログの保存を進める
 
 ### Phase 3: OCR/写真解析
 

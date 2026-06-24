@@ -2,9 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ScoreImportBatch;
+use App\Models\ScoreImportRow;
 use App\Models\Tournament;
+use App\Services\ScoreImportCommitService;
 use App\Services\ScoreImportCsvStageService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Throwable;
 
 class TournamentScoreImportController extends Controller
@@ -44,6 +48,207 @@ class TournamentScoreImportController extends Controller
                 $batch->row_count,
                 $needsReviewCount
             ));
+    }
+
+    public function show(Request $request, Tournament $tournament, ScoreImportBatch $scoreImport)
+    {
+        $this->authorizeEditorOrAdmin();
+        $this->ensureBatchBelongsToTournament($scoreImport, $tournament);
+
+        $status = (string) $request->query('status', '');
+        $rows = $scoreImport->rows()
+            ->with([
+                'candidates' => function ($query) {
+                    $query->orderBy('rank')->orderByDesc('confidence')->orderBy('id');
+                },
+                'participant',
+                'bowler',
+                'confirmedGameScore',
+            ])
+            ->when($status !== '', function ($query) use ($status) {
+                $query->where('parse_status', $status);
+            })
+            ->orderBy('row_number')
+            ->orderBy('id')
+            ->paginate(50)
+            ->withQueryString();
+
+        $summary = [
+            'total' => $scoreImport->rows()->count(),
+            'parsed' => $scoreImport->rows()->where('parse_status', 'parsed')->count(),
+            'accepted' => $scoreImport->rows()->where('parse_status', 'accepted')->count(),
+            'needs_review' => $scoreImport->rows()->where('parse_status', 'needs_review')->count(),
+            'rejected' => $scoreImport->rows()->where('parse_status', 'rejected')->count(),
+            'confirmed' => $scoreImport->rows()->whereNotNull('confirmed_game_score_id')->count(),
+        ];
+
+        return view('score_imports.show', compact(
+            'tournament',
+            'scoreImport',
+            'rows',
+            'status',
+            'summary',
+        ));
+    }
+
+    public function updateRow(
+        Request $request,
+        Tournament $tournament,
+        ScoreImportBatch $scoreImport,
+        ScoreImportRow $scoreImportRow,
+        ScoreImportCommitService $committer
+    ) {
+        $this->authorizeEditorOrAdmin();
+        $this->ensureBatchBelongsToTournament($scoreImport, $tournament);
+        $this->ensureRowBelongsToBatch($scoreImportRow, $scoreImport);
+
+        if ($scoreImportRow->confirmed_game_score_id) {
+            return back()->withErrors([
+                'row' => '反映済みの行は編集できません。',
+            ]);
+        }
+
+        $validated = $request->validate([
+            'parse_status' => ['nullable', 'string', 'in:accepted,needs_review,rejected'],
+            'selected_candidate_id' => ['nullable', 'integer'],
+            'tournament_participant_id' => ['nullable', 'integer', 'exists:tournament_participants,id'],
+            'pro_bowler_id' => ['nullable', 'integer', 'exists:pro_bowlers,id'],
+            'license_number' => ['nullable', 'string', 'max:50'],
+            'name' => ['nullable', 'string', 'max:255'],
+            'entry_number' => ['nullable', 'string', 'max:50'],
+            'stage' => ['nullable', 'string', 'max:50'],
+            'shift' => ['nullable', 'string', 'max:20'],
+            'gender' => ['nullable', 'string', 'max:10'],
+            'game_number' => ['nullable', 'integer', 'min:1', 'max:99'],
+            'score' => ['nullable', 'integer', 'min:0', 'max:300'],
+        ]);
+
+        $participantId = $validated['tournament_participant_id'] ?? null;
+        $proBowlerId = $validated['pro_bowler_id'] ?? null;
+        $selectedCandidateId = $validated['selected_candidate_id'] ?? null;
+
+        if ($selectedCandidateId) {
+            $candidate = $scoreImportRow->candidates()->whereKey($selectedCandidateId)->first();
+            if (! $candidate) {
+                return back()->withErrors([
+                    'selected_candidate_id' => '選択した候補が見つかりません。',
+                ])->withInput();
+            }
+
+            $participantId = $candidate->tournament_participant_id;
+            $proBowlerId = $candidate->pro_bowler_id;
+        }
+
+        if ($participantId) {
+            $participant = DB::table('tournament_participants')
+                ->where('id', $participantId)
+                ->where('tournament_id', $tournament->id)
+                ->first();
+
+            if (! $participant) {
+                return back()->withErrors([
+                    'tournament_participant_id' => 'この大会の参加者ではありません。',
+                ])->withInput();
+            }
+
+            $proBowlerId = $proBowlerId ?: $participant->pro_bowler_id;
+        }
+
+        $payload = [
+            'tournament_participant_id' => $participantId ?: null,
+            'pro_bowler_id' => $proBowlerId ?: null,
+            'license_number' => $this->nullableString($validated['license_number'] ?? null),
+            'name' => $this->nullableString($validated['name'] ?? null),
+            'entry_number' => $this->nullableString($validated['entry_number'] ?? null),
+            'stage' => $this->nullableString($validated['stage'] ?? null),
+            'shift' => $this->nullableString($validated['shift'] ?? null),
+            'gender' => $this->nullableString($validated['gender'] ?? null),
+            'game_number' => $validated['game_number'] ?? null,
+            'score' => $validated['score'] ?? null,
+            'reviewed_by' => auth()->id(),
+            'reviewed_at' => now(),
+        ];
+
+        $issues = $this->rowIssues($payload);
+        $requestedStatus = (string) ($validated['parse_status'] ?? '');
+
+        $payload['parse_status'] = $requestedStatus === 'rejected'
+            ? 'rejected'
+            : (empty($issues) ? 'accepted' : 'needs_review');
+        $payload['error_message'] = empty($issues) ? null : implode(', ', $issues);
+
+        $scoreImportRow->update($payload);
+
+        if ($selectedCandidateId) {
+            $scoreImportRow->candidates()->update(['is_selected' => false]);
+            $scoreImportRow->candidates()->whereKey($selectedCandidateId)->update(['is_selected' => true]);
+        }
+
+        $committer->refreshBatchStatus($scoreImport->fresh(), auth()->user());
+
+        return redirect()
+            ->route('tournaments.score_imports.show', [$tournament->id, $scoreImport->id])
+            ->with('success', '取込行を更新しました。');
+    }
+
+    public function commit(
+        Tournament $tournament,
+        ScoreImportBatch $scoreImport,
+        ScoreImportCommitService $committer
+    ) {
+        $this->authorizeEditorOrAdmin();
+        $this->ensureBatchBelongsToTournament($scoreImport, $tournament);
+
+        $summary = $committer->commit($tournament, $scoreImport, auth()->user());
+
+        return redirect()
+            ->route('tournaments.score_imports.show', [$tournament->id, $scoreImport->id])
+            ->with('success', sprintf(
+                'スコアを確定反映しました。新規: %d / 更新: %d / 要確認へ戻した行: %d',
+                $summary['created'],
+                $summary['updated'],
+                $summary['skipped']
+            ));
+    }
+
+    private function ensureBatchBelongsToTournament(ScoreImportBatch $batch, Tournament $tournament): void
+    {
+        abort_unless((int) $batch->tournament_id === (int) $tournament->id, 404);
+    }
+
+    private function ensureRowBelongsToBatch(ScoreImportRow $row, ScoreImportBatch $batch): void
+    {
+        abort_unless((int) $row->score_import_batch_id === (int) $batch->id, 404);
+    }
+
+    private function rowIssues(array $row): array
+    {
+        $issues = [];
+
+        if (($row['stage'] ?? '') === null || trim((string) ($row['stage'] ?? '')) === '') {
+            $issues[] = 'stage_missing';
+        }
+
+        if (($row['game_number'] ?? null) === null) {
+            $issues[] = 'game_number_missing';
+        }
+
+        if (($row['score'] ?? null) === null) {
+            $issues[] = 'score_missing';
+        }
+
+        if (empty($row['tournament_participant_id']) && empty($row['pro_bowler_id'])) {
+            $issues[] = 'player_unmatched';
+        }
+
+        return $issues;
+    }
+
+    private function nullableString(mixed $value): ?string
+    {
+        $value = trim((string) ($value ?? ''));
+
+        return $value === '' ? null : $value;
     }
 
     private function authorizeEditorOrAdmin(): void

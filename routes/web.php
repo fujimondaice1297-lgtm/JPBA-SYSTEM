@@ -327,6 +327,12 @@ Route::middleware(['auth','role:editor,admin'])->group(function () {
         ->name('tournaments.operation_logs.index');
     Route::post('/tournaments/{tournament}/score-imports/csv', [\App\Http\Controllers\TournamentScoreImportController::class, 'storeCsv'])
         ->name('tournaments.score_imports.csv.store');
+    Route::get('/tournaments/{tournament}/score-imports/{scoreImport}', [\App\Http\Controllers\TournamentScoreImportController::class, 'show'])
+        ->name('tournaments.score_imports.show');
+    Route::patch('/tournaments/{tournament}/score-imports/{scoreImport}/rows/{scoreImportRow}', [\App\Http\Controllers\TournamentScoreImportController::class, 'updateRow'])
+        ->name('tournaments.score_imports.rows.update');
+    Route::post('/tournaments/{tournament}/score-imports/{scoreImport}/commit', [\App\Http\Controllers\TournamentScoreImportController::class, 'commit'])
+        ->name('tournaments.score_imports.commit');
     Route::post('/tournaments/{tournament}/draws/bulk', [\App\Http\Controllers\DrawController::class, 'bulk'])
         ->name('tournaments.draws.bulk');
     Route::get('/tournaments/{tournament}/draw-reminders/create', [\App\Http\Controllers\TournamentDrawReminderController::class, 'create'])

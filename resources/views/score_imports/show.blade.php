@@ -1,0 +1,246 @@
+@extends('layouts.app')
+
+@section('content')
+<div class="container">
+  <div class="d-flex justify-content-between align-items-start mb-3 flex-wrap gap-2">
+    <div>
+      <h2 class="mb-1">スコアCSV取込詳細</h2>
+      <div class="text-muted">{{ $tournament->name }} / 取込ID #{{ $scoreImport->id }}</div>
+    </div>
+    <div class="d-flex gap-2 flex-wrap">
+      <a href="{{ route('tournaments.operation_logs.index', $tournament->id) }}" class="btn btn-outline-secondary">運用ログへ戻る</a>
+      <form method="POST" action="{{ route('tournaments.score_imports.commit', [$tournament->id, $scoreImport->id]) }}" class="d-inline">
+        @csrf
+        <button type="submit" class="btn btn-primary" {{ (($summary['parsed'] ?? 0) + ($summary['accepted'] ?? 0) - ($summary['confirmed'] ?? 0)) <= 0 ? 'disabled' : '' }}>
+          確認済み行を反映
+        </button>
+      </form>
+    </div>
+  </div>
+
+  @if (session('success'))
+    <div class="alert alert-success">{{ session('success') }}</div>
+  @endif
+
+  @if ($errors->any())
+    <div class="alert alert-danger">
+      <ul class="mb-0">
+        @foreach ($errors->all() as $error)
+          <li>{{ $error }}</li>
+        @endforeach
+      </ul>
+    </div>
+  @endif
+
+  <div class="row g-3 mb-4">
+    @foreach ([
+      'total' => '全行',
+      'parsed' => '自動確認済み',
+      'accepted' => '手動確認済み',
+      'needs_review' => '要確認',
+      'rejected' => '除外',
+      'confirmed' => '反映済み',
+    ] as $key => $label)
+      <div class="col-6 col-md-2">
+        <div class="border rounded p-3 h-100">
+          <div class="text-muted small">{{ $label }}</div>
+          <div class="fs-4 fw-bold">{{ number_format((int) ($summary[$key] ?? 0)) }}</div>
+        </div>
+      </div>
+    @endforeach
+  </div>
+
+  <div class="card mb-4">
+    <div class="card-header fw-bold d-flex justify-content-between align-items-center flex-wrap gap-2">
+      <span>取込情報</span>
+      @php
+        $batchStatusClass = match ($scoreImport->status) {
+          'confirmed' => 'text-bg-success',
+          'parsed' => 'text-bg-primary',
+          'reviewing' => 'text-bg-warning',
+          'failed' => 'text-bg-danger',
+          default => 'text-bg-secondary',
+        };
+      @endphp
+      <span class="badge {{ $batchStatusClass }}">{{ $scoreImport->status }}</span>
+    </div>
+    <div class="card-body row g-3">
+      <div class="col-md-4">
+        <div class="text-muted small">ファイル</div>
+        <div class="fw-semibold">{{ $scoreImport->source_filename ?? '-' }}</div>
+      </div>
+      <div class="col-md-4">
+        <div class="text-muted small">取込日時</div>
+        <div>{{ optional($scoreImport->created_at)->format('Y-m-d H:i') }}</div>
+      </div>
+      <div class="col-md-4">
+        <div class="text-muted small">メモ</div>
+        <div>{{ $scoreImport->notes ?: '-' }}</div>
+      </div>
+      @if ($scoreImport->error_message)
+        <div class="col-12">
+          <div class="alert alert-danger mb-0">{{ $scoreImport->error_message }}</div>
+        </div>
+      @endif
+    </div>
+  </div>
+
+  <form method="GET" action="{{ route('tournaments.score_imports.show', [$tournament->id, $scoreImport->id]) }}" class="card mb-4">
+    <div class="card-body row g-3 align-items-end">
+      <div class="col-md-4">
+        <label class="form-label">状態</label>
+        <select name="status" class="form-select">
+          <option value="">すべて</option>
+          @foreach (['parsed' => '自動確認済み', 'accepted' => '手動確認済み', 'needs_review' => '要確認', 'rejected' => '除外'] as $key => $label)
+            <option value="{{ $key }}" {{ $status === $key ? 'selected' : '' }}>{{ $label }}</option>
+          @endforeach
+        </select>
+      </div>
+      <div class="col-md-4">
+        <button type="submit" class="btn btn-outline-primary">絞り込み</button>
+      </div>
+    </div>
+  </form>
+
+  <div class="card">
+    <div class="card-header fw-bold">取込行</div>
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-sm align-middle mb-0">
+          <thead>
+            <tr>
+              <th style="width: 130px;">行</th>
+              <th style="min-width: 220px;">候補</th>
+              <th style="min-width: 240px;">選手</th>
+              <th style="min-width: 260px;">スコア</th>
+              <th style="width: 150px;">操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            @forelse ($rows as $row)
+              @php
+                $rowFormId = 'score-import-row-' . $row->id;
+                $rowStatusClass = match ($row->parse_status) {
+                  'accepted', 'parsed' => 'text-bg-success',
+                  'needs_review' => 'text-bg-warning',
+                  'rejected' => 'text-bg-secondary',
+                  default => 'text-bg-light',
+                };
+              @endphp
+              <tr>
+                <td>
+                  <div class="fw-semibold">#{{ $row->row_number }}</div>
+                  <div class="small text-muted">ID {{ $row->id }}</div>
+                  <span class="badge {{ $rowStatusClass }}">{{ $row->parse_status }}</span>
+                  @if ($row->confirmed_game_score_id)
+                    <div class="small text-success mt-1">反映済み: game_scores #{{ $row->confirmed_game_score_id }}</div>
+                  @endif
+                  @if ($row->error_message)
+                    <div class="small text-danger mt-1">{{ $row->error_message }}</div>
+                  @endif
+                </td>
+                <td>
+                  <select form="{{ $rowFormId }}" name="selected_candidate_id" class="form-select form-select-sm mb-2" {{ $row->confirmed_game_score_id ? 'disabled' : '' }}>
+                    <option value="">候補を使わない</option>
+                    @foreach ($row->candidates as $candidate)
+                      <option value="{{ $candidate->id }}" {{ $candidate->is_selected ? 'selected' : '' }}>
+                        {{ $candidate->candidate_type }}:
+                        {{ $candidate->candidate_value ?: '-' }}
+                        @if ($candidate->confidence !== null)
+                          / {{ $candidate->confidence }}%
+                        @endif
+                      </option>
+                    @endforeach
+                  </select>
+                  <div class="row g-2">
+                    <div class="col-6">
+                      <label class="form-label small mb-1">参加者ID</label>
+                      <input form="{{ $rowFormId }}" type="number" name="tournament_participant_id" class="form-control form-control-sm" value="{{ $row->tournament_participant_id }}" {{ $row->confirmed_game_score_id ? 'disabled' : '' }}>
+                    </div>
+                    <div class="col-6">
+                      <label class="form-label small mb-1">プロID</label>
+                      <input form="{{ $rowFormId }}" type="number" name="pro_bowler_id" class="form-control form-control-sm" value="{{ $row->pro_bowler_id }}" {{ $row->confirmed_game_score_id ? 'disabled' : '' }}>
+                    </div>
+                  </div>
+                </td>
+                <td>
+                  <div class="row g-2">
+                    <div class="col-6">
+                      <label class="form-label small mb-1">ライセンス</label>
+                      <input form="{{ $rowFormId }}" type="text" name="license_number" class="form-control form-control-sm" value="{{ $row->license_number }}" {{ $row->confirmed_game_score_id ? 'disabled' : '' }}>
+                    </div>
+                    <div class="col-6">
+                      <label class="form-label small mb-1">エントリー</label>
+                      <input form="{{ $rowFormId }}" type="text" name="entry_number" class="form-control form-control-sm" value="{{ $row->entry_number }}" {{ $row->confirmed_game_score_id ? 'disabled' : '' }}>
+                    </div>
+                    <div class="col-12">
+                      <label class="form-label small mb-1">氏名</label>
+                      <input form="{{ $rowFormId }}" type="text" name="name" class="form-control form-control-sm" value="{{ $row->name }}" {{ $row->confirmed_game_score_id ? 'disabled' : '' }}>
+                    </div>
+                  </div>
+                </td>
+                <td>
+                  <div class="row g-2">
+                    <div class="col-6">
+                      <label class="form-label small mb-1">ステージ</label>
+                      <input form="{{ $rowFormId }}" type="text" name="stage" class="form-control form-control-sm" value="{{ $row->stage }}" {{ $row->confirmed_game_score_id ? 'disabled' : '' }}>
+                    </div>
+                    <div class="col-3">
+                      <label class="form-label small mb-1">G</label>
+                      <input form="{{ $rowFormId }}" type="number" name="game_number" class="form-control form-control-sm" value="{{ $row->game_number }}" min="1" max="99" {{ $row->confirmed_game_score_id ? 'disabled' : '' }}>
+                    </div>
+                    <div class="col-3">
+                      <label class="form-label small mb-1">Score</label>
+                      <input form="{{ $rowFormId }}" type="number" name="score" class="form-control form-control-sm" value="{{ $row->score }}" min="0" max="300" {{ $row->confirmed_game_score_id ? 'disabled' : '' }}>
+                    </div>
+                    <div class="col-4">
+                      <label class="form-label small mb-1">シフト</label>
+                      <input form="{{ $rowFormId }}" type="text" name="shift" class="form-control form-control-sm" value="{{ $row->shift }}" {{ $row->confirmed_game_score_id ? 'disabled' : '' }}>
+                    </div>
+                    <div class="col-4">
+                      <label class="form-label small mb-1">性別</label>
+                      <input form="{{ $rowFormId }}" type="text" name="gender" class="form-control form-control-sm" value="{{ $row->gender }}" {{ $row->confirmed_game_score_id ? 'disabled' : '' }}>
+                    </div>
+                    <div class="col-4">
+                      <label class="form-label small mb-1">状態</label>
+                      <select form="{{ $rowFormId }}" name="parse_status" class="form-select form-select-sm" {{ $row->confirmed_game_score_id ? 'disabled' : '' }}>
+                        <option value="accepted" {{ in_array($row->parse_status, ['parsed', 'accepted'], true) ? 'selected' : '' }}>確認済み</option>
+                        <option value="needs_review" {{ $row->parse_status === 'needs_review' ? 'selected' : '' }}>要確認</option>
+                        <option value="rejected" {{ $row->parse_status === 'rejected' ? 'selected' : '' }}>除外</option>
+                      </select>
+                    </div>
+                  </div>
+                </td>
+                <td>
+                  @if (! $row->confirmed_game_score_id)
+                    <form id="{{ $rowFormId }}" method="POST" action="{{ route('tournaments.score_imports.rows.update', [$tournament->id, $scoreImport->id, $row->id]) }}">
+                      @csrf
+                      @method('PATCH')
+                    </form>
+                    <button form="{{ $rowFormId }}" type="submit" class="btn btn-sm btn-outline-primary w-100 mb-2">保存</button>
+                  @endif
+                  @if ($row->raw_payload)
+                    <details class="small">
+                      <summary>元データ</summary>
+                      <pre class="small bg-light border rounded p-2 mt-2 mb-0">{{ json_encode($row->raw_payload, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) }}</pre>
+                    </details>
+                  @endif
+                </td>
+              </tr>
+            @empty
+              <tr>
+                <td colspan="5" class="text-muted p-4">表示できる取込行がありません。</td>
+              </tr>
+            @endforelse
+          </tbody>
+        </table>
+      </div>
+    </div>
+    @if ($rows->hasPages())
+      <div class="card-footer">
+        {{ $rows->links() }}
+      </div>
+    @endif
+  </div>
+</div>
+@endsection
