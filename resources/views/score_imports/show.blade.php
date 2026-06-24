@@ -4,7 +4,7 @@
 <div class="container">
   <div class="d-flex justify-content-between align-items-start mb-3 flex-wrap gap-2">
     <div>
-      <h2 class="mb-1">スコアCSV取込詳細</h2>
+      <h2 class="mb-1">スコア取込詳細</h2>
       <div class="text-muted">{{ $tournament->name }} / 取込ID #{{ $scoreImport->id }}</div>
     </div>
     <div class="d-flex gap-2 flex-wrap">
@@ -58,25 +58,40 @@
           'confirmed' => 'text-bg-success',
           'parsed' => 'text-bg-primary',
           'reviewing' => 'text-bg-warning',
+          'draft' => 'text-bg-info',
           'failed' => 'text-bg-danger',
           default => 'text-bg-secondary',
+        };
+        $importTypeLabel = match ($scoreImport->import_type) {
+          'score_sheet_image' => '写真/PDF',
+          'csv' => 'CSV',
+          default => $scoreImport->import_type ?: '-',
         };
       @endphp
       <span class="badge {{ $batchStatusClass }}">{{ $scoreImport->status }}</span>
     </div>
     <div class="card-body row g-3">
-      <div class="col-md-4">
+      <div class="col-md-3">
+        <div class="text-muted small">種別</div>
+        <div class="fw-semibold">{{ $importTypeLabel }}</div>
+      </div>
+      <div class="col-md-3">
         <div class="text-muted small">ファイル</div>
         <div class="fw-semibold">{{ $scoreImport->source_filename ?? '-' }}</div>
       </div>
-      <div class="col-md-4">
+      <div class="col-md-3">
         <div class="text-muted small">取込日時</div>
         <div>{{ optional($scoreImport->created_at)->format('Y-m-d H:i') }}</div>
       </div>
-      <div class="col-md-4">
+      <div class="col-md-3">
         <div class="text-muted small">メモ</div>
         <div>{{ $scoreImport->notes ?: '-' }}</div>
       </div>
+      @if ($scoreImport->import_type === 'score_sheet_image' && ($summary['total'] ?? 0) === 0)
+        <div class="col-12">
+          <div class="alert alert-info mb-0">OCR解析待ちの原本です。解析結果行はまだ作成されていません。</div>
+        </div>
+      @endif
       @if ($scoreImport->error_message)
         <div class="col-12">
           <div class="alert alert-danger mb-0">{{ $scoreImport->error_message }}</div>

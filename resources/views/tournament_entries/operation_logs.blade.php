@@ -256,7 +256,7 @@
 
   <div class="card mb-4">
     <div class="card-header fw-bold d-flex justify-content-between align-items-center flex-wrap gap-2">
-      <span>スコアCSV一時取込</span>
+      <span>スコア一時取込</span>
       <span class="text-muted small">確認後に `game_scores` へ反映するための下書き保存</span>
     </div>
     <div class="card-body">
@@ -288,12 +288,43 @@
         </div>
       </form>
 
+      <hr>
+
+      <form method="POST" action="{{ route('tournaments.score_imports.image.store', $tournament->id) }}" enctype="multipart/form-data" class="row g-3 align-items-end mb-4">
+        @csrf
+        <div class="col-md-4">
+          <label for="score_sheet" class="form-label">写真/PDF原本</label>
+          <input type="file" name="score_sheet" id="score_sheet" class="form-control" accept=".jpg,.jpeg,.png,.webp,.pdf,image/*,application/pdf" required>
+        </div>
+        <div class="col-md-2">
+          <label for="image_default_stage" class="form-label">既定ステージ</label>
+          <input type="text" name="image_default_stage" id="image_default_stage" class="form-control" value="{{ old('image_default_stage') }}" placeholder="予選">
+        </div>
+        <div class="col-md-2">
+          <label for="image_default_shift" class="form-label">既定シフト</label>
+          <input type="text" name="image_default_shift" id="image_default_shift" class="form-control" value="{{ old('image_default_shift') }}">
+        </div>
+        <div class="col-md-2">
+          <label for="image_default_gender" class="form-label">既定性別</label>
+          <input type="text" name="image_default_gender" id="image_default_gender" class="form-control" value="{{ old('image_default_gender') }}" placeholder="M / F">
+        </div>
+        <div class="col-md-2">
+          <label for="image_notes" class="form-label">メモ</label>
+          <input type="text" name="image_notes" id="image_notes" class="form-control" value="{{ old('image_notes') }}">
+        </div>
+        <div class="col-12">
+          <button type="submit" class="btn btn-outline-primary">写真/PDFを保存</button>
+          <span class="text-muted small ms-2">OCR解析前の原本として保存します</span>
+        </div>
+      </form>
+
       @if (($scoreImportBatches ?? collect())->isNotEmpty())
         <div class="table-responsive">
           <table class="table table-sm align-middle mb-0">
             <thead>
               <tr>
                 <th style="width: 90px;">ID</th>
+                <th style="width: 120px;">種別</th>
                 <th>ファイル</th>
                 <th style="width: 120px;">状態</th>
                 <th style="width: 120px;">取込行</th>
@@ -307,6 +338,16 @@
                 <tr>
                   <td>#{{ $batch->id }}</td>
                   <td>
+                    @php
+                      $importTypeLabel = match ($batch->import_type) {
+                        'score_sheet_image' => '写真/PDF',
+                        'csv' => 'CSV',
+                        default => $batch->import_type ?: '-',
+                      };
+                    @endphp
+                    <span class="badge text-bg-light border">{{ $importTypeLabel }}</span>
+                  </td>
+                  <td>
                     <div class="fw-semibold">{{ $batch->source_filename ?? '-' }}</div>
                     @if ($batch->error_message)
                       <div class="small text-danger">{{ $batch->error_message }}</div>
@@ -315,8 +356,10 @@
                   <td>
                     @php
                       $statusClass = match ($batch->status) {
+                        'confirmed' => 'text-bg-success',
                         'parsed' => 'text-bg-success',
                         'reviewing' => 'text-bg-warning',
+                        'draft' => 'text-bg-info',
                         'failed' => 'text-bg-danger',
                         default => 'text-bg-secondary',
                       };
@@ -335,7 +378,7 @@
           </table>
         </div>
       @else
-        <div class="text-muted small">この大会のスコアCSV一時取込はまだありません。</div>
+        <div class="text-muted small">この大会のスコア一時取込はまだありません。</div>
       @endif
     </div>
   </div>

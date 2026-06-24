@@ -77,3 +77,10 @@
 - `game_number` + `score` の1行1スコア形式に加え、`1G` / `2G` / `3G`、`G1`、`game1`、`第1ゲーム` などの横持ち列を検出し、1つのCSV行から複数の `score_import_rows` を作れるようにした。
 - 空欄の横持ちゲーム列はスキップする。元CSV行番号とスコア列情報は `raw_payload` に残す。
 - 操作ログには `score_mode` と検出スコア列情報を残す。
+
+## 2026-06-24 追記: OCR原本アップロード入口
+
+- `ScoreImportImageStageService` を追加。
+- 運用ログ画面から写真/PDF原本をアップロードし、`score_import_batches.import_type = score_sheet_image` のバッチとして保存できるようにした。
+- まだOCR解析はしない。行数0の `draft` バッチとして残し、操作ログ `image_stage` にファイル情報と既定値を保存する。
+- 取込詳細画面はCSV専用表記を避け、写真/PDFバッチも確認できる表示へ調整した。

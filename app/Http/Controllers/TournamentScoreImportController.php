@@ -7,6 +7,7 @@ use App\Models\ScoreImportRow;
 use App\Models\Tournament;
 use App\Services\ScoreImportCommitService;
 use App\Services\ScoreImportCsvStageService;
+use App\Services\ScoreImportImageStageService;
 use App\Services\ScoreImportOperationLogger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -48,6 +49,39 @@ class TournamentScoreImportController extends Controller
                 $batch->id,
                 $batch->row_count,
                 $needsReviewCount
+            ));
+    }
+
+    public function storeImage(Request $request, Tournament $tournament, ScoreImportImageStageService $importer)
+    {
+        $this->authorizeEditorOrAdmin();
+
+        $validated = $request->validate([
+            'score_sheet' => ['required', 'file', 'mimes:jpg,jpeg,png,webp,pdf', 'max:20480'],
+            'image_default_stage' => ['nullable', 'string', 'max:50'],
+            'image_default_shift' => ['nullable', 'string', 'max:20'],
+            'image_default_gender' => ['nullable', 'string', 'max:10'],
+            'image_notes' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        try {
+            $batch = $importer->import($tournament, $request->file('score_sheet'), auth()->user(), [
+                'default_stage' => $validated['image_default_stage'] ?? '',
+                'default_shift' => $validated['image_default_shift'] ?? '',
+                'default_gender' => $validated['image_default_gender'] ?? '',
+                'notes' => $validated['image_notes'] ?? '',
+            ]);
+        } catch (Throwable $e) {
+            return back()->withErrors([
+                'score_sheet' => 'スコア原本ファイルの一時保存に失敗しました: ' . $e->getMessage(),
+            ])->withInput();
+        }
+
+        return redirect()
+            ->route('tournaments.operation_logs.index', $tournament->id)
+            ->with('success', sprintf(
+                'スコア原本ファイルをOCR解析待ちとして保存しました。取込ID: %d',
+                $batch->id
             ));
     }
 

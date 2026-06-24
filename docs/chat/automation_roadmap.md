@@ -153,3 +153,9 @@ flowchart LR
 - 横持ちCSVでは、1つのCSV行をゲーム数ぶんの `score_import_rows` に展開する。空欄のゲーム列は取り込まず、確認対象の一時データだけを作る。
 - 操作ログには `score_mode`、検出したスコア列数、ゲーム番号つきの列一覧を残す。
 - 次は Excel 取込、OCR画像アップロード前の画像保存設計、または取込詳細画面の操作性改善へ進める。
+
+## 2026-06-24 追記: OCR前段の原本アップロード
+
+- `ScoreImportImageStageService` を追加し、紙の成績表を撮影した画像やPDFを `score_import_batches` に `score_sheet_image` として保存できる入口を作った。
+- この段階ではOCR解析や `score_import_rows` 作成は行わず、原本ファイル・メモ・既定ステージ等・操作ログを残す。
+- 後続のOCR処理は、このバッチを読み、解析結果を `score_import_rows` と `score_import_row_candidates` へ追加してから既存の確認・確定反映画面へ流す。
