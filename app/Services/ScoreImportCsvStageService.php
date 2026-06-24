@@ -14,7 +14,7 @@ use Throwable;
 
 class ScoreImportCsvStageService
 {
-    private const PARSER_VERSION = 'score_csv_stage_v1';
+    private const PARSER_VERSION = 'score_csv_stage_v2';
 
     public function import(Tournament $tournament, UploadedFile $file, ?Authenticatable $user = null, array $options = []): ScoreImportBatch
     {
@@ -68,44 +68,42 @@ class ScoreImportCsvStageService
                         continue;
                     }
 
-                    $rowCount++;
+                    foreach ($this->mapRows($values, $header, $columns, $options, $lineNumber) as $mappedRow) {
+                        $rowCount++;
 
-                    $mapped = $this->mapRow($values, $columns, $options);
-                    $match = $this->matchPlayer($mapped, $lookups);
-                    $issues = $this->detectIssues($mapped, $match);
-                    $parseStatus = empty($issues) ? 'parsed' : 'needs_review';
+                        $mapped = $mappedRow['mapped'];
+                        $match = $this->matchPlayer($mapped, $lookups);
+                        $issues = $this->detectIssues($mapped, $match);
+                        $parseStatus = empty($issues) ? 'parsed' : 'needs_review';
 
-                    if ($parseStatus === 'parsed') {
-                        $parsedCount++;
-                    } else {
-                        $needsReviewCount++;
-                    }
+                        if ($parseStatus === 'parsed') {
+                            $parsedCount++;
+                        } else {
+                            $needsReviewCount++;
+                        }
 
-                    $row = ScoreImportRow::create([
-                        'score_import_batch_id' => $batch->id,
-                        'row_number' => $lineNumber,
-                        'raw_payload' => [
-                            'header' => array_values($header),
-                            'values' => array_values($values),
-                            'mapped' => $mapped,
-                        ],
-                        'parse_status' => $parseStatus,
-                        'confidence' => $match['confidence'],
-                        'tournament_participant_id' => $match['tournament_participant_id'],
-                        'pro_bowler_id' => $match['pro_bowler_id'],
-                        'license_number' => $mapped['license_number'],
-                        'name' => $mapped['name'],
-                        'entry_number' => $mapped['entry_number'],
-                        'stage' => $mapped['stage'],
-                        'shift' => $mapped['shift'],
-                        'gender' => $mapped['gender'],
-                        'game_number' => $mapped['game_number'],
-                        'score' => $mapped['score'],
-                        'error_message' => empty($issues) ? null : implode(', ', $issues),
-                    ]);
+                        $row = ScoreImportRow::create([
+                            'score_import_batch_id' => $batch->id,
+                            'row_number' => $rowCount,
+                            'raw_payload' => $mappedRow['payload'],
+                            'parse_status' => $parseStatus,
+                            'confidence' => $match['confidence'],
+                            'tournament_participant_id' => $match['tournament_participant_id'],
+                            'pro_bowler_id' => $match['pro_bowler_id'],
+                            'license_number' => $mapped['license_number'],
+                            'name' => $mapped['name'],
+                            'entry_number' => $mapped['entry_number'],
+                            'stage' => $mapped['stage'],
+                            'shift' => $mapped['shift'],
+                            'gender' => $mapped['gender'],
+                            'game_number' => $mapped['game_number'],
+                            'score' => $mapped['score'],
+                            'error_message' => empty($issues) ? null : implode(', ', $issues),
+                        ]);
 
-                    foreach ($match['candidates'] as $candidate) {
-                        $row->candidates()->create($candidate);
+                        foreach ($match['candidates'] as $candidate) {
+                            $row->candidates()->create($candidate);
+                        }
                     }
                 }
 
@@ -152,6 +150,9 @@ class ScoreImportCsvStageService
                 'stored_path' => $batch->stored_path,
                 'accepted_row_count' => $batch->accepted_row_count,
                 'rejected_row_count' => $batch->rejected_row_count,
+                'score_mode' => $this->scoreImportMode($columns),
+                'score_column_count' => count($columns['score_columns'] ?? []),
+                'score_columns' => $this->scoreColumnsForLog($columns),
             ],
         ], $user);
 
@@ -179,6 +180,8 @@ class ScoreImportCsvStageService
             return null;
         };
 
+        $scoreColumn = $col(['score', 'スコア', '点数', '得点']);
+
         return [
             'license_number' => $col(['license_number', 'license_no', 'license', 'ライセンス番号', 'ライセンスNo', '会員番号']),
             'name' => $col(['name', 'player_name', '氏名', '名前', '選手名', '氏名漢字']),
@@ -187,8 +190,52 @@ class ScoreImportCsvStageService
             'shift' => $col(['shift', 'シフト', '班']),
             'gender' => $col(['gender', 'sex', '性別']),
             'game_number' => $col(['game_number', 'game_no', 'game', 'g', 'ゲーム番号', 'ゲーム', 'G']),
-            'score' => $col(['score', 'スコア', '点数', '得点']),
+            'score' => $scoreColumn,
+            'score_columns' => $this->detectScoreColumns($header, $scoreColumn),
         ];
+    }
+
+    private function mapRows(array $values, array $header, array $columns, array $options, int $lineNumber): array
+    {
+        if ($columns['score'] !== null || empty($columns['score_columns'])) {
+            $mapped = $this->mapRow($values, $columns, $options);
+
+            return [[
+                'mapped' => $mapped,
+                'payload' => $this->buildRawPayload($header, $values, $mapped, [
+                    'source_line_number' => $lineNumber,
+                    'wide_score_column' => false,
+                ]),
+            ]];
+        }
+
+        $rows = [];
+        foreach ($columns['score_columns'] as $scoreColumn) {
+            $rawScore = $this->value($values, $scoreColumn['index']);
+            if ($this->cleanValue($rawScore) === '') {
+                continue;
+            }
+
+            $wideColumns = $columns;
+            $wideColumns['score'] = $scoreColumn['index'];
+            $wideColumns['game_number'] = null;
+
+            $wideOptions = $options;
+            $wideOptions['default_game_number'] = $scoreColumn['game_number'];
+
+            $mapped = $this->mapRow($values, $wideColumns, $wideOptions);
+            $rows[] = [
+                'mapped' => $mapped,
+                'payload' => $this->buildRawPayload($header, $values, $mapped, [
+                    'source_line_number' => $lineNumber,
+                    'wide_score_column' => true,
+                    'score_column_header' => $scoreColumn['header'],
+                    'score_column_index' => $scoreColumn['index'],
+                ]),
+            ];
+        }
+
+        return $rows;
     }
 
     private function mapRow(array $values, array $columns, array $options): array
@@ -206,6 +253,66 @@ class ScoreImportCsvStageService
             'game_number' => $this->intOrNull($rawGameNumber !== '' ? $rawGameNumber : ($options['default_game_number'] ?? null)),
             'score' => $this->intOrNull($rawScore),
         ];
+    }
+
+    private function buildRawPayload(array $header, array $values, array $mapped, array $extra): array
+    {
+        return array_merge([
+            'header' => array_values($header),
+            'values' => array_values($values),
+            'mapped' => $mapped,
+        ], $extra);
+    }
+
+    private function detectScoreColumns(array $header, ?int $explicitScoreColumn): array
+    {
+        if ($explicitScoreColumn !== null) {
+            return [];
+        }
+
+        $columns = [];
+        $seenGameNumbers = [];
+
+        foreach ($header as $index => $name) {
+            $gameNumber = $this->scoreGameNumberFromHeader($name);
+            if ($gameNumber === null || isset($seenGameNumbers[$gameNumber])) {
+                continue;
+            }
+
+            $seenGameNumbers[$gameNumber] = true;
+            $columns[] = [
+                'index' => $index,
+                'game_number' => $gameNumber,
+                'header' => $this->cleanValue($name),
+            ];
+        }
+
+        return $columns;
+    }
+
+    private function scoreGameNumberFromHeader(mixed $header): ?int
+    {
+        $key = str_replace(['_', '-', '.', '/', '・'], '', $this->normalizeHeader($header));
+        $patterns = [
+            '/^g(\d{1,2})$/u',
+            '/^game(\d{1,2})$/u',
+            '/^score(\d{1,2})$/u',
+            '/^(\d{1,2})g$/u',
+            '/^(\d{1,2})game$/u',
+            '/^(\d{1,2})score$/u',
+            '/^第?(\d{1,2})(?:g|ゲーム)$/u',
+            '/^ゲーム(\d{1,2})$/u',
+        ];
+
+        foreach ($patterns as $pattern) {
+            if (preg_match($pattern, $key, $matches) === 1) {
+                $gameNumber = (int) $matches[1];
+
+                return $gameNumber > 0 ? $gameNumber : null;
+            }
+        }
+
+        return null;
     }
 
     private function detectIssues(array $mapped, array $match): array
@@ -421,6 +528,30 @@ class ScoreImportCsvStageService
         $name = trim((string) $name, '._-');
 
         return $name !== '' ? $name : 'scores.csv';
+    }
+
+    private function scoreImportMode(array $columns): string
+    {
+        if ($columns['score'] !== null) {
+            return 'single_score_column';
+        }
+
+        if (! empty($columns['score_columns'])) {
+            return 'wide_game_columns';
+        }
+
+        return 'unmapped_score_column';
+    }
+
+    private function scoreColumnsForLog(array $columns): array
+    {
+        return array_map(
+            fn (array $column): array => [
+                'header' => $column['header'],
+                'game_number' => $column['game_number'],
+            ],
+            $columns['score_columns'] ?? []
+        );
     }
 
     private function buildNotes(array $options): ?string

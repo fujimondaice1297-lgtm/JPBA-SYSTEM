@@ -70,3 +70,10 @@
 - 未照合・不足行は `needs_review` のまま残し、確定反映時にも `game_scores` へ入れない。
 - 取込詳細画面に複数行一括修正を追加。選択行へステージ、ゲーム番号、シフト、性別、状態をまとめて適用できる。
 - `score_import_operation_logs` を追加し、CSV取込・行修正・一括修正・確定反映の操作履歴を記録/表示できるようにした。
+
+## 2026-06-24 追記: 横持ちスコアCSV対応
+
+- `ScoreImportCsvStageService` を `score_csv_stage_v2` に更新。
+- `game_number` + `score` の1行1スコア形式に加え、`1G` / `2G` / `3G`、`G1`、`game1`、`第1ゲーム` などの横持ち列を検出し、1つのCSV行から複数の `score_import_rows` を作れるようにした。
+- 空欄の横持ちゲーム列はスキップする。元CSV行番号とスコア列情報は `raw_payload` に残す。
+- 操作ログには `score_mode` と検出スコア列情報を残す。

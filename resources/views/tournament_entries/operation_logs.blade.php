@@ -284,7 +284,7 @@
         </div>
         <div class="col-12">
           <button type="submit" class="btn btn-outline-primary">CSVを一時取込</button>
-          <span class="text-muted small ms-2">対応列: license_number / name / entry_number / stage / game_number / score など</span>
+          <span class="text-muted small ms-2">対応列: license_number / name / entry_number / stage / game_number / score、または 1G / 2G / 3G などの横持ちスコア列</span>
         </div>
       </form>
 
