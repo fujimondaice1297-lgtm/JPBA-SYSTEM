@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\ProBowler;
 use App\Models\Tournament;
 use App\Models\TournamentEntry;
+use App\Services\ProBowlerSeedService;
 use App\Services\TournamentLaneMovementService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
@@ -1214,14 +1215,23 @@ class TournamentEntryAdminController extends Controller
                 ->keyBy(fn ($participant) => (int) $participant->pro_bowler_id)
             : collect();
 
-        return $entries->map(function (TournamentEntry $entry) use ($participantsByBowlerId) {
+        $seedService = app(ProBowlerSeedService::class);
+
+        return $entries->map(function (TournamentEntry $entry) use ($participantsByBowlerId, $seedService, $tournament) {
             $participant = $entry->pro_bowler_id
                 ? $participantsByBowlerId->get((int) $entry->pro_bowler_id)
                 : null;
 
-            $entry->participant_display_license_no = filled($participant?->display_license_no)
+            $rawLicenseNo = filled($participant?->display_license_no)
                 ? (string) $participant->display_license_no
                 : ($entry->bowler?->license_no ?? '-');
+
+            $entry->participant_display_license_no = $this->formatEntryLicenseNoForSeedDisplay(
+                $seedService,
+                $tournament,
+                $entry,
+                $rawLicenseNo
+            );
 
             $entry->participant_display_name = filled($participant?->display_name)
                 ? (string) $participant->display_name
@@ -1253,6 +1263,27 @@ class TournamentEntryAdminController extends Controller
 
             return $entry;
         });
+    }
+
+    private function formatEntryLicenseNoForSeedDisplay(
+        ProBowlerSeedService $seedService,
+        Tournament $tournament,
+        TournamentEntry $entry,
+        ?string $fallbackLicenseNo
+    ): string {
+        $licenseNo = trim((string) ($entry->bowler?->license_no ?? $fallbackLicenseNo ?? ''));
+
+        if ($licenseNo === '' || $licenseNo === '-') {
+            return $fallbackLicenseNo ?: '-';
+        }
+
+        $display = $seedService->formatLicenseForTournamentPdf(
+            (int) $tournament->id,
+            $entry->pro_bowler_id ? (int) $entry->pro_bowler_id : ($entry->bowler?->id ? (int) $entry->bowler->id : null),
+            $licenseNo
+        );
+
+        return $display !== '' ? $display : ($fallbackLicenseNo ?: '-');
     }
 
     private function decorateEntriesWithPriority(Collection $entries, array $priorityLookup): Collection
