@@ -9,6 +9,7 @@ use App\Services\ScoreImportCommitService;
 use App\Services\ScoreImportCsvStageService;
 use App\Services\ScoreImportImageStageService;
 use App\Services\ScoreImportOperationLogger;
+use App\Services\ScoreImportOcrResultStageService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Throwable;
@@ -131,6 +132,45 @@ class TournamentScoreImportController extends Controller
             'summary',
             'operationLogs',
         ));
+    }
+
+    public function storeOcrJson(
+        Request $request,
+        Tournament $tournament,
+        ScoreImportBatch $scoreImport,
+        ScoreImportOcrResultStageService $importer
+    ) {
+        $this->authorizeEditorOrAdmin();
+        $this->ensureBatchBelongsToTournament($scoreImport, $tournament);
+
+        $validated = $request->validate([
+            'ocr_json' => ['required', 'file', 'mimes:json,txt', 'max:10240'],
+            'ocr_default_stage' => ['nullable', 'string', 'max:50'],
+            'ocr_default_shift' => ['nullable', 'string', 'max:20'],
+            'ocr_default_gender' => ['nullable', 'string', 'max:10'],
+            'replace_existing' => ['nullable', 'boolean'],
+        ]);
+
+        try {
+            $summary = $importer->importJson($tournament, $scoreImport, $request->file('ocr_json'), auth()->user(), [
+                'default_stage' => $validated['ocr_default_stage'] ?? '',
+                'default_shift' => $validated['ocr_default_shift'] ?? '',
+                'default_gender' => $validated['ocr_default_gender'] ?? '',
+                'replace_existing' => $request->boolean('replace_existing'),
+            ]);
+        } catch (Throwable $e) {
+            return back()->withErrors([
+                'ocr_json' => 'OCR解析結果JSONの取込に失敗しました: ' . $e->getMessage(),
+            ])->withInput();
+        }
+
+        return redirect()
+            ->route('tournaments.score_imports.show', [$tournament->id, $scoreImport->id])
+            ->with('success', sprintf(
+                'OCR解析結果を確認用行へ変換しました。作成: %d / 要確認: %d',
+                $summary['created'],
+                $summary['needs_review']
+            ));
     }
 
     public function updateRow(

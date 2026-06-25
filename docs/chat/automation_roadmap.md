@@ -159,3 +159,10 @@ flowchart LR
 - `ScoreImportImageStageService` を追加し、紙の成績表を撮影した画像やPDFを `score_import_batches` に `score_sheet_image` として保存できる入口を作った。
 - この段階ではOCR解析や `score_import_rows` 作成は行わず、原本ファイル・メモ・既定ステージ等・操作ログを残す。
 - 後続のOCR処理は、このバッチを読み、解析結果を `score_import_rows` と `score_import_row_candidates` へ追加してから既存の確認・確定反映画面へ流す。
+
+## 2026-06-25 追記: OCR解析結果JSON取込
+
+- `ScoreImportOcrResultStageService` を追加し、写真/PDF原本バッチに対してOCR/AI解析結果JSONを投入できるようにした。
+- JSONの `rows` 配列を `score_import_rows` へ変換する。1人の行に `games` または `scores` がある場合はゲームごとの行へ展開する。
+- 解析結果は直接 `game_scores` へ入れず、既存の候補選択・行修正・確定反映画面を通す。
+- 次は実OCRエンジン接続、またはJSON出力仕様を外部AI処理から安定して作るためのプロンプト/アダプタ整理へ進める。

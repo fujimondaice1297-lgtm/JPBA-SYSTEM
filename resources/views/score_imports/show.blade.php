@@ -100,6 +100,40 @@
     </div>
   </div>
 
+  @if ($scoreImport->import_type === 'score_sheet_image')
+    <div class="card mb-4">
+      <div class="card-header fw-bold">OCR解析結果JSON取込</div>
+      <div class="card-body">
+        <form method="POST" action="{{ route('tournaments.score_imports.ocr_json.store', [$tournament->id, $scoreImport->id]) }}" enctype="multipart/form-data" class="row g-3 align-items-end">
+          @csrf
+          <div class="col-md-4">
+            <label for="ocr_json" class="form-label">解析結果JSON</label>
+            <input type="file" name="ocr_json" id="ocr_json" class="form-control" accept=".json,.txt,application/json,text/plain" required>
+          </div>
+          <div class="col-md-2">
+            <label for="ocr_default_stage" class="form-label">既定ステージ</label>
+            <input type="text" name="ocr_default_stage" id="ocr_default_stage" class="form-control" value="{{ old('ocr_default_stage') }}" placeholder="予選">
+          </div>
+          <div class="col-md-2">
+            <label for="ocr_default_shift" class="form-label">既定シフト</label>
+            <input type="text" name="ocr_default_shift" id="ocr_default_shift" class="form-control" value="{{ old('ocr_default_shift') }}">
+          </div>
+          <div class="col-md-2">
+            <label for="ocr_default_gender" class="form-label">既定性別</label>
+            <input type="text" name="ocr_default_gender" id="ocr_default_gender" class="form-control" value="{{ old('ocr_default_gender') }}" placeholder="M / F">
+          </div>
+          <div class="col-md-2">
+            <div class="form-check mb-2">
+              <input type="checkbox" name="replace_existing" value="1" id="replace_existing" class="form-check-input">
+              <label for="replace_existing" class="form-check-label">既存解析行を差し替える</label>
+            </div>
+            <button type="submit" class="btn btn-outline-primary w-100">JSONを取込</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  @endif
+
   <form method="GET" action="{{ route('tournaments.score_imports.show', [$tournament->id, $scoreImport->id]) }}" class="card mb-4">
     <div class="card-body row g-3 align-items-end">
       <div class="col-md-4">

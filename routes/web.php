@@ -331,6 +331,8 @@ Route::middleware(['auth','role:editor,admin'])->group(function () {
         ->name('tournaments.score_imports.image.store');
     Route::get('/tournaments/{tournament}/score-imports/{scoreImport}', [\App\Http\Controllers\TournamentScoreImportController::class, 'show'])
         ->name('tournaments.score_imports.show');
+    Route::post('/tournaments/{tournament}/score-imports/{scoreImport}/ocr-json', [\App\Http\Controllers\TournamentScoreImportController::class, 'storeOcrJson'])
+        ->name('tournaments.score_imports.ocr_json.store');
     Route::patch('/tournaments/{tournament}/score-imports/{scoreImport}/rows', [\App\Http\Controllers\TournamentScoreImportController::class, 'bulkUpdateRows'])
         ->name('tournaments.score_imports.rows.bulk_update');
     Route::patch('/tournaments/{tournament}/score-imports/{scoreImport}/rows/{scoreImportRow}', [\App\Http\Controllers\TournamentScoreImportController::class, 'updateRow'])
