@@ -7193,3 +7193,34 @@ User::where('email','domaine-d@i.softbank.jp')->exists(); // true
   1. 実データの紙成績表画像/PDFを外部OCR/AIにかけ、出力テキストを貼り付け変換へ流す。
   2. 変換結果の要確認行を修正し、`game_scores` 確定反映まで通し確認する。
   3. 実OCRエンジン接続を行う場合は、このアダプタへ渡す境界を固定してから実装する。
+
+---
+
+## 2026-06-26 古い未チェック整理・現行JPBAサイト確認
+
+- 目的:
+  - `progress_board.md` に散っていた古い未チェックを削除し、必要なものだけを次に行う候補として残す。
+  - 現行JPBAサイトを確認し、公開側の踏襲候補に漏れがあれば追加する。
+
+- 実施内容:
+  - 古い `commit / push`、`git status`、次チャット開始時確認、`storage/backups/` 注意、完了済みS表示、完了済み歴代優勝者シードなどの未チェックを削除した。
+  - 必要な後続候補は `progress_board.md` 末尾の `Active Backlog` へ集約した。
+  - 整理後の未チェックは43件。
+  - 現行JPBAサイトを確認し、以下の公開踏襲候補を追加した。
+    - トップページの主要メニュー、更新履歴、プロボウラー専用ページ、バナー、INFORMATION、協賛/外部リンク、SNSリンク
+    - `INFORMATION` の `TV情報` カテゴリ
+    - `JPBAについて` / `スケジュール` / `選手データ` / `インストラクター` / `プロテスト` / `トピックス`
+    - お問い合わせ、取材のお申込み、特定商取引法、プライバシーポリシー
+
+- 参照:
+  - https://www.jpba1.jp/
+  - https://www.jpba1.jp/association/index.html
+  - https://www.jpba1.jp/schedule/index.html
+  - https://www.jpba1.jp/player/index.html
+  - https://www.jpba1.jp/instructor/index.html
+  - https://www.jpba1.jp/protest/index.html
+  - https://www.jpba.or.jp/topics.html
+
+- 次の自然な作業:
+  1. `Active Backlog` のAから、OCR実データ通し確認へ進む。
+  2. もしくは公開サイト踏襲のBから、トップ/ナビ/INFORMATIONカテゴリの不足整理へ進む。

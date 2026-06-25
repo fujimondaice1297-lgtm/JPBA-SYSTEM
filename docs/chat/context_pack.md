@@ -113,3 +113,10 @@
 - `ScoreImportOcrTextAdapterService` で、JSON / Markdown表 / タブ区切り / カンマ区切り / 空白区切りの簡易表を既存OCR JSON仕様へ変換する。
 - 変換後は既存のOCR JSON取込と同じく `score_import_rows` に保存し、確認後にだけ `game_scores` へ反映する。
 - `変換JSONを確認` で、DB保存前に変換結果を別タブのJSONとして確認できる。
+
+## 2026-06-26 追記: 未チェック整理
+
+- 古い未チェックを削除し、必要な候補だけを `progress_board.md` 末尾の `Active Backlog` に集約した。
+- 整理後の未チェックは43件。
+- 現行JPBAサイトを確認し、公開側の不足候補も `Active Backlog` に追加した。
+- 次に作業するときは、古い履歴中の未完了風メモではなく `Active Backlog` を参照する。

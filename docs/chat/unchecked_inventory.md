@@ -1,6 +1,7 @@
 # 古い未チェック項目の棚卸し
 
 作成日: 2026-06-25
+最終更新: 2026-06-26
 
 ## 対象
 
@@ -10,15 +11,15 @@
 
 ## 件数
 
-- `progress_board.md`: 未チェック 139 件
+- `progress_board.md`: 未チェック 43 件（2026-06-26整理後）
 - `automation_roadmap.md`: 未チェック 0 件
 - `context_pack.md`: 未チェック 0 件
 
-未チェックはすべて `progress_board.md` に残っている。これは実装漏れだけではなく、過去セッションの「次に確認する」「commit / push する」「後続で整理する」という履歴メモが混在している状態。
+未チェックはすべて `progress_board.md` の末尾 `Active Backlog` に集約した。古い履歴メモ、重複、一時確認、commit / push、次チャット確認の未チェックは削除済み。
 
 ## 判断
 
-古い未チェック 139 件を、そのまま上から順番に実行する必要はない。
+古い未チェックを、そのまま上から順番に実行する必要はない。2026-06-26時点では、必要項目だけを `Active Backlog` として残す。
 
 2026-06-23 以降にCodexが直接進めた以下の作業は、現在のログ上ではチェック済み扱いでよい。
 
@@ -115,9 +116,34 @@
 3. OCR解析結果の信頼度・警告・人間の修正導線を取込詳細画面へ寄せる
 4. 実データでCSV / Excel / OCR JSON取込から `game_scores` 確定反映まで通し確認する
 
+## 2026-06-26 整理結果
+
+- 古い未チェック140件から、不要な履歴・重複・一時確認系を削除した。
+- 必要な後続候補は `docs/chat/progress_board.md` 末尾の `Active Backlog` へ集約した。
+- 整理後の未チェックは43件。
+- 現行JPBAサイト確認により、公開側の踏襲候補として以下を追加した。
+  - トップの上部メニュー、更新履歴、プロボウラー専用ページ、主要バナー、INFORMATION、協賛バナー、外部リンク、SNSリンク
+  - INFORMATIONカテゴリの `TV情報`
+  - `JPBAについて` の協会概要・会長挨拶・組織図・役員名簿・定款・事業計画/予算/報告/財務PDF
+  - `選手データ` の氏名・ライセンスNo範囲・性別・地区・退会者導線
+  - `インストラクター` の講習情報・スクール情報・テキスト販売・ライセンス別一覧
+  - `プロテスト` の受験の流れ・実施概要・申請/結果PDF
+  - `トピックス` の記事本文・画像・達成記録・大会ページリンク
+  - お問い合わせ、取材のお申込み、特定商取引法、プライバシーポリシー
+
+## 参照した現行JPBAサイト
+
+- https://www.jpba1.jp/
+- https://www.jpba1.jp/association/index.html
+- https://www.jpba1.jp/schedule/index.html
+- https://www.jpba1.jp/player/index.html
+- https://www.jpba1.jp/instructor/index.html
+- https://www.jpba1.jp/protest/index.html
+- https://www.jpba.or.jp/topics.html
+
 ## 運用ルール
 
-- 古い `progress_board.md` の未チェックは、即実行リストとして扱わない。
+- `progress_board.md` の未チェックは、末尾の `Active Backlog` を正本として扱う。
 - 2026-06-23以降の現在作業は、`context_pack.md`、`automation_roadmap.md`、この棚卸しファイルを優先して読む。
-- 古い未チェックに着手する場合は、必ず現在DB・現在コードで再確認してから、新しい作業ログとして切り出す。
-- 新しい作業は、古いメモの中に追記せず、直近の日付メモかこの棚卸しのActive Backlogへ寄せる。
+- 古い履歴メモを再開する場合は、必ず現在DB・現在コードで再確認してから、新しい作業ログとして切り出す。
+- 新しい候補は、古いメモの中に追記せず、直近の日付メモか `Active Backlog` へ寄せる。
