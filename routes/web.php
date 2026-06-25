@@ -327,6 +327,8 @@ Route::middleware(['auth','role:editor,admin'])->group(function () {
         ->name('tournaments.operation_logs.index');
     Route::post('/tournaments/{tournament}/score-imports/csv', [\App\Http\Controllers\TournamentScoreImportController::class, 'storeCsv'])
         ->name('tournaments.score_imports.csv.store');
+    Route::post('/tournaments/{tournament}/score-imports/paste', [\App\Http\Controllers\TournamentScoreImportController::class, 'storePaste'])
+        ->name('tournaments.score_imports.paste.store');
     Route::post('/tournaments/{tournament}/score-imports/image', [\App\Http\Controllers\TournamentScoreImportController::class, 'storeImage'])
         ->name('tournaments.score_imports.image.store');
     Route::get('/tournaments/{tournament}/score-imports/{scoreImport}', [\App\Http\Controllers\TournamentScoreImportController::class, 'show'])

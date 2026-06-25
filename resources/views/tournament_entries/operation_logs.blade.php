@@ -288,6 +288,34 @@
         </div>
       </form>
 
+      <form method="POST" action="{{ route('tournaments.score_imports.paste.store', $tournament->id) }}" class="row g-3 align-items-end mb-4">
+        @csrf
+        <div class="col-12">
+          <label for="score_paste" class="form-label">Excel貼り付け</label>
+          <textarea name="score_paste" id="score_paste" class="form-control" rows="5" placeholder="license_number	name	stage	1G	2G	3G&#10;M00001297	山田太郎	予選	210	225	198">{{ old('score_paste') }}</textarea>
+        </div>
+        <div class="col-md-2">
+          <label for="paste_default_stage" class="form-label">既定ステージ</label>
+          <input type="text" name="paste_default_stage" id="paste_default_stage" class="form-control" value="{{ old('paste_default_stage') }}" placeholder="予選">
+        </div>
+        <div class="col-md-2">
+          <label for="paste_default_game_number" class="form-label">既定G</label>
+          <input type="number" name="paste_default_game_number" id="paste_default_game_number" class="form-control" min="1" max="99" value="{{ old('paste_default_game_number') }}">
+        </div>
+        <div class="col-md-2">
+          <label for="paste_default_shift" class="form-label">既定シフト</label>
+          <input type="text" name="paste_default_shift" id="paste_default_shift" class="form-control" value="{{ old('paste_default_shift') }}">
+        </div>
+        <div class="col-md-2">
+          <label for="paste_default_gender" class="form-label">既定性別</label>
+          <input type="text" name="paste_default_gender" id="paste_default_gender" class="form-control" value="{{ old('paste_default_gender') }}" placeholder="M / F">
+        </div>
+        <div class="col-md-4">
+          <button type="submit" class="btn btn-outline-primary">貼り付けを一時取込</button>
+          <span class="text-muted small ms-2">ExcelやGoogleスプレッドシートの表をコピーして貼り付け</span>
+        </div>
+      </form>
+
       <hr>
 
       <form method="POST" action="{{ route('tournaments.score_imports.image.store', $tournament->id) }}" enctype="multipart/form-data" class="row g-3 align-items-end mb-4">

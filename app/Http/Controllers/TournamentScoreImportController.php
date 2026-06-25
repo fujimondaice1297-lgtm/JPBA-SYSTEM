@@ -11,6 +11,7 @@ use App\Services\ScoreImportImageStageService;
 use App\Services\ScoreImportOperationLogger;
 use App\Services\ScoreImportOcrResultStageService;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Throwable;
 
@@ -47,6 +48,56 @@ class TournamentScoreImportController extends Controller
             ->route('tournaments.operation_logs.index', $tournament->id)
             ->with('success', sprintf(
                 'スコアCSVを一時取込しました。取込ID: %d / 取込行: %d / 要確認: %d',
+                $batch->id,
+                $batch->row_count,
+                $needsReviewCount
+            ));
+    }
+
+    public function storePaste(Request $request, Tournament $tournament, ScoreImportCsvStageService $importer)
+    {
+        $this->authorizeEditorOrAdmin();
+
+        $validated = $request->validate([
+            'score_paste' => ['required', 'string', 'max:200000'],
+            'paste_default_stage' => ['nullable', 'string', 'max:50'],
+            'paste_default_shift' => ['nullable', 'string', 'max:20'],
+            'paste_default_gender' => ['nullable', 'string', 'max:10'],
+            'paste_default_game_number' => ['nullable', 'integer', 'min:1', 'max:99'],
+        ]);
+
+        $tempPath = tempnam(sys_get_temp_dir(), 'score_paste_');
+        if ($tempPath === false) {
+            return back()->withErrors([
+                'score_paste' => '貼り付けデータの一時ファイルを作成できませんでした。',
+            ])->withInput();
+        }
+
+        try {
+            $csv = $this->pastedTableToCsv($validated['score_paste']);
+            file_put_contents($tempPath, mb_convert_encoding($csv, 'CP932', 'UTF-8'));
+
+            $file = new UploadedFile($tempPath, 'pasted_scores.csv', 'text/csv', null, true);
+            $batch = $importer->import($tournament, $file, auth()->user(), [
+                'default_stage' => $validated['paste_default_stage'] ?? '',
+                'default_shift' => $validated['paste_default_shift'] ?? '',
+                'default_gender' => $validated['paste_default_gender'] ?? '',
+                'default_game_number' => $validated['paste_default_game_number'] ?? '',
+            ]);
+        } catch (Throwable $e) {
+            return back()->withErrors([
+                'score_paste' => '貼り付けスコアの一時取込に失敗しました: ' . $e->getMessage(),
+            ])->withInput();
+        } finally {
+            @unlink($tempPath);
+        }
+
+        $needsReviewCount = $batch->rows()->where('parse_status', 'needs_review')->count();
+
+        return redirect()
+            ->route('tournaments.operation_logs.index', $tournament->id)
+            ->with('success', sprintf(
+                '貼り付けスコアを一時取込しました。取込ID: %d / 取込行: %d / 要確認: %d',
                 $batch->id,
                 $batch->row_count,
                 $needsReviewCount
@@ -496,6 +547,33 @@ class TournamentScoreImportController extends Controller
     private function isBlank(mixed $value): bool
     {
         return trim((string) ($value ?? '')) === '';
+    }
+
+    private function pastedTableToCsv(string $text): string
+    {
+        $text = str_replace(["\r\n", "\r"], "\n", trim($text));
+        $lines = array_values(array_filter(explode("\n", $text), fn (string $line): bool => trim($line) !== ''));
+
+        if (empty($lines)) {
+            throw new \InvalidArgumentException('貼り付けデータに取込対象行がありません。');
+        }
+
+        $handle = fopen('php://temp', 'r+');
+        if (! $handle) {
+            throw new \InvalidArgumentException('貼り付けデータをCSVへ変換できませんでした。');
+        }
+
+        foreach ($lines as $line) {
+            $delimiter = str_contains($line, "\t") ? "\t" : ",";
+            $cells = str_getcsv($line, $delimiter, '"', '');
+            fputcsv($handle, $cells, ',', '"', '', "\r\n");
+        }
+
+        rewind($handle);
+        $csv = stream_get_contents($handle);
+        fclose($handle);
+
+        return $csv === false ? '' : $csv;
     }
 
     private function authorizeEditorOrAdmin(): void
