@@ -7247,3 +7247,30 @@ User::where('email','domaine-d@i.softbank.jp')->exists(); // true
 - 次の自然な作業:
   1. 実データの紙成績表画像/PDFから外部OCR/AI出力を作り、貼り付け変換プレビューで `payload.rows` を確認する。
   2. もしくは、実OCRエンジン接続の境界を `画像/PDF原本バッチ -> OCR処理 -> アダプタ -> score_import_rows` として固定する。
+
+---
+
+## 2026-06-26 OCRエンジン接続境界の固定
+
+- 目的:
+  - 未チェック項目 `実OCRエンジンを接続する場合の境界を、画像/PDF原本バッチ -> OCR処理 -> アダプタ -> score_import_rows として固定する` を進める。
+  - 将来のOCRジョブが `game_scores` や `tournament_results` へ直接書かず、必ず確認用ステージングを通るようにする。
+
+- 実施内容:
+  - `app/Services/ScoreImportOcrEngineBoundaryService.php` を追加した。
+  - `buildEngineInput()` を、画像/PDF原本バッチからOCRエンジンへ渡す入力仕様の正本にした。
+    - `score_import_batch_id`
+    - `stored_path`
+    - `source_filename`
+    - 既定ステージ/シフト/性別/G
+    - 直接書き込み禁止テーブル
+    - 人間確認必須ルール
+  - `stageTextResult()` を、OCRエンジン/AI出力テキストから確認用行を作る入口にした。
+  - 処理順は `ScoreImportOcrTextAdapterService` -> `ScoreImportOcrResultStageService` -> `score_import_rows`。
+  - 既存の `OCR/AI出力貼り付け` 画面も `ScoreImportOcrEngineBoundaryService` を通すように変更した。
+  - `変換JSONを確認` のレスポンスに `boundary` を追加し、実OCR接続時に使う入力仕様を画面からも確認できるようにした。
+  - `progress_board.md` の該当未チェックを完了扱いにし、残り未チェックは41件。
+
+- 次の自然な作業:
+  1. 実データの紙成績表画像/PDFから外部OCR/AI出力を作り、プレビューJSONの `boundary` と `payload.rows` を確認する。
+  2. CSV / Excel / OCR JSON / OCR貼り付け変換を同じ運用手順書にまとめる。

@@ -211,3 +211,11 @@ flowchart LR
 - 行一覧へ `確認情報` 列を追加し、信頼度、要確認理由、変換元ファイル/行/列を一覧で確認できるようにした。
 - `raw_payload` 全体だけでなく、抽出元行だけを先に開けるようにした。
 - この対応により、未チェックは42件になった。
+
+## 2026-06-26 追記: OCRエンジン接続境界の固定
+
+- `ScoreImportOcrEngineBoundaryService` を追加し、実OCRエンジンを接続する場合の入口を固定した。
+- OCRエンジン側へ渡す入力は `buildEngineInput()` で、`score_import_batches` の画像/PDF原本バッチ、原本パス、既定値、直接書き込み禁止テーブルを示す。
+- OCRエンジン/AI出力テキストは `stageTextResult()` へ渡し、必ず `ScoreImportOcrTextAdapterService` -> `ScoreImportOcrResultStageService` -> `score_import_rows` の順に流す。
+- `game_scores` や `tournament_results` へ直接書き込まず、人間確認後の確定反映を必須にする境界として整理した。
+- 貼り付け変換画面も同じ境界サービスを通すようにした。この対応により、未チェックは41件になった。

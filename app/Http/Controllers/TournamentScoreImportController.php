@@ -9,8 +9,8 @@ use App\Services\ScoreImportCommitService;
 use App\Services\ScoreImportCsvStageService;
 use App\Services\ScoreImportImageStageService;
 use App\Services\ScoreImportOperationLogger;
+use App\Services\ScoreImportOcrEngineBoundaryService;
 use App\Services\ScoreImportOcrResultStageService;
-use App\Services\ScoreImportOcrTextAdapterService;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
@@ -229,8 +229,7 @@ class TournamentScoreImportController extends Controller
         Request $request,
         Tournament $tournament,
         ScoreImportBatch $scoreImport,
-        ScoreImportOcrTextAdapterService $adapter,
-        ScoreImportOcrResultStageService $importer
+        ScoreImportOcrEngineBoundaryService $ocrBoundary
     ) {
         $this->authorizeEditorOrAdmin();
         $this->ensureBatchBelongsToTournament($scoreImport, $tournament);
@@ -252,21 +251,20 @@ class TournamentScoreImportController extends Controller
         ];
 
         try {
-            $adapted = $adapter->adapt($validated['ocr_adapter_text'], $defaults);
-            $summary = $importer->importPayload($tournament, $scoreImport, $adapted['payload'], auth()->user(), array_merge($defaults, [
+            $result = $ocrBoundary->stageTextResult($tournament, $scoreImport, $validated['ocr_adapter_text'], auth()->user(), array_merge($defaults, [
                 'replace_existing' => $request->boolean('ocr_adapter_replace_existing'),
                 'source_filename' => 'ocr_ai_adapter_' . now()->format('Ymd_His') . '.json',
                 'operation_action' => 'ocr_adapter_stage',
                 'operation_message' => 'OCR/AI出力をJSON仕様へ変換して確認用行へ変換しました。',
-                'adapter_summary' => $adapted['summary'],
             ]));
+            $summary = $result['import_summary'];
         } catch (Throwable $e) {
             return back()->withErrors([
                 'ocr_adapter_text' => 'OCR/AI出力の変換に失敗しました: ' . $e->getMessage(),
             ])->withInput();
         }
 
-        $warningCount = (int) ($adapted['summary']['warning_count'] ?? 0);
+        $warningCount = (int) ($result['adapter_summary']['warning_count'] ?? 0);
 
         return redirect()
             ->route('tournaments.score_imports.show', [$tournament->id, $scoreImport->id])
@@ -282,7 +280,7 @@ class TournamentScoreImportController extends Controller
         Request $request,
         Tournament $tournament,
         ScoreImportBatch $scoreImport,
-        ScoreImportOcrTextAdapterService $adapter
+        ScoreImportOcrEngineBoundaryService $ocrBoundary
     ) {
         $this->authorizeEditorOrAdmin();
         $this->ensureBatchBelongsToTournament($scoreImport, $tournament);
@@ -295,16 +293,19 @@ class TournamentScoreImportController extends Controller
             'ocr_adapter_default_game_number' => ['nullable', 'integer', 'min:1', 'max:99'],
         ]);
 
-        $adapted = $adapter->adapt($validated['ocr_adapter_text'], [
+        $defaults = [
             'default_stage' => $validated['ocr_adapter_default_stage'] ?? '',
             'default_shift' => $validated['ocr_adapter_default_shift'] ?? '',
             'default_gender' => $validated['ocr_adapter_default_gender'] ?? '',
             'default_game_number' => $validated['ocr_adapter_default_game_number'] ?? '',
-        ]);
+        ];
+
+        $adapted = $ocrBoundary->previewTextResult($validated['ocr_adapter_text'], $defaults);
 
         return response()
             ->json([
                 'summary' => $adapted['summary'],
+                'boundary' => $ocrBoundary->buildEngineInput($tournament, $scoreImport, $defaults),
                 'payload' => $adapted['payload'],
             ], 200, [], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)
             ->header('Content-Disposition', 'inline; filename="score_ocr_adapter_preview.json"');

@@ -1376,13 +1376,19 @@
 - [✓] `raw_payload` の全体だけでなく、抽出元行だけを先に開けるようにした
 - [✓] DBスキーマは変更せず、既存の `confidence` / `error_message` / `raw_payload` / 操作ログ `adapter_summary` を表示に活用した
 
+#### 2026-06-26 メモ（OCRエンジン接続境界の固定）
+- [✓] `ScoreImportOcrEngineBoundaryService` を追加し、画像/PDF原本バッチからOCRエンジンへ渡す入力仕様を `buildEngineInput()` として固定した
+- [✓] OCRエンジン/AI出力テキストは `stageTextResult()` で `ScoreImportOcrTextAdapterService` -> `ScoreImportOcrResultStageService` -> `score_import_rows` に流す境界にした
+- [✓] 貼り付け変換画面も同じ境界サービスを通すようにし、手動貼り付けと将来の実OCRジョブの経路を揃えた
+- [✓] プレビューJSONに `boundary` を追加し、バッチID、原本ファイル、既定値、直接書き込み禁止テーブル、確認必須ルールを確認できるようにした
+
 ##### 次に行う候補（Active Backlog）
 
 ###### A. 直近のスコア/OCR運用
 - [ ] 実データの紙成績表画像/PDFから外部OCR/AI出力を作り、貼り付け変換プレビューで `payload.rows` を確認する
 - [ ] 貼り付け変換から `score_import_rows` 作成、要確認行修正、`game_scores` 確定反映まで通し確認する
 - [✓] OCR/AI変換結果の警告・信頼度・変換元行を、取込詳細画面でより見やすく表示する
-- [ ] 実OCRエンジンを接続する場合の境界を、画像/PDF原本バッチ -> OCR処理 -> アダプタ -> `score_import_rows` として固定する
+- [✓] 実OCRエンジンを接続する場合の境界を、画像/PDF原本バッチ -> OCR処理 -> アダプタ -> `score_import_rows` として固定する
 - [ ] CSV / Excel / OCR JSON / OCR貼り付け変換を同じ運用手順書にまとめる
 
 ###### B. 現行JPBAサイト踏襲で足りない公開導線

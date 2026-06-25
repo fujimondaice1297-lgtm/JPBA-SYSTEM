@@ -127,3 +127,12 @@
 - 取込行一覧に `確認情報` 列を追加し、信頼度、要確認理由、変換元ファイル/行/列、抽出元行を表示できるようにした。
 - DB変更はない。既存の `confidence` / `error_message` / `raw_payload` / 操作ログ `adapter_summary` を表示に使う。
 - 未チェックは42件。
+
+## 2026-06-26 追記: OCRエンジン接続境界の固定
+
+- `app/Services/ScoreImportOcrEngineBoundaryService.php` を追加した。
+- 実OCRエンジンへ渡す入力仕様は `buildEngineInput()`、OCR/AI出力テキストをステージングへ流す入口は `stageTextResult()`。
+- 既存の貼り付け変換画面もこの境界サービスを通すように変更した。
+- 境界は `画像/PDF原本バッチ -> OCR処理 -> ScoreImportOcrTextAdapterService -> ScoreImportOcrResultStageService -> score_import_rows`。
+- `game_scores` / `tournament_results` へ直接書き込まず、人間確認後に確定反映する。
+- 未チェックは41件。
