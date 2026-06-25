@@ -7153,3 +7153,41 @@ User::where('email','domaine-d@i.softbank.jp')->exists(); // true
     - 未登録枠は `未登録` として表示
   - `resources/views/tournament_seed_players/pdf.blade.php` の⑤枠見出しが②枠と同じ `公認T/M歴代優勝者シードプロ` になっていたため、`当該年度・前年度優勝者シードプロ` へ修正した。
   - `php artisan view:cache` でBladeコンパイル確認済み。
+
+---
+
+## 2026-06-26 OCR/AI出力テキストアダプタ
+
+- 目的:
+  - 紙の成績表を写真/PDFで保存したあと、外部OCR/AIが返したテキストや表を、既存のOCR JSON仕様へ変換して `score_import_rows` へ流せるようにする。
+  - OCR結果を直接 `game_scores` へ入れず、従来どおり確認・修正・確定反映を通す。
+
+- 実施内容:
+  - `ScoreImportOcrTextAdapterService` を追加した。
+    - JSON
+    - Markdown表
+    - タブ区切り
+    - カンマ区切り
+    - 空白区切りの簡易表
+    を受け、`rows` / `games` / `scores` 形式へ正規化する。
+  - `ScoreImportOcrResultStageService` に `importPayload()` を追加し、アップロードファイルだけでなく、アダプタが作った配列ペイロードも既存処理へ流せるようにした。
+  - 写真/PDFバッチ詳細画面に `OCR/AI出力貼り付け` フォームを追加した。
+  - `routes/web.php` に `tournaments.score_imports.ocr_adapter.store` を追加した。
+  - 操作ログでは `ocr_adapter_stage` として、変換元・件数・警告数を残せるようにした。
+
+- 確認結果:
+  - `php -l app\Services\ScoreImportOcrTextAdapterService.php`
+  - `php -l app\Services\ScoreImportOcrResultStageService.php`
+  - `php -l app\Http\Controllers\TournamentScoreImportController.php`
+  - `php -l routes\web.php`
+  - `php artisan route:list --name=score_imports`
+  - `php artisan view:cache`
+  - アダプタ単体で、以下の貼り付け表を `rows` + `scores` へ変換できることを確認した。
+    - `ライセンス番号 氏名 1G 2G 3G`
+    - `M00001297 山田太郎 210 225 198`
+  - DBロールバック付き確認で、1人分の横持ち3Gが `score_import_rows` 3行と操作ログ1件に展開されることを確認した。
+
+- 次の自然な作業:
+  1. 実データの紙成績表画像/PDFを外部OCR/AIにかけ、出力テキストを貼り付け変換へ流す。
+  2. 変換結果の要確認行を修正し、`game_scores` 確定反映まで通し確認する。
+  3. 実OCRエンジン接続を行う場合は、このアダプタへ渡す境界を固定してから実装する。

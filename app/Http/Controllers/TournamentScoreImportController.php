@@ -10,6 +10,7 @@ use App\Services\ScoreImportCsvStageService;
 use App\Services\ScoreImportImageStageService;
 use App\Services\ScoreImportOperationLogger;
 use App\Services\ScoreImportOcrResultStageService;
+use App\Services\ScoreImportOcrTextAdapterService;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
@@ -221,6 +222,59 @@ class TournamentScoreImportController extends Controller
                 'OCR解析結果を確認用行へ変換しました。作成: %d / 要確認: %d',
                 $summary['created'],
                 $summary['needs_review']
+            ));
+    }
+
+    public function storeOcrAdapter(
+        Request $request,
+        Tournament $tournament,
+        ScoreImportBatch $scoreImport,
+        ScoreImportOcrTextAdapterService $adapter,
+        ScoreImportOcrResultStageService $importer
+    ) {
+        $this->authorizeEditorOrAdmin();
+        $this->ensureBatchBelongsToTournament($scoreImport, $tournament);
+
+        $validated = $request->validate([
+            'ocr_adapter_text' => ['required', 'string', 'max:300000'],
+            'ocr_adapter_default_stage' => ['nullable', 'string', 'max:50'],
+            'ocr_adapter_default_shift' => ['nullable', 'string', 'max:20'],
+            'ocr_adapter_default_gender' => ['nullable', 'string', 'max:10'],
+            'ocr_adapter_default_game_number' => ['nullable', 'integer', 'min:1', 'max:99'],
+            'ocr_adapter_replace_existing' => ['nullable', 'boolean'],
+        ]);
+
+        $defaults = [
+            'default_stage' => $validated['ocr_adapter_default_stage'] ?? '',
+            'default_shift' => $validated['ocr_adapter_default_shift'] ?? '',
+            'default_gender' => $validated['ocr_adapter_default_gender'] ?? '',
+            'default_game_number' => $validated['ocr_adapter_default_game_number'] ?? '',
+        ];
+
+        try {
+            $adapted = $adapter->adapt($validated['ocr_adapter_text'], $defaults);
+            $summary = $importer->importPayload($tournament, $scoreImport, $adapted['payload'], auth()->user(), array_merge($defaults, [
+                'replace_existing' => $request->boolean('ocr_adapter_replace_existing'),
+                'source_filename' => 'ocr_ai_adapter_' . now()->format('Ymd_His') . '.json',
+                'operation_action' => 'ocr_adapter_stage',
+                'operation_message' => 'OCR/AI出力をJSON仕様へ変換して確認用行へ変換しました。',
+                'adapter_summary' => $adapted['summary'],
+            ]));
+        } catch (Throwable $e) {
+            return back()->withErrors([
+                'ocr_adapter_text' => 'OCR/AI出力の変換に失敗しました: ' . $e->getMessage(),
+            ])->withInput();
+        }
+
+        $warningCount = (int) ($adapted['summary']['warning_count'] ?? 0);
+
+        return redirect()
+            ->route('tournaments.score_imports.show', [$tournament->id, $scoreImport->id])
+            ->with('success', sprintf(
+                'OCR/AI出力を変換して確認用行へ反映しました。作成: %d / 要確認: %d / 変換警告: %d',
+                $summary['created'],
+                $summary['needs_review'],
+                $warningCount
             ));
     }
 

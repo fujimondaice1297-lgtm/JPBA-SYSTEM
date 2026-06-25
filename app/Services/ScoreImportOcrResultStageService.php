@@ -26,12 +26,30 @@ class ScoreImportOcrResultStageService
         }
 
         $payload = $this->decodeJsonFile($file);
+
+        return $this->importPayload($tournament, $batch, $payload, $user, array_merge($options, [
+            'source_filename' => $file->getClientOriginalName(),
+        ]));
+    }
+
+    public function importPayload(
+        Tournament $tournament,
+        ScoreImportBatch $batch,
+        array $payload,
+        ?Authenticatable $user = null,
+        array $options = []
+    ): array {
+        if ($batch->import_type !== 'score_sheet_image') {
+            throw new InvalidArgumentException('OCR解析結果は写真/PDF原本バッチにだけ追加できます。');
+        }
+
+        $sourceFilename = (string) ($options['source_filename'] ?? 'ocr_result.json');
         $payloadRows = $this->extractRows($payload);
         if (empty($payloadRows)) {
             throw new InvalidArgumentException('OCR解析結果JSONに取込対象行がありません。');
         }
 
-        $summary = DB::transaction(function () use ($tournament, $batch, $payloadRows, $file, $options): array {
+        $summary = DB::transaction(function () use ($tournament, $batch, $payloadRows, $sourceFilename, $options): array {
             if ($batch->rows()->whereNotNull('confirmed_game_score_id')->exists()) {
                 throw new InvalidArgumentException('反映済み行があるため、OCR解析結果を差し替えできません。');
             }
@@ -68,11 +86,12 @@ class ScoreImportOcrResultStageService
                     'row_number' => $index + 1,
                     'raw_payload' => [
                         'parser_version' => self::PARSER_VERSION,
-                        'source_filename' => $file->getClientOriginalName(),
+                        'source_filename' => $sourceFilename,
                         'source_row_number' => $payloadRow['_source_row_number'] ?? ($index + 1),
                         'source_game_key' => $payloadRow['_source_game_key'] ?? null,
                         'ocr_payload' => $payloadRow,
                         'mapped' => $mapped,
+                        'adapter_summary' => $options['adapter_summary'] ?? null,
                     ],
                     'parse_status' => $parseStatus,
                     'confidence' => $mapped['confidence'],
@@ -114,18 +133,19 @@ class ScoreImportOcrResultStageService
             ];
         });
 
-        app(ScoreImportOperationLogger::class)->log($batch->fresh(), 'ocr_json_stage', [
+        app(ScoreImportOperationLogger::class)->log($batch->fresh(), (string) ($options['operation_action'] ?? 'ocr_json_stage'), [
             'status' => 'success',
             'target_row_count' => $summary['created'],
             'created_count' => $summary['created'],
             'skipped_count' => $summary['needs_review'],
-            'message' => 'OCR解析結果JSONを確認用行へ変換しました。',
+            'message' => (string) ($options['operation_message'] ?? 'OCR解析結果JSONを確認用行へ変換しました。'),
             'payload' => [
-                'source_filename' => $file->getClientOriginalName(),
+                'source_filename' => $sourceFilename,
                 'parser_version' => self::PARSER_VERSION,
                 'parsed_row_count' => $summary['parsed'],
                 'needs_review_row_count' => $summary['needs_review'],
                 'replaced_existing_row_count' => $summary['replaced_existing'],
+                'adapter_summary' => $options['adapter_summary'] ?? null,
             ],
         ], $user);
 

@@ -106,3 +106,9 @@
 - 2026-06-23以降にCodexが直接進めた作業はチェック済み扱いでよい。
 - 詳細な分類は `docs/chat/unchecked_inventory.md` に作成済み。
 - 次に進める直近候補は、実OCRエンジン接続、またはOCR/AI出力を現在のJSON仕様へ変換する実アダプタの実装。
+
+## 2026-06-26 追記: OCR/AI出力テキストアダプタ
+
+- 写真/PDFバッチ詳細画面に、OCR/AI出力貼り付け欄を追加した。
+- `ScoreImportOcrTextAdapterService` で、JSON / Markdown表 / タブ区切り / カンマ区切り / 空白区切りの簡易表を既存OCR JSON仕様へ変換する。
+- 変換後は既存のOCR JSON取込と同じく `score_import_rows` に保存し、確認後にだけ `game_scores` へ反映する。

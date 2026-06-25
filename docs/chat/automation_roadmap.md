@@ -184,3 +184,10 @@ flowchart LR
 - `progress_board.md` に残っていた未チェック139件を棚卸しし、実行不要の履歴メモ、後続候補、直近のActive Backlogに分類した。
 - 詳細は `docs/chat/unchecked_inventory.md` を正本として参照する。
 - 現時点の直近タスクは、OCR/AI出力を現在のJSON仕様へ変換する実アダプタ、または実OCRエンジン接続。
+
+## 2026-06-26 追記: OCR/AI出力テキストアダプタ
+
+- `ScoreImportOcrTextAdapterService` を追加し、外部OCR/AIの出力テキストを既存のOCR JSON仕様へ変換できるようにした。
+- JSON、Markdown表、タブ/カンマ区切り、空白区切りの簡易表を受け、`rows` / `games` / `scores` 形式へ正規化する。
+- 写真/PDFバッチ詳細画面から貼り付け変換でき、変換後は既存の `ScoreImportOcrResultStageService` で `score_import_rows` へ流す。
+- 解析結果は引き続き直接 `game_scores` へ入れず、確認・修正・確定反映を通す。

@@ -1496,3 +1496,10 @@
 - [✓] 2026-06-23以降にCodexが進めた作業は、現行ログ上ではチェック済み扱いでよい
 - [✓] 詳細な分類は `docs/chat/unchecked_inventory.md` に作成した
 - [✓] 直近のActive Backlogは、実OCRエンジン接続、またはOCR/AI出力を現在のJSON仕様へ変換する実アダプタの実装
+
+#### 2026-06-26 メモ（OCR/AI出力テキストアダプタ）
+- [✓] `ScoreImportOcrTextAdapterService` を追加し、外部OCR/AI出力を既存OCR JSON仕様へ変換できるようにした
+- [✓] JSON / Markdown表 / タブ区切り / カンマ区切り / 空白区切りの簡易表を `rows` / `games` / `scores` 形式へ正規化する
+- [✓] 写真/PDFバッチ詳細画面へ `OCR/AI出力貼り付け` フォームを追加した
+- [✓] 変換後は `ScoreImportOcrResultStageService::importPayload()` へ流し、既存の確認・修正・確定反映画面をそのまま使う
+- [ ] 次の自然な後続は、実データの紙成績表画像/PDFから外部OCR/AIで出力したテキストを使い、貼り付け変換から `game_scores` 確定反映まで通し確認すること

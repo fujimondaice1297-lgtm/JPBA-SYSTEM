@@ -133,6 +133,39 @@
             <button type="submit" class="btn btn-outline-primary w-100">JSONを取込</button>
           </div>
         </form>
+
+        <hr>
+
+        <form method="POST" action="{{ route('tournaments.score_imports.ocr_adapter.store', [$tournament->id, $scoreImport->id]) }}" class="row g-3 align-items-end">
+          @csrf
+          <div class="col-12">
+            <label for="ocr_adapter_text" class="form-label">OCR/AI出力貼り付け</label>
+            <textarea name="ocr_adapter_text" id="ocr_adapter_text" class="form-control" rows="6" placeholder="ライセンス番号 氏名 1G 2G 3G&#10;M00001297 山田太郎 210 225 198&#10;F00000001 鈴木花子 200 216 190">{{ old('ocr_adapter_text') }}</textarea>
+          </div>
+          <div class="col-md-2">
+            <label for="ocr_adapter_default_stage" class="form-label">既定ステージ</label>
+            <input type="text" name="ocr_adapter_default_stage" id="ocr_adapter_default_stage" class="form-control" value="{{ old('ocr_adapter_default_stage') }}" placeholder="予選">
+          </div>
+          <div class="col-md-2">
+            <label for="ocr_adapter_default_shift" class="form-label">既定シフト</label>
+            <input type="text" name="ocr_adapter_default_shift" id="ocr_adapter_default_shift" class="form-control" value="{{ old('ocr_adapter_default_shift') }}">
+          </div>
+          <div class="col-md-2">
+            <label for="ocr_adapter_default_gender" class="form-label">既定性別</label>
+            <input type="text" name="ocr_adapter_default_gender" id="ocr_adapter_default_gender" class="form-control" value="{{ old('ocr_adapter_default_gender') }}" placeholder="M / F">
+          </div>
+          <div class="col-md-2">
+            <label for="ocr_adapter_default_game_number" class="form-label">既定G</label>
+            <input type="number" name="ocr_adapter_default_game_number" id="ocr_adapter_default_game_number" class="form-control" min="1" max="99" value="{{ old('ocr_adapter_default_game_number') }}">
+          </div>
+          <div class="col-md-2">
+            <div class="form-check mb-2">
+              <input type="checkbox" name="ocr_adapter_replace_existing" value="1" id="ocr_adapter_replace_existing" class="form-check-input">
+              <label for="ocr_adapter_replace_existing" class="form-check-label">既存解析行を差し替える</label>
+            </div>
+            <button type="submit" class="btn btn-outline-primary w-100">貼り付け変換</button>
+          </div>
+        </form>
       </div>
     </div>
   @endif
