@@ -102,7 +102,10 @@
 
   @if ($scoreImport->import_type === 'score_sheet_image')
     <div class="card mb-4">
-      <div class="card-header fw-bold">OCR解析結果JSON取込</div>
+      <div class="card-header fw-bold d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <span>OCR解析結果JSON取込</span>
+        <a href="{{ route('tournaments.score_imports.ocr_json.sample', [$tournament->id, $scoreImport->id]) }}" class="btn btn-sm btn-outline-secondary">サンプルJSON</a>
+      </div>
       <div class="card-body">
         <form method="POST" action="{{ route('tournaments.score_imports.ocr_json.store', [$tournament->id, $scoreImport->id]) }}" enctype="multipart/form-data" class="row g-3 align-items-end">
           @csrf

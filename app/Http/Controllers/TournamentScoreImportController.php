@@ -173,6 +173,49 @@ class TournamentScoreImportController extends Controller
             ));
     }
 
+    public function ocrJsonSample(Tournament $tournament, ScoreImportBatch $scoreImport)
+    {
+        $this->authorizeEditorOrAdmin();
+        $this->ensureBatchBelongsToTournament($scoreImport, $tournament);
+
+        return response()
+            ->json([
+                'rows' => [
+                    [
+                        'license_number' => 'M00001297',
+                        'name' => '山田 太郎',
+                        'stage' => '予選',
+                        'shift' => 'A',
+                        'gender' => 'M',
+                        'scores' => [
+                            '1' => 210,
+                            '2' => 225,
+                            '3' => 198,
+                        ],
+                        'confidence' => 0.92,
+                    ],
+                    [
+                        'ライセンス番号' => 'F00000001',
+                        '氏名' => '鈴木 花子',
+                        'ステージ' => '予選',
+                        'games' => [
+                            [
+                                'ゲーム番号' => 1,
+                                'スコア' => 200,
+                                '信頼度' => 88,
+                            ],
+                            [
+                                'ゲーム番号' => 2,
+                                'スコア' => 216,
+                                '信頼度' => 91,
+                            ],
+                        ],
+                    ],
+                ],
+            ], 200, [], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)
+            ->header('Content-Disposition', 'attachment; filename="score_ocr_result_sample.json"');
+    }
+
     public function updateRow(
         Request $request,
         Tournament $tournament,

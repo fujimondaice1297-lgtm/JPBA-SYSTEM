@@ -12,7 +12,7 @@ use InvalidArgumentException;
 
 class ScoreImportOcrResultStageService
 {
-    private const PARSER_VERSION = 'score_ocr_result_v1';
+    private const PARSER_VERSION = 'score_ocr_result_v2';
 
     public function importJson(
         Tournament $tournament,
@@ -150,7 +150,9 @@ class ScoreImportOcrResultStageService
 
     private function extractRows(array $payload): array
     {
-        $sourceRows = array_is_list($payload) ? $payload : ($payload['rows'] ?? []);
+        $sourceRows = array_is_list($payload)
+            ? $payload
+            : $this->firstArrayValue($payload, ['rows', 'players', 'results', 'items', '解析結果', '行', '選手']);
         if (! is_array($sourceRows)) {
             return [];
         }
@@ -162,11 +164,12 @@ class ScoreImportOcrResultStageService
             }
 
             $baseRow = $sourceRow;
-            unset($baseRow['games'], $baseRow['scores']);
+            unset($baseRow['games'], $baseRow['game_scores'], $baseRow['gameScores'], $baseRow['scores'], $baseRow['ゲーム'], $baseRow['スコア']);
             $baseRow['_source_row_number'] = $index + 1;
 
-            if (isset($sourceRow['games']) && is_array($sourceRow['games'])) {
-                foreach ($sourceRow['games'] as $gameIndex => $gameRow) {
+            $gameRows = $this->firstArrayValue($sourceRow, ['games', 'game_scores', 'gameScores', 'ゲーム']);
+            if (is_array($gameRows)) {
+                foreach ($gameRows as $gameIndex => $gameRow) {
                     if (! is_array($gameRow)) {
                         continue;
                     }
@@ -179,8 +182,9 @@ class ScoreImportOcrResultStageService
                 continue;
             }
 
-            if (isset($sourceRow['scores']) && is_array($sourceRow['scores'])) {
-                foreach ($sourceRow['scores'] as $gameNumber => $score) {
+            $scoreRows = $this->firstArrayValue($sourceRow, ['scores', 'スコア']);
+            if (is_array($scoreRows)) {
+                foreach ($scoreRows as $gameNumber => $score) {
                     $rows[] = array_merge($baseRow, [
                         'game_number' => $gameNumber,
                         'score' => $score,
@@ -199,19 +203,19 @@ class ScoreImportOcrResultStageService
 
     private function mapPayloadRow(array $row, array $options): array
     {
-        $rawGameNumber = $this->firstValue($row, ['game_number', 'game_no', 'game', 'g']);
-        $rawScore = $this->firstValue($row, ['score', 'pin', 'pins', 'total']);
+        $rawGameNumber = $this->firstValue($row, ['game_number', 'game_no', 'game', 'g', 'gameNumber', 'ゲーム番号', 'ゲーム', 'G']);
+        $rawScore = $this->firstValue($row, ['score', 'pin', 'pins', 'total', 'スコア', '点数', '得点', 'ピン']);
 
         return [
-            'license_number' => $this->compactValue($this->firstValue($row, ['license_number', 'license_no', 'license'])),
-            'name' => $this->cleanValue($this->firstValue($row, ['name', 'player_name'])),
-            'entry_number' => $this->compactValue($this->firstValue($row, ['entry_number', 'entry_no', 'entry'])),
-            'stage' => $this->cleanValue($this->firstValue($row, ['stage', 'round']) ?: ($options['default_stage'] ?? '')),
-            'shift' => $this->cleanValue($this->firstValue($row, ['shift']) ?: ($options['default_shift'] ?? '')),
-            'gender' => $this->cleanValue($this->firstValue($row, ['gender', 'sex']) ?: ($options['default_gender'] ?? '')),
+            'license_number' => $this->compactValue($this->firstValue($row, ['license_number', 'license_no', 'license', 'licenseNumber', 'ライセンス番号', 'ライセンスNo', '会員番号'])),
+            'name' => $this->cleanValue($this->firstValue($row, ['name', 'player_name', 'playerName', '氏名', '名前', '選手名'])),
+            'entry_number' => $this->compactValue($this->firstValue($row, ['entry_number', 'entry_no', 'entry', 'entryNumber', 'エントリー番号', '受付番号', '番号'])),
+            'stage' => $this->cleanValue($this->firstValue($row, ['stage', 'round', 'ステージ', 'ラウンド']) ?: ($options['default_stage'] ?? '')),
+            'shift' => $this->cleanValue($this->firstValue($row, ['shift', 'シフト', '班']) ?: ($options['default_shift'] ?? '')),
+            'gender' => $this->cleanValue($this->firstValue($row, ['gender', 'sex', '性別']) ?: ($options['default_gender'] ?? '')),
             'game_number' => $this->intOrNull($rawGameNumber),
             'score' => $this->intOrNull($rawScore),
-            'confidence' => $this->normalizeConfidence($this->firstValue($row, ['confidence', 'ocr_confidence'])),
+            'confidence' => $this->normalizeConfidence($this->firstValue($row, ['confidence', 'ocr_confidence', 'ocrConfidence', '信頼度'])),
         ];
     }
 
@@ -362,13 +366,38 @@ class ScoreImportOcrResultStageService
 
     private function firstValue(array $row, array $keys): mixed
     {
+        $normalizedRow = [];
+        foreach ($row as $key => $value) {
+            $normalizedRow[$this->normalizeKey($key)] = $value;
+        }
+
         foreach ($keys as $key) {
             if (array_key_exists($key, $row)) {
                 return $row[$key];
             }
+
+            $normalizedKey = $this->normalizeKey($key);
+            if (array_key_exists($normalizedKey, $normalizedRow)) {
+                return $normalizedRow[$normalizedKey];
+            }
         }
 
         return null;
+    }
+
+    private function firstArrayValue(array $row, array $keys): ?array
+    {
+        $value = $this->firstValue($row, $keys);
+
+        return is_array($value) ? $value : null;
+    }
+
+    private function normalizeKey(mixed $value): string
+    {
+        $value = $this->compactValue($value);
+        $value = str_replace(['_', '-', '.', '/', '・'], '', $value);
+
+        return mb_strtolower($value, 'UTF-8');
     }
 
     private function identityKey(mixed $value): string
