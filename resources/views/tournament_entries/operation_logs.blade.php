@@ -40,6 +40,7 @@
     $seeds = $automationSummary['seeds'] ?? [];
     $diagnostics = $automationSummary['diagnostics'] ?? [];
     $diagnosticIssues = $diagnostics['issues'] ?? [];
+    $missingScorePlayerRows = $diagnostics['missing_score_player_rows'] ?? [];
     $statusBadges = [
       'done' => ['class' => 'bg-success', 'label' => '完了'],
       'ready' => ['class' => 'bg-primary', 'label' => '実行可'],
@@ -128,6 +129,47 @@
         </div>
       @endif
 
+      @if (!empty($missingScorePlayerRows))
+        <div class="mb-3">
+          <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+            <div class="small text-muted">スコア未入力候補（選手単位）</div>
+            <span class="badge text-bg-warning">{{ $diagnostics['score_entry_gap'] ?? count($missingScorePlayerRows) }} 名</span>
+          </div>
+          <div class="table-responsive">
+            <table class="table table-sm table-bordered align-middle mb-0">
+              <thead>
+                <tr>
+                  <th style="width: 80px;">Entry</th>
+                  <th style="width: 120px;">ライセンス</th>
+                  <th>氏名</th>
+                  <th style="width: 100px;">シフト</th>
+                  <th style="width: 90px;">レーン</th>
+                </tr>
+              </thead>
+              <tbody>
+                @foreach ($missingScorePlayerRows as $missingScorePlayer)
+                  <tr>
+                    <td>#{{ $missingScorePlayer['entry_id'] ?? '-' }}</td>
+                    <td>
+                      {{ $missingScorePlayer['license_tail'] ?? '-' }}
+                      @if (!empty($missingScorePlayer['license_no']))
+                        <div class="small text-muted">{{ $missingScorePlayer['license_no'] }}</div>
+                      @endif
+                    </td>
+                    <td>{{ $missingScorePlayer['name'] ?? '-' }}</td>
+                    <td>{{ ($missingScorePlayer['shift'] ?? '') !== '' ? $missingScorePlayer['shift'] : '-' }}</td>
+                    <td>{{ filled($missingScorePlayer['lane'] ?? null) ? $missingScorePlayer['lane'] : '-' }}</td>
+                  </tr>
+                @endforeach
+              </tbody>
+            </table>
+          </div>
+          @if (($diagnostics['score_entry_gap'] ?? 0) > count($missingScorePlayerRows))
+            <div class="small text-muted mt-1">表示は先頭 {{ count($missingScorePlayerRows) }} 名までです。</div>
+          @endif
+        </div>
+      @endif
+
       <div class="table-responsive mb-3">
         <table class="table table-sm align-middle">
           <thead>
@@ -153,7 +195,7 @@
               <td>
                 `game_scores` を速報・順位計算の正本として入力します。
                 @if (($diagnostics['score_entry_gap'] ?? 0) > 0)
-                  <div class="small text-warning">エントリー人数との差分: {{ $diagnostics['score_entry_gap'] }} 名</div>
+                  <div class="small text-warning">スコア未入力候補: {{ $diagnostics['score_entry_gap'] }} 名</div>
                 @endif
                 @if (!empty($diagnostics['incomplete_stage_rows']))
                   <div class="small text-warning">ステージ設定に対して未完了の入力があります。</div>

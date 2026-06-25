@@ -102,11 +102,14 @@ class TournamentAutomationReadinessService
                 'stage_rows' => [],
                 'stage_settings' => [],
                 'incomplete_stage_rows' => [],
+                'missing_player_count' => 0,
+                'missing_player_rows' => [],
             ];
         }
 
         $base = DB::table('game_scores')->where('tournament_id', $tournamentId);
         $stageSettings = $this->stageSettings($tournamentId);
+        $missingScorePlayers = $this->missingScorePlayers($tournamentId);
 
         $identityRows = (clone $base)
             ->select(['tournament_participant_id', 'pro_bowler_id', 'license_number', 'name'])
@@ -181,6 +184,88 @@ class TournamentAutomationReadinessService
             'stage_rows' => $stageRows,
             'stage_settings' => $stageSettings,
             'incomplete_stage_rows' => $incompleteStageRows,
+            'missing_player_count' => $missingScorePlayers['count'],
+            'missing_player_rows' => $missingScorePlayers['rows'],
+        ];
+    }
+
+    private function missingScorePlayers(int $tournamentId): array
+    {
+        if (! Schema::hasTable('tournament_entries') || ! Schema::hasTable('game_scores')) {
+            return [
+                'count' => 0,
+                'rows' => [],
+            ];
+        }
+
+        $scoreKeys = [];
+        DB::table('game_scores')
+            ->where('tournament_id', $tournamentId)
+            ->select(['pro_bowler_id', 'license_number', 'name'])
+            ->get()
+            ->each(function ($row) use (&$scoreKeys): void {
+                foreach ($this->identityKeys(
+                    $row->pro_bowler_id ? (int) $row->pro_bowler_id : null,
+                    $row->license_number ?? null,
+                    $row->name ?? null
+                ) as $key) {
+                    $scoreKeys[$key] = true;
+                }
+            });
+
+        $entryRows = DB::table('tournament_entries as entries')
+            ->leftJoin('pro_bowlers as bowlers', 'bowlers.id', '=', 'entries.pro_bowler_id')
+            ->where('entries.tournament_id', $tournamentId)
+            ->where('entries.status', 'entry')
+            ->select([
+                'entries.id',
+                'entries.pro_bowler_id',
+                'entries.shift',
+                'entries.lane',
+                'bowlers.license_no',
+                'bowlers.name_kanji',
+                'bowlers.name_kana',
+            ])
+            ->orderBy('entries.id')
+            ->get();
+
+        $missingRows = [];
+
+        foreach ($entryRows as $entry) {
+            $keys = $this->identityKeys(
+                $entry->pro_bowler_id ? (int) $entry->pro_bowler_id : null,
+                $entry->license_no ?? null,
+                $entry->name_kanji ?? null
+            );
+
+            $hasScore = false;
+            foreach ($keys as $key) {
+                if (isset($scoreKeys[$key])) {
+                    $hasScore = true;
+                    break;
+                }
+            }
+
+            if ($hasScore) {
+                continue;
+            }
+
+            $licenseNo = trim((string) ($entry->license_no ?? ''));
+
+            $missingRows[] = [
+                'entry_id' => (int) $entry->id,
+                'pro_bowler_id' => $entry->pro_bowler_id ? (int) $entry->pro_bowler_id : null,
+                'license_no' => $licenseNo,
+                'license_tail' => $this->licenseTail($licenseNo),
+                'name' => trim((string) ($entry->name_kanji ?? $entry->name_kana ?? '')),
+                'shift' => trim((string) ($entry->shift ?? '')),
+                'lane' => $entry->lane,
+            ];
+        }
+
+        return [
+            'count' => count($missingRows),
+            'rows' => array_slice($missingRows, 0, 50),
         ];
     }
 
@@ -351,7 +436,7 @@ class TournamentAutomationReadinessService
         array $titles,
         array $seeds
     ): array {
-        $scoreEntryGap = max(0, (int) $entries['entry_count'] - (int) $scores['scored_player_count']);
+        $scoreEntryGap = (int) ($scores['missing_player_count'] ?? 0);
         $incompleteStageRows = $scores['incomplete_stage_rows'] ?? [];
 
         $fullFinalRowCount = (int) ($snapshots['full_final_row_count'] ?? 0);
@@ -435,6 +520,7 @@ class TournamentAutomationReadinessService
 
         return [
             'score_entry_gap' => $scoreEntryGap,
+            'missing_score_player_rows' => $scores['missing_player_rows'] ?? [],
             'incomplete_stage_rows' => $incompleteStageRows,
             'final_sync_gap' => $finalSyncGap,
             'award_pending' => $awardPending,
@@ -461,6 +547,52 @@ class TournamentAutomationReadinessService
                 'enabled' => (bool) ($row->enabled ?? false),
             ])
             ->all();
+    }
+
+    private function identityKeys(?int $proBowlerId, ?string $licenseNo, ?string $name): array
+    {
+        $keys = [];
+
+        if ($proBowlerId !== null && $proBowlerId > 0) {
+            $keys[] = 'pro:' . $proBowlerId;
+        }
+
+        $licenseKey = $this->normalizeIdentityText($licenseNo);
+        if ($licenseKey !== '') {
+            $keys[] = 'license:' . $licenseKey;
+        }
+
+        $licenseTail = $this->licenseTail($licenseNo);
+        if ($licenseTail !== '') {
+            $keys[] = 'tail:' . $licenseTail;
+        }
+
+        $nameKey = $this->normalizeIdentityText($name);
+        if ($nameKey !== '') {
+            $keys[] = 'name:' . $nameKey;
+        }
+
+        return array_values(array_unique($keys));
+    }
+
+    private function normalizeIdentityText(?string $value): string
+    {
+        return strtoupper(preg_replace('/\s+/u', '', trim((string) $value)) ?? trim((string) $value));
+    }
+
+    private function licenseTail(?string $licenseNo): string
+    {
+        $licenseNo = $this->normalizeIdentityText($licenseNo);
+        if ($licenseNo === '') {
+            return '';
+        }
+
+        $digits = preg_replace('/\D+/', '', $licenseNo) ?? '';
+        if ($digits !== '') {
+            return substr(str_pad($digits, 4, '0', STR_PAD_LEFT), -4);
+        }
+
+        return substr($licenseNo, -4);
     }
 
     private function countRowsWithAnyPositiveColumn($baseQuery, array $columns): int
