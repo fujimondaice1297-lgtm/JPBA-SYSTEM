@@ -32,6 +32,27 @@
     </div>
   @endif
 
+  @php
+    $latestAdapterSummary = null;
+    foreach (($operationLogs ?? collect()) as $operationLog) {
+      $adapterSummary = data_get($operationLog->payload, 'adapter_summary');
+      if (is_array($adapterSummary)) {
+        $latestAdapterSummary = $adapterSummary;
+        break;
+      }
+    }
+
+    $scoreImportIssueLabels = [
+      'stage_missing' => 'ステージ未入力',
+      'game_number_missing' => 'G未入力',
+      'score_missing' => 'スコア未入力',
+      'score_out_of_range' => 'スコア範囲外',
+      'player_identity_missing' => '選手識別なし',
+      'player_unmatched' => '選手未照合',
+      'player_ambiguous' => '候補複数',
+    ];
+  @endphp
+
   <div class="row g-3 mb-4">
     @foreach ([
       'total' => '全行',
@@ -49,6 +70,49 @@
       </div>
     @endforeach
   </div>
+
+  @if ($latestAdapterSummary)
+    <div class="card mb-4">
+      <div class="card-header fw-bold d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <span>OCR/AI変換サマリー</span>
+        @if ((int) data_get($latestAdapterSummary, 'warning_count', 0) > 0)
+          <span class="badge text-bg-warning">警告 {{ number_format((int) data_get($latestAdapterSummary, 'warning_count', 0)) }}件</span>
+        @else
+          <span class="badge text-bg-success">警告なし</span>
+        @endif
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-md-3">
+            <div class="text-muted small">形式</div>
+            <div class="fw-semibold">{{ data_get($latestAdapterSummary, 'input_format', '-') }}</div>
+          </div>
+          <div class="col-md-3">
+            <div class="text-muted small">入力行数</div>
+            <div class="fw-semibold">{{ number_format((int) data_get($latestAdapterSummary, 'input_line_count', 0)) }}</div>
+          </div>
+          <div class="col-md-3">
+            <div class="text-muted small">抽出行数</div>
+            <div class="fw-semibold">{{ number_format((int) data_get($latestAdapterSummary, 'row_count', 0)) }}</div>
+          </div>
+          <div class="col-md-3">
+            <div class="text-muted small">アダプタ</div>
+            <div class="fw-semibold">{{ data_get($latestAdapterSummary, 'adapter_version', '-') }}</div>
+          </div>
+        </div>
+        @if (!empty(data_get($latestAdapterSummary, 'warnings')))
+          <div class="alert alert-warning mt-3 mb-0">
+            <div class="fw-semibold mb-1">変換時の警告</div>
+            <ul class="mb-0">
+              @foreach (data_get($latestAdapterSummary, 'warnings', []) as $warning)
+                <li>{{ $warning }}</li>
+              @endforeach
+            </ul>
+          </div>
+        @endif
+      </div>
+    </div>
+  @endif
 
   <div class="card mb-4">
     <div class="card-header fw-bold d-flex justify-content-between align-items-center flex-wrap gap-2">
@@ -302,6 +366,7 @@
                   <label for="score-import-check-all" class="form-check-label">行</label>
                 </div>
               </th>
+              <th style="min-width: 260px;">確認情報</th>
               <th style="min-width: 220px;">候補</th>
               <th style="min-width: 240px;">選手</th>
               <th style="min-width: 260px;">スコア</th>
@@ -318,6 +383,43 @@
                   'rejected' => 'text-bg-secondary',
                   default => 'text-bg-light',
                 };
+                $rawPayload = is_array($row->raw_payload) ? $row->raw_payload : [];
+                $issueCodes = collect(explode(',', (string) $row->error_message))
+                  ->map(fn ($issue) => trim($issue))
+                  ->filter()
+                  ->values();
+                $confidenceText = $row->confidence === null
+                  ? null
+                  : rtrim(rtrim(number_format((float) $row->confidence, 2), '0'), '.');
+                $confidenceClass = $row->confidence === null
+                  ? 'text-bg-secondary'
+                  : ((float) $row->confidence >= 90
+                    ? 'text-bg-success'
+                    : ((float) $row->confidence >= 70 ? 'text-bg-info' : 'text-bg-warning'));
+                $sourceFragments = [];
+                $sourceFilename = data_get($rawPayload, 'source_filename');
+                $sourceLineNumber = data_get($rawPayload, 'source_line_number');
+                $sourceRowNumber = data_get($rawPayload, 'source_row_number');
+                $sourceGameKey = data_get($rawPayload, 'source_game_key');
+                $scoreColumnHeader = data_get($rawPayload, 'score_column_header');
+                if ($sourceFilename) {
+                  $sourceFragments[] = '元ファイル: ' . $sourceFilename;
+                }
+                if ($sourceLineNumber) {
+                  $sourceFragments[] = 'CSV行: ' . $sourceLineNumber;
+                }
+                if ($sourceRowNumber) {
+                  $sourceFragments[] = '解析行: ' . $sourceRowNumber;
+                }
+                if ($sourceGameKey !== null && $sourceGameKey !== '') {
+                  $sourceFragments[] = '元Gキー: ' . $sourceGameKey;
+                }
+                if ($scoreColumnHeader) {
+                  $sourceFragments[] = 'スコア列: ' . $scoreColumnHeader;
+                }
+                $sourceExcerpt = data_get($rawPayload, 'ocr_payload')
+                  ?: data_get($rawPayload, 'values')
+                  ?: data_get($rawPayload, 'mapped');
               @endphp
               <tr>
                 <td>
@@ -335,6 +437,40 @@
                   @endif
                   @if ($row->error_message)
                     <div class="small text-danger mt-1">{{ $row->error_message }}</div>
+                  @endif
+                </td>
+                <td>
+                  <div class="d-flex gap-1 flex-wrap mb-2">
+                    @if ($confidenceText !== null)
+                      <span class="badge {{ $confidenceClass }}">信頼度 {{ $confidenceText }}%</span>
+                    @else
+                      <span class="badge {{ $confidenceClass }}">信頼度なし</span>
+                    @endif
+                    @forelse ($issueCodes as $issueCode)
+                      <span class="badge text-bg-warning">{{ $scoreImportIssueLabels[$issueCode] ?? $issueCode }}</span>
+                    @empty
+                      <span class="badge text-bg-success">警告なし</span>
+                    @endforelse
+                  </div>
+                  <div class="small">
+                    <div class="text-muted">変換元</div>
+                    @forelse ($sourceFragments as $sourceFragment)
+                      <div>{{ $sourceFragment }}</div>
+                    @empty
+                      <div class="text-muted">-</div>
+                    @endforelse
+                  </div>
+                  @if ($sourceExcerpt)
+                    <details class="small mt-2">
+                      <summary>抽出元行</summary>
+                      <pre class="small bg-light border rounded p-2 mt-2 mb-0">{{ json_encode($sourceExcerpt, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) }}</pre>
+                    </details>
+                  @endif
+                  @if ($rawPayload)
+                    <details class="small mt-2">
+                      <summary>取込raw</summary>
+                      <pre class="small bg-light border rounded p-2 mt-2 mb-0">{{ json_encode($rawPayload, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) }}</pre>
+                    </details>
                   @endif
                 </td>
                 <td>
@@ -417,17 +553,11 @@
                     </form>
                     <button form="{{ $rowFormId }}" type="submit" class="btn btn-sm btn-outline-primary w-100 mb-2">保存</button>
                   @endif
-                  @if ($row->raw_payload)
-                    <details class="small">
-                      <summary>元データ</summary>
-                      <pre class="small bg-light border rounded p-2 mt-2 mb-0">{{ json_encode($row->raw_payload, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) }}</pre>
-                    </details>
-                  @endif
                 </td>
               </tr>
             @empty
               <tr>
-                <td colspan="5" class="text-muted p-4">表示できる取込行がありません。</td>
+                <td colspan="6" class="text-muted p-4">表示できる取込行がありません。</td>
               </tr>
             @endforelse
           </tbody>

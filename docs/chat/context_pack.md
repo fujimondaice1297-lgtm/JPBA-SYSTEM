@@ -120,3 +120,10 @@
 - 整理後の未チェックは43件。
 - 現行JPBAサイトを確認し、公開側の不足候補も `Active Backlog` に追加した。
 - 次に作業するときは、古い履歴中の未完了風メモではなく `Active Backlog` を参照する。
+
+## 2026-06-26 追記: OCR/AI取込詳細の確認情報表示
+
+- `resources/views/score_imports/show.blade.php` に、最新のOCR/AI変換サマリーカードを追加した。
+- 取込行一覧に `確認情報` 列を追加し、信頼度、要確認理由、変換元ファイル/行/列、抽出元行を表示できるようにした。
+- DB変更はない。既存の `confidence` / `error_message` / `raw_payload` / 操作ログ `adapter_summary` を表示に使う。
+- 未チェックは42件。

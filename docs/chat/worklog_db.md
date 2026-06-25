@@ -7224,3 +7224,26 @@ User::where('email','domaine-d@i.softbank.jp')->exists(); // true
 - 次の自然な作業:
   1. `Active Backlog` のAから、OCR実データ通し確認へ進む。
   2. もしくは公開サイト踏襲のBから、トップ/ナビ/INFORMATIONカテゴリの不足整理へ進む。
+
+---
+
+## 2026-06-26 OCR/AI取込詳細の確認情報表示
+
+- 目的:
+  - 未チェック項目 `OCR/AI変換結果の警告・信頼度・変換元行を、取込詳細画面でより見やすく表示する` を進める。
+  - 実データ投入前に、要確認行の理由と変換元を管理画面で追えるようにする。
+
+- 実施内容:
+  - `resources/views/score_imports/show.blade.php` に、最新のOCR/AI変換サマリーカードを追加した。
+  - 取込行一覧へ `確認情報` 列を追加した。
+  - 行ごとに以下を表示できるようにした。
+    - `confidence` の信頼度バッジ
+    - `error_message` の要確認理由を日本語ラベル化したバッジ
+    - `raw_payload` の変換元ファイル、CSV行、OCR解析行、元Gキー、スコア列
+    - `raw_payload` から抽出元行だけを先に開ける詳細表示
+  - DBスキーマ変更はなし。既存の `confidence` / `error_message` / `raw_payload` / 操作ログ `adapter_summary` を表示に使った。
+  - `progress_board.md` の該当未チェックを完了扱いにし、残り未チェックは42件。
+
+- 次の自然な作業:
+  1. 実データの紙成績表画像/PDFから外部OCR/AI出力を作り、貼り付け変換プレビューで `payload.rows` を確認する。
+  2. もしくは、実OCRエンジン接続の境界を `画像/PDF原本バッチ -> OCR処理 -> アダプタ -> score_import_rows` として固定する。
