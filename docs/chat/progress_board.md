@@ -1488,3 +1488,11 @@
 - [✓] `TournamentAutomationReadinessService` でエントリー済み選手と `game_scores` を pro ID / ライセンス / 下4桁 / 氏名で突合し、スコア未入力候補を選手単位で算出するようにした
 - [✓] 大会運用ログの終了処理チェックリストへ、スコア未入力候補のEntry ID・ライセンス・氏名・シフト・レーン一覧を表示するようにした
 - [✓] 表示は先頭50名までに制限し、件数自体は `score_entry_gap` として全体数を保持する
+
+#### 2026-06-25 メモ（古い未チェック項目の棚卸し）
+- [✓] `docs/chat/progress_board.md` / `docs/chat/automation_roadmap.md` / `docs/chat/context_pack.md` の未チェック項目を棚卸しした
+- [✓] 未チェック139件はすべて `progress_board.md` に残っており、`automation_roadmap.md` と `context_pack.md` は未チェック0件であることを確認した
+- [✓] 古い `commit / push`、`git status`、`storage/backups/`、次チャット開始時確認、旧い `S` 表示、旧い歴代優勝者シード画面メモは、履歴または重複として扱う方針にした
+- [✓] 2026-06-23以降にCodexが進めた作業は、現行ログ上ではチェック済み扱いでよい
+- [✓] 詳細な分類は `docs/chat/unchecked_inventory.md` に作成した
+- [✓] 直近のActive Backlogは、実OCRエンジン接続、またはOCR/AI出力を現在のJSON仕様へ変換する実アダプタの実装
