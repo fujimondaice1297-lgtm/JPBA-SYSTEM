@@ -278,6 +278,38 @@ class TournamentScoreImportController extends Controller
             ));
     }
 
+    public function previewOcrAdapter(
+        Request $request,
+        Tournament $tournament,
+        ScoreImportBatch $scoreImport,
+        ScoreImportOcrTextAdapterService $adapter
+    ) {
+        $this->authorizeEditorOrAdmin();
+        $this->ensureBatchBelongsToTournament($scoreImport, $tournament);
+
+        $validated = $request->validate([
+            'ocr_adapter_text' => ['required', 'string', 'max:300000'],
+            'ocr_adapter_default_stage' => ['nullable', 'string', 'max:50'],
+            'ocr_adapter_default_shift' => ['nullable', 'string', 'max:20'],
+            'ocr_adapter_default_gender' => ['nullable', 'string', 'max:10'],
+            'ocr_adapter_default_game_number' => ['nullable', 'integer', 'min:1', 'max:99'],
+        ]);
+
+        $adapted = $adapter->adapt($validated['ocr_adapter_text'], [
+            'default_stage' => $validated['ocr_adapter_default_stage'] ?? '',
+            'default_shift' => $validated['ocr_adapter_default_shift'] ?? '',
+            'default_gender' => $validated['ocr_adapter_default_gender'] ?? '',
+            'default_game_number' => $validated['ocr_adapter_default_game_number'] ?? '',
+        ]);
+
+        return response()
+            ->json([
+                'summary' => $adapted['summary'],
+                'payload' => $adapted['payload'],
+            ], 200, [], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)
+            ->header('Content-Disposition', 'inline; filename="score_ocr_adapter_preview.json"');
+    }
+
     public function ocrJsonSample(Tournament $tournament, ScoreImportBatch $scoreImport)
     {
         $this->authorizeEditorOrAdmin();

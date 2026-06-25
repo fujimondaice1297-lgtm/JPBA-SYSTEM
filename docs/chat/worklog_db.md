@@ -7173,6 +7173,8 @@ User::where('email','domaine-d@i.softbank.jp')->exists(); // true
   - `ScoreImportOcrResultStageService` に `importPayload()` を追加し、アップロードファイルだけでなく、アダプタが作った配列ペイロードも既存処理へ流せるようにした。
   - 写真/PDFバッチ詳細画面に `OCR/AI出力貼り付け` フォームを追加した。
   - `routes/web.php` に `tournaments.score_imports.ocr_adapter.store` を追加した。
+  - `routes/web.php` に `tournaments.score_imports.ocr_adapter.preview` を追加した。
+    - 画面の `変換JSONを確認` ボタンから、DB保存前の正規化結果をJSONで確認できる。
   - 操作ログでは `ocr_adapter_stage` として、変換元・件数・警告数を残せるようにした。
 
 - 確認結果:

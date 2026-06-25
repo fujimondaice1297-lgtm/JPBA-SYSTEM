@@ -112,3 +112,4 @@
 - 写真/PDFバッチ詳細画面に、OCR/AI出力貼り付け欄を追加した。
 - `ScoreImportOcrTextAdapterService` で、JSON / Markdown表 / タブ区切り / カンマ区切り / 空白区切りの簡易表を既存OCR JSON仕様へ変換する。
 - 変換後は既存のOCR JSON取込と同じく `score_import_rows` に保存し、確認後にだけ `game_scores` へ反映する。
+- `変換JSONを確認` で、DB保存前に変換結果を別タブのJSONとして確認できる。

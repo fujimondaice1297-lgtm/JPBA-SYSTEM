@@ -163,7 +163,15 @@
               <input type="checkbox" name="ocr_adapter_replace_existing" value="1" id="ocr_adapter_replace_existing" class="form-check-input">
               <label for="ocr_adapter_replace_existing" class="form-check-label">既存解析行を差し替える</label>
             </div>
-            <button type="submit" class="btn btn-outline-primary w-100">貼り付け変換</button>
+            <div class="d-grid gap-2">
+              <button type="submit" class="btn btn-outline-primary">貼り付け変換</button>
+              <button type="submit"
+                class="btn btn-outline-secondary"
+                formaction="{{ route('tournaments.score_imports.ocr_adapter.preview', [$tournament->id, $scoreImport->id]) }}"
+                formtarget="_blank">
+                変換JSONを確認
+              </button>
+            </div>
           </div>
         </form>
       </div>

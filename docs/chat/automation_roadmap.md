@@ -191,3 +191,9 @@ flowchart LR
 - JSON、Markdown表、タブ/カンマ区切り、空白区切りの簡易表を受け、`rows` / `games` / `scores` 形式へ正規化する。
 - 写真/PDFバッチ詳細画面から貼り付け変換でき、変換後は既存の `ScoreImportOcrResultStageService` で `score_import_rows` へ流す。
 - 解析結果は引き続き直接 `game_scores` へ入れず、確認・修正・確定反映を通す。
+
+## 2026-06-26 追記: OCR/AI出力変換プレビュー
+
+- 写真/PDFバッチ詳細画面に `変換JSONを確認` ボタンを追加した。
+- 貼り付けたOCR/AI出力を、DBへ保存せずに `summary` と `payload.rows` のJSONとして別タブ表示できる。
+- 実データを流す前に、ゲーム数・スコア・氏名・ライセンスの変換結果を確認してから `score_import_rows` へ反映できる。
