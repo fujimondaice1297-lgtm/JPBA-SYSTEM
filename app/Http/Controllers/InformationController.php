@@ -16,7 +16,7 @@ class InformationController extends Controller
         $year = $request->input('year');
         if ($year === null) { $year = now()->year; } // デフォルト：今年（未指定時のみ）
 
-        $categories = $this->categories();
+        $categories = Information::categories();
         $category = (string)($request->input('category') ?? '');
         $category = trim($category);
         if ($category === '' || !in_array($category, $categories, true)) {
@@ -53,7 +53,7 @@ class InformationController extends Controller
         $year = $request->input('year');
         if ($year === null) { $year = now()->year; }
 
-        $categories = $this->categories();
+        $categories = Information::categories();
         $category = (string)($request->input('category') ?? '');
         $category = trim($category);
         if ($category === '' || !in_array($category, $categories, true)) {
@@ -196,12 +196,6 @@ class InformationController extends Controller
             ->orderByDesc('y')
             ->pluck('y')
             ->all();
-    }
-
-    /** カテゴリ（正本：data_dictionary） */
-    private function categories(): array
-    {
-        return ['NEWS', 'イベント', '大会', 'ｲﾝｽﾄﾗｸﾀｰ'];
     }
 
     /** /member/info 配下かどうか（ルート名依存を避け、URLで判定） */

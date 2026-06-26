@@ -9,6 +9,14 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Information extends Model
 {
+    public const CATEGORIES = [
+        'NEWS',
+        '大会',
+        'TV情報',
+        'ｲﾝｽﾄﾗｸﾀｰ',
+        'イベント',
+    ];
+
     protected $table = 'informations';
 
     protected $fillable = [
@@ -29,6 +37,16 @@ class Information extends Model
         'starts_at' => 'datetime',
         'ends_at'   => 'datetime',
     ];
+
+    public static function categories(): array
+    {
+        return self::CATEGORIES;
+    }
+
+    public static function categoryValidationRule(): string
+    {
+        return 'nullable|in:' . implode(',', self::CATEGORIES);
+    }
 
     /** 公開期間内 */
     public function scopeActive(Builder $q): Builder

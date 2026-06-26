@@ -11,7 +11,7 @@ class InformationAdminController extends Controller
 {
     private function categories(): array
     {
-        return ['NEWS', 'イベント', '大会', 'ｲﾝｽﾄﾗｸﾀｰ'];
+        return Information::categories();
     }
 
     private function audiences(): array
@@ -68,7 +68,7 @@ class InformationAdminController extends Controller
     {
         $data = $request->validate([
             'title' => 'required|string|max:255',
-            'category' => 'nullable|in:NEWS,イベント,大会,ｲﾝｽﾄﾗｸﾀｰ',
+            'category' => Information::categoryValidationRule(),
             'audience' => 'required|in:public,members,district_leaders,needs_training',
             'is_public' => 'sometimes|boolean',
             'starts_at' => 'nullable|date',
@@ -105,7 +105,7 @@ class InformationAdminController extends Controller
     {
         $data = $request->validate([
             'title' => 'required|string|max:255',
-            'category' => 'nullable|in:NEWS,イベント,大会,ｲﾝｽﾄﾗｸﾀｰ',
+            'category' => Information::categoryValidationRule(),
             'audience' => 'required|in:public,members,district_leaders,needs_training',
             'is_public' => 'sometimes|boolean',
             'starts_at' => 'nullable|date',

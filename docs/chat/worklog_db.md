@@ -7299,3 +7299,25 @@ User::where('email','domaine-d@i.softbank.jp')->exists(); // true
 - 次の自然な作業:
   1. 実データの紙成績表画像/PDFから外部OCR/AI出力を作り、貼り付け変換プレビューで `payload.rows` を確認する。
   2. 貼り付け変換から `score_import_rows` 作成、要確認行修正、`game_scores` 確定反映まで通し確認する。
+
+---
+
+## 2026-06-26 公開トップ棚卸し・INFORMATIONカテゴリ正本化
+
+- 目的:
+  - Active Backlog Bの `公開トップを現行JPBA1の構成に合わせて棚卸しする` と `INFORMATIONカテゴリを現行サイト実態に合わせる` を進める。
+  - 現行サイトの見た目を維持する前提で、トップページの構成要素を後続実装に分解できる状態にする。
+
+- 実施内容:
+  - `docs/operations/public_site_parity_checklist.md` を追加した。
+  - 現行トップの上部メニュー、更新履歴、プロボウラー専用ページ、大会バナー、PDFリンク、動画/外部サービス、INFORMATION、協賛/関連団体、SNS、フッター導線を棚卸しした。
+  - `Information::categories()` と `Information::categoryValidationRule()` を追加し、カテゴリ候補をモデル正本にした。
+  - `InformationController` と `InformationAdminController` のカテゴリ候補/バリデーションをモデル正本へ寄せた。
+  - `2026_06_26_000002_update_information_category_check_for_tv_info.php` を追加し、`informations_category_check` で `TV情報` を許可できるようにした。
+  - `/info`、`/info/{information}`、`/info/files/{informationFile}` をログイン不要の公開ルートへ移した。表示・DL可否は既存Controllerの `active()` / `public()` / file `visibility=public` 判定で守る。
+  - `docs/db/data_dictionary.md` のカテゴリ許容値を更新した。
+  - 未チェックは38件。
+
+- 次の自然な作業:
+  1. 公開トップのLaravel初期画面を、現行JPBA1トップ構成に置き換える。
+  2. トップの大会バナー/日程枠をDB正本から表示し、PDFリンクも管理できるようにする。

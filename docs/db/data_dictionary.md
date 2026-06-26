@@ -509,7 +509,7 @@ CSV一時取込、行修正、一括修正、`game_scores` への確定反映な
 ### 主要カラム
 - title（タイトル：string）
 - category（カテゴリ：string(32), nullable）
-  - 許容値: NEWS / イベント / 大会 / ｲﾝｽﾄﾗｸﾀｰ
+  - 許容値: NEWS / 大会 / TV情報 / ｲﾝｽﾄﾗｸﾀｰ / イベント
   - 備考: DB制約（CHECK）で上記以外は拒否（NULLは許容）
 - body（本文：text）
 - is_public（公開フラグ：boolean, default true）

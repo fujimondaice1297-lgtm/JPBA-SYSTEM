@@ -144,3 +144,13 @@
 - すべて `score_import_rows` -> 人間確認 -> `game_scores` の流れにそろえる。
 - 次にスコア取込運用を確認するときは、この手順書を正本として読む。
 - 未チェックは40件。
+
+## 2026-06-26 追記: 公開トップ棚卸し・INFORMATIONカテゴリ正本化
+
+- `docs/operations/public_site_parity_checklist.md` を追加した。
+- 現行JPBA1トップの上部メニュー、更新履歴、プロボウラー専用ページ、大会バナー、PDFリンク、動画/外部サービス、INFORMATION、協賛/関連団体、SNS、フッター導線を棚卸しした。
+- INFORMATIONカテゴリは `NEWS` / `大会` / `TV情報` / `ｲﾝｽﾄﾗｸﾀｰ` / `イベント` を正本にする。
+- カテゴリ候補は `Information::categories()`、管理画面バリデーションは `Information::categoryValidationRule()` を使う。
+- `informations_category_check` を更新するmigrationを追加し、DBでも `TV情報` を許可する。
+- `/info`、`/info/{information}`、`/info/files/{informationFile}` はログイン不要の公開ルート。会員向けは `/member/info` 系のまま。
+- 未チェックは38件。
