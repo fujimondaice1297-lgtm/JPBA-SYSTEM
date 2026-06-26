@@ -7344,3 +7344,26 @@ User::where('email','domaine-d@i.softbank.jp')->exists(); // true
 - 次の自然な作業:
   1. `JPBAについて` の協会概要、会長挨拶、運営機構図、役員・代議員名簿、定款、事業計画、予算、事業報告、財務PDFを公開ページとして整理する。
   2. `スケジュール` ページを年次/月次カレンダーとPDF導線込みで現行サイトの見た目へ寄せる。
+
+---
+
+## 2026-06-26 JPBAについて・スケジュール公開ページ
+
+- 目的:
+  - Active Backlog Bの `JPBAについて` と `スケジュール` の公開導線を進める。
+  - 現行JPBA1の見た目・情報構成を保ちながら、公開側をLaravel側へ寄せる。
+
+- 実施内容:
+  - `app/Http/Controllers/PublicPageController.php` を追加した。
+  - `/about` を `public.about` として追加した。
+  - `/schedule` を `public.schedule` として追加した。
+  - `resources/views/public/layout.blade.php` を追加し、公開下層ページのヘッダー、メニュー、フッターを共通化した。
+  - `resources/views/public/about.blade.php` を追加し、協会概要、団体紹介、事業、定款、会長挨拶、運営機構図、役員・代議員名簿、事業計画、予算、事業報告、財務PDFを整理した。
+  - `resources/views/public/schedule.blade.php` を追加し、`tournaments` / `calendar_events` を年別・月別に表示する公開スケジュールを作った。
+  - `config/jpba_public.php` のトップナビで、`JPBAについて` / `スケジュール` をローカル公開ページへ向けた。
+  - `config/jpba_public.php` に協会概要と関連PDFリンクを集約した。
+  - 未チェックは35件。
+
+- 次の自然な作業:
+  1. `選手データ` の公開検索を、氏名、ライセンスNo範囲、性別、地区、退会者導線まで現行サイトと照合する。
+  2. `トーナメント` 公開ページで、大会ページ、速報、成績、PDF、トピックスリンクを現行サイト互換で表示する。

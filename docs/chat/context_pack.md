@@ -164,3 +164,12 @@
 - INFORMATION枠は `Information::active()->public()` を読む。
 - 現行サイト由来の外部ナビ、PDF、フッター導線は `config/jpba_public.php`。
 - 未チェックは37件。
+
+## 2026-06-26 追記: JPBAについて・スケジュール公開ページ
+
+- `/about` は `PublicPageController@about`、ルート名は `public.about`。
+- `/schedule` は `PublicPageController@schedule`、ルート名は `public.schedule`。
+- 公開下層共通レイアウトは `resources/views/public/layout.blade.php`。
+- `JPBAについて` の協会概要、事業、公式資料PDF導線は `config/jpba_public.php` の `association` を読む。
+- `スケジュール` は `tournaments` / `calendar_events` を読み、年別・月別に表示する。指定年にデータがなければDB上の最新年へ寄せる。
+- 未チェックは35件。
