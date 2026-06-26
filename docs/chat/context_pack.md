@@ -184,3 +184,14 @@
 - 既存の会員向け `pro_bowlers.public_show` は維持し、公開ルートから来た時だけ公開プロフィールViewを返す。
 - `config/jpba_public.php` の `選手データ` ナビは `public.players.index` を指す。
 - 未チェックは34件。
+
+## 2026-06-26 追記: トーナメント公開ページ
+
+- `/tournament` は `PublicTournamentController@index`、ルート名は `public.tournaments.index`。
+- `/tournament/{tournament}` は `PublicTournamentController@show`、ルート名は `public.tournaments.show`。
+- `/tournament/index.html` は `/tournament` へ301リダイレクトする。
+- 公開側は管理画面の `/tournaments` と衝突しないよう、現行サイト寄りの単数形URL `/tournament` にしている。
+- 一覧検索条件は、大会区分、年、月、地区。地区は会場名/会場住所の都道府県キーワードで絞る。
+- 詳細は `tournament_files.visibility=public`、`sidebar_schedule`、`result_cards`、`simple_result_pdfs`、`tournament_results` 上位行を読む。
+- `config/jpba_public.php` の `トーナメント` ナビは `public.tournaments.index` を指す。
+- 未チェックは33件。

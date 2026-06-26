@@ -53,6 +53,8 @@
 - `/schedule` は `PublicPageController@schedule` で表示し、`tournaments` / `calendar_events` を年別・月別に並べます。
 - `/players` は `PublicPlayerController@index` で表示し、`pro_bowlers` を氏名、ライセンスNo範囲、性別、地区、退会者で検索します。
 - `/players/{id}` は `PublicProfileController@show` で表示し、公開検索から個別プロフィールへ遷移します。
+- `/tournament` は `PublicTournamentController@index` で表示し、`tournaments` を大会区分、年、月、地区で検索します。
+- `/tournament/{tournament}` は `PublicTournamentController@show` で表示し、公開PDF、速報/成績リンク、結果カード、上位成績を表示します。
 - トップ大会枠は `tournaments` と公開 `tournament_files` を読みます。
 - INFORMATION枠は `Information::active()->public()` を読みます。
 - 現行サイト由来の外部ナビ、PDF、フッター導線は `config/jpba_public.php` に集約しています。
@@ -63,9 +65,10 @@
 2. 公開トップのLaravel初期画面をJPBAトップ構成へ差し替える。
 3. JPBAについて・スケジュールの公開ページをLaravel側に用意する。
 4. 選手データ公開検索をLaravel側に用意する。
-5. 大会バナー枠をDB正本から表示する。
-6. PDFリンク・協賛バナー・外部リンク・SNSリンクを管理可能にする。
-7. 旧URL互換と `jpba1.jp` / `jpba.or.jp` の分担を決める。
+5. トーナメント公開ページをLaravel側に用意する。
+6. 大会バナー枠をDB正本から表示する。
+7. PDFリンク・協賛バナー・外部リンク・SNSリンクを管理可能にする。
+8. 旧URL互換と `jpba1.jp` / `jpba.or.jp` の分担を決める。
 
 ## 完了条件
 

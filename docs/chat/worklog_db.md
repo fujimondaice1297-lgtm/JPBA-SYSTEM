@@ -7390,3 +7390,26 @@ User::where('email','domaine-d@i.softbank.jp')->exists(); // true
 - 次の自然な作業:
   1. `トーナメント` 公開ページで、大会ページ、速報、成績、PDF、トピックスリンクを現行サイト互換で表示する。
   2. `インストラクター` 公開ページで、講習情報、スクール情報、テキスト販売、制度概要、ライセンス別一覧を整理する。
+
+---
+
+## 2026-06-26 トーナメント公開ページ
+
+- 目的:
+  - Active Backlog Bの `トーナメント` 公開ページを進める。
+  - 現行JPBA1の条件検索、大会ページ、速報/成績/PDF/トピックス導線をLaravel側へ寄せる。
+
+- 実施内容:
+  - `app/Http/Controllers/PublicTournamentController.php` を追加した。
+  - `/tournament` を `public.tournaments.index` として追加した。
+  - `/tournament/{tournament}` を `public.tournaments.show` として追加した。
+  - `/tournament/index.html` は `/tournament` へ301リダイレクトする。
+  - 公開側は管理画面の `/tournaments` と衝突しないよう、現行サイト寄りの単数形URLにした。
+  - 一覧は `tournaments` を大会区分、年、月、地区で検索し、公開 `tournament_files` の資料リンクも表示する。
+  - 詳細は大会基本情報、公開PDF、`sidebar_schedule` の速報/成績リンク、`result_cards` / `simple_result_pdfs`、`tournament_results` 上位成績を表示する。
+  - `config/jpba_public.php` のトップナビで、`トーナメント` をローカル公開ページへ向けた。
+  - 未チェックは33件。
+
+- 次の自然な作業:
+  1. `インストラクター` 公開ページで、講習情報、スクール情報、テキスト販売、制度概要、ライセンス別一覧を整理する。
+  2. `プロテスト` 公開ページで、受験の流れ、実施概要、申請/結果PDF、受験者講習会情報を整理する。
