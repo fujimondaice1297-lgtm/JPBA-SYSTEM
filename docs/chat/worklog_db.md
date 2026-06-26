@@ -7321,3 +7321,26 @@ User::where('email','domaine-d@i.softbank.jp')->exists(); // true
 - 次の自然な作業:
   1. 公開トップのLaravel初期画面を、現行JPBA1トップ構成に置き換える。
   2. トップの大会バナー/日程枠をDB正本から表示し、PDFリンクも管理できるようにする。
+
+---
+
+## 2026-06-26 公開トップのDB表示化
+
+- 目的:
+  - Active Backlog Bの `トップの大会バナー/日程枠をDB正本から表示し、PDFリンクも管理できるようにする` を進める。
+  - `/` のLaravel初期画面をやめ、現行JPBAトップの導線を保った公開トップにする。
+
+- 実施内容:
+  - `app/Http/Controllers/PublicHomeController.php` を追加した。
+  - `/` を `PublicHomeController@index` へ差し替え、ルート名を `public.home` にした。
+  - `resources/views/public/home.blade.php` を追加した。
+  - トップの大会枠は `tournaments` を読み、未来/開催中を優先、該当がなければ直近大会を表示する。
+  - 大会カードには `hero_image_path` / `image_path` / `title_logo_path` / `poster_images` を利用し、公開 `tournament_files` のPDFリンクも表示する。
+  - INFORMATION枠は `Information::active()->public()` を読み、一般公開のお知らせを表示する。
+  - 現行サイト由来の上部メニュー、更新履歴、プロボウラー専用ページ、PDF、フッター導線は `config/jpba_public.php` にまとめた。
+  - 外部チャンネルURLは正確なhrefを確認できるまで空配列にし、誤URLを出さない方針にした。
+  - 未チェックは37件。
+
+- 次の自然な作業:
+  1. `JPBAについて` の協会概要、会長挨拶、運営機構図、役員・代議員名簿、定款、事業計画、予算、事業報告、財務PDFを公開ページとして整理する。
+  2. `スケジュール` ページを年次/月次カレンダーとPDF導線込みで現行サイトの見た目へ寄せる。

@@ -46,6 +46,13 @@
 - `calendar_events`: 年間/月間スケジュール、PDF出力
 - 後続候補の公開リンク管理: PDF、外部リンク、協賛バナー、SNSリンク
 
+## 実装メモ
+
+- `/` は `PublicHomeController@index` で表示します。
+- トップ大会枠は `tournaments` と公開 `tournament_files` を読みます。
+- INFORMATION枠は `Information::active()->public()` を読みます。
+- 現行サイト由来の外部ナビ、PDF、フッター導線は `config/jpba_public.php` に集約しています。
+
 ## 実装順の候補
 
 1. INFORMATIONカテゴリとDB制約を現行サイトに合わせる。

@@ -154,3 +154,13 @@
 - `informations_category_check` を更新するmigrationを追加し、DBでも `TV情報` を許可する。
 - `/info`、`/info/{information}`、`/info/files/{informationFile}` はログイン不要の公開ルート。会員向けは `/member/info` 系のまま。
 - 未チェックは38件。
+
+## 2026-06-26 追記: 公開トップのDB表示化
+
+- `/` は `PublicHomeController@index`、ルート名は `public.home`。
+- 公開トップViewは `resources/views/public/home.blade.php`。
+- 大会枠は `tournaments` と公開 `tournament_files` を読み、未来/開催中優先、なければ直近大会を表示する。
+- 大会画像は `hero_image_path` / `image_path` / `title_logo_path` / `poster_images` の順に使い、なければ `public/images/jpba_logo.png` を表示する。
+- INFORMATION枠は `Information::active()->public()` を読む。
+- 現行サイト由来の外部ナビ、PDF、フッター導線は `config/jpba_public.php`。
+- 未チェックは37件。

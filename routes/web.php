@@ -26,7 +26,7 @@ use App\Http\Controllers\{
     CalendarController, CalendarEventController, ProBowlerTitleController, TitleSyncController,
     MemberDashboardController, InformationController, TournamentEntryBallController,
     TournamentEntryController, DrawController, ProBowlerImportController, AuthInstructorImportController, HofController, HofManageController,
-    AuthController, ScoreController, EligibilityController, PublicProfileController, FlashNewsController,
+    AuthController, ScoreController, EligibilityController, PublicHomeController, PublicProfileController, FlashNewsController,
     FlashNewsPublicController
 };
 
@@ -166,7 +166,7 @@ if (app()->environment('local')) {
 /* ========================
    トップ
 ======================== */
-Route::get('/', fn () => view('welcome'));
+Route::get('/', [PublicHomeController::class, 'index'])->name('public.home');
 
 /* ========================
    認証（公開）
