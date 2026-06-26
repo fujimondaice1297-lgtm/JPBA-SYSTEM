@@ -195,3 +195,14 @@
 - 詳細は `tournament_files.visibility=public`、`sidebar_schedule`、`result_cards`、`simple_result_pdfs`、`tournament_results` 上位行を読む。
 - `config/jpba_public.php` の `トーナメント` ナビは `public.tournaments.index` を指す。
 - 未チェックは33件。
+
+## 2026-06-26 追記: インストラクター公開ページ
+
+- `/instructor` は `PublicInstructorController@index`、ルート名は `public.instructors.index`。
+- `/instructor/index.html` は `/instructor` へ301リダイレクトする。
+- 公開Viewは `resources/views/public/instructors/index.blade.php`。
+- 上部の制度/講習/スクール/テキスト/ライセンス別導線は `config/jpba_public.php` の `instructor` を読む。
+- 最新情報は `informations.category = ｲﾝｽﾄﾗｸﾀｰ` の一般公開データを読む。
+- ライセンス別一覧は `instructor_registry` の `is_current=true` / `is_active=true` / `is_visible=true` を読む。
+- `config/jpba_public.php` の `インストラクター` ナビは `public.instructors.index` を指す。
+- 未チェックは32件。

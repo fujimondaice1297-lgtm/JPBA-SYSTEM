@@ -7413,3 +7413,26 @@ User::where('email','domaine-d@i.softbank.jp')->exists(); // true
 - 次の自然な作業:
   1. `インストラクター` 公開ページで、講習情報、スクール情報、テキスト販売、制度概要、ライセンス別一覧を整理する。
   2. `プロテスト` 公開ページで、受験の流れ、実施概要、申請/結果PDF、受験者講習会情報を整理する。
+
+---
+
+## 2026-06-26 インストラクター公開ページ
+
+- 目的:
+  - Active Backlog Bの `インストラクター` 公開ページを進める。
+  - 現行JPBA1の講習情報、スクール情報、テキスト販売、制度概要、ライセンス別情報をLaravel側へ寄せる。
+
+- 実施内容:
+  - `app/Http/Controllers/PublicInstructorController.php` を追加した。
+  - `/instructor` を `public.instructors.index` として追加した。
+  - `/instructor/index.html` は `/instructor` へ301リダイレクトする。
+  - `resources/views/public/instructors/index.blade.php` を追加した。
+  - 公開ページ上部に講習情報、スクール情報、テキスト販売、制度概要、ライセンス別情報への導線を表示する。
+  - INFORMATIONの `ｲﾝｽﾄﾗｸﾀｰ` カテゴリから最新のお知らせを表示する。
+  - `instructor_registry` の current / active / visible 行を正本として、氏名、番号、区分、級、地区で検索できるライセンス別一覧を表示する。
+  - `config/jpba_public.php` のトップナビで、`インストラクター` をローカル公開ページへ向けた。
+  - 未チェックは32件。
+
+- 次の自然な作業:
+  1. `プロテスト` 公開ページで、受験の流れ、実施概要、申請/結果PDF、受験者講習会情報を整理する。
+  2. `トピックス` 公開ページで、記事本文、画像、達成記録、社会貢献活動、プロボウラー紹介、大会ページリンクを扱えるようにする。

@@ -26,7 +26,7 @@ use App\Http\Controllers\{
     CalendarController, CalendarEventController, ProBowlerTitleController, TitleSyncController,
     MemberDashboardController, InformationController, TournamentEntryBallController,
     TournamentEntryController, DrawController, ProBowlerImportController, AuthInstructorImportController, HofController, HofManageController,
-    AuthController, ScoreController, EligibilityController, PublicHomeController, PublicPageController, PublicPlayerController, PublicProfileController, PublicTournamentController, FlashNewsController,
+    AuthController, ScoreController, EligibilityController, PublicHomeController, PublicInstructorController, PublicPageController, PublicPlayerController, PublicProfileController, PublicTournamentController, FlashNewsController,
     FlashNewsPublicController
 };
 
@@ -180,6 +180,8 @@ Route::get('/tournament/{tournament}', [PublicTournamentController::class, 'show
     ->whereNumber('tournament')
     ->name('public.tournaments.show');
 Route::redirect('/tournament/index.html', '/tournament', 301);
+Route::get('/instructor', [PublicInstructorController::class, 'index'])->name('public.instructors.index');
+Route::redirect('/instructor/index.html', '/instructor', 301);
 
 /* ========================
    認証（公開）

@@ -6,7 +6,7 @@ return [
         ['label' => 'スケジュール', 'route' => 'public.schedule'],
         ['label' => '選手データ', 'route' => 'public.players.index'],
         ['label' => 'トーナメント', 'route' => 'public.tournaments.index'],
-        ['label' => 'インストラクター', 'url' => 'https://www.jpba1.jp/instructor/index.html'],
+        ['label' => 'インストラクター', 'route' => 'public.instructors.index'],
         ['label' => 'プロテスト', 'url' => 'https://www.jpba1.jp/protest/index.html'],
         ['label' => 'トピックス', 'url' => 'https://www.jpba.or.jp/topics.html'],
     ],
@@ -60,6 +60,43 @@ return [
             ['label' => '2026年度収支予算(PDF)', 'url' => 'https://www.jpba1.jp/assets/pdf/Association/2026/Budget_2026.pdf'],
             ['label' => '2025年度事業報告(PDF)', 'url' => 'https://www.jpba1.jp/assets/pdf/Association/2026/Report_2025.pdf'],
             ['label' => '2025年度正味財産増減計算書(PDF)', 'url' => 'https://www.jpba1.jp/assets/pdf/Association/2026/Settlement_2025.pdf'],
+        ],
+    ],
+
+    'instructor' => [
+        'summary' => [
+            '公益社団法人日本プロボウリング協会では、ボウリングの普及・指導に携わるインストラクター制度を設けています。',
+            '講習情報、スクール情報、テキスト販売、制度概要、ライセンス別情報を公開導線として整理し、名簿は instructor_registry を正本として表示します。',
+        ],
+        'feature_links' => [
+            [
+                'label' => 'インストラクター講習情報',
+                'description' => '講習会・研修会など、インストラクター向けのお知らせを確認できます。',
+                'url' => 'https://www.jpba1.jp/instructor/instructor_guide.html',
+            ],
+            [
+                'label' => 'ボウリングスクール開講のご案内',
+                'description' => 'スクール開講に関する案内、要件、関連資料を確認できます。',
+                'url' => 'https://www.jpba1.jp/instructor/school_guide.html',
+            ],
+            [
+                'label' => 'インストラクターテキスト販売',
+                'description' => '指導者向けテキストや教材の販売案内です。',
+                'url' => 'https://www.jpba1.jp/instructor/textbook.html',
+            ],
+            [
+                'label' => 'インストラクター制度概要',
+                'description' => 'JPBAインストラクター制度の概要を確認できます。',
+                'url' => 'https://www.jpba1.jp/instructor/overview.html',
+            ],
+        ],
+        'license_links' => [
+            ['label' => 'A級インストラクター', 'url' => 'https://www.jpba1.jp/instructor/ins_a.html'],
+            ['label' => 'B級インストラクター', 'url' => 'https://www.jpba1.jp/instructor/ins_b.html'],
+            ['label' => 'C級インストラクター', 'url' => 'https://www.jpba1.jp/instructor/ins_c.html'],
+            ['label' => 'プロ・インストラクター', 'url' => 'https://www.jpba1.jp/instructor/ins_pro.html'],
+            ['label' => '1級・2級インストラクター', 'url' => 'https://www.jpba1.jp/instructor/ins_12.html'],
+            ['label' => '健康ボウリング指導員', 'url' => 'https://www.jpba1.jp/instructor/ins_shidoin.html'],
         ],
     ],
 
