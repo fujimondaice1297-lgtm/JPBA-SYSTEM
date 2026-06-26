@@ -136,3 +136,11 @@
 - 境界は `画像/PDF原本バッチ -> OCR処理 -> ScoreImportOcrTextAdapterService -> ScoreImportOcrResultStageService -> score_import_rows`。
 - `game_scores` / `tournament_results` へ直接書き込まず、人間確認後に確定反映する。
 - 未チェックは41件。
+
+## 2026-06-26 追記: スコア取込運用手順書
+
+- `docs/operations/score_import_runbook.md` を追加した。
+- CSV、Excel/Googleスプレッドシート貼り付け、写真/PDF原本、OCR JSON、OCR/AI出力貼り付けの共通手順書。
+- すべて `score_import_rows` -> 人間確認 -> `game_scores` の流れにそろえる。
+- 次にスコア取込運用を確認するときは、この手順書を正本として読む。
+- 未チェックは40件。

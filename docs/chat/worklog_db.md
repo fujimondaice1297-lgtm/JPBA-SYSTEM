@@ -7274,3 +7274,28 @@ User::where('email','domaine-d@i.softbank.jp')->exists(); // true
 - 次の自然な作業:
   1. 実データの紙成績表画像/PDFから外部OCR/AI出力を作り、プレビューJSONの `boundary` と `payload.rows` を確認する。
   2. CSV / Excel / OCR JSON / OCR貼り付け変換を同じ運用手順書にまとめる。
+
+---
+
+## 2026-06-26 スコア取込運用手順書
+
+- 目的:
+  - 未チェック項目 `CSV / Excel / OCR JSON / OCR貼り付け変換を同じ運用手順書にまとめる` を進める。
+  - 取込方式ごとに操作が散らばらないよう、現場確認用の正本手順を作る。
+
+- 実施内容:
+  - `docs/operations/score_import_runbook.md` を追加した。
+  - 以下の入口を1つの手順書へまとめた。
+    - CSVファイル取込
+    - Excel/Googleスプレッドシート貼り付け
+    - 写真/PDF原本保存
+    - OCR JSON取込
+    - OCR/AI出力貼り付け
+  - すべての方式で、まず `score_import_batches` / `score_import_rows` に保存し、人間確認後に `game_scores` へ確定反映する流れを明記した。
+  - 実OCRエンジン接続時の境界として、`ScoreImportOcrEngineBoundaryService::buildEngineInput()` / `stageTextResult()` / `previewTextResult()` も記載した。
+  - 要確認理由、個別修正、一括修正、差し替え、反映後の扱い、トラブル時、完了条件を整理した。
+  - `progress_board.md` の該当未チェックを完了扱いにし、残り未チェックは40件。
+
+- 次の自然な作業:
+  1. 実データの紙成績表画像/PDFから外部OCR/AI出力を作り、貼り付け変換プレビューで `payload.rows` を確認する。
+  2. 貼り付け変換から `score_import_rows` 作成、要確認行修正、`game_scores` 確定反映まで通し確認する。

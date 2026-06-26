@@ -219,3 +219,11 @@ flowchart LR
 - OCRエンジン/AI出力テキストは `stageTextResult()` へ渡し、必ず `ScoreImportOcrTextAdapterService` -> `ScoreImportOcrResultStageService` -> `score_import_rows` の順に流す。
 - `game_scores` や `tournament_results` へ直接書き込まず、人間確認後の確定反映を必須にする境界として整理した。
 - 貼り付け変換画面も同じ境界サービスを通すようにした。この対応により、未チェックは41件になった。
+
+## 2026-06-26 追記: スコア取込運用手順書
+
+- `docs/operations/score_import_runbook.md` を追加した。
+- CSV、Excel/Googleスプレッドシート貼り付け、写真/PDF原本、OCR JSON、OCR/AI出力貼り付けを、同じ確認用ステージング運用として整理した。
+- 手順書では、すべての取込方式で `score_import_rows` -> 人間確認 -> `game_scores` の順に進めることを明記した。
+- 差し替え、反映後の扱い、要確認理由、トラブル時、完了条件もまとめた。
+- この対応により、未チェックは40件になった。
