@@ -185,6 +185,10 @@ class PublicProfileController extends Controller
             'season_trial_titles_count' => $seasonTrialTitles->count(),
         ];
 
-        return view('pro_bowlers.public_show', compact('view'));
+        $viewName = request()->routeIs('public.players.show')
+            ? 'public.players.show'
+            : 'pro_bowlers.public_show';
+
+        return view($viewName, compact('view'));
     }
 }

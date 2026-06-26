@@ -173,3 +173,14 @@
 - `JPBAについて` の協会概要、事業、公式資料PDF導線は `config/jpba_public.php` の `association` を読む。
 - `スケジュール` は `tournaments` / `calendar_events` を読み、年別・月別に表示する。指定年にデータがなければDB上の最新年へ寄せる。
 - 未チェックは35件。
+
+## 2026-06-26 追記: 選手データ公開検索
+
+- `/players` は `PublicPlayerController@index`、ルート名は `public.players.index`。
+- `/players/{id}` は `PublicProfileController@show`、ルート名は `public.players.show`。
+- `/player` と `/player/index.html` は `/players` へ301リダイレクトする。
+- 検索条件は、氏名、ライセンスNo範囲、性別、地区、退会者。公開側では `is_visible=true` を前提に、通常検索は `is_active=true`、退会者検索は退会ステータス/非アクティブを読む。
+- 公開検索Viewは `resources/views/public/players/index.blade.php`、公開プロフィールViewは `resources/views/public/players/show.blade.php`。
+- 既存の会員向け `pro_bowlers.public_show` は維持し、公開ルートから来た時だけ公開プロフィールViewを返す。
+- `config/jpba_public.php` の `選手データ` ナビは `public.players.index` を指す。
+- 未チェックは34件。

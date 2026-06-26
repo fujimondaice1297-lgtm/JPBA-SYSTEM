@@ -4,7 +4,7 @@ return [
     'primary_nav' => [
         ['label' => 'JPBAについて', 'route' => 'public.about'],
         ['label' => 'スケジュール', 'route' => 'public.schedule'],
-        ['label' => '選手データ', 'url' => 'https://www.jpba1.jp/player/index.html'],
+        ['label' => '選手データ', 'route' => 'public.players.index'],
         ['label' => 'トーナメント', 'url' => 'https://www.jpba.or.jp/'],
         ['label' => 'インストラクター', 'url' => 'https://www.jpba1.jp/instructor/index.html'],
         ['label' => 'プロテスト', 'url' => 'https://www.jpba1.jp/protest/index.html'],

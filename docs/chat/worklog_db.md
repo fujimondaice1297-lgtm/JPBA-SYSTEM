@@ -7367,3 +7367,26 @@ User::where('email','domaine-d@i.softbank.jp')->exists(); // true
 - 次の自然な作業:
   1. `選手データ` の公開検索を、氏名、ライセンスNo範囲、性別、地区、退会者導線まで現行サイトと照合する。
   2. `トーナメント` 公開ページで、大会ページ、速報、成績、PDF、トピックスリンクを現行サイト互換で表示する。
+
+---
+
+## 2026-06-26 選手データ公開検索
+
+- 目的:
+  - Active Backlog Bの `選手データ` 公開検索を進める。
+  - 現行JPBA1の検索条件である氏名、ライセンスNo範囲、性別、地区、退会者導線をLaravel側へ寄せる。
+
+- 実施内容:
+  - `app/Http/Controllers/PublicPlayerController.php` を追加した。
+  - `/players` を `public.players.index` として追加した。
+  - `/players/{id}` を `public.players.show` として追加し、公開検索結果から個別プロフィールへ遷移できるようにした。
+  - `/player` と `/player/index.html` は `/players` へ301リダイレクトする。
+  - `resources/views/public/players/index.blade.php` を追加し、氏名、ライセンスNo範囲、性別、地区、退会者検索を表示した。
+  - `resources/views/public/players/show.blade.php` を追加し、公開レイアウトでプロフィール、タイトル、SNS/所属先リンクを表示した。
+  - 既存の `PublicProfileController@show` は、公開ルートから来た場合だけ公開用Viewを返す。会員向け既存Viewは維持する。
+  - `config/jpba_public.php` のトップナビで、`選手データ` をローカル公開ページへ向けた。
+  - 未チェックは34件。
+
+- 次の自然な作業:
+  1. `トーナメント` 公開ページで、大会ページ、速報、成績、PDF、トピックスリンクを現行サイト互換で表示する。
+  2. `インストラクター` 公開ページで、講習情報、スクール情報、テキスト販売、制度概要、ライセンス別一覧を整理する。

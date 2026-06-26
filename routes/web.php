@@ -26,7 +26,7 @@ use App\Http\Controllers\{
     CalendarController, CalendarEventController, ProBowlerTitleController, TitleSyncController,
     MemberDashboardController, InformationController, TournamentEntryBallController,
     TournamentEntryController, DrawController, ProBowlerImportController, AuthInstructorImportController, HofController, HofManageController,
-    AuthController, ScoreController, EligibilityController, PublicHomeController, PublicPageController, PublicProfileController, FlashNewsController,
+    AuthController, ScoreController, EligibilityController, PublicHomeController, PublicPageController, PublicPlayerController, PublicProfileController, FlashNewsController,
     FlashNewsPublicController
 };
 
@@ -169,6 +169,12 @@ if (app()->environment('local')) {
 Route::get('/', [PublicHomeController::class, 'index'])->name('public.home');
 Route::get('/about', [PublicPageController::class, 'about'])->name('public.about');
 Route::get('/schedule', [PublicPageController::class, 'schedule'])->name('public.schedule');
+Route::get('/players', [PublicPlayerController::class, 'index'])->name('public.players.index');
+Route::get('/players/{id}', [PublicProfileController::class, 'show'])
+    ->whereNumber('id')
+    ->name('public.players.show');
+Route::redirect('/player', '/players', 301);
+Route::redirect('/player/index.html', '/players', 301);
 
 /* ========================
    認証（公開）
