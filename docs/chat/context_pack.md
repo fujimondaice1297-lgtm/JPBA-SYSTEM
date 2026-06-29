@@ -257,3 +257,11 @@
 - 敗者側ブラケット、リセット決勝、敗者側順位、同順位扱い、再戦条件、`DE:*` の `game_scores.entry_number` 候補、snapshot保存内容、PDF方針を整理した。
 - `docs/operations/tournament_pdf_template_policy.md` を追加し、大会IDや大会名ごとの専用Bladeを作らず、DB設定・共通Controller・方式別partialでPDFを拡張する運用に固定した。
 - Active Backlog C/Dの2件を完了扱いにし、未チェックは19件。
+
+## 2026-06-30 追記: 大会方式のソース確認ルール
+
+- `docs/operations/tournament_format_source_policy.md` を追加した。
+- ラウンドロビン、ダブルエリミネーションなどの方式は、一般的な大会方式説明だけで固定実装しない。
+- JPBA公式大会要項PDF、公式成績PDF、現行サイトの速報・成績、既存DBデータを優先し、一般説明は補助資料に留める。
+- `docs/operations/double_elimination_design.md` のリセット決勝、敗者側順位、同順位扱い、再戦条件は、JPBA資料確認前の仮設計であることを明記した。
+- 未チェックは19件のまま。

@@ -2,6 +2,12 @@
 
 更新日: 2026-06-30
 
+## 大会方式ルールの扱い
+
+PDFの方式別文言や表示項目は、方式名だけで固定しない。ラウンドロビン、ダブルエリミネーションなどは大会ごとの要項で、ゲーム数、通過人数、ボーナスポイント、リセット決勝、順位決定方法が変わる可能性がある。
+
+実装時は `docs/operations/tournament_format_source_policy.md` を参照し、JPBA公式資料と既存DBデータで確認できた設定を `result_flow_type`、方式別設定JSON、snapshotの `calculation_definition` からPDFへ渡す。
+
 ## 目的
 
 大会ごとにBladeを直接手修正する運用をやめ、DB設定・共通Controller・方式別partialで公式PDFを再現する。  

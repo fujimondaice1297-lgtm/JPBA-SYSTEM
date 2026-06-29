@@ -1461,6 +1461,13 @@
 - [✓] 棚卸し、スコア取込/OCR、公開導線、ランキング/シード、大会終了処理、成績フロー診断、方式別回帰、PDF共通ルール、残作業を一箇所に整理した
 - [✓] 残り未チェックは23件のまま
 
+#### 2026-06-30 メモ（大会方式のソース確認ルール）
+- [✓] `docs/operations/tournament_format_source_policy.md` を追加し、ラウンドロビンやダブルエリミネーションを一般論だけで固定実装しないルールを定めた
+- [✓] JPBA公式大会要項PDF、公式成績PDF、現行サイトの速報・成績、既存DBデータを優先し、一般的な大会方式説明は補助資料に留める方針にした
+- [✓] `docs/operations/double_elimination_design.md` のリセット決勝・順位決定・再戦条件を、JPBA資料確認前の仮設計として明記した
+- [✓] `docs/operations/result_flow_regression_audit.md` と `docs/operations/tournament_pdf_template_policy.md` にも、方式名だけでPDF文言や集計ルールを固定しない注意を追記した
+- [✓] 残り未チェックは19件のまま
+
 ##### 次に行う候補（Active Backlog）
 
 ###### A. 直近のスコア/OCR運用

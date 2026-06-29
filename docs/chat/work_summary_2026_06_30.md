@@ -82,6 +82,12 @@
 - 敗者側ブラケット、リセット決勝、敗者側順位、同順位扱い、再戦条件、`DE:*` のスコアキー、snapshot保存内容を整理した。
 - `docs/operations/tournament_pdf_template_policy.md` を追加し、大会ごとのBlade直接手修正を避ける運用に固定した。
 
+### 10. 大会方式のソース確認ルール
+
+- `docs/operations/tournament_format_source_policy.md` を追加した。
+- ラウンドロビンやダブルエリミネーションは、一般的な方式説明だけで固定実装せず、JPBA公式大会要項PDF、公式成績PDF、現行サイト、既存DBデータを優先して確認する方針にした。
+- `docs/operations/double_elimination_design.md` のリセット決勝、敗者側順位、同順位扱い、再戦条件を、JPBA資料確認前の仮設計として明記した。
+
 ## 残っている大きな作業
 
 - 実データの紙成績表画像/PDFからOCR/AI出力を作り、貼り付け変換プレビュー、`score_import_rows`、要確認行修正、`game_scores` 確定反映まで通し確認する。

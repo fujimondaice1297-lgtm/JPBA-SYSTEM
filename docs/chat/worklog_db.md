@@ -7644,3 +7644,43 @@ User::where('email','domaine-d@i.softbank.jp')->exists(); // true
 - 次の自然な作業:
   1. ランキング取込・年度末確定・全日本選手権用年度途中ランキング・優先出場順位の整理をまとめて進める。
   2. シングルエリミネーションfixtureを復元/再作成し、速報、正式成績snapshot、PDFまで再確認する。
+
+---
+
+## 2026-06-30 大会方式のソース確認ルール
+
+- 目的:
+  - ユーザーから、ラウンドロビンやダブルエリミネーションは検索して正しい状態で修正するよう注意があったため、今後の方式実装で一般論を固定ロジックにしないルールを明文化する。
+  - 既存のダブルエリミネーション設計メモを、JPBA資料確認前の仮設計として扱うよう補正する。
+
+- 外部確認:
+  - JPBA公式トップ:
+    - `https://www.jpba1.jp/`
+  - JPBA公認トーナメント一覧:
+    - `https://www.jpba.or.jp/information/tournament/tournament.html`
+  - 2026 JPBAトーナメント予定表PDF:
+    - `https://www.jpba.or.jp/information/tournament/tournament2026/PDF/2026_TournamentSchedule_260622.pdf`
+  - ラウンドロビンの一般説明:
+    - `https://en.wikipedia.org/wiki/Round-robin_tournament`
+  - ダブルエリミネーションの一般説明:
+    - `https://en.wikipedia.org/wiki/Double-elimination_tournament`
+
+- 判断:
+  - JPBA公式トップ、公認トーナメント一覧、予定表PDFでは、大会名、日程、ランキング算入、AVG、賞金、タイトル欄は確認できた。
+  - ただし、公開一覧と予定表PDFだけでは、ラウンドロビンやダブルエリミネーションの詳細ルールまでは確定できない。
+  - 一般的なラウンドロビンは総当たり方式、一般的なダブルエリミネーションは2敗敗退方式として理解できるが、JPBA実装では大会要項、公式成績PDF、速報、既存DBデータを優先する。
+
+- 実施内容:
+  - `docs/operations/tournament_format_source_policy.md` を追加した。
+  - 正本の優先順位を、JPBA公式大会要項PDF、公式成績PDF、現行サイトの速報・成績、既存DBデータ、一般説明の順にした。
+  - `docs/operations/double_elimination_design.md` に、リセット決勝、敗者側順位、同順位扱い、再戦条件はJPBA資料確認前の仮設計であることを追記した。
+  - `docs/operations/result_flow_regression_audit.md` に、DB実データ回帰確認は公式ルール確定資料ではないことを追記した。
+  - `docs/operations/tournament_pdf_template_policy.md` に、方式名だけでPDF文言や集計ルールを固定しない注意を追記した。
+
+- Active Backlog更新:
+  - 新規の未チェック消化ではなく、今後の作業ガードとして記録した。
+  - 残り未チェックは19件のまま。
+
+- 次の自然な作業:
+  1. ランキング取込・年度末確定・全日本選手権用年度途中ランキング・優先出場順位の整理をまとめて進める。
+  2. シングルエリミネーションfixtureを復元/再作成し、速報、正式成績snapshot、PDFまで再確認する。
