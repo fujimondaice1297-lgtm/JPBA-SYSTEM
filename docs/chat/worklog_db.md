@@ -7581,3 +7581,35 @@ User::where('email','domaine-d@i.softbank.jp')->exists(); // true
   - Active Backlogの未チェックは23件。
   - `storage/backups/` は引き続きGit管理外。
   - 次に進むなら、実OCR/AI出力の通し確認、またはシングルエリミネーションfixture復元が自然。
+
+---
+
+## 2026-06-30 データ正本の役割整理
+
+- 目的:
+  - Active Backlog C/Eのうち、賞金・ポイント配分の正本整理と、登録ボール/使用ボールの正本整理をまとめて進める。
+  - DB migrationを追加せず、現行実装と現物スキーマに合わせて「新規自動化が読むべき正本」を固定する。
+
+- 確認した実装:
+  - `TournamentResultSnapshotService` / `TournamentResultSnapshotController` は、ポイントを `point_distributions.points`、賞金を `prize_distributions.amount` から読んでいる。
+  - `TournamentAutomationReadinessService` も `point_distributions` / `prize_distributions` を診断対象にしている。
+  - `RegisteredBallController` は `registered_balls` 作成/更新後に `used_balls` へ同期する。
+  - `TournamentEntryBallController` は大会使用ボール画面の表示前にも `registered_balls -> used_balls` 同期を行う。
+  - `tournament_entry_balls` はエントリーごとの使用ボール選択履歴を保持する。
+
+- 実施内容:
+  - `docs/operations/data_source_ownership.md` を追加した。
+  - `docs/db/data_dictionary.md` の `point_distributions` / `prize_distributions` / `tournament_points` / `tournament_awards` / `tournament_entry_balls` / `registered_balls` / `used_balls` を更新した。
+  - ポイント配分は `point_distributions`、賞金配分は `prize_distributions` を正本とする方針を固定した。
+  - `tournament_points` / `tournament_awards` は旧互換として残し、新規自動化・集計・PDF出力では参照しない方針を固定した。
+  - 公式登録ボール台帳は `registered_balls`、大会エントリーの選択候補は `used_balls`、エントリーごとの選択結果は `tournament_entry_balls` として役割を固定した。
+  - 仮登録は `inspection_number` なし、または `expires_at` NULL として扱い、期限切れの `used_balls` は通常の選択候補から外す方針を記録した。
+
+- Active Backlog更新:
+  - `tournament_awards` / `tournament_points` と `prize_distributions` / `point_distributions` の役割整理を完了扱いにした。
+  - `registered_balls` と `used_balls` の役割分担を完了扱いにした。
+  - 残り未チェックは21件。
+
+- 次の自然な作業:
+  1. 実OCR/AI出力の通し確認を行う。
+  2. シングルエリミネーションfixtureを復元/再作成し、速報、正式成績snapshot、PDFまで再確認する。

@@ -8,7 +8,7 @@
 - 目的は、現行サイトの見た目と公開導線を保ちながら、DB・PHP・運用手順を整理し、手作業運用を自動化へ寄せること。
 - この総括を作成する直前のGitHub `main` 反映済みコミットは `3c57537`。
 - 作業後の通常差分はなし。未追跡の `storage/backups/` はバックアップ/投入スクリプト置き場としてGit管理外のまま維持する。
-- Active Backlogの未チェックは23件。
+- Active Backlogの未チェックは21件。
 
 ## 進めた主な作業
 
@@ -68,16 +68,21 @@
 - `MatchScoreSheetImageService` の `imagefilledpolygon()` 非推奨警告を修正した。
 - `docs/operations/pdf_common_output_rules.md` を追加し、氏名、期表示、ライセンス下4桁、賞金欄、方式別文言混入防止、警告NGをPDF共通表示ルールとして固定した。
 
+### 8. データ正本の役割整理
+
+- `docs/operations/data_source_ownership.md` を追加した。
+- ポイント配分は `point_distributions`、賞金配分は `prize_distributions` を正本とし、`tournament_points` / `tournament_awards` は旧互換として扱う方針を固定した。
+- 公式登録ボール台帳は `registered_balls`、大会エントリーで選べる使用ボール候補は `used_balls`、エントリーごとの選択履歴は `tournament_entry_balls` として役割を固定した。
+- `docs/db/data_dictionary.md` に、配分正本、旧互換テーブル、登録ボール同期、仮登録、有効期限の扱いを追記した。
+
 ## 残っている大きな作業
 
 - 実データの紙成績表画像/PDFからOCR/AI出力を作り、貼り付け変換プレビュー、`score_import_rows`、要確認行修正、`game_scores` 確定反映まで通し確認する。
 - シングルエリミネーションfixtureを復元/再作成し、速報、正式成績snapshot、PDFまで再確認する。
 - 通常トータルピン方式のみの大会fixtureを作り、通常PDFへの方式別文言混入がないことを確認する。
 - ダブルエリミネーション方式を設計する。
-- `tournament_awards` / `tournament_points` と `prize_distributions` / `point_distributions` の役割を整理する。
 - ランキング取込、年度末確定処理、年度途中ランキング運用、優先出場順位の反映を整理する。
 - エントリー管理に、チェックイン、当日運用、抽選結果公開、取消理由、一括繰り上げ履歴を接続する。
-- `registered_balls` と `used_balls` の役割分担を最終整理する。
 - `instructor_registry` への段階移行、ProTest要件/スキーマ/公開導線の整理を進める。
 - `tournaments` 周辺の最終スキーマ、辞書、ER、migrationを現DBと定期的に照合する。
 

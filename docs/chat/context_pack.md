@@ -242,3 +242,11 @@
 - 次へ進む前の総括として `docs/chat/work_summary_2026_06_30.md` を追加した。
 - ここまでのCodex作業を、棚卸し、スコア取込/OCR、公開導線、ランキング/シード、大会終了処理、成績フロー診断、方式別回帰、PDF共通ルール、残作業に分けて整理した。
 - 次に進む候補は、実OCR/AI出力の通し確認、またはシングルエリミネーションfixture復元。
+
+## 2026-06-30 追記: データ正本の役割整理
+
+- `docs/operations/data_source_ownership.md` を追加し、賞金・ポイント配分と登録ボール/使用ボールの正本を固定した。
+- ポイント配分は `point_distributions`、賞金配分は `prize_distributions` を正本とする。`tournament_points` / `tournament_awards` は旧互換として残し、新規自動化・集計・PDF出力では参照しない。
+- 公式登録ボール台帳は `registered_balls`、大会エントリーで選べる使用ボール候補は `used_balls`、エントリーごとの選択履歴は `tournament_entry_balls` を正本とする。
+- `docs/db/data_dictionary.md` に上記の役割、同期ルール、仮登録/有効期限の扱いを追記した。
+- Active Backlog C/Eの2件を完了扱いにし、未チェックは21件。

@@ -1,5 +1,5 @@
 // Auto-generated from docs/db/data_dictionary.md
-// Generated at: 2026-06-24T17:20:14+09:00
+// Generated at: 2026-06-30T01:29:50+09:00
 
 Project JPBA_SYSTEM {
   database_type: 'PostgreSQL'
@@ -356,4 +356,6 @@ Ref: tournament_seed_players.seed_list_player_id > pro_bowler_seed_list_players.
 Ref: tournament_seed_players.source_tournament_id > tournaments.id
 Ref: tournament_seed_players.tournament_id > tournaments.id
 Ref: tournaments.venue_id > venues.id
+Ref: used_balls.approved_ball_id > approved_balls.id
+Ref: used_balls.pro_bowler_id > pro_bowlers.id
 Ref: users.pro_bowler_id > pro_bowlers.id
