@@ -226,3 +226,13 @@
 - `大会運用ログ` の大会終了処理チェックリストに、速報・正式成績フロー診断を追加した。
 - 速報から正式成績への反映は、`score_import_rows` -> `game_scores` -> `tournament_result_snapshots` -> `tournament_results` / titles / PDF の順に、人間確認後のボタン方式で固定する。
 - Active Backlog Cの4件を完了扱いにし、未チェックは24件。
+
+## 2026-06-29 追記: 方式別回帰監査・PDF共通ルール
+
+- `docs/operations/result_flow_regression_audit.md` を追加した。
+- 現DBで確認できる実データは、大会ID 10（シーズントライアル + シュートアウト）と大会ID 11（THE OPEN + ラウンドロビン + ステップラダー）。
+- 大会ID 11のRR/ステップラダー、大会ID 10のシュートアウト、大会ID 10/11のPDF生成を確認した。
+- 現DBにはシングルエリミネーション大会と `SE:%` スコア行がないため、シングルエリミネーション実データ回帰は未完了として残す。
+- `MatchScoreSheetImageService` の `imagefilledpolygon()` 非推奨警告を修正した。
+- `docs/operations/pdf_common_output_rules.md` を追加し、PDF共通表示ルールを固定した。
+- Active Backlog DのPDF共通表示ルールを完了扱いにし、未チェックは23件。

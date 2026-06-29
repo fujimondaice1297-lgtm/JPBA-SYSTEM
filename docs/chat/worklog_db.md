@@ -7494,3 +7494,62 @@ User::where('email','domaine-d@i.softbank.jp')->exists(); // true
 - 次の自然な作業:
   1. ラウンドロビン、ステップラダー、シュートアウト、シングルエリミネーションの既存実装を実データで回帰確認する。
   2. 実データの紙成績表画像/PDFからOCR/AI出力を作り、貼り付け変換プレビューと `game_scores` 確定反映まで通し確認する。
+
+---
+
+## 2026-06-29 方式別回帰監査・PDF共通ルール
+
+- 目的:
+  - Active Backlog C/Dのうち、現DBで確認できる方式別回帰とPDF共通表示ルール固定を進める。
+  - 確認できない方式は無理に完了扱いにせず、必要なfixture不足として残す。
+
+- 現DBの確認対象:
+  - 大会ID 10:
+    - `JPBAシーズントライアル 2025 オータムシリーズ C会場`
+    - `result_flow_type = prelim_to_semifinal_to_shootout_to_final`
+    - `game_scores = 650`
+    - current snapshot 6件
+  - 大会ID 11:
+    - `大岡産業レディース THE OPEN 2025`
+    - `result_flow_type = prelim_to_rr_to_final`
+    - `game_scores = 1628`
+    - current snapshot 10件
+
+- 実データ回帰確認:
+  - ラウンドロビン:
+    - 大会ID 11で `RoundRobinService::build()` を実行。
+    - carry snapshotあり、8名、RR 8G、勝ち30P/引分15P、ポジションラウンド有効。
+    - 1位サンプルは久保田彩花、5勝3敗、Bonus 150。
+  - ステップラダー:
+    - 大会ID 11で `StepLadderService::build()` を実行。
+    - seed 3名、1回戦/優勝決定戦とも `done`。
+    - 最終順位3名、優勝は久保田彩花。
+  - シュートアウト:
+    - 大会ID 10で `ScoreController::buildShootoutResultPayload()` をReflection経由で実行。
+    - seed 8名、3試合すべて完了、優勝は水野耕佑。
+  - シングルエリミネーション:
+    - 現DBに `result_flow_type like %single_elimination%` の大会が0件。
+    - `game_scores.stage = トーナメント` かつ `entry_number like SE:%` の行も0件。
+    - 実データ回帰にはBBBカップ相当のfixture復元または再作成が必要。
+
+- PDF回帰確認:
+  - 大会ID 10のPDF生成:
+    - `%PDF` 生成、714646 bytes。
+  - 大会ID 11のPDF生成:
+    - `%PDF` 生成、515847 bytes。
+  - 大会ID 10のPDF生成時、`MatchScoreSheetImageService` の `imagefilledpolygon()` が非推奨警告を出したため修正。
+    - `num_points` 引数を外し、PHPの3引数形式へ変更。
+    - 修正後、大会ID 10のPDFは警告なしで `%PDF` 生成。
+
+- 追加した運用資料:
+  - `docs/operations/result_flow_regression_audit.md`
+  - `docs/operations/pdf_common_output_rules.md`
+
+- Active Backlog更新:
+  - PDF共通表示ルールを完了扱いにした。
+  - 方式別回帰確認は、シングルエリミネーション実データが現DBにないため未完了のまま残す。
+  - 残り未チェックは23件。
+
+- 次の自然な作業:
+  1. シングルエリミネーションfixtureを復元/再作成し、速報、正式成績snapshot、PDFまで再確認する。
+  2. 通常トータルピン方式のみの大会fixtureを作り、通常PDFへの方式別文言混入がないことを確認する。

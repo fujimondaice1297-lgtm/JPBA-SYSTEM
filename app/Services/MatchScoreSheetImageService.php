@@ -222,13 +222,13 @@ class MatchScoreSheetImageService
             $left, $top,
             $left, $bottom,
             $middleX, $middleY,
-        ], 3, $black);
+        ], $black);
 
         imagefilledpolygon($image, [
             $right, $top,
             $right, $bottom,
             $middleX, $middleY,
-        ], 3, $black);
+        ], $black);
     }
 
     private function drawSpareMark($image, int $x, int $y, int $w, int $h, int $black): void
@@ -237,7 +237,7 @@ class MatchScoreSheetImageService
             $x + $w - 1, $y + 1,
             $x + $w - 1, $y + $h - 1,
             $x + 1, $y + $h - 1,
-        ], 3, $black);
+        ], $black);
     }
 
     private function calculateCumulativeScoresForPdf(Collection $frames): array
