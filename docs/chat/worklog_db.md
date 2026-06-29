@@ -7436,3 +7436,27 @@ User::where('email','domaine-d@i.softbank.jp')->exists(); // true
 - 次の自然な作業:
   1. `プロテスト` 公開ページで、受験の流れ、実施概要、申請/結果PDF、受験者講習会情報を整理する。
   2. `トピックス` 公開ページで、記事本文、画像、達成記録、社会貢献活動、プロボウラー紹介、大会ページリンクを扱えるようにする。
+
+---
+
+## 2026-06-26 プロテスト・トピックス・フッター公開導線
+
+- 目的:
+  - Active Backlog Bの `プロテスト`、`トピックス`、フッター固定ページ、旧URL互換方針をまとめて進める。
+  - 現行JPBA1 / jpba.or.jp に分かれている公開導線を、Laravelで正本化できるものと外部リンクとして残すものに分ける。
+- 実施内容:
+  - `PublicPageController` に `protest()`、`topics()`、`staticPage()` を追加した。
+  - `/protest` を `public.protest` として追加した。
+  - `/topics` を `public.topics` として追加した。
+  - `/contact` / `/media` / `/commerce` / `/privacy` を追加した。
+  - `/protest/index.html`、`/topics.html`、`/update_logs.html`、`/inquiry/index.html`、`/media/index.html`、`/ovservance/index.html`、`/ovservance.html`、`/policy/index.html` を301リダイレクトにした。
+  - `resources/views/public/protest.blade.php` を追加し、受験の流れ、関連リンク、実施日程、関連INFORMATIONを表示する。
+  - `resources/views/public/topics.blade.php` を追加し、`informations` と公開 `information_files` を正本に記事本文、画像、添付、カテゴリを表示する。
+  - `resources/views/public/static_page.blade.php` を追加し、フッター固定ページを共通Viewで表示する。
+  - `config/jpba_public.php` の `プロテスト` / `トピックス` / `更新履歴` / フッター導線をローカル公開ページへ向けた。
+  - プロテスト本文、受験フロー、関連リンク、トピックスの現行サイト導線、フッター固定ページ本文は `config/jpba_public.php` に集約した。
+  - 未移行のPDF、外部フォーム、旧大会詳細、社会貢献活動、プロボウラー紹介は外部リンクとして残す。
+  - 未チェックは28件。
+- 次の自然な作業:
+  1. `game_scores` を正本に、速報・途中成績・正式成績・PDF・タイトル反映の流れを通し確認する。
+  2. スコア順位速報のタイブレーク、通過人数、carry、シフト別/合算、男女別/合算を整理する。

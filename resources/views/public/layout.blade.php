@@ -231,7 +231,7 @@
 
   $urlFor = function (array $link) {
       if (!empty($link['route']) && \Illuminate\Support\Facades\Route::has($link['route'])) {
-          return route($link['route']);
+          return route($link['route'], $link['params'] ?? []);
       }
 
       return $link['url'] ?? '#';

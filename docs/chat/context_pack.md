@@ -206,3 +206,15 @@
 - ライセンス別一覧は `instructor_registry` の `is_current=true` / `is_active=true` / `is_visible=true` を読む。
 - `config/jpba_public.php` の `インストラクター` ナビは `public.instructors.index` を指す。
 - 未チェックは32件。
+
+## 2026-06-26 追記: プロテスト・トピックス・フッター公開導線
+
+- `/protest` は `PublicPageController@protest`、ルート名は `public.protest`。
+- `/topics` は `PublicPageController@topics`、ルート名は `public.topics`。
+- `/contact` / `/media` / `/commerce` / `/privacy` は `PublicPageController@staticPage` で表示する。
+- 公開Viewは `resources/views/public/protest.blade.php`、`resources/views/public/topics.blade.php`、`resources/views/public/static_page.blade.php`。
+- プロテストは `config('jpba_public.protest')`、`pro_test_schedule`、`calendar_events.kind=pro_test`、プロテスト関連INFORMATIONを読む。
+- トピックスは `informations` と公開 `information_files` を正本に、記事本文、画像、添付、カテゴリを表示する。
+- フッター固定ページの本文・表・リンクは `config('jpba_public.static_pages')` に集約した。
+- 旧URL互換は `/protest/index.html`、`/topics.html`、`/update_logs.html`、`/inquiry/index.html`、`/media/index.html`、`/ovservance/index.html`、`/ovservance.html`、`/policy/index.html` を301でローカル公開ページへ寄せる。
+- 未チェックは28件。

@@ -56,9 +56,13 @@
 - `/tournament` は `PublicTournamentController@index` で表示し、`tournaments` を大会区分、年、月、地区で検索します。
 - `/tournament/{tournament}` は `PublicTournamentController@show` で表示し、公開PDF、速報/成績リンク、結果カード、上位成績を表示します。
 - `/instructor` は `PublicInstructorController@index` で表示し、制度導線と `instructor_registry` 正本のライセンス別一覧を表示します。
+- `/protest` は `PublicPageController@protest` で表示し、受験の流れ、実施概要リンク、受験者講習会導線、`pro_test_schedule` / `calendar_events.kind=pro_test` / 関連INFORMATIONを表示します。
+- `/topics` は `PublicPageController@topics` で表示し、`informations` と公開 `information_files` を正本に、記事本文、画像、添付、カテゴリ、現行サイトの社会貢献活動・プロボウラー紹介・大会ページ導線を表示します。
+- `/contact`、`/media`、`/commerce`、`/privacy` は `PublicPageController@staticPage` で表示し、現行フッター導線をLaravel側に寄せます。
 - トップ大会枠は `tournaments` と公開 `tournament_files` を読みます。
 - INFORMATION枠は `Information::active()->public()` を読みます。
 - 現行サイト由来の外部ナビ、PDF、フッター導線は `config/jpba_public.php` に集約しています。
+- 旧URLは `.html` / `index.html` 互換を原則301でローカル公開ページへ寄せ、未移行のPDF・外部フォーム・旧大会詳細は外部リンクとして残します。
 
 ## 実装順の候補
 
@@ -68,9 +72,9 @@
 4. 選手データ公開検索をLaravel側に用意する。
 5. トーナメント公開ページをLaravel側に用意する。
 6. インストラクター公開ページをLaravel側に用意する。
-7. 大会バナー枠をDB正本から表示する。
-8. PDFリンク・協賛バナー・外部リンク・SNSリンクを管理可能にする。
-9. 旧URL互換と `jpba1.jp` / `jpba.or.jp` の分担を決める。
+7. プロテスト、トピックス、フッター固定ページをLaravel側に用意する。
+8. 旧URL互換と `jpba1.jp` / `jpba.or.jp` の分担を決める。
+9. PDFリンク・協賛バナー・外部リンク・SNSリンクを管理可能にする。
 
 ## 完了条件
 

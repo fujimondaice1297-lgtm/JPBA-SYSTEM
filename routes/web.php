@@ -182,6 +182,23 @@ Route::get('/tournament/{tournament}', [PublicTournamentController::class, 'show
 Route::redirect('/tournament/index.html', '/tournament', 301);
 Route::get('/instructor', [PublicInstructorController::class, 'index'])->name('public.instructors.index');
 Route::redirect('/instructor/index.html', '/instructor', 301);
+Route::get('/protest', [PublicPageController::class, 'protest'])->name('public.protest');
+Route::redirect('/protest/index.html', '/protest', 301);
+Route::get('/topics', [PublicPageController::class, 'topics'])->name('public.topics');
+Route::redirect('/topics.html', '/topics', 301);
+Route::redirect('/update_logs.html', '/topics', 301);
+Route::get('/contact', [PublicPageController::class, 'staticPage'])->defaults('page', 'contact')->name('public.contact');
+Route::redirect('/inquiry', '/contact', 301);
+Route::redirect('/inquiry/index.html', '/contact', 301);
+Route::get('/media', [PublicPageController::class, 'staticPage'])->defaults('page', 'media')->name('public.media');
+Route::redirect('/media/index.html', '/media', 301);
+Route::get('/commerce', [PublicPageController::class, 'staticPage'])->defaults('page', 'commerce')->name('public.commerce');
+Route::redirect('/ovservance', '/commerce', 301);
+Route::redirect('/ovservance/index.html', '/commerce', 301);
+Route::redirect('/ovservance.html', '/commerce', 301);
+Route::get('/privacy', [PublicPageController::class, 'staticPage'])->defaults('page', 'privacy')->name('public.privacy');
+Route::redirect('/policy', '/privacy', 301);
+Route::redirect('/policy/index.html', '/privacy', 301);
 
 /* ========================
    認証（公開）

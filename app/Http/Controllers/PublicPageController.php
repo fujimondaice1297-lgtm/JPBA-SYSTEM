@@ -3,9 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Models\CalendarEvent;
+use App\Models\Information;
 use App\Models\Tournament;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Collection;
 use Illuminate\View\View;
 
@@ -83,6 +86,64 @@ class PublicPageController extends Controller
         ]);
     }
 
+    public function protest(): View
+    {
+        return view('public.protest', [
+            'publicConfig' => config('jpba_public', []),
+            'protestConfig' => config('jpba_public.protest', []),
+            'proTestSchedules' => $this->proTestSchedules(),
+            'proTestInformations' => $this->proTestInformations(),
+        ]);
+    }
+
+    public function topics(Request $request): View
+    {
+        $categories = Information::categories();
+        $category = trim((string) $request->query('category', ''));
+
+        if ($category === '' || !in_array($category, $categories, true)) {
+            $category = null;
+        }
+
+        $topics = Information::query()
+            ->active()
+            ->public()
+            ->with(['files' => function ($query) {
+                $query->where('visibility', 'public')
+                    ->orderBy('sort_order')
+                    ->orderBy('id');
+            }])
+            ->when($category, fn ($query) => $query->where('category', $category))
+            ->orderByDesc('published_at')
+            ->orderByDesc('updated_at')
+            ->orderByDesc('id')
+            ->paginate(10)
+            ->withQueryString();
+
+        return view('public.topics', [
+            'publicConfig' => config('jpba_public', []),
+            'topicsConfig' => config('jpba_public.topics', []),
+            'topics' => $topics,
+            'categories' => $categories,
+            'category' => $category,
+        ]);
+    }
+
+    public function staticPage(string $page): View
+    {
+        $pages = config('jpba_public.static_pages', []);
+
+        if (!isset($pages[$page])) {
+            abort(404);
+        }
+
+        return view('public.static_page', [
+            'publicConfig' => config('jpba_public', []),
+            'page' => $page,
+            'pageConfig' => $pages[$page],
+        ]);
+    }
+
     private function availableScheduleYears(): array
     {
         $years = collect();
@@ -112,6 +173,62 @@ class PublicPageController extends Controller
             });
 
         return $years->unique()->sortDesc()->values()->all();
+    }
+
+    private function proTestSchedules(): Collection
+    {
+        $rows = collect();
+
+        if (Schema::hasTable('pro_test_schedule')) {
+            $rows = DB::table('pro_test_schedule')
+                ->select(['id', 'year', 'schedule_name', 'start_date', 'end_date', 'application_start', 'application_end'])
+                ->orderByDesc('year')
+                ->orderByDesc('start_date')
+                ->limit(8)
+                ->get();
+        }
+
+        $events = CalendarEvent::query()
+            ->where('kind', 'pro_test')
+            ->orderByDesc('start_date')
+            ->limit(8)
+            ->get()
+            ->map(function (CalendarEvent $event) {
+                return (object) [
+                    'id' => 'event-' . $event->id,
+                    'year' => $event->start_date ? Carbon::parse($event->start_date)->year : null,
+                    'schedule_name' => $event->title,
+                    'start_date' => $event->start_date,
+                    'end_date' => $event->end_date,
+                    'application_start' => null,
+                    'application_end' => null,
+                ];
+            });
+
+        return $rows
+            ->concat($events)
+            ->sortByDesc(fn ($row) => ($row->start_date ?: ($row->year ? $row->year . '-01-01' : '0000-01-01')))
+            ->values();
+    }
+
+    private function proTestInformations(): Collection
+    {
+        return Information::query()
+            ->active()
+            ->public()
+            ->withCount(['files' => function ($query) {
+                $query->where('visibility', 'public');
+            }])
+            ->where(function ($query) {
+                $query->where('title', 'like', '%プロテスト%')
+                    ->orWhere('title', 'like', '%受験%')
+                    ->orWhere('body', 'like', '%プロテスト%');
+            })
+            ->orderByDesc('published_at')
+            ->orderByDesc('updated_at')
+            ->orderByDesc('id')
+            ->limit(8)
+            ->get();
     }
 
     private function pushYear(Collection $years, mixed $date): void
