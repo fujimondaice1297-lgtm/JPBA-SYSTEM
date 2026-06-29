@@ -250,3 +250,10 @@
 - 公式登録ボール台帳は `registered_balls`、大会エントリーで選べる使用ボール候補は `used_balls`、エントリーごとの選択履歴は `tournament_entry_balls` を正本とする。
 - `docs/db/data_dictionary.md` に上記の役割、同期ルール、仮登録/有効期限の扱いを追記した。
 - Active Backlog C/Eの2件を完了扱いにし、未チェックは21件。
+
+## 2026-06-30 追記: 大会方式・PDFテンプレート運用設計
+
+- `docs/operations/double_elimination_design.md` を追加し、ダブルエリミネーションを `single_elimination` とは別方式として実装する方針を固定した。
+- 敗者側ブラケット、リセット決勝、敗者側順位、同順位扱い、再戦条件、`DE:*` の `game_scores.entry_number` 候補、snapshot保存内容、PDF方針を整理した。
+- `docs/operations/tournament_pdf_template_policy.md` を追加し、大会IDや大会名ごとの専用Bladeを作らず、DB設定・共通Controller・方式別partialでPDFを拡張する運用に固定した。
+- Active Backlog C/Dの2件を完了扱いにし、未チェックは19件。

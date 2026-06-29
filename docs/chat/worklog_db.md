@@ -7613,3 +7613,34 @@ User::where('email','domaine-d@i.softbank.jp')->exists(); // true
 - 次の自然な作業:
   1. 実OCR/AI出力の通し確認を行う。
   2. シングルエリミネーションfixtureを復元/再作成し、速報、正式成績snapshot、PDFまで再確認する。
+
+---
+
+## 2026-06-30 大会方式・PDFテンプレート運用設計
+
+- 目的:
+  - Active Backlog C/Dのうち、ユーザー入力や実データがなくても進められる設計項目をまとめて進める。
+  - ダブルエリミネーション方式の未決事項と、大会ごとにBladeを直接手修正しないPDF運用を固定する。
+
+- 確認した実装:
+  - `TournamentResultController` は `result_flow_type` を見て、シングルエリミネーション、シュートアウト、ステップラダー、スコアシート画像をPDFへ渡している。
+  - `SingleEliminationService` は、seed、BYE、`SE:%` の `game_scores.entry_number`、敗退ラウンド順位を扱っている。
+  - PDFは `resources/views/tournament_results/pdf.blade.php` と `pdfs/partials/context.blade.php` を入口に、方式別Blade/partialへ分かれている。
+  - 現行の `TournamentController` バリデーションには `double_elimination` 系の `result_flow_type` はまだ存在しない。
+
+- 実施内容:
+  - `docs/operations/double_elimination_design.md` を追加した。
+  - ダブルエリミネーションは `single_elimination` へ混ぜず、別service / 別result_type / 別PDF partialとして追加する方針にした。
+  - 敗者側ブラケット、リセット決勝、敗者側順位、同順位扱い、再戦条件を整理した。
+  - 将来の `result_flow_type` 候補、`double_elimination_*` 設定候補、`DE:*` の `game_scores.entry_number` 形式、snapshot保存内容を整理した。
+  - `docs/operations/tournament_pdf_template_policy.md` を追加した。
+  - 大会IDや大会名ごとの専用Bladeを作らず、DB設定・共通Controller・方式別partialでPDFを拡張する運用に固定した。
+
+- Active Backlog更新:
+  - `ダブルエリミネーション方式の敗者側ブラケット、リセット決勝、敗者側順位、同順位扱い、再戦条件を設計する` を完了扱いにした。
+  - `大会ごとにBladeを直接手修正しない運用へ寄せる` を完了扱いにした。
+  - 残り未チェックは19件。
+
+- 次の自然な作業:
+  1. ランキング取込・年度末確定・全日本選手権用年度途中ランキング・優先出場順位の整理をまとめて進める。
+  2. シングルエリミネーションfixtureを復元/再作成し、速報、正式成績snapshot、PDFまで再確認する。
