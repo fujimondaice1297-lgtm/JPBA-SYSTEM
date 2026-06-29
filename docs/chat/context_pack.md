@@ -218,3 +218,11 @@
 - フッター固定ページの本文・表・リンクは `config('jpba_public.static_pages')` に集約した。
 - 旧URL互換は `/protest/index.html`、`/topics.html`、`/update_logs.html`、`/inquiry/index.html`、`/media/index.html`、`/ovservance/index.html`、`/ovservance.html`、`/policy/index.html` を301でローカル公開ページへ寄せる。
 - 未チェックは28件。
+
+## 2026-06-29 追記: 大会成績フロー診断
+
+- `TournamentAutomationReadinessService` が `score_flow` を返すようにした。
+- `score_flow` には、成績フロー、carryプリセット、同スコア時ルール、方式別通過人数、carry集計元、`game_scores` の男女/シフト別スコープ、正式成績snapshot反映単位、人間確認後の反映ルートを含める。
+- `大会運用ログ` の大会終了処理チェックリストに、速報・正式成績フロー診断を追加した。
+- 速報から正式成績への反映は、`score_import_rows` -> `game_scores` -> `tournament_result_snapshots` -> `tournament_results` / titles / PDF の順に、人間確認後のボタン方式で固定する。
+- Active Backlog Cの4件を完了扱いにし、未チェックは24件。

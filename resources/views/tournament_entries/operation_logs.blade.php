@@ -38,6 +38,14 @@
     $awards = $automationSummary['awards'] ?? [];
     $titles = $automationSummary['titles'] ?? [];
     $seeds = $automationSummary['seeds'] ?? [];
+    $scoreFlow = $automationSummary['score_flow'] ?? [];
+    $flow = $scoreFlow['flow'] ?? [];
+    $rankingRuleRows = $scoreFlow['ranking_rule_rows'] ?? [];
+    $qualifierRows = $scoreFlow['qualifier_rows'] ?? [];
+    $carrySourceRows = $scoreFlow['carry_source_rows'] ?? [];
+    $scoreScopeRows = $scoreFlow['score_scope_rows'] ?? [];
+    $snapshotScopeRows = $scoreFlow['snapshot_scope_rows'] ?? [];
+    $confirmationRows = $scoreFlow['confirmation_rows'] ?? [];
     $diagnostics = $automationSummary['diagnostics'] ?? [];
     $diagnosticIssues = $diagnostics['issues'] ?? [];
     $missingScorePlayerRows = $diagnostics['missing_score_player_rows'] ?? [];
@@ -115,6 +123,226 @@
           <div class="alert alert-success mb-0">現時点で大きな不足は検出されていません。</div>
         @endif
       </div>
+
+      @if (!empty($scoreFlow))
+        <div class="border rounded p-3 mb-3">
+          <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+            <div>
+              <div class="fw-bold">速報・正式成績フロー診断</div>
+              <div class="small text-muted">通過人数、carry、男女/シフト別集計、反映ボタンの固定ルート</div>
+            </div>
+            <a href="{{ route('tournaments.edit', $tournament->id) }}" class="btn btn-sm btn-outline-secondary">大会設定</a>
+          </div>
+
+          <div class="row g-3 mb-3">
+            <div class="col-lg-4">
+              <div class="border rounded p-2 h-100">
+                <div class="small text-muted">成績フロー</div>
+                <div class="fw-bold">{{ $flow['label'] ?? ($flow['type'] ?? '未設定') }}</div>
+                <div class="small text-muted">{{ $flow['type'] ?? '-' }}</div>
+              </div>
+            </div>
+            <div class="col-lg-4">
+              <div class="border rounded p-2 h-100">
+                <div class="small text-muted">carry設定</div>
+                <div class="fw-bold">{{ $flow['carry_label'] ?? ($flow['carry_preset'] ?? '未設定') }}</div>
+                @if (!empty($flow['carry_description']))
+                  <div class="small text-muted">{{ $flow['carry_description'] }}</div>
+                @endif
+              </div>
+            </div>
+            <div class="col-lg-4">
+              <div class="border rounded p-2 h-100">
+                <div class="small text-muted">正式反映</div>
+                <div class="fw-bold">人間確認後のボタン反映</div>
+                <div class="small text-muted">条件付きsnapshotは最終成績へ自動同期しません。</div>
+              </div>
+            </div>
+          </div>
+
+          @if (!empty($rankingRuleRows))
+            <div class="table-responsive mb-3">
+              <table class="table table-sm table-bordered align-middle mb-0">
+                <thead>
+                  <tr>
+                    <th style="width: 140px;">速報確認</th>
+                    <th>固定ルール</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @foreach ($rankingRuleRows as $ruleRow)
+                    <tr>
+                      <td class="fw-bold">{{ $ruleRow['label'] ?? '-' }}</td>
+                      <td>{{ $ruleRow['value'] ?? '-' }}</td>
+                    </tr>
+                  @endforeach
+                </tbody>
+              </table>
+            </div>
+          @endif
+
+          @if (!empty($qualifierRows) || !empty($carrySourceRows))
+            <div class="row g-3 mb-3">
+              @if (!empty($qualifierRows))
+                <div class="col-lg-5">
+                  <div class="small text-muted mb-2">方式別通過人数</div>
+                  <div class="table-responsive">
+                    <table class="table table-sm table-bordered align-middle mb-0">
+                      <thead>
+                        <tr>
+                          <th>方式</th>
+                          <th style="width: 90px;">使用</th>
+                          <th style="width: 90px;">人数</th>
+                          <th>詳細</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        @foreach ($qualifierRows as $qualifierRow)
+                          <tr>
+                            <td class="fw-bold">{{ $qualifierRow['label'] ?? '-' }}</td>
+                            <td>
+                              <span class="badge {{ !empty($qualifierRow['enabled']) ? 'text-bg-success' : 'text-bg-light border' }}">
+                                {{ !empty($qualifierRow['enabled']) ? '対象' : '未使用' }}
+                              </span>
+                            </td>
+                            <td>{{ (int) ($qualifierRow['qualifier_count'] ?? 0) }} 名</td>
+                            <td class="small">{{ $qualifierRow['details'] ?? '' }}</td>
+                          </tr>
+                        @endforeach
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              @endif
+
+              @if (!empty($carrySourceRows))
+                <div class="col-lg-7">
+                  <div class="small text-muted mb-2">carry / 集計元ステージ</div>
+                  <div class="table-responsive">
+                    <table class="table table-sm table-bordered align-middle mb-0">
+                      <thead>
+                        <tr>
+                          <th style="width: 160px;">結果種別</th>
+                          <th style="width: 180px;">result_code</th>
+                          <th>集計元</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        @foreach ($carrySourceRows as $carryRow)
+                          <tr>
+                            <td class="fw-bold">{{ $carryRow['result_label'] ?? '-' }}</td>
+                            <td><code>{{ $carryRow['result_code'] ?? '-' }}</code></td>
+                            <td>{{ $carryRow['source_label'] ?? '未設定' }}</td>
+                          </tr>
+                        @endforeach
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              @endif
+            </div>
+          @endif
+
+          @if (!empty($scoreScopeRows) || !empty($snapshotScopeRows))
+            <div class="row g-3 mb-3">
+              @if (!empty($scoreScopeRows))
+                <div class="col-lg-6">
+                  <div class="small text-muted mb-2">`game_scores` 集計スコープ</div>
+                  <div class="table-responsive">
+                    <table class="table table-sm table-bordered align-middle mb-0">
+                      <thead>
+                        <tr>
+                          <th>ステージ</th>
+                          <th style="width: 80px;">性別</th>
+                          <th style="width: 80px;">シフト</th>
+                          <th style="width: 70px;">G</th>
+                          <th style="width: 80px;">行数</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        @foreach ($scoreScopeRows as $scopeRow)
+                          <tr>
+                            <td class="fw-bold">{{ $scopeRow['stage'] ?? '-' }}</td>
+                            <td>{{ $scopeRow['gender_label'] ?? '全体' }}</td>
+                            <td>{{ $scopeRow['shift_label'] ?? '全体' }}</td>
+                            <td>{{ (int) ($scopeRow['games_count'] ?? 0) }}G</td>
+                            <td>{{ (int) ($scopeRow['rows_count'] ?? 0) }}</td>
+                          </tr>
+                        @endforeach
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              @endif
+
+              @if (!empty($snapshotScopeRows))
+                <div class="col-lg-6">
+                  <div class="small text-muted mb-2">正式成績snapshot反映単位</div>
+                  <div class="table-responsive">
+                    <table class="table table-sm table-bordered align-middle mb-0">
+                      <thead>
+                        <tr>
+                          <th>snapshot</th>
+                          <th style="width: 80px;">性別</th>
+                          <th style="width: 80px;">シフト</th>
+                          <th style="width: 80px;">行数</th>
+                          <th style="width: 70px;">最終</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        @foreach ($snapshotScopeRows as $snapshotRow)
+                          <tr>
+                            <td>
+                              <div class="fw-bold">{{ $snapshotRow['result_name'] ?? '-' }}</div>
+                              <div class="small text-muted">{{ $snapshotRow['result_code'] ?? '-' }}</div>
+                            </td>
+                            <td>{{ $snapshotRow['gender_label'] ?? '全体' }}</td>
+                            <td>{{ $snapshotRow['shift_label'] ?? '全体' }}</td>
+                            <td>{{ (int) ($snapshotRow['rows_count'] ?? 0) }}</td>
+                            <td>
+                              <span class="badge {{ !empty($snapshotRow['is_final']) ? 'text-bg-primary' : 'text-bg-light border' }}">
+                                {{ !empty($snapshotRow['is_final']) ? 'final' : '-' }}
+                              </span>
+                            </td>
+                          </tr>
+                        @endforeach
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              @endif
+            </div>
+          @endif
+
+          @if (!empty($confirmationRows))
+            <div class="small text-muted mb-2">人間確認を挟む反映ルート</div>
+            <div class="table-responsive">
+              <table class="table table-sm table-bordered align-middle mb-0">
+                <thead>
+                  <tr>
+                    <th style="width: 90px;">段階</th>
+                    <th>From</th>
+                    <th>To</th>
+                    <th style="width: 160px;">操作</th>
+                    <th>確認点</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @foreach ($confirmationRows as $confirmationRow)
+                    <tr>
+                      <td class="fw-bold">{{ $confirmationRow['step'] ?? '-' }}</td>
+                      <td>{{ $confirmationRow['from'] ?? '-' }}</td>
+                      <td>{{ $confirmationRow['to'] ?? '-' }}</td>
+                      <td>{{ $confirmationRow['trigger'] ?? '-' }}</td>
+                      <td class="small">{{ $confirmationRow['note'] ?? '' }}</td>
+                    </tr>
+                  @endforeach
+                </tbody>
+              </table>
+            </div>
+          @endif
+        </div>
+      @endif
 
       @if (!empty($scores['stage_rows']))
         <div class="mb-3">

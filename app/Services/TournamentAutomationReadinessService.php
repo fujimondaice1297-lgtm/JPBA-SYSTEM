@@ -9,6 +9,11 @@ use Illuminate\Support\Facades\Schema;
 
 class TournamentAutomationReadinessService
 {
+    public function __construct(
+        private readonly TournamentResultCarryService $carryService
+    ) {
+    }
+
     public function build(Tournament $tournament): array
     {
         $tournamentId = (int) $tournament->id;
@@ -22,6 +27,7 @@ class TournamentAutomationReadinessService
         $awards = $this->awardSummary($tournamentId);
         $titles = $this->titleSummary($tournamentId);
         $seeds = $this->seedSummary($tournamentId, $tournamentYear, $gender);
+        $scoreFlow = $this->scoreFlowSummary($tournament);
         $diagnostics = $this->diagnostics($entries, $scores, $snapshots, $results, $awards, $titles, $seeds);
 
         return [
@@ -34,6 +40,7 @@ class TournamentAutomationReadinessService
             'awards' => $awards,
             'titles' => $titles,
             'seeds' => $seeds,
+            'score_flow' => $scoreFlow,
             'diagnostics' => $diagnostics,
             'readiness' => $this->readiness($entries, $scores, $snapshots, $results, $awards, $titles, $seeds, $diagnostics),
         ];
@@ -186,6 +193,241 @@ class TournamentAutomationReadinessService
             'incomplete_stage_rows' => $incompleteStageRows,
             'missing_player_count' => $missingScorePlayers['count'],
             'missing_player_rows' => $missingScorePlayers['rows'],
+        ];
+    }
+
+    private function scoreFlowSummary(Tournament $tournament): array
+    {
+        $flowType = trim((string) ($tournament->result_flow_type ?? 'legacy_standard')) ?: 'legacy_standard';
+        $carryPreset = $this->carryService->canonicalPresetKey((string) ($tournament->result_carry_preset ?? 'default'));
+        $carryOptions = $this->carryService->presetOptions();
+        $carrySettings = $this->carryService->settingsForTournament($tournament);
+
+        return [
+            'flow' => [
+                'type' => $flowType,
+                'label' => $this->resultFlowLabel($flowType),
+                'carry_preset' => $carryPreset,
+                'carry_label' => $carryOptions[$carryPreset]['label'] ?? $carryPreset,
+                'carry_description' => $carryOptions[$carryPreset]['description'] ?? '',
+            ],
+            'ranking_rule_rows' => $this->rankingRuleRows(),
+            'qualifier_rows' => $this->qualifierRows($tournament, $flowType),
+            'carry_source_rows' => $this->carrySourceRows($carrySettings),
+            'score_scope_rows' => $this->scoreScopeRows((int) $tournament->id),
+            'snapshot_scope_rows' => $this->snapshotScopeRows((int) $tournament->id),
+            'confirmation_rows' => $this->confirmationRows(),
+        ];
+    }
+
+    private function rankingRuleRows(): array
+    {
+        return [
+            [
+                'label' => '同スコア時',
+                'value' => '合計ピン → 対象ステージのローハイ小 → 対象ステージ合計 → ID順',
+            ],
+            [
+                'label' => '通過ライン',
+                'value' => '速報画面の通過人数指定と、大会設定の方式別進出人数を確認',
+            ],
+            [
+                'label' => '集計範囲',
+                'value' => 'carry設定、シフト指定、男女指定を `game_scores` から計算',
+            ],
+        ];
+    }
+
+    private function qualifierRows(Tournament $tournament, string $flowType): array
+    {
+        return [
+            [
+                'label' => 'ラウンドロビン',
+                'enabled' => str_contains($flowType, '_rr_'),
+                'qualifier_count' => (int) ($tournament->round_robin_qualifier_count ?? 0),
+                'details' => '勝ち ' . (int) ($tournament->round_robin_win_bonus ?? 30)
+                    . 'P / 引分 ' . (int) ($tournament->round_robin_tie_bonus ?? 15) . 'P',
+            ],
+            [
+                'label' => 'トーナメント',
+                'enabled' => str_contains($flowType, 'single_elimination'),
+                'qualifier_count' => (int) ($tournament->single_elimination_qualifier_count ?? 0),
+                'details' => 'seed: ' . (trim((string) ($tournament->single_elimination_seed_source_result_code ?? '')) ?: '未設定'),
+            ],
+            [
+                'label' => 'シュートアウト',
+                'enabled' => str_contains($flowType, 'shootout'),
+                'qualifier_count' => (int) ($tournament->shootout_qualifier_count ?? 0),
+                'details' => 'seed: ' . (trim((string) ($tournament->shootout_seed_source_result_code ?? '')) ?: '未設定'),
+            ],
+        ];
+    }
+
+    private function carrySourceRows(array $carrySettings): array
+    {
+        $rows = [];
+
+        foreach ($carrySettings as $resultCode => $setting) {
+            if (! is_array($setting)) {
+                continue;
+            }
+
+            $sourceStages = $setting['source_stages'] ?? [];
+            if (! is_array($sourceStages)) {
+                $sourceStages = [];
+            }
+
+            $sourceStages = array_values(array_filter(array_map(
+                fn ($stage): string => trim((string) $stage),
+                $sourceStages
+            ), fn (string $stage): bool => $stage !== ''));
+
+            $rows[] = [
+                'result_code' => (string) $resultCode,
+                'result_label' => $this->resultCodeLabel((string) $resultCode),
+                'source_stages' => $sourceStages,
+                'source_label' => $sourceStages !== [] ? implode(' + ', $sourceStages) : '未設定',
+            ];
+        }
+
+        return $rows;
+    }
+
+    private function scoreScopeRows(int $tournamentId): array
+    {
+        if (! Schema::hasTable('game_scores')) {
+            return [];
+        }
+
+        $hasGender = Schema::hasColumn('game_scores', 'gender');
+        $hasShift = Schema::hasColumn('game_scores', 'shift');
+
+        $query = DB::table('game_scores')
+            ->where('tournament_id', $tournamentId)
+            ->select([
+                'stage',
+                DB::raw('COUNT(*) as rows_count'),
+                DB::raw('COUNT(DISTINCT game_number) as games_count'),
+                DB::raw('MAX(game_number) as max_game'),
+            ]);
+
+        if ($hasGender) {
+            $query->addSelect('gender')->groupBy('gender');
+        } else {
+            $query->selectRaw('NULL as gender');
+        }
+
+        if ($hasShift) {
+            $query->addSelect('shift')->groupBy('shift');
+        } else {
+            $query->selectRaw('NULL as shift');
+        }
+
+        return $query
+            ->groupBy('stage')
+            ->orderBy('stage')
+            ->orderBy('gender')
+            ->orderBy('shift')
+            ->get()
+            ->map(fn ($row): array => [
+                'stage' => trim((string) ($row->stage ?? '')) ?: '未設定',
+                'gender' => trim((string) ($row->gender ?? '')),
+                'gender_label' => $this->genderLabel($row->gender ?? null),
+                'shift' => trim((string) ($row->shift ?? '')),
+                'shift_label' => $this->blankLabel($row->shift ?? null),
+                'rows_count' => (int) $row->rows_count,
+                'games_count' => (int) $row->games_count,
+                'max_game' => (int) $row->max_game,
+            ])
+            ->all();
+    }
+
+    private function snapshotScopeRows(int $tournamentId): array
+    {
+        if (! Schema::hasTable('tournament_result_snapshots')) {
+            return [];
+        }
+
+        $snapshots = DB::table('tournament_result_snapshots')
+            ->where('tournament_id', $tournamentId)
+            ->where('is_current', true)
+            ->orderBy('result_code')
+            ->orderBy('gender')
+            ->orderBy('shift')
+            ->orderByDesc('reflected_at')
+            ->get([
+                'id',
+                'result_code',
+                'result_name',
+                'gender',
+                'shift',
+                'is_final',
+                'reflected_at',
+            ]);
+
+        if ($snapshots->isEmpty()) {
+            return [];
+        }
+
+        $rowCounts = [];
+
+        if (Schema::hasTable('tournament_result_snapshot_rows')) {
+            $rowCounts = DB::table('tournament_result_snapshot_rows')
+                ->whereIn('snapshot_id', $snapshots->pluck('id')->all())
+                ->select(['snapshot_id', DB::raw('COUNT(*) as rows_count')])
+                ->groupBy('snapshot_id')
+                ->pluck('rows_count', 'snapshot_id')
+                ->map(fn ($count): int => (int) $count)
+                ->all();
+        }
+
+        return $snapshots
+            ->map(fn ($snapshot): array => [
+                'id' => (int) $snapshot->id,
+                'result_code' => (string) $snapshot->result_code,
+                'result_name' => (string) $snapshot->result_name,
+                'gender' => trim((string) ($snapshot->gender ?? '')),
+                'gender_label' => $this->genderLabel($snapshot->gender ?? null),
+                'shift' => trim((string) ($snapshot->shift ?? '')),
+                'shift_label' => $this->blankLabel($snapshot->shift ?? null),
+                'is_final' => (bool) $snapshot->is_final,
+                'reflected_at' => $snapshot->reflected_at,
+                'rows_count' => (int) ($rowCounts[$snapshot->id] ?? 0),
+            ])
+            ->all();
+    }
+
+    private function confirmationRows(): array
+    {
+        return [
+            [
+                'step' => '取込',
+                'from' => '紙/PDF/CSV/OCR',
+                'to' => 'score_import_rows',
+                'trigger' => '一時取込',
+                'note' => '警告・候補を確認してから確定',
+            ],
+            [
+                'step' => '確定',
+                'from' => 'score_import_rows',
+                'to' => 'game_scores',
+                'trigger' => '確定反映ボタン',
+                'note' => '`game_scores` が速報の正本',
+            ],
+            [
+                'step' => '正式反映',
+                'from' => 'game_scores',
+                'to' => 'tournament_result_snapshots',
+                'trigger' => '正式成績反映ボタン',
+                'note' => '男女/シフト条件付きはsnapshot止まり',
+            ],
+            [
+                'step' => '公開確定',
+                'from' => 'final snapshot',
+                'to' => 'tournament_results / titles / PDF',
+                'trigger' => '同期・反映ボタン',
+                'note' => '全体finalのみ最終成績へ同期',
+            ],
         ];
     }
 
@@ -666,6 +908,50 @@ class TournamentAutomationReadinessService
         }
 
         return null;
+    }
+
+    private function resultFlowLabel(string $flowType): string
+    {
+        return match ($flowType) {
+            'legacy_standard' => '既存（予選→準々決勝→準決勝→決勝）',
+            'prelim_to_rr_to_final' => '予選→ラウンドロビン→決勝ステップラダー',
+            'prelim_to_quarterfinal_to_rr_to_final' => '予選→準々決勝→ラウンドロビン→決勝ステップラダー',
+            'prelim_to_single_elimination_to_final' => '予選→トーナメント→最終成績',
+            'prelim_to_quarterfinal_to_single_elimination_to_final' => '予選→準々決勝→トーナメント→最終成績',
+            'prelim_to_semifinal_to_single_elimination_to_final' => '予選→準決勝通算→トーナメント→最終成績',
+            'prelim_to_shootout_to_final' => '予選→シュートアウト→最終成績',
+            'prelim_to_quarterfinal_to_shootout_to_final' => '予選→準々決勝→シュートアウト→最終成績',
+            'prelim_to_semifinal_to_shootout_to_final' => '予選→準決勝通算→シュートアウト→最終成績',
+            default => $flowType,
+        };
+    }
+
+    private function resultCodeLabel(string $resultCode): string
+    {
+        return match ($resultCode) {
+            'prelim_total' => '予選通算',
+            'quarterfinal_total' => '準々決勝通算',
+            'semifinal_total' => '準決勝通算',
+            'round_robin_total' => 'ラウンドロビン通算',
+            'final_total' => '決勝/最終',
+            default => $resultCode,
+        };
+    }
+
+    private function genderLabel(mixed $gender): string
+    {
+        return match (strtoupper(trim((string) $gender))) {
+            'M' => '男子',
+            'F' => '女子',
+            default => '全体',
+        };
+    }
+
+    private function blankLabel(mixed $value): string
+    {
+        $text = trim((string) $value);
+
+        return $text !== '' ? $text : '全体';
     }
 
     private function normalizeGender(mixed $gender): ?string
