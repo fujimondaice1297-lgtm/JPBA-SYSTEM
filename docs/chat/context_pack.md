@@ -236,3 +236,9 @@
 - `MatchScoreSheetImageService` の `imagefilledpolygon()` 非推奨警告を修正した。
 - `docs/operations/pdf_common_output_rules.md` を追加し、PDF共通表示ルールを固定した。
 - Active Backlog DのPDF共通表示ルールを完了扱いにし、未チェックは23件。
+
+## 2026-06-30 追記: 作業ログ総括
+
+- 次へ進む前の総括として `docs/chat/work_summary_2026_06_30.md` を追加した。
+- ここまでのCodex作業を、棚卸し、スコア取込/OCR、公開導線、ランキング/シード、大会終了処理、成績フロー診断、方式別回帰、PDF共通ルール、残作業に分けて整理した。
+- 次に進む候補は、実OCR/AI出力の通し確認、またはシングルエリミネーションfixture復元。
