@@ -265,3 +265,12 @@
 - JPBA公式大会要項PDF、公式成績PDF、現行サイトの速報・成績、既存DBデータを優先し、一般説明は補助資料に留める。
 - `docs/operations/double_elimination_design.md` のリセット決勝、敗者側順位、同順位扱い、再戦条件は、JPBA資料確認前の仮設計であることを明記した。
 - 未チェックは19件のまま。
+
+## 2026-06-30 追記: ランキング・シード・優先出場順位運用
+
+- `docs/operations/ranking_seed_entry_policy.md` を追加した。
+- `/rankings` は補助画面ではなく、公式ランキング・年度末確定ランキング管理画面として残す。
+- 男子2025 ranking snapshot id=4 は `as_of_date=2025-12-23`、公式PDF本文も `2025.12.23` のため一致確認済み。
+- 全日本選手権用の年度途中ランキングは、年度末最終ランキングとは別snapshotとして `ranking_scope = all_japan_entry_priority` 候補で保存する方針にした。
+- 大会エントリーへの優先出場順位は `tournament_entries` へ直接コピーせず、年度別シード + 大会別追加シード + `priority_order` を合成して参照する。
+- Active Backlog Eの4件を完了扱いにし、未チェックは15件。

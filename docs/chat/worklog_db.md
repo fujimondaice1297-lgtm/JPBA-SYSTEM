@@ -7647,6 +7647,62 @@ User::where('email','domaine-d@i.softbank.jp')->exists(); // true
 
 ---
 
+## 2026-06-30 ランキング・シード・優先出場順位運用
+
+- 目的:
+  - Active Backlog Eのうち、ユーザー入力なしで判断・整理できる項目をまとめて進める。
+  - 公式ランキング取込画面を一時補助画面として放置せず、年度末確定ランキング管理画面として位置付ける。
+  - 年度末ランキング、翌年度シード、全日本選手権用年度途中ランキング、大会別優先出場順位の反映先を固定する。
+
+- 確認した実装:
+  - `/rankings` は `RankingController@index` / `storeOfficialRanking()`。
+  - 保存先は `pro_bowler_ranking_snapshots` / `pro_bowler_ranking_rows`。
+  - `/pro-bowler-seed-lists` は `ProBowlerSeedListController` と `ProBowlerSeedService` で、公式ranking snapshotまたはDB内ランキングから年度別シードを作る。
+  - `/tournaments/{tournament}/seed-players` は `TournamentSeedPlayerController` で、年度別シードと大会別追加シードを合成し、優先出場順位・PDFを作る。
+  - `TournamentSeedPlayerController::buildTournamentPriorityPlayers()` は、年度別シード + 大会別追加シード + `priority_order` を合成している。
+
+- DB確認:
+  - `ProBowlerRankingSnapshot` を確認した。
+  - 2025女子:
+    - snapshot id: `3`
+    - `as_of_date = 2025-12-13`
+    - rows: `226`
+    - source: `https://www.jpba.or.jp/information/tournament/ranking/2025/W/W_PointRanking_251213.pdf`
+  - 2025男子:
+    - snapshot id: `4`
+    - `as_of_date = 2025-12-23`
+    - rows: `360`
+    - source: `https://www.jpba.or.jp/information/tournament/ranking/2025/M/M_PointRanking_251220.pdf`
+
+- 公式PDF日付確認:
+  - 2025男子PDF本文は `2025.12.23`。
+  - DBの男子ranking snapshot id=4 の `as_of_date = 2025-12-23` と一致している。
+  - PDFファイル名の `251220` ではなく、PDF本文の日付を正とする。
+
+- 実施内容:
+  - `docs/operations/ranking_seed_entry_policy.md` を追加した。
+  - `/rankings` は補助画面ではなく、公式ランキング・年度末確定ランキング管理画面として残す方針にした。
+  - 年度末確定ランキングは `ranking_scope = official_tournament` / `is_final = true` とする。
+  - 全日本選手権用の年度途中ランキングは、年度末最終ランキングとは別snapshotとして保存する方針にした。
+    - 候補: `ranking_scope = all_japan_entry_priority`
+    - `is_final = false`
+    - `as_of_date` は出場資格判定に使う公式PDFまたは公式発表日。
+  - 大会エントリーへの優先出場順位は `tournament_entries` に直接コピーしない方針にした。
+  - 優先出場順位は、年度別シード、 大会別追加シード、`priority_order` を合成して参照する。
+
+- Active Backlog更新:
+  - `公式ランキング取込画面を、補助画面として残すか年度末確定ランキング管理画面へ整理するか決める` を完了扱いにした。
+  - `男子ranking snapshotの as_of_date が公式PDF日付と一致しているか確認する` を完了扱いにした。
+  - `実ランキング取込、年度末確定処理、全日本選手権用の年度途中ランキング運用を整理する` を完了扱いにした。
+  - `大会エントリー導線へ優先出場順位をどう反映するか決める` を完了扱いにした。
+  - 残り未チェックは15件。
+
+- 次の自然な作業:
+  1. チェックイン、当日運用、抽選結果公開、取消理由、一括繰り上げ履歴をエントリー管理に接続する。
+  2. `instructor_registry` を正本にし、既存 `instructors` / 画面 / Controller を段階移行する。
+
+---
+
 ## 2026-06-30 大会方式のソース確認ルール
 
 - 目的:
