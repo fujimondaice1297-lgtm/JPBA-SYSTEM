@@ -95,13 +95,22 @@
 - 男子2025 ranking snapshot id=4 の `as_of_date=2025-12-23` が、公式PDF本文の `2025.12.23` と一致することを確認した。
 - 年度末確定ランキング、翌年度シード生成、全日本選手権用の年度途中ランキングsnapshot、大会別優先出場順位の反映方針を整理した。
 
+### 12. インストラクター・ProTest・会員基盤
+
+- `docs/operations/instructor_protest_identity_policy.md` を追加した。
+- インストラクター情報は `instructor_registry` を正本、旧 `instructors` を互換レイヤとして残す方針にした。
+- 講習・受講は `trainings` / `pro_bowler_trainings`、資格・更新・失効履歴は `instructor_registry` の current/history として扱う方針にした。
+- `ProBowlerController` / `ProBowlerImportController` の `instructors` 更新は、旧画面・旧帳票互換のための同期として維持する。
+- alias / 旧ライセンス表記は `source_key` / `legacy_instructor_license_no` / `cert_no` / `notes` / history 行として保持する。
+- ProTest は `pro_test_*` テーブル群を申請、実技スコア、合否、公開結果PDF導線の正本候補として整理した。
+- `pro_test.record_type_id` は ADR-0003 の通り、ProTest管理画面を本格化する段階で参照先を確定する。
+
 ## 残っている大きな作業
 
 - 実データの紙成績表画像/PDFからOCR/AI出力を作り、貼り付け変換プレビュー、`score_import_rows`、要確認行修正、`game_scores` 確定反映まで通し確認する。
 - シングルエリミネーションfixtureを復元/再作成し、速報、正式成績snapshot、PDFまで再確認する。
 - 通常トータルピン方式のみの大会fixtureを作り、通常PDFへの方式別文言混入がないことを確認する。
 - エントリー管理に、チェックイン、当日運用、抽選結果公開、取消理由、一括繰り上げ履歴を接続する。
-- `instructor_registry` への段階移行、ProTest要件/スキーマ/公開導線の整理を進める。
 - `tournaments` 周辺の最終スキーマ、辞書、ER、migrationを現DBと定期的に照合する。
 
 ## 次に進むなら

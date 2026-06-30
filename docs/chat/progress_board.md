@@ -1475,6 +1475,14 @@
 - [✓] 大会エントリーへの優先出場順位は `tournament_entries` へ直接コピーせず、年度別シード + 大会別追加シード + `priority_order` を合成して参照する方針にした
 - [✓] 残り未チェックは15件
 
+#### 2026-06-30 メモ（インストラクター・ProTest・会員基盤）
+- [✓] `docs/operations/instructor_protest_identity_policy.md` を追加し、`instructor_registry` を正本、`instructors` を互換レイヤとして残す方針を固定した
+- [✓] 講習・受講は `trainings` / `pro_bowler_trainings`、資格・更新・失効履歴は `instructor_registry` の current/history として扱う方針にした
+- [✓] `ProBowlerController` / `ProBowlerImportController` の `instructors` 更新は互換レイヤ同期として維持し、新規参照は `instructor_registry` に寄せる方針にした
+- [✓] alias/旧ライセンス表記は `source_key` / `legacy_instructor_license_no` / `cert_no` / `notes` / history 行として保持し、現在値を安易に上書きしない方針にした
+- [✓] ProTest は `pro_test_*` テーブル群を申請・実技スコア・合否・公開結果PDF導線の正本候補として整理し、`record_type_id` はADRどおり保留にした
+- [✓] 残り未チェックは10件
+
 ##### 次に行う候補（Active Backlog）
 
 ###### A. 直近のスコア/OCR運用
@@ -1522,11 +1530,11 @@
 - [✓] `registered_balls` と `used_balls` の役割分担を最終整理する
 
 ###### F. インストラクター・ProTest・会員基盤
-- [ ] `instructor_registry` を正本にし、既存 `instructors` / 画面 / Controller を段階移行する
-- [ ] 講習、資格、更新履歴、資格解除時の扱いを決める
-- [ ] `ProBowlerController` / `ProBowlerImportController` の `instructors` 更新を互換レイヤとして維持するか整理する
-- [ ] alias/旧ライセンス表記を current/history へどう寄せるか整理する
-- [ ] ProTestの要件、スキーマ、申請、実技スコア、合否、公開結果PDF導線を整理する
+- [✓] `instructor_registry` を正本にし、既存 `instructors` / 画面 / Controller を段階移行する
+- [✓] 講習、資格、更新履歴、資格解除時の扱いを決める
+- [✓] `ProBowlerController` / `ProBowlerImportController` の `instructors` 更新を互換レイヤとして維持するか整理する
+- [✓] alias/旧ライセンス表記を current/history へどう寄せるか整理する
+- [✓] ProTestの要件、スキーマ、申請、実技スコア、合否、公開結果PDF導線を整理する
 
 ###### G. DB正本・公開互換の横断整理
 - [ ] `tournaments` 周辺の最終スキーマを辞書・ER・migrationと揃える

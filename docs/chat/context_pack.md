@@ -274,3 +274,13 @@
 - 全日本選手権用の年度途中ランキングは、年度末最終ランキングとは別snapshotとして `ranking_scope = all_japan_entry_priority` 候補で保存する方針にした。
 - 大会エントリーへの優先出場順位は `tournament_entries` へ直接コピーせず、年度別シード + 大会別追加シード + `priority_order` を合成して参照する。
 - Active Backlog Eの4件を完了扱いにし、未チェックは15件。
+
+## 2026-06-30 追記: インストラクター・ProTest・会員基盤
+
+- `docs/operations/instructor_protest_identity_policy.md` を追加した。
+- インストラクター情報の正本は `instructor_registry`、旧 `instructors` は互換レイヤとして残す方針にした。
+- `InstructorController` はすでに `InstructorRegistry` 中心で、`ProBowlerController` / `ProBowlerImportController` の `instructors` 更新は互換同期として維持する。
+- 講習・受講は `trainings` / `pro_bowler_trainings`、資格・更新・失効履歴は `instructor_registry` の current/history として扱う。
+- alias / 旧ライセンス表記は `source_key` / `legacy_instructor_license_no` / `cert_no` / `notes` / history 行として保持し、現在値を安易に上書きしない。
+- ProTest は `pro_test_*` テーブル群を申請、実技スコア、合否、公開結果PDF導線の正本候補として整理した。`pro_test.record_type_id` は ADR-0003 の通り参照先確定を保留する。
+- Active Backlog Fの5件を完了扱いにし、未チェックは10件。

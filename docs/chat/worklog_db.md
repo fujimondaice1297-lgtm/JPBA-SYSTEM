@@ -7703,6 +7703,43 @@ User::where('email','domaine-d@i.softbank.jp')->exists(); // true
 
 ---
 
+## 2026-06-30 インストラクター・ProTest・会員基盤の運用整理
+
+- 目的:
+  - Active Backlog F の5件をまとめて処理する。
+  - `instructor_registry` 正本化、旧 `instructors` の扱い、資格更新・資格解除、alias/旧ライセンス表記、ProTestの申請・実技スコア・合否・公開導線を一つの運用方針に固定する。
+
+- 確認した実装:
+  - `InstructorController` は `InstructorRegistry` を中心に一覧、登録、編集、PDF出力を扱っている。
+  - `ProBowlerController` は管理画面保存時に `syncLegacyInstructor()` と `syncRegistryInstructor()` を両方実行する。
+  - `ProBowlerImportController` は `Pro_colum.csv` 取込時に `syncLegacyInstructorFromBowler()` と `syncRegistryFromBowler()` を両方実行する。
+  - `AuthInstructorImportController` は `AuthInstructor.csv` を `source_type = auth_instructor_csv` として `instructor_registry` へ取り込む。
+  - `InstructorRegistry` には current/history、更新年度、更新期限、更新状態、置換理由を扱うカラムとラベルがある。
+  - `/protest` は `pro_test_schedule`、`calendar_events.kind = pro_test`、関連INFORMATIONを読む公開ページになっている。
+
+- 実施内容:
+  - `docs/operations/instructor_protest_identity_policy.md` を追加した。
+  - インストラクター情報の正本を `instructor_registry`、旧 `instructors` を互換レイヤとして残す方針にした。
+  - `ProBowlerController` / `ProBowlerImportController` の `instructors` 更新は、旧画面・旧帳票・旧処理互換を保つ同期として維持する。
+  - 講習・受講は `trainings` / `pro_bowler_trainings`、資格・更新・失効履歴は `instructor_registry` の current/history として扱う。
+  - alias / 旧ライセンス表記は `source_key` / `legacy_instructor_license_no` / `cert_no` / `notes` / history 行として保持し、現在値を安易に上書きしない。
+  - ProTest は `pro_test_*` テーブル群を、申請、実技スコア、合否、公開結果PDF導線の正本候補として整理した。
+  - `pro_test.record_type_id` は ADR-0003 の通り、ProTest管理画面を本格化する段階で参照先を確定する。
+
+- Active Backlog更新:
+  - `instructor_registry` を正本にし、既存 `instructors` / 画面 / Controller を段階移行する項目を完了扱いにした。
+  - 講習、資格、更新履歴、資格解除時の扱いを決める項目を完了扱いにした。
+  - `ProBowlerController` / `ProBowlerImportController` の `instructors` 更新を互換レイヤとして維持するか整理する項目を完了扱いにした。
+  - alias/旧ライセンス表記を current/history へどう寄せるか整理する項目を完了扱いにした。
+  - ProTestの要件、スキーマ、申請、実技スコア、合否、公開結果PDF導線を整理する項目を完了扱いにした。
+  - 残り未チェックは10件。
+
+- 次の自然な作業:
+  1. チェックイン、当日運用、抽選結果公開、取消理由、一括繰り上げ履歴をエントリー管理に接続する。
+  2. `tournaments` 周辺の最終スキーマ、辞書、ER、migrationを現DBと定期的に照合する。
+
+---
+
 ## 2026-06-30 大会方式のソース確認ルール
 
 - 目的:
