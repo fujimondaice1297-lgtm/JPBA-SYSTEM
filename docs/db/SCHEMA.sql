@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict k0RvuSlLHfh4jhWh0NfIBVtyRmLYNP6vmnbG2N6uPAYQuJCOmxwX9TeCbh5lZme
+\restrict JPBASYSTEMSCHEMADUMP20260701
 
 -- Dumped from database version 18.2
 -- Dumped by pg_dump version 18.2
@@ -852,7 +852,7 @@ CREATE TABLE public.informations (
     category character varying(32) DEFAULT 'NEWS'::character varying NOT NULL,
     published_at timestamp(0) without time zone,
     CONSTRAINT informations_audience_check CHECK (((audience)::text = ANY ((ARRAY['public'::character varying, 'members'::character varying, 'district_leaders'::character varying, 'needs_training'::character varying])::text[]))),
-    CONSTRAINT informations_category_check CHECK (((category IS NULL) OR ((category)::text = ANY ((ARRAY['NEWS'::character varying, 'イベント'::character varying, '大会'::character varying, 'ｲﾝｽﾄﾗｸﾀｰ'::character varying])::text[]))))
+    CONSTRAINT informations_category_check CHECK (((category IS NULL) OR ((category)::text = ANY ((ARRAY['NEWS'::character varying, '大会'::character varying, 'TV情報'::character varying, 'ｲﾝｽﾄﾗｸﾀｰ'::character varying, 'イベント'::character varying])::text[]))))
 );
 
 
@@ -7671,5 +7671,5 @@ ALTER TABLE ONLY public.users
 -- PostgreSQL database dump complete
 --
 
-\unrestrict k0RvuSlLHfh4jhWh0NfIBVtyRmLYNP6vmnbG2N6uPAYQuJCOmxwX9TeCbh5lZme
+\unrestrict JPBASYSTEMSCHEMADUMP20260701
 

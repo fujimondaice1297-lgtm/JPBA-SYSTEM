@@ -1483,6 +1483,14 @@
 - [✓] ProTest は `pro_test_*` テーブル群を申請・実技スコア・合否・公開結果PDF導線の正本候補として整理し、`record_type_id` はADRどおり保留にした
 - [✓] 残り未チェックは10件
 
+#### 2026-07-01 メモ（大会DB正本・公開/管理境界）
+- [✓] `docs/operations/tournament_db_alignment_public_admin_policy.md` を追加し、大会系DB正本と公開/管理の役割分担を整理した
+- [✓] `pg_dump -s` で `docs/db/SCHEMA.sql` を現DBから再生成し、`informations_category_check` が `TV情報` を含む現DB制約へ揃ったことを確認した
+- [✓] `information_schema.columns` から `docs/db/columns_public.csv` を再生成し、`php tools/generate_db_docs.php` で `docs/db/columns_by_table.md` を再生成した
+- [✓] `php tools/generate_er_from_dictionary.php` で `docs/db/ER.dbml` を再生成した
+- [✓] `tournaments` は83 columns、`tournament_entries` / `tournament_results` は各17 columns、`tournament_files` は7 columnsとして現DB確認済み
+- [✓] 残り未チェックは7件
+
 ##### 次に行う候補（Active Backlog）
 
 ###### A. 直近のスコア/OCR運用
@@ -1537,7 +1545,7 @@
 - [✓] ProTestの要件、スキーマ、申請、実技スコア、合否、公開結果PDF導線を整理する
 
 ###### G. DB正本・公開互換の横断整理
-- [ ] `tournaments` 周辺の最終スキーマを辞書・ER・migrationと揃える
-- [ ] `docs/db` の辞書、ER、SCHEMA、columns資料を現DBと定期的に照合する
-- [ ] 公開側はDB正本を読むだけ、管理側は入力・確認・反映を行う役割分担を維持する
+- [✓] `tournaments` 周辺の最終スキーマを辞書・ER・migrationと揃える
+- [✓] `docs/db` の辞書、ER、SCHEMA、columns資料を現DBと定期的に照合する
+- [✓] 公開側はDB正本を読むだけ、管理側は入力・確認・反映を行う役割分担を維持する
 - [ ] 現行サイトの見た目を保つため、HTML構造、画像/バナー、PDF/外部リンク、フッターリンクを公開画面ごとに照合する

@@ -105,13 +105,21 @@
 - ProTest は `pro_test_*` テーブル群を申請、実技スコア、合否、公開結果PDF導線の正本候補として整理した。
 - `pro_test.record_type_id` は ADR-0003 の通り、ProTest管理画面を本格化する段階で参照先を確定する。
 
+### 13. 大会DB正本・公開/管理境界
+
+- `docs/operations/tournament_db_alignment_public_admin_policy.md` を追加した。
+- `docs/db/SCHEMA.sql`、`docs/db/columns_public.csv`、`docs/db/columns_by_table.md`、`docs/db/ER.dbml` を現DB・辞書から再生成した。
+- `SCHEMA.sql` は `informations_category_check` が `TV情報` を含む現DB制約へ更新された。
+- `tournaments` 周辺は、現DB、辞書、ER、columns資料で新たな構造差分は見つからなかった。
+- 公開側はDB正本を読むだけ、管理側は入力・確認・反映を行う役割分担を整理した。
+
 ## 残っている大きな作業
 
 - 実データの紙成績表画像/PDFからOCR/AI出力を作り、貼り付け変換プレビュー、`score_import_rows`、要確認行修正、`game_scores` 確定反映まで通し確認する。
 - シングルエリミネーションfixtureを復元/再作成し、速報、正式成績snapshot、PDFまで再確認する。
 - 通常トータルピン方式のみの大会fixtureを作り、通常PDFへの方式別文言混入がないことを確認する。
 - エントリー管理に、チェックイン、当日運用、抽選結果公開、取消理由、一括繰り上げ履歴を接続する。
-- `tournaments` 周辺の最終スキーマ、辞書、ER、migrationを現DBと定期的に照合する。
+- 現行サイトの見た目を保つため、HTML構造、画像/バナー、PDF/外部リンク、フッターリンクを公開画面ごとに照合する。
 
 ## 次に進むなら
 

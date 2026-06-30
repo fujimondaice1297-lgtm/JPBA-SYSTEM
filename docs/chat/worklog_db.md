@@ -7113,6 +7113,7 @@ User::where('email','domaine-d@i.softbank.jp')->exists(); // true
   - `docs/chat/context_pack.md` を空欄の多い雛形から、現在の作業状態・次タスク・注意点が分かる内容へ更新した。
   - `php artisan migrate:status` で、`2025_09_02_000213_create_pro_bowler_ranking_and_seed_tables` が実DBに適用済みであることを確認した。
   - `pg_dump -s` で `docs/db/SCHEMA.sql` を現DBから再生成した。
+    - PostgreSQL 18 の `\restrict` ランダム差分を抑えるため、固定 `--restrict-key` を指定した。
   - `psql` の `information_schema.columns` から `docs/db/columns_public.csv` を再生成した。
   - `php tools/generate_db_docs.php` で `docs/db/columns_by_table.md` を再生成した。
   - `tools/generate_db_docs.php` の `fgetcsv()` 呼び出しにescape引数を明示し、PHPのDeprecated警告を解消した。
@@ -7737,6 +7738,53 @@ User::where('email','domaine-d@i.softbank.jp')->exists(); // true
 - 次の自然な作業:
   1. チェックイン、当日運用、抽選結果公開、取消理由、一括繰り上げ履歴をエントリー管理に接続する。
   2. `tournaments` 周辺の最終スキーマ、辞書、ER、migrationを現DBと定期的に照合する。
+
+---
+
+## 2026-07-01 大会DB正本・公開/管理境界の照合
+
+- 目的:
+  - Active Backlog G のうち、`tournaments` 周辺スキーマ照合、`docs/db` 資料の現DB照合、公開側/管理側の役割分担整理をまとめて進める。
+
+- 実行した確認:
+  - `pg_dump -s` で `docs/db/SCHEMA.sql` を現DBから再生成した。
+  - `psql` の `information_schema.columns` から `docs/db/columns_public.csv` を再生成した。
+  - `php tools/generate_db_docs.php` で `docs/db/columns_by_table.md` を再生成した。
+  - `php tools/generate_er_from_dictionary.php` で `docs/db/ER.dbml` を再生成した。
+  - Laravel tinker で主要大会系テーブルのカラム数を確認した。
+    - `tournaments`: 83
+    - `tournament_entries`: 17
+    - `tournament_results`: 17
+    - `tournament_files`: 7
+    - `tournament_result_snapshots`: 20
+    - `tournament_result_snapshot_rows`: 20
+
+- 差分:
+  - `SCHEMA.sql` の `informations_category_check` が、現DBどおり `TV情報` を含む制約へ更新された。
+  - `columns_by_table.md` と `ER.dbml` は生成時刻が更新された。
+  - `tournaments` 周辺の構造差分は見つからなかった。
+
+- 実施内容:
+  - `docs/operations/tournament_db_alignment_public_admin_policy.md` を追加した。
+  - 大会系DB正本を用途別に整理した。
+    - 大会設定: `tournaments`
+    - 大会添付: `tournament_files`
+    - エントリー/抽選/チェックイン: `tournament_entries`
+    - 一時取込: `score_import_batches` / `score_import_rows`
+    - 投球スコア: `game_scores`
+    - 速報/途中/正式反映前後: `tournament_result_snapshots` / `tournament_result_snapshot_rows`
+    - 最終成績: `tournament_results`
+  - 公開側はDB正本を読むだけ、管理側は入力・確認・反映を行う境界を整理した。
+
+- Active Backlog更新:
+  - `tournaments` 周辺の最終スキーマを辞書・ER・migrationと揃える項目を完了扱いにした。
+  - `docs/db` の辞書、ER、SCHEMA、columns資料を現DBと定期的に照合する項目を完了扱いにした。
+  - 公開側はDB正本を読むだけ、管理側は入力・確認・反映を行う役割分担を維持する項目を完了扱いにした。
+  - 残り未チェックは7件。
+
+- 次の自然な作業:
+  1. エントリー管理に、チェックイン、当日運用、抽選結果公開、取消理由、一括繰り上げ履歴を接続する。
+  2. 現行サイトの見た目維持のため、公開画面ごとにHTML構造、画像/バナー、PDF/外部リンク、フッターリンクを照合する。
 
 ---
 

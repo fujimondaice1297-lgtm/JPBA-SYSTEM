@@ -1,7 +1,7 @@
 # Columns by table (generated)
 
 - Source: `docs/db/columns_public.csv`
-- Generated: 2026-06-24 17:20:25
+- Generated: 2026-07-01 08:39:01
 
 > ⚠️ このファイルは自動生成です。手で編集しないでください。
 

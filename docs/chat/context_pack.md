@@ -284,3 +284,14 @@
 - alias / 旧ライセンス表記は `source_key` / `legacy_instructor_license_no` / `cert_no` / `notes` / history 行として保持し、現在値を安易に上書きしない。
 - ProTest は `pro_test_*` テーブル群を申請、実技スコア、合否、公開結果PDF導線の正本候補として整理した。`pro_test.record_type_id` は ADR-0003 の通り参照先確定を保留する。
 - Active Backlog Fの5件を完了扱いにし、未チェックは10件。
+
+## 2026-07-01 追記: 大会DB正本・公開/管理境界
+
+- `docs/operations/tournament_db_alignment_public_admin_policy.md` を追加した。
+- `pg_dump -s` で `docs/db/SCHEMA.sql` を現DBから再生成した。
+- `information_schema.columns` から `docs/db/columns_public.csv` を再生成し、`php tools/generate_db_docs.php` で `docs/db/columns_by_table.md` を再生成した。
+- `php tools/generate_er_from_dictionary.php` で `docs/db/ER.dbml` を再生成した。
+- `SCHEMA.sql` は `informations_category_check` が `TV情報` を含む現DB制約へ更新された。`tournaments` 周辺の構造差分は出なかった。
+- 現DB確認では `tournaments` 83 columns、`tournament_entries` 17 columns、`tournament_results` 17 columns、`tournament_files` 7 columns。
+- 公開側はDB正本を読むだけ、管理側は入力・確認・反映を担当する境界を整理した。
+- Active Backlog Gの3件を完了扱いにし、未チェックは7件。
