@@ -113,18 +113,47 @@
 
         @if ($firstScoreImage)
             <div class="official-score-section">
-                <div class="official-score-heading">
-                    <span class="official-score-logo">JPBA</span>
-                    <span class="official-score-title">{{ $scoreHeadingSafe($firstScoreImage, 0) }}</span>
-                </div>
-
-                <img class="official-score-image" src="{!! $firstScoreImage['image'] ?? '' !!}" alt="優勝決定戦スコア表">
+                @include('tournament_results.pdfs.partials.score_sheet_block', [
+                    'scoreSheetImage' => $firstScoreImage,
+                    'scoreTitle' => $scoreHeadingSafe($firstScoreImage, 0),
+                    'scoreIndex' => 0,
+                    'scoreBlockModifier' => 'official-score-section-block',
+                    'scoreHeadingClass' => 'official-score-heading',
+                    'scoreTitleClass' => 'official-score-title',
+                ])
             </div>
         @endif
     </div>
 
     @if (count($remainingScoreImages) > 0)
-        <div class="official-next-score-page">
+        @foreach (array_chunk($remainingScoreImages, 2) as $pageIndex => $scoreSheetPage)
+            <div class="official-next-score-page">
+                <div class="official-next-score-main-title">
+                    @if ($officialMainTitleSafe !== '')
+                        {{ $officialMainTitleSafe }}<br>
+                    @endif
+                    @if ($officialSubTitle !== '')
+                        {{ $officialSubTitle }}<br>
+                    @endif
+                    決勝（{{ $stageNumberSafe($qualifierCount) }}名によるシュートアウト方式）
+                </div>
+
+                @foreach ($scoreSheetPage as $index => $scoreSheetImage)
+                    @php
+                        $absoluteScoreIndex = ($pageIndex * 2) + $index + 1;
+                    @endphp
+                    @include('tournament_results.pdfs.partials.score_sheet_block', [
+                        'scoreSheetImage' => $scoreSheetImage,
+                        'scoreTitle' => $scoreHeadingSafe($scoreSheetImage, $absoluteScoreIndex),
+                        'scoreIndex' => $absoluteScoreIndex,
+                    ])
+                @endforeach
+            </div>
+        @endforeach
+    @endif
+@elseif (count($rawScoreImages) > 0)
+    @foreach (array_chunk($rawScoreImages, 2) as $pageIndex => $scoreSheetPage)
+        <div class="official-plain-score-page">
             <div class="official-next-score-main-title">
                 @if ($officialMainTitleSafe !== '')
                     {{ $officialMainTitleSafe }}<br>
@@ -135,39 +164,17 @@
                 決勝（{{ $stageNumberSafe($qualifierCount) }}名によるシュートアウト方式）
             </div>
 
-            @foreach ($remainingScoreImages as $index => $scoreSheetImage)
-                <div class="official-next-score-block">
-                    <div class="official-next-score-heading">
-                        <span class="official-score-logo">JPBA</span>
-                        <span class="official-next-score-title">{{ $scoreHeadingSafe($scoreSheetImage, $index + 1) }}</span>
-                    </div>
-
-                    <img class="official-score-image" src="{!! $scoreSheetImage['image'] ?? '' !!}" alt="スコア表">
-                </div>
+            @foreach ($scoreSheetPage as $index => $scoreSheetImage)
+                @php
+                    $absoluteScoreIndex = ($pageIndex * 2) + $index;
+                @endphp
+                @include('tournament_results.pdfs.partials.score_sheet_block', [
+                    'scoreSheetImage' => $scoreSheetImage,
+                    'scoreTitle' => $scoreHeadingSafe($scoreSheetImage, $absoluteScoreIndex),
+                    'scoreIndex' => $absoluteScoreIndex,
+                    'scoreTitleClass' => 'official-score-title',
+                ])
             @endforeach
         </div>
-    @endif
-@elseif (count($rawScoreImages) > 0)
-    <div class="official-plain-score-page">
-        <div class="official-next-score-main-title">
-            @if ($officialMainTitleSafe !== '')
-                {{ $officialMainTitleSafe }}<br>
-            @endif
-            @if ($officialSubTitle !== '')
-                {{ $officialSubTitle }}<br>
-            @endif
-            決勝（{{ $stageNumberSafe($qualifierCount) }}名によるシュートアウト方式）
-        </div>
-
-        @foreach ($rawScoreImages as $index => $scoreSheetImage)
-            <div class="official-next-score-block">
-                <div class="official-next-score-heading">
-                    <span class="official-score-logo">JPBA</span>
-                    <span class="official-score-title">{{ $scoreHeadingSafe($scoreSheetImage, $index) }}</span>
-                </div>
-
-                <img class="official-score-image" src="{!! $scoreSheetImage['image'] ?? '' !!}" alt="スコア表">
-            </div>
-        @endforeach
-    </div>
+    @endforeach
 @endif

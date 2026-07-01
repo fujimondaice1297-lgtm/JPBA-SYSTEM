@@ -16,7 +16,7 @@ class MatchScoreSheetImageService
 
     /**
      * @param \Illuminate\Support\Collection<int, TournamentMatchScoreSheet> $scoreSheets
-     * @return array<int,array{sheet_id:int,match_label:string,game_number:int,lane_label:string,image:string}>
+     * @return array<int,array{sheet_id:int,match_label:string,game_number:int,lane_label:string,player_count:int,image:string}>
      */
     public function generateDataUris(Collection $scoreSheets): array
     {
@@ -34,6 +34,7 @@ class MatchScoreSheetImageService
                 'match_label' => (string) ($scoreSheet->match_label ?: $scoreSheet->match_code ?: 'スコア表'),
                 'game_number' => (int) ($scoreSheet->game_number ?: 1),
                 'lane_label' => (string) ($scoreSheet->lane_label ?: ''),
+                'player_count' => (int) ($scoreSheet->players instanceof Collection ? $scoreSheet->players->count() : 0),
                 'image' => $image,
             ];
         }

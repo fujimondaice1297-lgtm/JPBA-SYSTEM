@@ -328,8 +328,12 @@
             page-break-inside: avoid;
         }
 
+        .official-score-section .official-next-score-block {
+            margin-bottom: 0;
+        }
+
         .official-score-heading {
-            margin: 4px 0 4px 56px;
+            margin: 4px 0 3px 56px;
             line-height: 1.15;
             white-space: nowrap;
         }
@@ -341,10 +345,19 @@
             line-height: 18px;
             text-align: center;
             border: 1px solid #222;
-            border-radius: 10px;
+            border-radius: 2px;
             font-size: 8px;
             vertical-align: middle;
-            margin-right: 4px;
+            margin-right: 5px;
+        }
+
+        .official-score-logo-image {
+            display: inline-block;
+            width: 36px;
+            height: auto;
+            max-height: 23px;
+            margin-right: 6px;
+            vertical-align: middle;
         }
 
         .official-score-title {
@@ -353,28 +366,52 @@
             vertical-align: middle;
         }
 
-        .official-score-image {
+        .official-score-meta {
             width: 86%;
-            max-width: 86%;
+            margin: 0 auto 4px auto;
+            padding: 0 2px 3px 2px;
+            border-bottom: 1px solid #222;
+            font-size: 9.8px;
+            line-height: 1.2;
+            text-align: left;
+        }
+
+        .official-score-image-frame {
+            width: 87%;
+            margin: 0 auto 4px auto;
+            padding: 3px 4px;
+            border: 1px solid #111;
+        }
+
+        .official-score-image {
+            width: 100%;
+            max-width: 100%;
             height: auto;
             display: block;
-            margin: 0 auto 4px auto;
+            margin: 0 auto;
         }
 
         .official-next-score-page {
             page-break-before: always;
+            page-break-after: auto;
         }
 
         .official-next-score-main-title {
-            margin: 26px 0 24px 0;
+            margin: 22px 0 18px 0;
             text-align: center;
             font-size: 21px;
             line-height: 1.4;
         }
 
         .official-next-score-block {
-            margin: 0 0 16px 0;
+            margin: 0 0 14px 0;
             page-break-inside: avoid;
+        }
+
+        .official-next-score-block + .official-next-score-block {
+            margin-top: 10px;
+            padding-top: 9px;
+            border-top: 1px solid #777;
         }
 
         .official-next-score-heading {
@@ -391,6 +428,7 @@
 
         .official-plain-score-page {
             page-break-before: always;
+            page-break-after: auto;
         }
 
         .official-plain-score-title {

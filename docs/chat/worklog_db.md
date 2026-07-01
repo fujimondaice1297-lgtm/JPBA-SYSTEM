@@ -8071,3 +8071,35 @@ User::where('email','domaine-d@i.softbank.jp')->exists(); // true
 ### 未チェック更新
 - 今回は既存Active Backlog外のDB・構成整理作業として記録した。
 - 残り未チェックは4件のまま。
+
+## 2026-07-02 公式PDF風スコアシート仕上げ
+
+### 目的
+- 公式PDF風スコアシートの罫線、ロゴ、会場情報、複数ページ分割を調整する。
+- 既存大会ID 10のシーズントライアル/シュートアウト実データで見た目を確認する。
+
+### 変更内容
+- `resources/views/tournament_results/pdfs/partials/score_sheet_block.blade.php` を追加し、スコアシート1枚分の描画を共通化した。
+- 通常/シングルエリミネーション用の `score_sheets.blade.php` は、スコアシートが複数ある場合も先頭を落とさず全件表示するようにした。
+- シュートアウト用の `shootout_pages.blade.php` は、優勝決定戦を図ページ内に表示し、残りスコアシートを2枚ごとに別ページへ分けるようにした。
+- スコアシート見出しへJPBA実ロゴ、会場、開催日、レーン、ゲーム番号を表示するようにした。
+- スコアシート画像に外枠罫線を追加し、複数枚表示時の区切り線と余白を調整した。
+- PDF共通の開催日表示を `YYYY年M月D日` 形式へ揃えた。
+- `MatchScoreSheetImageService::generateDataUris()` が `player_count` を返すようにし、今後のページ分割条件拡張に備えた。
+
+### 検証
+- `php -l app/Services/MatchScoreSheetImageService.php`
+- `php artisan view:cache`
+- 既存大会ID 10の `tournament_match_score_sheets` 3件からPNG data URIを生成できることを確認した。
+- `php artisan tournament:pdf-regression`
+  - `season_trial_existing` OK
+  - `round_robin_step_ladder_existing` OK
+  - `standard_fixture` OK
+  - `shootout_fixture` OK
+  - `single_elimination_fixture` OK
+- 大会ID 10のPDFを `tmp/pdfs/tournament_10_score_sheet_check.pdf` として生成し、PopplerでPNG化した。
+- `tournament_10_page-2.png` と `tournament_10_page-3.png` を目視確認し、ロゴ、会場/開催日/レーン表示、外枠罫線、ページ分割に表示崩れがないことを確認した。
+
+### 未チェック更新
+- Active Backlog Dの「公式PDF風スコアシートの罫線、ロゴ、会場情報、複数ページ分割を調整する」を完了扱いにした。
+- 残り未チェックは3件。

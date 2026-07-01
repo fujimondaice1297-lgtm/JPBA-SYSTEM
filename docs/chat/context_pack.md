@@ -344,3 +344,14 @@
 - Serviceは完全未参照なし。
 - ルート未接続Controller 6本と関連View/Request/未読込routeを削除し、Controllerは68本すべてルート接続済みに整理した。
 - 現DBは95テーブル中64テーブルが空。ただし将来運用、旧互換、Laravel標準テーブルを含むためDBテーブル削除は実施しない。
+
+## 2026-07-02 追記: 公式PDF風スコアシート
+
+- スコアシート1枚分の描画を `resources/views/tournament_results/pdfs/partials/score_sheet_block.blade.php` に共通化した。
+- スコアシート見出しはJPBA実ロゴ、会場、開催日、レーン、ゲーム番号を表示する。
+- 通常/シングルエリミネーション用 `score_sheets.blade.php` は、複数スコアシート時も先頭を落とさず全件を2枚ごとにページ分割する。
+- シュートアウト用 `shootout_pages.blade.php` は、優勝決定戦を図ページ内、残りを2枚ごとの別ページとして出す。
+- `MatchScoreSheetImageService::generateDataUris()` は `player_count` を返す。
+- `php artisan tournament:pdf-regression` は全5ケースOK。
+- 大会ID 10のPDFをPNG化し、スコアシートページのロゴ、会場/開催日/レーン表示、外枠罫線、ページ分割に崩れがないことを確認した。
+- 未チェックは3件。

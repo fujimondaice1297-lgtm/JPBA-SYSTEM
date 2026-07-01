@@ -99,16 +99,35 @@
         ], '');
     }
 
+    $formatPdfDate = function ($value): string {
+        if ($value instanceof \DateTimeInterface) {
+            return $value->format('Y年n月j日');
+        }
+
+        $text = trim((string) ($value ?? ''));
+        if ($text === '') {
+            return '';
+        }
+
+        try {
+            return \Illuminate\Support\Carbon::parse($text)->format('Y年n月j日');
+        } catch (\Throwable $e) {
+            return $text;
+        }
+    };
+
     $dateText = '';
     if (isset($tournament)) {
         $start = $tournament->start_date ?? null;
         $end = $tournament->end_date ?? null;
-        if ($start && $end && (string) $start !== (string) $end) {
-            $dateText = (string) $start . '～' . (string) $end;
-        } elseif ($start) {
-            $dateText = (string) $start;
-        } elseif ($end) {
-            $dateText = (string) $end;
+        $startText = $formatPdfDate($start);
+        $endText = $formatPdfDate($end);
+        if ($startText !== '' && $endText !== '' && $startText !== $endText) {
+            $dateText = $startText . '～' . $endText;
+        } elseif ($startText !== '') {
+            $dateText = $startText;
+        } elseif ($endText !== '') {
+            $dateText = $endText;
         }
     }
 

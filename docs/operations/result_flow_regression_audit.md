@@ -1,6 +1,6 @@
 # 大会成績方式別回帰監査
 
-最終更新: 2026-07-01
+最終更新: 2026-07-02
 
 ## 2026-06-30 方式ルール確認メモ
 
@@ -45,6 +45,20 @@
 | single_elimination_fixture | single_elimination | 一時fixture | OK | 120953 | シングルエリミネーションPDF |
 
 実行後、`tournaments` は大会ID 10/11のみで、一時fixtureが残っていないことを確認した。
+
+## 2026-07-02 PDFスコアシート仕上げ後回帰
+
+公式PDF風スコアシートの罫線、JPBAロゴ、会場/開催日/レーン表示、複数ページ分割を調整した後、同じ `php artisan tournament:pdf-regression` を実行した。
+
+| case | mode | 対象 | 結果 | bytes | メモ |
+|---|---|---|---|---:|---|
+| season_trial_existing | season_trial | 大会ID 10 | OK | 712137 | スコアシート見出し、会場/開催日/レーン表示、2枚ごとのページ分割を確認 |
+| round_robin_step_ladder_existing | standard_with_step_ladder | 大会ID 11 | OK | 670411 | 通常外枠 + RR/ステップラダー |
+| standard_fixture | standard | 一時fixture | OK | 203333 | 通常トータルピンPDF |
+| shootout_fixture | shootout | 一時fixture | OK | 399687 | 純シュートアウトPDF |
+| single_elimination_fixture | single_elimination | 一時fixture | OK | 121282 | シングルエリミネーションPDF |
+
+大会ID 10のPDFを `tmp/pdfs/tournament_10_score_sheet_check.pdf` として生成し、PopplerでPNG化した。`tournament_10_page-2.png` と `tournament_10_page-3.png` を確認し、ロゴ、外枠罫線、会場/開催日/レーン表示、ページ分割に表示崩れがないことを確認した。
 
 ## 2026-07-01 結果フロー一括回帰
 
