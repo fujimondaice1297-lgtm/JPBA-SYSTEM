@@ -1,7 +1,7 @@
 # Columns by table (generated)
 
 - Source: `docs/db/columns_public.csv`
-- Generated: 2026-07-01 08:39:01
+- Generated: 2026-07-01 09:13:15
 
 > ⚠️ このファイルは自動生成です。手で編集しないでください。
 
@@ -1187,6 +1187,25 @@
 | 3 | used_ball_id | bigint | YES |
 | 4 | created_at | timestamp without time zone | YES |
 | 5 | updated_at | timestamp without time zone | YES |
+
+## tournament_entry_operation_logs (14 columns)
+
+| # | column | type | nullable |
+|---:|---|---|---|
+| 1 | id | bigint | NO |
+| 2 | tournament_id | bigint | NO |
+| 3 | tournament_entry_id | bigint | YES |
+| 4 | pro_bowler_id | bigint | YES |
+| 5 | action | character varying | NO |
+| 6 | from_status | character varying | YES |
+| 7 | to_status | character varying | YES |
+| 8 | reason | text | YES |
+| 9 | batch_key | character varying | YES |
+| 10 | actor_user_id | bigint | YES |
+| 11 | payload | json | YES |
+| 12 | occurred_at | timestamp without time zone | NO |
+| 13 | created_at | timestamp without time zone | YES |
+| 14 | updated_at | timestamp without time zone | YES |
 
 ## tournament_files (7 columns)
 

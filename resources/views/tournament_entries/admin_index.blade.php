@@ -99,6 +99,8 @@
     </div>
   </div>
 
+  @include('tournament_entries.partials.entry_operation_logs', ['entryOperationLogs' => $entryOperationLogs ?? collect()])
+
   <div id="amateur-participants" class="card mb-4 border-primary">
     <div class="card-header fw-bold text-primary">アマチュア参加者登録</div>
     <div class="card-body">
@@ -651,6 +653,12 @@
                 @if (in_array($entry->status, ['entry', 'waiting'], true))
                   <form method="POST" action="{{ route('tournaments.entries.cancel', $entry->id) }}" class="m-0">
                     @csrf
+                    <input type="text"
+                           name="cancel_reason"
+                           class="form-control form-control-sm mb-1"
+                           maxlength="1000"
+                           required
+                           placeholder="取消理由">
                     <button type="submit"
                             class="btn btn-sm btn-outline-danger"
                             onclick="return confirm('このエントリー / ウェイティングを取り消します。抽選・待機順・チェックイン情報もクリアされます。よろしいですか？');">

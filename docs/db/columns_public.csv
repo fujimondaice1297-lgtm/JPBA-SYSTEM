@@ -802,6 +802,20 @@ tournament_entry_balls,2,tournament_entry_id,bigint,YES
 tournament_entry_balls,3,used_ball_id,bigint,YES
 tournament_entry_balls,4,created_at,timestamp without time zone,YES
 tournament_entry_balls,5,updated_at,timestamp without time zone,YES
+tournament_entry_operation_logs,1,id,bigint,NO
+tournament_entry_operation_logs,2,tournament_id,bigint,NO
+tournament_entry_operation_logs,3,tournament_entry_id,bigint,YES
+tournament_entry_operation_logs,4,pro_bowler_id,bigint,YES
+tournament_entry_operation_logs,5,action,character varying,NO
+tournament_entry_operation_logs,6,from_status,character varying,YES
+tournament_entry_operation_logs,7,to_status,character varying,YES
+tournament_entry_operation_logs,8,reason,text,YES
+tournament_entry_operation_logs,9,batch_key,character varying,YES
+tournament_entry_operation_logs,10,actor_user_id,bigint,YES
+tournament_entry_operation_logs,11,payload,json,YES
+tournament_entry_operation_logs,12,occurred_at,timestamp without time zone,NO
+tournament_entry_operation_logs,13,created_at,timestamp without time zone,YES
+tournament_entry_operation_logs,14,updated_at,timestamp without time zone,YES
 tournament_files,1,id,bigint,NO
 tournament_files,2,tournament_id,bigint,NO
 tournament_files,3,type,character varying,NO

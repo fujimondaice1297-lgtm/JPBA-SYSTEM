@@ -7825,3 +7825,41 @@ User::where('email','domaine-d@i.softbank.jp')->exists(); // true
 - 次の自然な作業:
   1. ランキング取込・年度末確定・全日本選手権用年度途中ランキング・優先出場順位の整理をまとめて進める。
   2. シングルエリミネーションfixtureを復元/再作成し、速報、正式成績snapshot、PDFまで再確認する。
+## 2026-07-01 エントリー当日運用・取消理由・繰り上げ履歴
+
+### 目的
+- Active Backlog Eの未チェック「チェックイン、当日運用、抽選結果公開、取消理由、一括繰り上げ履歴をエントリー管理に接続する」を進める。
+- 既存のチェックイン、抽選一覧、ウェイティング登録、単独繰り上げ、一括繰り上げ、取消処理は残し、後から運用根拠を追える履歴層を追加する。
+
+### 実施内容
+- `tournament_entry_operation_logs` テーブルを追加した。
+  - 対象大会、対象エントリー、対象プロ、操作種別、操作前後ステータス、理由、batch key、操作者、payload、発生日時を保持する。
+  - `tournament_entries` は申込・抽選・使用ボール登録・チェックインの正本として維持し、このテーブルは監査・運用確認用の履歴とする。
+- `TournamentEntryAdminController` を更新した。
+  - 管理側エントリー一覧 / 抽選一覧へ直近20件の操作履歴を渡す。
+  - ウェイティング登録、単独繰り上げ、一括繰り上げ、一括繰り上げ対象外、取消を履歴化する。
+  - 一括繰り上げでは同じ `batch_key` を使い、成功行と対象外行を同一操作単位として追えるようにした。
+  - 取消時は `cancel_reason` を必須入力にし、取消前のシフト、レーン、チェックイン、ウェイティング状態を `payload.previous_state` に残す。
+- `TournamentEntryController` を更新した。
+  - 会員本人のチェックイン時にも `check_in` 操作として履歴を保存する。
+- `resources/views/tournament_entries/partials/entry_operation_logs.blade.php` を追加した。
+  - 管理側エントリー一覧 / 抽選一覧で、日時、操作、選手、状態遷移、理由・メモ、一括キー、操作者を表示する。
+- `admin_index.blade.php` / `admin_draws.blade.php` を更新した。
+  - 操作履歴パーツを表示。
+  - 取消フォームに `cancel_reason` 入力欄を追加。
+- `docs/db/data_dictionary.md` に `tournament_entry_operation_logs` の役割、主要カラム、運用方針、FKを追記した。
+- 現DBから `docs/db/SCHEMA.sql`、`docs/db/columns_public.csv`、`docs/db/columns_by_table.md`、`docs/db/ER.dbml` を再生成した。
+
+### 検証
+- `php -l app/Http/Controllers/TournamentEntryAdminController.php`
+- `php -l app/Http/Controllers/TournamentEntryController.php`
+- `php -l database/migrations/2026_07_01_000001_create_tournament_entry_operation_logs_table.php`
+- `php artisan migrate`
+- `php artisan view:cache`
+- `php artisan tinker --execute="...Schema::hasTable('tournament_entry_operation_logs')..."`
+  - `exists = true`
+  - 14カラム: `id`, `tournament_id`, `tournament_entry_id`, `pro_bowler_id`, `action`, `from_status`, `to_status`, `reason`, `batch_key`, `actor_user_id`, `payload`, `occurred_at`, `created_at`, `updated_at`
+
+### 未チェック更新
+- Active Backlog Eの該当1件を完了扱いにした。
+- 残り未チェックは6件。

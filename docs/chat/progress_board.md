@@ -1491,6 +1491,15 @@
 - [✓] `tournaments` は83 columns、`tournament_entries` / `tournament_results` は各17 columns、`tournament_files` は7 columnsとして現DB確認済み
 - [✓] 残り未チェックは7件
 
+#### 2026-07-01 メモ（エントリー当日運用・取消理由・繰り上げ履歴）
+- [✓] `tournament_entry_operation_logs` を追加し、エントリー取消、ウェイティング登録、単独繰り上げ、一括繰り上げ、対象外スキップ、会員チェックインの履歴を保存できるようにした
+- [✓] 管理側エントリー一覧 / 抽選一覧に、直近20件のエントリー操作履歴を表示する共通パーツを追加した
+- [✓] 取消時は `cancel_reason` を必須入力にし、取消前のシフト、レーン、チェックイン、ウェイティング状態を `payload.previous_state` に残すようにした
+- [✓] 一括繰り上げは `batch_key` で同一操作単位を追跡し、繰り上げ成功行と参加権利なし等の対象外行を同じ履歴で確認できるようにした
+- [✓] `docs/db/data_dictionary.md`、`SCHEMA.sql`、`columns_public.csv`、`columns_by_table.md`、`ER.dbml` を現DBに合わせて更新した
+- [✓] `php -l`、`php artisan migrate`、`php artisan view:cache`、Laravel tinkerでの新テーブル確認を通した
+- [✓] 残り未チェックは6件
+
 ##### 次に行う候補（Active Backlog）
 
 ###### A. 直近のスコア/OCR運用
@@ -1534,7 +1543,7 @@
 - [✓] 男子ranking snapshotの `as_of_date` が公式PDF日付と一致しているか確認する
 - [✓] 実ランキング取込、年度末確定処理、全日本選手権用の年度途中ランキング運用を整理する
 - [✓] 大会エントリー導線へ優先出場順位をどう反映するか決める
-- [ ] チェックイン、当日運用、抽選結果公開、取消理由、一括繰り上げ履歴をエントリー管理に接続する
+- [✓] チェックイン、当日運用、抽選結果公開、取消理由、一括繰り上げ履歴をエントリー管理に接続する
 - [✓] `registered_balls` と `used_balls` の役割分担を最終整理する
 
 ###### F. インストラクター・ProTest・会員基盤

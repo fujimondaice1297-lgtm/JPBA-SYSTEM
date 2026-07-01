@@ -77,6 +77,8 @@
     </div>
   </div>
 
+  @include('tournament_entries.partials.entry_operation_logs', ['entryOperationLogs' => $entryOperationLogs ?? collect()])
+
   @if (($summary['priority_missing_count'] ?? 0) > 0)
     <div class="alert alert-warning small d-flex justify-content-between align-items-center flex-wrap gap-2">
       <div>
@@ -238,6 +240,12 @@
             <td>
               <form method="POST" action="{{ route('tournaments.entries.cancel', $entry->id) }}" class="m-0">
                 @csrf
+                <input type="text"
+                       name="cancel_reason"
+                       class="form-control form-control-sm mb-1"
+                       maxlength="1000"
+                       required
+                       placeholder="取消理由">
                 <button type="submit"
                         class="btn btn-sm btn-outline-danger"
                         onclick="return confirm('この参加登録を取り消します。抽選・チェックイン情報もクリアされます。よろしいですか？');">

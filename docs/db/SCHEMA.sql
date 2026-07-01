@@ -3660,6 +3660,51 @@ ALTER SEQUENCE public.tournament_entry_balls_id_seq OWNED BY public.tournament_e
 
 
 --
+-- Name: tournament_entry_operation_logs; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.tournament_entry_operation_logs (
+    id bigint NOT NULL,
+    tournament_id bigint NOT NULL,
+    tournament_entry_id bigint,
+    pro_bowler_id bigint,
+    action character varying(64) NOT NULL,
+    from_status character varying(32),
+    to_status character varying(32),
+    reason text,
+    batch_key character varying(64),
+    actor_user_id bigint,
+    payload json,
+    occurred_at timestamp(0) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    created_at timestamp(0) without time zone,
+    updated_at timestamp(0) without time zone
+);
+
+
+ALTER TABLE public.tournament_entry_operation_logs OWNER TO postgres;
+
+--
+-- Name: tournament_entry_operation_logs_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.tournament_entry_operation_logs_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.tournament_entry_operation_logs_id_seq OWNER TO postgres;
+
+--
+-- Name: tournament_entry_operation_logs_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.tournament_entry_operation_logs_id_seq OWNED BY public.tournament_entry_operation_logs.id;
+
+
+--
 -- Name: tournament_files; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -5187,6 +5232,13 @@ ALTER TABLE ONLY public.tournament_entry_balls ALTER COLUMN id SET DEFAULT nextv
 
 
 --
+-- Name: tournament_entry_operation_logs id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.tournament_entry_operation_logs ALTER COLUMN id SET DEFAULT nextval('public.tournament_entry_operation_logs_id_seq'::regclass);
+
+
+--
 -- Name: tournament_files id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
@@ -6082,6 +6134,14 @@ ALTER TABLE ONLY public.tournament_entry_balls
 
 
 --
+-- Name: tournament_entry_operation_logs tournament_entry_operation_logs_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.tournament_entry_operation_logs
+    ADD CONSTRAINT tournament_entry_operation_logs_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: tournament_files tournament_files_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -6885,6 +6945,34 @@ CREATE INDEX tdrl_tournament_pending_idx ON public.tournament_draw_reminder_logs
 
 
 --
+-- Name: teol_action_occurred_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX teol_action_occurred_idx ON public.tournament_entry_operation_logs USING btree (action, occurred_at);
+
+
+--
+-- Name: teol_batch_key_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX teol_batch_key_idx ON public.tournament_entry_operation_logs USING btree (batch_key);
+
+
+--
+-- Name: teol_entry_occurred_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX teol_entry_occurred_idx ON public.tournament_entry_operation_logs USING btree (tournament_entry_id, occurred_at);
+
+
+--
+-- Name: teol_tournament_occurred_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX teol_tournament_occurred_idx ON public.tournament_entry_operation_logs USING btree (tournament_id, occurred_at);
+
+
+--
 -- Name: tmsf_player_frame_idx; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -7465,6 +7553,38 @@ ALTER TABLE ONLY public.tournament_entry_balls
 
 ALTER TABLE ONLY public.tournament_entry_balls
     ADD CONSTRAINT tournament_entry_balls_used_ball_id_foreign FOREIGN KEY (used_ball_id) REFERENCES public.used_balls(id) ON DELETE CASCADE;
+
+
+--
+-- Name: tournament_entry_operation_logs tournament_entry_operation_logs_actor_user_id_foreign; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.tournament_entry_operation_logs
+    ADD CONSTRAINT tournament_entry_operation_logs_actor_user_id_foreign FOREIGN KEY (actor_user_id) REFERENCES public.users(id) ON DELETE SET NULL;
+
+
+--
+-- Name: tournament_entry_operation_logs tournament_entry_operation_logs_pro_bowler_id_foreign; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.tournament_entry_operation_logs
+    ADD CONSTRAINT tournament_entry_operation_logs_pro_bowler_id_foreign FOREIGN KEY (pro_bowler_id) REFERENCES public.pro_bowlers(id) ON DELETE SET NULL;
+
+
+--
+-- Name: tournament_entry_operation_logs tournament_entry_operation_logs_tournament_entry_id_foreign; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.tournament_entry_operation_logs
+    ADD CONSTRAINT tournament_entry_operation_logs_tournament_entry_id_foreign FOREIGN KEY (tournament_entry_id) REFERENCES public.tournament_entries(id) ON DELETE SET NULL;
+
+
+--
+-- Name: tournament_entry_operation_logs tournament_entry_operation_logs_tournament_id_foreign; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.tournament_entry_operation_logs
+    ADD CONSTRAINT tournament_entry_operation_logs_tournament_id_foreign FOREIGN KEY (tournament_id) REFERENCES public.tournaments(id) ON DELETE CASCADE;
 
 
 --

@@ -13,6 +13,7 @@ use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 
 class TournamentEntryAdminController extends Controller
 {
@@ -52,6 +53,7 @@ class TournamentEntryAdminController extends Controller
         $summary = $this->buildSummary($tournament, $priorityLookup);
         $amateurBowlers = $this->loadAmateurBowlersForSelect();
         $amateurParticipants = $this->loadTournamentAmateurParticipants($tournament);
+        $entryOperationLogs = $this->recentEntryOperationLogs($tournament);
 
         return view('tournament_entries.admin_index', compact(
             'tournament',
@@ -60,7 +62,8 @@ class TournamentEntryAdminController extends Controller
             'status',
             'keyword',
             'amateurBowlers',
-            'amateurParticipants'
+            'amateurParticipants',
+            'entryOperationLogs'
         ));
     }
 
@@ -109,13 +112,15 @@ class TournamentEntryAdminController extends Controller
         );
 
         $summary = $this->buildSummary($tournament, $priorityLookup);
+        $entryOperationLogs = $this->recentEntryOperationLogs($tournament);
 
         return view('tournament_entries.admin_draws', compact(
             'tournament',
             'entries',
             'summary',
             'keyword',
-            'pendingDraw'
+            'pendingDraw',
+            'entryOperationLogs'
         ));
     }
 
@@ -245,6 +250,19 @@ class TournamentEntryAdminController extends Controller
                 'shift_drawn' => false,
                 'lane_drawn' => false,
             ]
+        );
+        $entry->loadMissing('bowler');
+
+        $this->recordEntryOperation(
+            $entry,
+            'waitlist_registered',
+            $data['waitlist_note'] ?: null,
+            [
+                'waitlist_priority' => $waitlistPriority,
+                'priority_auto_filled' => $priorityInfo && is_null($data['waitlist_priority'] ?? null),
+            ],
+            $existing?->status,
+            'waiting'
         );
 
         $message = 'ウェイティング登録を保存しました。 [' . $entry->bowler?->license_no . ' ' . ($entry->bowler?->name_kanji ?? '') . ']';
@@ -661,6 +679,8 @@ class TournamentEntryAdminController extends Controller
                 ->with('error', '参加権利がない選手は参加へ繰り上げできません。先に会員区分・出場可否を確認してください。');
         }
 
+        $fromStatus = (string) $entry->status;
+
         $entry->update([
             'status' => 'entry',
             'promoted_from_waitlist_at' => now(),
@@ -670,6 +690,21 @@ class TournamentEntryAdminController extends Controller
             'shift_drawn' => false,
             'lane_drawn' => false,
         ]);
+
+        $entry->refresh();
+        $entry->loadMissing('bowler');
+
+        $this->recordEntryOperation(
+            $entry,
+            'waitlist_promoted',
+            null,
+            [
+                'bulk' => false,
+                'waitlist_priority' => $entry->waitlist_priority,
+            ],
+            $fromStatus,
+            'entry'
+        );
 
         return redirect()
             ->route('tournaments.entries.index', $entry->tournament_id)
@@ -713,23 +748,54 @@ class TournamentEntryAdminController extends Controller
 
         $promotedCount = 0;
         $skippedCount = 0;
+        $batchKey = (string) Str::uuid();
+        $promotedAt = now();
 
         foreach ($entries as $entry) {
             $eligibility = $this->resolveEligibility($entry->bowler);
             if (($eligibility['short'] ?? '') !== '参加権利あり') {
+                $this->recordEntryOperation(
+                    $entry,
+                    'waitlist_bulk_skipped',
+                    $eligibility['message'] ?? '参加権利なし',
+                    [
+                        'batch_key' => $batchKey,
+                        'eligibility_short' => $eligibility['short'] ?? null,
+                    ],
+                    (string) $entry->status,
+                    (string) $entry->status,
+                    $batchKey
+                );
+
                 $skippedCount++;
                 continue;
             }
 
+            $fromStatus = (string) $entry->status;
+            $waitlistPriority = $entry->waitlist_priority;
+
             $entry->update([
                 'status' => 'entry',
-                'promoted_from_waitlist_at' => now(),
+                'promoted_from_waitlist_at' => $promotedAt,
                 'shift' => null,
                 'lane' => null,
                 'checked_in_at' => null,
                 'shift_drawn' => false,
                 'lane_drawn' => false,
             ]);
+
+            $this->recordEntryOperation(
+                $entry,
+                'waitlist_bulk_promoted',
+                null,
+                [
+                    'batch_key' => $batchKey,
+                    'waitlist_priority' => $waitlistPriority,
+                ],
+                $fromStatus,
+                'entry',
+                $batchKey
+            );
 
             $promotedCount++;
         }
@@ -750,13 +816,34 @@ class TournamentEntryAdminController extends Controller
             ->with('success', $message);
     }
 
-    public function cancel(TournamentEntry $entry)
+    public function cancel(Request $request, TournamentEntry $entry)
     {
         if (!in_array((string) $entry->status, ['entry', 'waiting'], true)) {
             return redirect()
                 ->route('tournaments.entries.index', $entry->tournament_id)
                 ->with('error', '参加またはウェイティングの行のみ取り消しできます。');
         }
+
+        $data = $request->validate([
+            'cancel_reason' => ['required', 'string', 'max:1000'],
+        ], [
+            'cancel_reason.required' => '取消理由を入力してください。',
+            'cancel_reason.max' => '取消理由は1000文字以内で入力してください。',
+        ]);
+
+        $reason = trim((string) $data['cancel_reason']);
+        $fromStatus = (string) $entry->status;
+        $previousState = [
+            'preferred_shift_code' => $entry->preferred_shift_code,
+            'shift' => $entry->shift,
+            'lane' => $entry->lane,
+            'checked_in_at' => $entry->checked_in_at,
+            'waitlist_priority' => $entry->waitlist_priority,
+            'waitlisted_at' => $entry->waitlisted_at,
+            'promoted_from_waitlist_at' => $entry->promoted_from_waitlist_at,
+            'shift_drawn' => (bool) $entry->shift_drawn,
+            'lane_drawn' => (bool) $entry->lane_drawn,
+        ];
 
         $entry->update([
             'status' => 'no_entry',
@@ -771,6 +858,18 @@ class TournamentEntryAdminController extends Controller
             'shift_drawn' => false,
             'lane_drawn' => false,
         ]);
+
+        $entry->refresh();
+        $entry->loadMissing('bowler');
+
+        $this->recordEntryOperation(
+            $entry,
+            'entry_cancelled',
+            $reason,
+            ['previous_state' => $previousState],
+            $fromStatus,
+            'no_entry'
+        );
 
         return redirect()
             ->route('tournaments.entries.index', $entry->tournament_id)
@@ -820,6 +919,83 @@ class TournamentEntryAdminController extends Controller
             'priority_missing_count' => $priorityCoverage['missing_count'],
             'priority_missing_entries' => $priorityCoverage['missing_entries'],
         ];
+    }
+
+    private function recentEntryOperationLogs(Tournament $tournament): Collection
+    {
+        if (!Schema::hasTable('tournament_entry_operation_logs')) {
+            return collect();
+        }
+
+        return DB::table('tournament_entry_operation_logs as log')
+            ->leftJoin('pro_bowlers as pb', 'pb.id', '=', 'log.pro_bowler_id')
+            ->leftJoin('users as u', 'u.id', '=', 'log.actor_user_id')
+            ->where('log.tournament_id', $tournament->id)
+            ->orderByDesc('log.occurred_at')
+            ->orderByDesc('log.id')
+            ->limit(20)
+            ->get([
+                'log.*',
+                'pb.license_no as bowler_license_no',
+                'pb.name_kanji as bowler_name',
+                'u.name as actor_name',
+            ])
+            ->map(function ($row) {
+                $payload = json_decode((string) ($row->payload ?? ''), true);
+                $payload = is_array($payload) ? $payload : [];
+
+                $row->action_label = $this->entryOperationActionLabel((string) $row->action);
+                $row->payload_array = $payload;
+                $row->batch_label = $row->batch_key ?: ($payload['batch_key'] ?? null);
+                $row->actor_label = $row->actor_name ?: ($row->actor_user_id ? ('user#' . $row->actor_user_id) : '-');
+
+                return $row;
+            });
+    }
+
+    private function recordEntryOperation(
+        TournamentEntry $entry,
+        string $action,
+        ?string $reason = null,
+        array $payload = [],
+        ?string $fromStatus = null,
+        ?string $toStatus = null,
+        ?string $batchKey = null
+    ): void {
+        if (!Schema::hasTable('tournament_entry_operation_logs')) {
+            return;
+        }
+
+        $now = now();
+
+        DB::table('tournament_entry_operation_logs')->insert([
+            'tournament_id' => $entry->tournament_id,
+            'tournament_entry_id' => $entry->id,
+            'pro_bowler_id' => $entry->pro_bowler_id,
+            'action' => $action,
+            'from_status' => $fromStatus,
+            'to_status' => $toStatus,
+            'reason' => $reason,
+            'batch_key' => $batchKey,
+            'actor_user_id' => auth()->id(),
+            'payload' => json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+            'occurred_at' => $now,
+            'created_at' => $now,
+            'updated_at' => $now,
+        ]);
+    }
+
+    private function entryOperationActionLabel(string $action): string
+    {
+        return match ($action) {
+            'waitlist_registered' => 'ウェイティング登録',
+            'waitlist_promoted' => '参加繰り上げ',
+            'waitlist_bulk_promoted' => '一括繰り上げ',
+            'waitlist_bulk_skipped' => '一括繰り上げ対象外',
+            'entry_cancelled' => '取消',
+            'check_in' => 'チェックイン',
+            default => $action,
+        };
     }
 
     private function buildPriorityCoverage(Tournament $tournament, array $priorityLookup): array

@@ -7,6 +7,8 @@ use App\Models\Tournament;
 use App\Models\TournamentEntry;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class TournamentEntryController extends Controller
 {
@@ -160,10 +162,42 @@ class TournamentEntryController extends Controller
         $entry->update([
             'checked_in_at' => now(),
         ]);
+        $entry->refresh();
+
+        $this->recordEntryOperation($entry, 'check_in', null, [
+            'shift' => $entry->shift,
+            'lane' => $entry->lane,
+            'source' => 'member_entry_select',
+        ]);
 
         return redirect()
             ->route('tournament.entry.select')
             ->with('success', 'チェックインを受け付けました。');
+    }
+
+    private function recordEntryOperation(TournamentEntry $entry, string $action, ?string $reason = null, array $payload = []): void
+    {
+        if (!Schema::hasTable('tournament_entry_operation_logs')) {
+            return;
+        }
+
+        $now = now();
+
+        DB::table('tournament_entry_operation_logs')->insert([
+            'tournament_id' => $entry->tournament_id,
+            'tournament_entry_id' => $entry->id,
+            'pro_bowler_id' => $entry->pro_bowler_id,
+            'action' => $action,
+            'from_status' => $entry->status,
+            'to_status' => $entry->status,
+            'reason' => $reason,
+            'batch_key' => null,
+            'actor_user_id' => auth()->id(),
+            'payload' => json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+            'occurred_at' => $now,
+            'created_at' => $now,
+            'updated_at' => $now,
+        ]);
     }
 
     private function normalizePreferredShift(string $preferredShift, Tournament $tournament): ?string
