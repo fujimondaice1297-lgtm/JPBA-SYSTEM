@@ -3,7 +3,6 @@
 // ===== 先頭へ移動（理由：PHPのuseは冒頭のみ有効。途中配置は構文上不可） =====
 use Illuminate\Support\Facades\Route;
 use App\Http\Kernel as HttpKernel;
-use Illuminate\Http\Request;
 use App\Models\ProBowler;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -19,7 +18,7 @@ use App\Http\Controllers\VenuePageController;
 use App\Http\Controllers\{
     ProBowlerController, TournamentController, TournamentResultController, RecordTypeController,
     InstructorController, PrizeDistributionController, PointDistributionController,
-    ApprovedBallController, ApprovedBallImportController, UsedBallController, ProfileController,
+    ApprovedBallController, ApprovedBallImportController, UsedBallController,
     TournamentProController, TpRegistrationController, RankingController, PerfectRecordController,
     ProGroupController, CertificateController, RegisteredBallController, ComplianceController,
     ProBowlerTrainingController, BulkTrainingController, TrainingReportController,

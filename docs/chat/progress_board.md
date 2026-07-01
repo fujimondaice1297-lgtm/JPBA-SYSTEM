@@ -1526,6 +1526,16 @@
 - [✓] `docs/operations/result_flow_regression_audit.md` を更新した
 - [✓] 残り未チェックは4件
 
+#### 2026-07-01 メモ（DB・構成整理監査）
+- [✓] `php artisan migrate:status` で167件すべて適用済み、未適用migrationなしを確認した
+- [✓] migration timestamp重複は既知の `2025_09_02_000026` 2件のみで、適用済み履歴保護のため削除/リネームしない方針にした
+- [✓] `app/Models/*.php` の全Modelが現DBテーブルを参照していることを確認した
+- [✓] Serviceは完全未参照なし。削除対象なしと判断した
+- [✓] ルート未接続Controller 6本と関連View/Request/未読込routeを削除し、Controllerは68本すべてルート接続済みに整理した
+- [✓] 現DBは95テーブル中64テーブルが空だが、将来運用/互換/Laravel標準を含むためDBテーブル削除は見送った
+- [✓] `docs/operations/database_simplification_audit.md` と `docs/db/migration_duplicates.md` を更新した
+- [✓] 残り未チェックは4件
+
 ##### 次に行う候補（Active Backlog）
 
 ###### A. 直近のスコア/OCR運用

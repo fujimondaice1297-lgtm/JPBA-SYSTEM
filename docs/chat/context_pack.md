@@ -334,3 +334,13 @@
 - 実行後に `tournaments` が大会ID 10/11のみで、一時fixtureがDBへ残っていないことを確認した。
 - Active Backlog Cの方式別回帰1件を完了扱いにした。
 - シングルエリミネーションの現DB実データ復元/再作成後の速報、正式成績snapshot、`tournament_results` 同期、PDF通し確認を新しい未チェックとして残し、未チェックは4件。
+
+## 2026-07-01 追記: DB・構成整理監査
+
+- `docs/operations/database_simplification_audit.md` を追加した。
+- `php artisan migrate:status` で167件すべて適用済み、未適用migrationなしを確認した。
+- migration timestamp重複は既知の `2025_09_02_000026` 2件のみ。既存DBで適用済みのため、削除/リネームせず `docs/db/migration_duplicates.md` に維持方針を記録した。
+- `app/Models/*.php` は全Modelが現DBテーブルを参照しており、Model/DBテーブル不一致はなかった。
+- Serviceは完全未参照なし。
+- ルート未接続Controller 6本と関連View/Request/未読込routeを削除し、Controllerは68本すべてルート接続済みに整理した。
+- 現DBは95テーブル中64テーブルが空。ただし将来運用、旧互換、Laravel標準テーブルを含むためDBテーブル削除は実施しない。

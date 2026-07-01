@@ -8009,3 +8009,65 @@ User::where('email','domaine-d@i.softbank.jp')->exists(); // true
 - Active Backlog Cの方式別回帰1件を完了扱いにした。
 - ただし現DBにシングルエリミネーション実データがないため、「シングルエリミネーションの実データを現DBへ復元/再作成し、速報画面、正式成績snapshot、`tournament_results` 同期、PDFまで通し確認する」を新しい未チェックとして残した。
 - 残り未チェックは4件。
+
+## 2026-07-01 DB・構成整理監査
+
+### 目的
+- DB、migration、Controller、Serviceに不要な重複や孤立ファイルがないか確認する。
+- 運用に影響しない範囲で、古い仮Controller/View/Requestを削除し、今後のDB運用を軽くする。
+- DBテーブルそのものは影響範囲が大きいため、確実に不要と判定できないものは削除しない。
+
+### 監査結果
+- `php artisan migrate:status` で167件すべて適用済み。未適用migrationなし。
+- migration timestamp重複は `2025_09_02_000026` の2件のみ。
+  - `2025_09_02_000026_add_entry_period_to_tournaments_table.php`
+  - `2025_09_02_000026_add_unique_to_teb.php`
+  - どちらも適用済みのため、削除/リネームせず既知レガシーとして維持する。
+- `app/Models/*.php` の全Modelが現DBテーブルを参照していることを確認した。
+- Serviceは完全未参照なし。
+- 現DBは95テーブル、うち31テーブルにデータ、64テーブルは空。
+  - 空テーブルにはLaravel標準、将来運用、旧互換、ProTest/講習/ボール/スコア取込などが含まれるため削除しない。
+
+### 削除したもの
+- ルート未接続かつ静的参照なしの孤立ファイルを削除した。
+- 削除前はController 74本中6本がルート未接続。
+- 削除後はController 68本すべてがルート接続済み。
+
+削除ファイル:
+
+| 種別 | ファイル |
+|---|---|
+| Controller | `app/Http/Controllers/MemberAuthController.php` |
+| Controller | `app/Http/Controllers/PasswordSetupController.php` |
+| Controller | `app/Http/Controllers/PlayerBallController.php` |
+| Controller | `app/Http/Controllers/ProfileController.php` |
+| Controller | `app/Http/Controllers/TournamentBallController.php` |
+| Controller | `app/Http/Controllers/VenueController.php` |
+| Request | `app/Http/Requests/ProfileUpdateRequest.php` |
+| Route | `routes/profile.php` |
+| View | `resources/views/auth/password_setup_request.blade.php` |
+| View | `resources/views/auth/password_setup_reset.blade.php` |
+| View | `resources/views/player_balls/index.blade.php` |
+| View | `resources/views/tournament_balls/index.blade.php` |
+| View | `resources/views/profile/**` |
+
+### ドキュメント更新
+- `docs/operations/database_simplification_audit.md` を追加した。
+- `docs/db/migration_duplicates.md` を最新結果へ更新した。
+
+### 検証
+- `php artisan migrate:status`
+- Model -> table照合: 全Model `Schema::hasTable()` true
+- Controller接続再集計: 68 Controller / 68 route-connected / 0 unroute
+- 削除対象名の静的検索: 削除対象Controller/View/Requestの参照なし
+- `php -l routes/web.php`
+- `php artisan route:list`
+- `APP_ENV=production` 相当で `php artisan route:list --path=__debug` / `--path=_dev` が該当なし
+- `php artisan view:cache`
+- `php artisan public:parity-audit`
+- `php artisan tournament:result-flow-regression`
+- 回帰コマンド後の `tournaments` は大会ID 10/11のみで、一時fixtureなし
+
+### 未チェック更新
+- 今回は既存Active Backlog外のDB・構成整理作業として記録した。
+- 残り未チェックは4件のまま。

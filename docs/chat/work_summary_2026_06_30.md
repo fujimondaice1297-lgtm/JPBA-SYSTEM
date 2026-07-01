@@ -146,6 +146,16 @@
 - 現DBにシングルエリミネーション実データがないため、ロールバックfixtureで4名/3試合完了、順位 `1,2,3,3` まで確認した。
 - 一時fixtureはDBへ残らないことを確認済み。
 
+### 18. DB・構成整理監査
+
+- `docs/operations/database_simplification_audit.md` を追加した。
+- migrationは167件すべて適用済み。未適用migrationなし。
+- migration timestamp重複は既知の `2025_09_02_000026` 2件のみで、適用済み履歴保護のため削除/リネームしない方針にした。
+- 全Modelが現DBテーブルを参照していることを確認した。
+- Serviceは完全未参照なし。
+- ルート未接続Controller 6本と関連View/Request/未読込routeを削除し、Controllerは68本すべてルート接続済みに整理した。
+- 現DBは95テーブル中64テーブルが空だが、将来運用、旧互換、Laravel標準を含むためDBテーブル削除は実施しない。
+
 ## 残っている大きな作業
 
 - 実データの紙成績表画像/PDFからOCR/AI出力を作り、貼り付け変換プレビュー、`score_import_rows`、要確認行修正、`game_scores` 確定反映まで通し確認する。
