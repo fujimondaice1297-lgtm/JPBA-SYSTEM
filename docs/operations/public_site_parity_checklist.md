@@ -1,6 +1,6 @@
 # 現行JPBA公開サイト踏襲チェックリスト
 
-確認日: 2026-06-26
+確認日: 2026-07-01
 確認元: https://www.jpba1.jp/
 
 ## 目的
@@ -81,3 +81,41 @@
 - 現行トップにある主要導線が、Laravel側の公開ページまたは後続タスクとして漏れなく管理されている。
 - 公開画面はDB正本を読むだけにし、手作業でHTMLを書き換える箇所を増やさない。
 - 管理画面で入力したINFORMATIONカテゴリが、公開一覧・会員一覧・トップ表示で同じ表示になる。
+
+## 2026-07-01 公開画面照合監査
+
+現行トップを再確認し、以下の導線をローカル設定へ反映した。
+
+- 2026 JPBAトーナメント予定表(PDF)
+- JPBAツアー ご観戦時のご案内(PDF)
+- ウレタンボールの使用規制について(PDF)
+- JPBA LIVEチャンネル
+- io.LEAGUEチャンネル
+- io.LEAGUE Official Website
+
+`php artisan public:parity-audit` を追加し、公開ページをLaravel内部でレンダリングして以下を確認できるようにした。
+
+- HTTP 200で表示できること
+- 現行サイト相当のロゴ、主要ナビ、補助導線、フッター導線が欠落していないこと
+- ページ固有の主要見出しが欠落していないこと
+- 画像数、PDFリンク数、外部リンク数、内部リンク数をページごとに把握できること
+- ローカル画像/添付ファイルの参照切れがないこと
+
+2026-07-01実行結果:
+
+| page | path | status | images | pdf_links | external_links | internal_links | missing_assets |
+|---|---|---|---:|---:|---:|---:|---:|
+| home | `/` | OK | 3 | 4 | 6 | 18 | 0 |
+| about | `/about` | OK | 1 | 6 | 8 | 16 | 0 |
+| schedule | `/schedule` | OK | 1 | 1 | 0 | 18 | 0 |
+| players | `/players` | OK | 1 | 0 | 0 | 61 | 0 |
+| tournaments | `/tournament` | OK | 1 | 1 | 0 | 22 | 0 |
+| instructors | `/instructor` | OK | 1 | 0 | 10 | 30 | 0 |
+| protest | `/protest` | OK | 1 | 0 | 3 | 16 | 0 |
+| topics | `/topics` | OK | 1 | 0 | 4 | 22 | 0 |
+| contact | `/contact` | OK | 1 | 0 | 1 | 16 | 0 |
+| media | `/media` | OK | 1 | 2 | 4 | 16 | 0 |
+| commerce | `/commerce` | OK | 1 | 0 | 1 | 16 | 0 |
+| privacy | `/privacy` | OK | 1 | 0 | 1 | 16 | 0 |
+
+全12ページで、主要HTML構造、画像/バナー、PDF/外部リンク、フッターリンクの自動照合はOK。

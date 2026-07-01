@@ -314,3 +314,12 @@
 - 2026-07-01実行結果は全5ケースOK。`%PDF` 生成、warningなし、一時fixtureはDBに残らないことを確認済み。
 - `docs/operations/result_flow_regression_audit.md` と `docs/operations/tournament_pdf_template_policy.md` を更新した。
 - Active Backlog DのPDF方式別回帰1件を完了扱いにし、未チェックは5件。
+
+## 2026-07-01 追記: 公開画面・現行サイト踏襲監査
+
+- 現行 `https://www.jpba1.jp/` トップを再確認し、2026 JPBAトーナメント予定表PDF、JPBA LIVE、io.LEAGUE系リンクを `config/jpba_public.php` へ反映した。
+- `php artisan public:parity-audit` を追加し、公開ページをLaravel内部レンダリングで監査できるようにした。
+- 監査対象は、主要ナビ、補助導線、フッター導線、ページ固有見出し、画像/バナー、PDFリンク、外部リンク、内部リンク、ローカル参照切れ。
+- `/`、`/about`、`/schedule`、`/players`、`/tournament`、`/instructor`、`/protest`、`/topics`、`/contact`、`/media`、`/commerce`、`/privacy` の12ページがすべてOK。
+- `docs/operations/public_site_parity_checklist.md` を更新した。
+- Active Backlog Gの公開画面照合1件を完了扱いにし、未チェックは4件。

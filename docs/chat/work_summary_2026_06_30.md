@@ -129,11 +129,17 @@
 - 2026-07-01実行では全5ケースOK。`%PDF` 生成、warningなし、一時fixtureがDBへ残らないことを確認した。
 - `docs/operations/result_flow_regression_audit.md` と `docs/operations/tournament_pdf_template_policy.md` を更新した。
 
+### 16. 公開画面・現行サイト踏襲監査
+
+- 現行 `https://www.jpba1.jp/` トップを再確認し、2026 JPBAトーナメント予定表PDF、JPBA LIVE、io.LEAGUE系リンクを `config/jpba_public.php` へ反映した。
+- `php artisan public:parity-audit` を追加した。
+- 公開12ページについて、主要ナビ、補助導線、フッター導線、ページ固有見出し、画像/バナー、PDFリンク、外部リンク、内部リンク、ローカル参照切れを監査できるようにした。
+- 2026-07-01実行では全12ページOK。`docs/operations/public_site_parity_checklist.md` へ結果を追記した。
+
 ## 残っている大きな作業
 
 - 実データの紙成績表画像/PDFからOCR/AI出力を作り、貼り付け変換プレビュー、`score_import_rows`、要確認行修正、`game_scores` 確定反映まで通し確認する。
 - シングルエリミネーションfixtureを復元/再作成し、速報、正式成績snapshot、PDFまで再確認する。
-- 現行サイトの見た目を保つため、HTML構造、画像/バナー、PDF/外部リンク、フッターリンクを公開画面ごとに照合する。
 
 ## 次に進むなら
 

@@ -1508,6 +1508,14 @@
 - [✓] `docs/operations/result_flow_regression_audit.md` と `docs/operations/tournament_pdf_template_policy.md` を更新した
 - [✓] 残り未チェックは5件
 
+#### 2026-07-01 メモ（公開画面・現行サイト踏襲監査）
+- [✓] 現行 `https://www.jpba1.jp/` トップを再確認し、2026 JPBAトーナメント予定表PDF、JPBA LIVE、io.LEAGUE系リンクをローカル公開設定へ反映した
+- [✓] `php artisan public:parity-audit` を追加し、公開ページをLaravel内部レンダリングで監査できるようにした
+- [✓] 主要ナビ、補助導線、フッター導線、ページ固有見出し、画像/バナー、PDFリンク、外部リンク、内部リンク、ローカル参照切れをページごとに確認できるようにした
+- [✓] `/`、`/about`、`/schedule`、`/players`、`/tournament`、`/instructor`、`/protest`、`/topics`、`/contact`、`/media`、`/commerce`、`/privacy` の12ページがすべてOKであることを確認した
+- [✓] `docs/operations/public_site_parity_checklist.md` を更新した
+- [✓] 残り未チェックは4件
+
 ##### 次に行う候補（Active Backlog）
 
 ###### A. 直近のスコア/OCR運用
@@ -1565,4 +1573,4 @@
 - [✓] `tournaments` 周辺の最終スキーマを辞書・ER・migrationと揃える
 - [✓] `docs/db` の辞書、ER、SCHEMA、columns資料を現DBと定期的に照合する
 - [✓] 公開側はDB正本を読むだけ、管理側は入力・確認・反映を行う役割分担を維持する
-- [ ] 現行サイトの見た目を保つため、HTML構造、画像/バナー、PDF/外部リンク、フッターリンクを公開画面ごとに照合する
+- [✓] 現行サイトの見た目を保つため、HTML構造、画像/バナー、PDF/外部リンク、フッターリンクを公開画面ごとに照合する

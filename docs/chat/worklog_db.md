@@ -7825,6 +7825,69 @@ User::where('email','domaine-d@i.softbank.jp')->exists(); // true
 - 次の自然な作業:
   1. ランキング取込・年度末確定・全日本選手権用年度途中ランキング・優先出場順位の整理をまとめて進める。
   2. シングルエリミネーションfixtureを復元/再作成し、速報、正式成績snapshot、PDFまで再確認する。
+## 2026-07-01 公開画面・現行サイト踏襲監査
+
+### 目的
+- Active Backlog Gの未チェック「現行サイトの見た目を保つため、HTML構造、画像/バナー、PDF/外部リンク、フッターリンクを公開画面ごとに照合する」を進める。
+- 現行 `https://www.jpba1.jp/` のトップ構造を維持しつつ、Laravel公開ページ側の導線・画像・PDF・外部リンクの欠落を自動監査できるようにする。
+
+### 現行サイト再確認
+- 2026-07-01に `https://www.jpba1.jp/` を確認した。
+- トップの主要構成:
+  - 主要ナビ: JPBAについて / スケジュール / 選手データ / トーナメント / インストラクター / プロテスト / トピックス
+  - 補助導線: 更新履歴 / プロボウラー専用ページ
+  - 大会バナー、公式PDF、動画・外部サービス、INFORMATION、協賛・関連団体、SNS、フッター導線
+- 現行トップで確認した以下を `config/jpba_public.php` へ反映した。
+  - 2026 JPBAトーナメント予定表(PDF)
+  - JPBAツアー ご観戦時のご案内(PDF)
+  - ウレタンボールの使用規制について(PDF)
+  - JPBA LIVEチャンネル
+  - io.LEAGUEチャンネル
+  - io.LEAGUE Official Website
+
+### 実施内容
+- `app/Console/Commands/RunPublicSiteParityAudit.php` を追加した。
+- コマンド名は `php artisan public:parity-audit`。
+- Laravel内部レンダリングで公開ページを確認し、サーバー起動なしで監査できる。
+- 監査対象:
+  - HTTPステータス
+  - ロゴ/協会名/英字協会名
+  - 主要ナビ、補助導線、フッター導線
+  - ページ固有の主要見出し
+  - 画像数
+  - PDFリンク数
+  - 外部リンク数
+  - 内部リンク数
+  - ローカル画像/添付ファイルの参照切れ
+- `docs/operations/public_site_parity_checklist.md` に監査結果を追記した。
+
+### 検証
+- `php -l app/Console/Commands/RunPublicSiteParityAudit.php`
+- `php -l config/jpba_public.php`
+- `php artisan list | Select-String -Pattern "public:parity-audit"`
+- `php artisan public:parity-audit`
+
+実行結果:
+
+| page | path | status | images | pdf_links | external_links | internal_links | missing_assets |
+|---|---|---|---:|---:|---:|---:|---:|
+| home | `/` | OK | 3 | 4 | 6 | 18 | 0 |
+| about | `/about` | OK | 1 | 6 | 8 | 16 | 0 |
+| schedule | `/schedule` | OK | 1 | 1 | 0 | 18 | 0 |
+| players | `/players` | OK | 1 | 0 | 0 | 61 | 0 |
+| tournaments | `/tournament` | OK | 1 | 1 | 0 | 22 | 0 |
+| instructors | `/instructor` | OK | 1 | 0 | 10 | 30 | 0 |
+| protest | `/protest` | OK | 1 | 0 | 3 | 16 | 0 |
+| topics | `/topics` | OK | 1 | 0 | 4 | 22 | 0 |
+| contact | `/contact` | OK | 1 | 0 | 1 | 16 | 0 |
+| media | `/media` | OK | 1 | 2 | 4 | 16 | 0 |
+| commerce | `/commerce` | OK | 1 | 0 | 1 | 16 | 0 |
+| privacy | `/privacy` | OK | 1 | 0 | 1 | 16 | 0 |
+
+### 未チェック更新
+- Active Backlog Gの公開画面照合1件を完了扱いにした。
+- 残り未チェックは4件。
+
 ## 2026-07-01 大会PDF方式別Blade回帰
 
 ### 目的

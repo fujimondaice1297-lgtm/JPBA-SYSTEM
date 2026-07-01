@@ -18,6 +18,10 @@ return [
 
     'featured_pdf_links' => [
         [
+            'label' => '2026 JPBAトーナメント予定表',
+            'url' => 'https://www.jpba.or.jp/information/tournament/tournament2026/PDF/2026_TournamentSchedule_260622.pdf',
+        ],
+        [
             'label' => 'JPBAツアー ご観戦時のご案内',
             'url' => 'https://www.jpba.or.jp/information/tournament/PDF/JPBA_TournamentSpectatorRules.pdf',
         ],
@@ -27,7 +31,20 @@ return [
         ],
     ],
 
-    'channel_links' => [],
+    'channel_links' => [
+        [
+            'label' => 'JPBA LIVEチャンネル',
+            'url' => 'https://www.youtube.com/channel/UCZhBTBHPsEFEO047w0ynZ0Q',
+        ],
+        [
+            'label' => 'io.LEAGUEチャンネル',
+            'url' => 'https://www.youtube.com/@io.LEAGUE',
+        ],
+        [
+            'label' => 'io.LEAGUE Official Website',
+            'url' => 'https://ioleague.jp/',
+        ],
+    ],
 
     'association' => [
         'overview' => [
