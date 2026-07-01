@@ -46,6 +46,21 @@
 
 実行後、`tournaments` は大会ID 10/11のみで、一時fixtureが残っていないことを確認した。
 
+## 2026-07-01 結果フロー一括回帰
+
+`php artisan tournament:result-flow-regression` を追加し、PDFではなく方式別サービスの計算結果を一括確認できるようにした。
+
+既存DBに実データがある方式はそのまま使用する。現DBにシングルエリミネーション大会と `SE:%` スコア行がないため、シングルエリミネーションだけはロールバックされる一時fixtureで、ブラケット生成、スコア反映、最終順位生成まで確認する。
+
+| case | mode | 対象 | 結果 | メモ |
+|---|---|---|---|---|
+| round_robin_existing | round_robin | 大会ID 11 | OK | 8名、8G、1位 久保田彩花、5勝3敗、Bonus 150 |
+| step_ladder_existing | step_ladder | 大会ID 11 | OK | seed 3名、1回戦/優勝決定戦とも `done`、優勝 久保田彩花 |
+| shootout_existing | shootout | 大会ID 10 | OK | seed source `semifinal_total`、8名、3試合完了、優勝 水野耕佑 |
+| single_elimination_fixture | single_elimination | 一時fixture | OK | 4名、3試合完了、順位 `1,2,3,3` |
+
+実行後、`tournaments` は大会ID 10/11のみで、一時fixtureが残っていないことを確認した。一時fixtureの `tournament_id` はロールバック後もシーケンス上は実行ごとに変動するため、固定IDとして扱わない。
+
 ## 修正した警告
 
 大会ID 10のPDF生成時に、`MatchScoreSheetImageService` の `imagefilledpolygon()` が非推奨引数警告を出していた。

@@ -323,3 +323,14 @@
 - `/`、`/about`、`/schedule`、`/players`、`/tournament`、`/instructor`、`/protest`、`/topics`、`/contact`、`/media`、`/commerce`、`/privacy` の12ページがすべてOK。
 - `docs/operations/public_site_parity_checklist.md` を更新した。
 - Active Backlog Gの公開画面照合1件を完了扱いにし、未チェックは4件。
+
+## 2026-07-01 追記: 大会結果フロー方式別回帰
+
+- `php artisan tournament:result-flow-regression` を追加し、方式別サービス計算を一括確認できるようにした。
+- 既存DBの実データで、大会ID 11のラウンドロビン8名/8G、1位久保田彩花、5勝3敗、Bonus 150を確認した。
+- 既存DBの実データで、大会ID 11のステップラダーseed 3名、1回戦/優勝決定戦とも `done`、優勝久保田彩花を確認した。
+- 既存DBの実データで、大会ID 10のシュートアウトseed 8名、3試合完了、優勝水野耕佑を確認した。
+- 現DBにはシングルエリミネーション大会と `SE:%` スコア行がないため、シングルエリミネーションだけはロールバックfixtureで、4名/3試合完了、順位 `1,2,3,3` まで確認した。
+- 実行後に `tournaments` が大会ID 10/11のみで、一時fixtureがDBへ残っていないことを確認した。
+- Active Backlog Cの方式別回帰1件を完了扱いにした。
+- シングルエリミネーションの現DB実データ復元/再作成後の速報、正式成績snapshot、`tournament_results` 同期、PDF通し確認を新しい未チェックとして残し、未チェックは4件。

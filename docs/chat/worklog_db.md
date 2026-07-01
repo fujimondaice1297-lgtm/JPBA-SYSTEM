@@ -7969,3 +7969,43 @@ User::where('email','domaine-d@i.softbank.jp')->exists(); // true
 ### 未チェック更新
 - Active Backlog Eの該当1件を完了扱いにした。
 - 残り未チェックは6件。
+
+## 2026-07-01 大会結果フロー方式別回帰
+
+### 目的
+- Active Backlog Cの未チェック「ラウンドロビン、ステップラダー、シュートアウト、シングルエリミネーションの既存実装を実データで回帰確認する」を進める。
+- PDF生成だけでなく、方式別サービスの計算、勝者判定、順位行生成が壊れていないかを一括確認できるようにする。
+- 現DBにシングルエリミネーション実データがないため、その欠落は隠さず、一時fixtureで実装回帰を代替する。
+
+### 実施内容
+- `app/Console/Commands/RunTournamentResultFlowRegression.php` を追加した。
+- コマンド名は `php artisan tournament:result-flow-regression`。
+- 既存大会を使うケース:
+  - `round_robin_existing`: 大会ID 11。ラウンドロビン8名/8G、勝敗、Bonusを確認。
+  - `step_ladder_existing`: 大会ID 11。seed 3名、1回戦/優勝決定戦、最終順位を確認。
+  - `shootout_existing`: 大会ID 10。seed 8名、3試合完了、優勝者、最終順位を確認。
+- ロールバックされる一時fixtureを使うケース:
+  - `single_elimination_fixture`: 4名シングルエリミネーション。ブラケット生成、スコア反映、最終順位 `1,2,3,3` を確認。
+- 一時fixtureは `DB::beginTransaction()` 内で作成し、検証後に `DB::rollBack()` するためDBには残さない。
+- `docs/operations/result_flow_regression_audit.md` に実行結果を追記した。
+
+### 検証
+- `php -l app/Console/Commands/RunTournamentResultFlowRegression.php`
+- `php artisan tournament:result-flow-regression`
+
+実行結果:
+
+| case | mode | tournament_id | fixture | status | message |
+|---|---|---:|---|---|---|
+| round_robin_existing | round_robin | 11 | no | OK | players=8, games=8, leader=久保田彩花, record=5-3-0, bonus=150 |
+| step_ladder_existing | step_ladder | 11 | no | OK | seeds=3, semifinal_status=done, final_status=done, winner=久保田彩花 |
+| shootout_existing | shootout | 10 | no | OK | seed_source=semifinal_total, seeds=8, completed_matches=3, winner=水野耕佑 |
+| single_elimination_fixture | single_elimination | 一時ID | yes | OK | seeds=4, completed_matches=3, rankings=1,2,3,3 |
+
+- 実行後に `tournaments` を確認し、大会ID 10/11のみで一時fixtureが残っていないことを確認した。
+- 一時fixtureの `tournament_id` はロールバック後もシーケンス上は実行ごとに変動するため、固定IDとして扱わない。
+
+### 未チェック更新
+- Active Backlog Cの方式別回帰1件を完了扱いにした。
+- ただし現DBにシングルエリミネーション実データがないため、「シングルエリミネーションの実データを現DBへ復元/再作成し、速報画面、正式成績snapshot、`tournament_results` 同期、PDFまで通し確認する」を新しい未チェックとして残した。
+- 残り未チェックは4件。
