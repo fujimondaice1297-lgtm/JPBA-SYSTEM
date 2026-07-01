@@ -305,3 +305,12 @@
 - `docs/db/data_dictionary.md`、`SCHEMA.sql`、`columns_public.csv`、`columns_by_table.md`、`ER.dbml` を現DBに合わせて更新した。
 - 検証は `php -l`、`php artisan migrate`、`php artisan view:cache`、Laravel tinkerでの新テーブル確認。
 - Active Backlog Eの1件を完了扱いにし、未チェックは6件。
+
+## 2026-07-01 追記: 大会PDF方式別Blade回帰
+
+- `php artisan tournament:pdf-regression` を追加し、方式別PDF入口を一括確認できるようにした。
+- 既存大会ID 10でシーズントライアル外枠 + シュートアウト表示、大会ID 11で通常外枠 + RR/ステップラダーPDFを確認した。
+- 標準、純シュートアウト、シングルエリミネーションはロールバックされる一時fixtureでPDF生成を確認する。
+- 2026-07-01実行結果は全5ケースOK。`%PDF` 生成、warningなし、一時fixtureはDBに残らないことを確認済み。
+- `docs/operations/result_flow_regression_audit.md` と `docs/operations/tournament_pdf_template_policy.md` を更新した。
+- Active Backlog DのPDF方式別回帰1件を完了扱いにし、未チェックは5件。

@@ -121,11 +121,18 @@
 - 一括繰り上げは `batch_key` で同一操作単位を追えるようにした。
 - `docs/db/data_dictionary.md`、`SCHEMA.sql`、`columns_public.csv`、`columns_by_table.md`、`ER.dbml` を現DBに合わせて更新した。
 
+### 15. 大会PDF方式別Blade回帰
+
+- `php artisan tournament:pdf-regression` を追加した。
+- 既存大会ID 10でシーズントライアル外枠 + シュートアウト表示、大会ID 11で通常外枠 + RR/ステップラダーPDFを確認した。
+- 標準、純シュートアウト、シングルエリミネーションは、ロールバックされる一時fixtureでPDF生成を確認する構成にした。
+- 2026-07-01実行では全5ケースOK。`%PDF` 生成、warningなし、一時fixtureがDBへ残らないことを確認した。
+- `docs/operations/result_flow_regression_audit.md` と `docs/operations/tournament_pdf_template_policy.md` を更新した。
+
 ## 残っている大きな作業
 
 - 実データの紙成績表画像/PDFからOCR/AI出力を作り、貼り付け変換プレビュー、`score_import_rows`、要確認行修正、`game_scores` 確定反映まで通し確認する。
 - シングルエリミネーションfixtureを復元/再作成し、速報、正式成績snapshot、PDFまで再確認する。
-- 通常トータルピン方式のみの大会fixtureを作り、通常PDFへの方式別文言混入がないことを確認する。
 - 現行サイトの見た目を保つため、HTML構造、画像/バナー、PDF/外部リンク、フッターリンクを公開画面ごとに照合する。
 
 ## 次に進むなら

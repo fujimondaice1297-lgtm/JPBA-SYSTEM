@@ -7825,6 +7825,49 @@ User::where('email','domaine-d@i.softbank.jp')->exists(); // true
 - 次の自然な作業:
   1. ランキング取込・年度末確定・全日本選手権用年度途中ランキング・優先出場順位の整理をまとめて進める。
   2. シングルエリミネーションfixtureを復元/再作成し、速報、正式成績snapshot、PDFまで再確認する。
+## 2026-07-01 大会PDF方式別Blade回帰
+
+### 目的
+- Active Backlog Dの未チェック「大会PDFの方式別Blade分割後の回帰確認を行う（通常、シーズントライアル、シュートアウト、シングルエリミネーション）」を進める。
+- 既存DBにない通常トータルピンのみ・純シュートアウト・シングルエリミネーションPDFを、実データを汚さず確認できるようにする。
+
+### 実施内容
+- `app/Console/Commands/RunTournamentPdfRegression.php` を追加した。
+- コマンド名は `php artisan tournament:pdf-regression`。
+- 既存大会を使うケース:
+  - `season_trial_existing`: 大会ID 10。シーズントライアル外枠 + シュートアウト表示。
+  - `round_robin_step_ladder_existing`: 大会ID 11。通常外枠 + ラウンドロビン / ステップラダー。
+- ロールバックされる一時fixtureを使うケース:
+  - `standard_fixture`: 通常トータルピンPDF。
+  - `shootout_fixture`: 純シュートアウトPDF。
+  - `single_elimination_fixture`: シングルエリミネーションPDF。
+- 一時fixtureは `DB::beginTransaction()` 内で作成し、PDF生成後に `DB::rollBack()` するためDBには残さない。
+- PDF生成中のPHP warning / deprecated warningを捕捉し、warningが出た場合はFAILにする。
+- `docs/operations/result_flow_regression_audit.md` に実行結果を追記した。
+- `docs/operations/tournament_pdf_template_policy.md` に回帰コマンドを最低ラインとして追記した。
+
+### 検証
+- `php -l app/Console/Commands/RunTournamentPdfRegression.php`
+- `php artisan list | Select-String -Pattern "tournament:pdf-regression"`
+- `php artisan tournament:pdf-regression`
+
+実行結果:
+
+| case | mode | tournament_id | fixture | status | bytes |
+|---|---|---|---|---|---:|
+| season_trial_existing | season_trial | 10 | no | OK | 714646 |
+| round_robin_step_ladder_existing | standard_with_step_ladder | 11 | no | OK | 632638 |
+| standard_fixture | standard | 一時ID | yes | OK | 203210 |
+| shootout_fixture | shootout | 一時ID | yes | OK | 399369 |
+| single_elimination_fixture | single_elimination | 一時ID | yes | OK | 120953 |
+
+- 実行後に `tournaments` を確認し、大会ID 10/11のみで一時fixtureが残っていないことを確認した。
+- 一時fixtureの `tournament_id` はロールバック後もシーケンス上は実行ごとに変動するため、固定IDとして扱わない。
+
+### 未チェック更新
+- Active Backlog DのPDF方式別回帰1件を完了扱いにした。
+- 残り未チェックは5件。
+
 ## 2026-07-01 エントリー当日運用・取消理由・繰り上げ履歴
 
 ### 目的

@@ -1,6 +1,6 @@
 # 大会成績方式別回帰監査
 
-最終更新: 2026-06-29
+最終更新: 2026-07-01
 
 ## 2026-06-30 方式ルール確認メモ
 
@@ -30,6 +30,22 @@
 | 大会PDF | 大会ID 10 | OK | `%PDF` 生成、714646 bytes。 |
 | 大会PDF | 大会ID 11 | OK | `%PDF` 生成、515847 bytes。 |
 
+## 2026-07-01 PDF方式別Blade回帰
+
+`php artisan tournament:pdf-regression` を追加し、方式別Blade分割後のPDF入口を一括確認できるようにした。
+
+既存DBに存在する大会はそのまま使用し、標準・純シュートアウト・シングルエリミネーションはロールバックされる一時fixtureでPDF生成だけ確認する。fixtureはDBに残さない。
+
+| case | mode | 対象 | 結果 | bytes | メモ |
+|---|---|---|---|---:|---|
+| season_trial_existing | season_trial | 大会ID 10 | OK | 714646 | シーズントライアル外枠 + シュートアウト表示 |
+| round_robin_step_ladder_existing | standard_with_step_ladder | 大会ID 11 | OK | 632638 | 通常外枠 + RR/ステップラダー |
+| standard_fixture | standard | 一時fixture | OK | 203210 | 通常トータルピンPDF |
+| shootout_fixture | shootout | 一時fixture | OK | 399369 | 純シュートアウトPDF |
+| single_elimination_fixture | single_elimination | 一時fixture | OK | 120953 | シングルエリミネーションPDF |
+
+実行後、`tournaments` は大会ID 10/11のみで、一時fixtureが残っていないことを確認した。
+
 ## 修正した警告
 
 大会ID 10のPDF生成時に、`MatchScoreSheetImageService` の `imagefilledpolygon()` が非推奨引数警告を出していた。
@@ -40,4 +56,4 @@
 
 1. シングルエリミネーションの実データを現DBへ戻す、または小さなfixture大会を作る。
 2. シングルエリミネーションで、速報画面、正式成績snapshot、`tournament_results` 同期、PDFトーナメント表まで再確認する。
-3. 通常トータルピン方式のみの大会fixtureを用意し、通常PDFにシーズントライアル/シュートアウト/トーナメント専用文言が混入しないことを確認する。
+3. 実データの紙成績表画像/PDFを使い、OCR/AI取込から `game_scores` 確定反映まで通し確認する。
