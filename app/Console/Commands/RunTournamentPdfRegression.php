@@ -56,6 +56,20 @@ class RunTournamentPdfRegression extends Command
             );
         }
 
+        $singleEliminationExisting = Tournament::query()
+            ->where('result_flow_type', 'like', '%single_elimination%')
+            ->orderBy('id')
+            ->first();
+
+        if ($singleEliminationExisting) {
+            $results[] = $this->checkPdf(
+                caseName: 'single_elimination_existing',
+                expectedMode: 'single_elimination',
+                tournament: $singleEliminationExisting,
+                isFixture: false
+            );
+        }
+
         DB::beginTransaction();
 
         try {

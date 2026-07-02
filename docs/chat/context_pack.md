@@ -355,3 +355,14 @@
 - `php artisan tournament:pdf-regression` は全5ケースOK。
 - 大会ID 10のPDFをPNG化し、スコアシートページのロゴ、会場/開催日/レーン表示、外枠罫線、ページ分割に崩れがないことを確認した。
 - 未チェックは3件。
+
+## 2026-07-02 追記: シングルエリミネーション現DB通し確認
+
+- `app/Services/SingleEliminationFixtureDataService.php` と `tournament:restore-single-elimination-fixture` を追加した。
+- `php artisan tournament:restore-single-elimination-fixture --force --json` で、現DBに大会ID 27 `シングルエリミネーション通し確認 fixture` を作成した。
+- 大会ID 27には、予選 `game_scores` 32行、SE `game_scores` 6行、`prelim_total` snapshot、`single_elimination_final` snapshot、`tournament_results` 4行がある。
+- `tournament:result-flow-regression` は、現DBにSE大会がある場合 `single_elimination_existing` として既存SEデータを確認する。
+- `tournament:pdf-regression` は、現DBにSE大会がある場合 `single_elimination_existing` のPDFも確認する。
+- 認証ありHTTPで `/scores/result?tournament_id=27&stage=トーナメント&upto_game=2` がstatus 200、優勝者名、`R2-M1` を含むことを確認した。
+- `tournament:result-flow-regression` と `tournament:pdf-regression` は大会ID 27込みでOK。
+- 未チェックは2件。残りは実物の紙成績表画像/PDFが必要なOCR/AI取込通し確認2件。

@@ -1544,6 +1544,14 @@
 - [✓] `php artisan tournament:pdf-regression` で全5ケースOKを確認した
 - [✓] 残り未チェックは3件
 
+#### 2026-07-02 メモ（シングルエリミネーション実データ通し確認）
+- [✓] `tournament:restore-single-elimination-fixture` を追加し、現DBへSE通し確認用大会を再作成できるようにした
+- [✓] 大会ID 27として、予選 `game_scores` 32行、SE `game_scores` 6行、`prelim_total` snapshot、`single_elimination_final` snapshot、`tournament_results` 4行を作成した
+- [✓] 認証ありHTTPで `/scores/result?tournament_id=27&stage=トーナメント&upto_game=2` が200で描画され、優勝者と `R2-M1` を含むことを確認した
+- [✓] `php artisan tournament:result-flow-regression` が `single_elimination_existing` として大会ID 27を確認し、4名/3試合完了/順位 `1,2,3,3` でOKになった
+- [✓] `php artisan tournament:pdf-regression` で `single_elimination_existing` のPDF生成OKを確認した
+- [✓] 残り未チェックは2件
+
 ##### 次に行う候補（Active Backlog）
 
 ###### A. 直近のスコア/OCR運用
@@ -1572,7 +1580,7 @@
 - [✓] スコア順位速報で、同スコア時タイブレーク、通過人数、carry、シフト別/合算、男女別/合算を整理する
 - [✓] 速報から正式成績への反映は、人間確認後の反映ボタン方式として固定する
 - [✓] ラウンドロビン、ステップラダー、シュートアウト、シングルエリミネーションの既存実装を回帰確認する
-- [ ] シングルエリミネーションの実データを現DBへ復元/再作成し、速報画面、正式成績snapshot、`tournament_results` 同期、PDFまで通し確認する
+- [✓] シングルエリミネーションの実データを現DBへ復元/再作成し、速報画面、正式成績snapshot、`tournament_results` 同期、PDFまで通し確認する
 - [✓] ダブルエリミネーション方式の敗者側ブラケット、リセット決勝、敗者側順位、同順位扱い、再戦条件を設計する
 - [✓] `tournament_awards` / `tournament_points` と `prize_distributions` / `point_distributions` の役割を整理し、辞書・現物スキーマを揃える
 - [✓] 最終成績同期後のタイトル反映、ポイント再計算、賞金、シード未反映候補を大会終了チェックリストから完結できるようにする

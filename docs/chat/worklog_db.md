@@ -8103,3 +8103,55 @@ User::where('email','domaine-d@i.softbank.jp')->exists(); // true
 ### 未チェック更新
 - Active Backlog Dの「公式PDF風スコアシートの罫線、ロゴ、会場情報、複数ページ分割を調整する」を完了扱いにした。
 - 残り未チェックは3件。
+
+## 2026-07-02 シングルエリミネーション実データ通し確認
+
+### 目的
+- 現DBに残るシングルエリミネーション確認用大会を再作成する。
+- 速報画面、正式成績snapshot、`tournament_results` 同期、PDFまで通し確認する。
+
+### 変更内容
+- `app/Services/SingleEliminationFixtureDataService.php` を追加した。
+  - 予選 `game_scores` から `prelim_total` snapshot を作る。
+  - SE `game_scores` を `SE:R1-M1:A` 形式で作る。
+  - `SingleEliminationService` でブラケットと正式順位を計算する。
+  - `single_elimination_final` snapshot と `tournament_results` を作る。
+- `app/Console/Commands/RestoreSingleEliminationFixtureCommand.php` を追加した。
+  - コマンド名は `php artisan tournament:restore-single-elimination-fixture`。
+  - `--force` 付きで同名の確認用大会だけを作り直す。
+  - `--force` なしでは既存確認用大会のサマリーを返し、重複作成しない。
+- `php artisan tournament:result-flow-regression` は、現DBにSE大会がある場合 `single_elimination_existing` として確認するようにした。
+- `php artisan tournament:pdf-regression` は、現DBにSE大会がある場合 `single_elimination_existing` のPDFも確認するようにした。
+
+### 作成した現DBデータ
+- 大会ID: 27
+- 大会名: `シングルエリミネーション通し確認 fixture`
+- `game_scores`
+  - 予選: 32行
+  - トーナメント: 6行
+- snapshots
+  - `prelim_total`: snapshot id 118
+  - `single_elimination_final`: snapshot id 119
+- `tournament_results`: 4行
+- SE結果: 4名、3試合完了、順位 `1,2,3,3`、優勝 `須田開代子`
+
+### 検証
+- `php -l app/Services/SingleEliminationFixtureDataService.php`
+- `php -l app/Console/Commands/RestoreSingleEliminationFixtureCommand.php`
+- `php -l app/Console/Commands/RunTournamentResultFlowRegression.php`
+- `php -l app/Console/Commands/RunTournamentPdfRegression.php`
+- `php artisan list | Select-String -Pattern "single-elimination|result-flow|pdf-regression"`
+- `php artisan view:cache`
+- `php artisan tournament:restore-single-elimination-fixture --force --json`
+- `php artisan tournament:restore-single-elimination-fixture --json`
+  - `created=false` で既存大会ID 27を返し、重複作成しないことを確認した。
+- 認証ありHTTPで `/scores/result?tournament_id=27&stage=トーナメント&upto_game=2` を描画し、status 200、優勝者名、`R2-M1` を含むことを確認した。
+- `php artisan tournament:result-flow-regression`
+  - `single_elimination_existing` が大会ID 27でOK。
+- `php artisan tournament:pdf-regression`
+  - `single_elimination_existing` が大会ID 27でOK。
+- 大会ID 27単体のPDFも `%PDF` header付きで生成できることを確認した。
+
+### 未チェック更新
+- Active Backlog Cの「シングルエリミネーションの実データを現DBへ復元/再作成し、速報画面、正式成績snapshot、`tournament_results` 同期、PDFまで通し確認する」を完了扱いにした。
+- 残り未チェックは2件。

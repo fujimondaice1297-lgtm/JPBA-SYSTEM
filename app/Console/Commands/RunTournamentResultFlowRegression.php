@@ -33,23 +33,42 @@ class RunTournamentResultFlowRegression extends Command
         $results[] = $this->checkStepLadder($stepLadderService);
         $results[] = $this->checkShootout($shootoutService);
 
-        DB::beginTransaction();
-        try {
-            $tournament = $this->createSingleEliminationFixture();
-            $results[] = $this->checkSingleEliminationFixture($singleEliminationService, $tournament);
-        } catch (Throwable $e) {
-            $results[] = $this->result(
-                caseName: 'single_elimination_fixture',
-                mode: 'single_elimination',
-                tournamentId: null,
-                isFixture: true,
-                checks: [
-                    ['ok' => false, 'message' => $e->getMessage()],
-                ],
-                details: []
+        $singleEliminationTournament = Tournament::query()
+            ->where('result_flow_type', 'like', '%single_elimination%')
+            ->orderBy('id')
+            ->first();
+
+        if ($singleEliminationTournament) {
+            $results[] = $this->checkSingleElimination(
+                service: $singleEliminationService,
+                tournament: $singleEliminationTournament,
+                caseName: 'single_elimination_existing',
+                isFixture: false
             );
-        } finally {
-            DB::rollBack();
+        } else {
+            DB::beginTransaction();
+            try {
+                $tournament = $this->createSingleEliminationFixture();
+                $results[] = $this->checkSingleElimination(
+                    service: $singleEliminationService,
+                    tournament: $tournament,
+                    caseName: 'single_elimination_fixture',
+                    isFixture: true
+                );
+            } catch (Throwable $e) {
+                $results[] = $this->result(
+                    caseName: 'single_elimination_fixture',
+                    mode: 'single_elimination',
+                    tournamentId: null,
+                    isFixture: true,
+                    checks: [
+                        ['ok' => false, 'message' => $e->getMessage()],
+                    ],
+                    details: []
+                );
+            } finally {
+                DB::rollBack();
+            }
         }
 
         $failed = collect($results)->contains(fn (array $result) => ($result['status'] ?? '') !== 'OK');
@@ -226,17 +245,26 @@ class RunTournamentResultFlowRegression extends Command
         );
     }
 
-    private function checkSingleEliminationFixture(SingleEliminationService $service, Tournament $tournament): array
+    private function checkSingleElimination(SingleEliminationService $service, Tournament $tournament, string $caseName, bool $isFixture): array
     {
+        $flowType = trim((string) ($tournament->result_flow_type ?? ''));
+        $qualifierCount = (int) ($tournament->single_elimination_qualifier_count ?? 0);
+        if ($qualifierCount < 2) {
+            $qualifierCount = 4;
+        }
+
+        $seedSourceResultCode = trim((string) ($tournament->single_elimination_seed_source_result_code ?? ''))
+            ?: $this->defaultSingleEliminationSeedSourceResultCode($flowType);
+
         $seedSnapshot = $this->findCurrentSnapshot(
             tournamentId: (int) $tournament->id,
-            resultCode: 'prelim_total',
+            resultCode: $seedSourceResultCode,
             gender: null,
             shift: ''
         );
 
         $seedRows = $seedSnapshot
-            ? $this->buildSeedEntriesFromSnapshot((int) $seedSnapshot->id, 4)
+            ? $this->buildSeedEntriesFromSnapshot((int) $seedSnapshot->id, $qualifierCount)
             : [];
 
         $seedSettings = $tournament->single_elimination_seed_settings;
@@ -245,8 +273,8 @@ class RunTournamentResultFlowRegression extends Command
         }
 
         $bracket = $service->buildBracket(
-            qualifierCount: 4,
-            seedPolicy: 'standard',
+            qualifierCount: $qualifierCount,
+            seedPolicy: trim((string) ($tournament->single_elimination_seed_policy ?? '')) ?: 'standard',
             seedSettings: $seedSettings,
             seedEntries: $seedRows
         );
@@ -260,22 +288,25 @@ class RunTournamentResultFlowRegression extends Command
         $completedMatches = $this->countCompletedMatches($bracket);
         $rankings = array_map(fn (array $row) => (int) ($row['ranking'] ?? 0), $standings);
         $winnerName = (string) ($standings[0]['display_name'] ?? '');
+        $actualMatchCount = (int) ($bracket['summary']['actual_match_count'] ?? 0);
+        $expectedRankings = $qualifierCount === 4 ? [1, 2, 3, 3] : null;
 
         return $this->result(
-            caseName: 'single_elimination_fixture',
+            caseName: $caseName,
             mode: 'single_elimination',
             tournamentId: (int) $tournament->id,
-            isFixture: true,
+            isFixture: $isFixture,
             checks: [
                 ['ok' => isset($seedSnapshot), 'message' => 'seed snapshot missing'],
-                ['ok' => count($seedRows) === 4, 'message' => 'expected 4 single-elimination seeds'],
-                ['ok' => (int) ($bracket['summary']['actual_match_count'] ?? 0) === 3, 'message' => 'expected 3 bracket matches'],
-                ['ok' => $completedMatches === 3, 'message' => 'expected 3 completed bracket matches'],
-                ['ok' => count($standings) === 4, 'message' => 'expected 4 final standings'],
-                ['ok' => $rankings === [1, 2, 3, 3], 'message' => 'unexpected rankings: ' . implode(',', $rankings)],
+                ['ok' => count($seedRows) === $qualifierCount, 'message' => 'expected ' . $qualifierCount . ' single-elimination seeds'],
+                ['ok' => $actualMatchCount === max(1, $qualifierCount - 1), 'message' => 'expected ' . max(1, $qualifierCount - 1) . ' bracket matches'],
+                ['ok' => $completedMatches === $actualMatchCount, 'message' => 'expected all bracket matches completed'],
+                ['ok' => count($standings) === $qualifierCount, 'message' => 'expected ' . $qualifierCount . ' final standings'],
+                ['ok' => $expectedRankings === null || $rankings === $expectedRankings, 'message' => 'unexpected rankings: ' . implode(',', $rankings)],
                 ['ok' => $winnerName !== '', 'message' => 'winner name missing'],
             ],
             details: [
+                'seed_source' => $seedSourceResultCode,
                 'seeds' => count($seedRows),
                 'completed_matches' => $completedMatches,
                 'rankings' => implode(',', $rankings),
@@ -498,6 +529,15 @@ class RunTournamentResultFlowRegression extends Command
         return match ($flowType) {
             'prelim_to_quarterfinal_to_shootout_to_final' => 'quarterfinal_total',
             'prelim_to_semifinal_to_shootout_to_final' => 'semifinal_total',
+            default => 'prelim_total',
+        };
+    }
+
+    private function defaultSingleEliminationSeedSourceResultCode(string $flowType): string
+    {
+        return match ($flowType) {
+            'prelim_to_quarterfinal_to_single_elimination_to_final' => 'quarterfinal_total',
+            'prelim_to_semifinal_to_single_elimination_to_final' => 'semifinal_total',
             default => 'prelim_total',
         };
     }

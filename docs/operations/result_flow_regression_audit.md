@@ -18,6 +18,7 @@
 |---:|---|---|---:|---:|---|
 | 10 | JPBAシーズントライアル 2025 オータムシリーズ C会場 | `prelim_to_semifinal_to_shootout_to_final` | 650 | 6 | シーズントライアル、シュートアウト、PDF |
 | 11 | 大岡産業レディース THE OPEN 2025 | `prelim_to_rr_to_final` | 1628 | 10 | ラウンドロビン、ステップラダー、PDF |
+| 27 | シングルエリミネーション通し確認 fixture | `prelim_to_single_elimination_to_final` | 38 | 2 | シングルエリミネーション、速報、正式成績、PDF |
 
 ## 2026-06-29 確認結果
 
@@ -60,6 +61,43 @@
 
 大会ID 10のPDFを `tmp/pdfs/tournament_10_score_sheet_check.pdf` として生成し、PopplerでPNG化した。`tournament_10_page-2.png` と `tournament_10_page-3.png` を確認し、ロゴ、外枠罫線、会場/開催日/レーン表示、ページ分割に表示崩れがないことを確認した。
 
+## 2026-07-02 シングルエリミネーション現DB通し確認
+
+`php artisan tournament:restore-single-elimination-fixture --force --json` を追加実行し、現DBに残るSE確認用大会を作成した。
+
+| 項目 | 値 |
+|---|---|
+| 大会ID | 27 |
+| 大会名 | シングルエリミネーション通し確認 fixture |
+| 予選スコア | 32行 |
+| SEスコア | 6行 |
+| 進出元snapshot | `prelim_total` id 118 |
+| 最終snapshot | `single_elimination_final` id 119 |
+| `tournament_results` | 4行 |
+| SE結果 | 4名、3試合完了、順位 `1,2,3,3`、優勝 須田開代子 |
+
+認証ありHTTPで `/scores/result?tournament_id=27&stage=トーナメント&upto_game=2` をレンダリングし、status 200、優勝者名、`R2-M1` を含むことを確認した。
+
+`php artisan tournament:result-flow-regression` は、現DBにSE大会がある場合 `single_elimination_existing` として既存データを確認する。
+
+| case | mode | 対象 | 結果 | メモ |
+|---|---|---|---|---|
+| round_robin_existing | round_robin | 大会ID 11 | OK | 8名、8G、1位 久保田彩花、5勝3敗、Bonus 150 |
+| step_ladder_existing | step_ladder | 大会ID 11 | OK | seed 3名、1回戦/優勝決定戦とも `done`、優勝 久保田彩花 |
+| shootout_existing | shootout | 大会ID 10 | OK | seed source `semifinal_total`、8名、3試合完了、優勝 水野耕佑 |
+| single_elimination_existing | single_elimination | 大会ID 27 | OK | seed source `prelim_total`、4名、3試合完了、順位 `1,2,3,3` |
+
+`php artisan tournament:pdf-regression` も、現DBにSE大会がある場合 `single_elimination_existing` のPDFを追加確認する。
+
+| case | mode | 対象 | 結果 | bytes | メモ |
+|---|---|---|---|---:|---|
+| season_trial_existing | season_trial | 大会ID 10 | OK | 712137 | シーズントライアル外枠 + シュートアウト表示 |
+| round_robin_step_ladder_existing | standard_with_step_ladder | 大会ID 11 | OK | 670411 | 通常外枠 + RR/ステップラダー |
+| single_elimination_existing | single_elimination | 大会ID 27 | OK | 260180 | 現DBのSE確認用大会 |
+| standard_fixture | standard | 一時fixture | OK | 58725 | 通常トータルピンPDF |
+| shootout_fixture | shootout | 一時fixture | OK | 399687 | 純シュートアウトPDF |
+| single_elimination_fixture | single_elimination | 一時fixture | OK | 121282 | 一時SE fixture PDF |
+
 ## 2026-07-01 結果フロー一括回帰
 
 `php artisan tournament:result-flow-regression` を追加し、PDFではなく方式別サービスの計算結果を一括確認できるようにした。
@@ -83,6 +121,5 @@
 
 ## 次に必要な回帰
 
-1. シングルエリミネーションの実データを現DBへ戻す、または小さなfixture大会を作る。
-2. シングルエリミネーションで、速報画面、正式成績snapshot、`tournament_results` 同期、PDFトーナメント表まで再確認する。
-3. 実データの紙成績表画像/PDFを使い、OCR/AI取込から `game_scores` 確定反映まで通し確認する。
+1. 実データの紙成績表画像/PDFを使い、OCR/AI取込から `payload.rows` を確認する。
+2. `score_import_rows` の確認、要確認行修正、`game_scores` 確定反映まで通し確認する。
