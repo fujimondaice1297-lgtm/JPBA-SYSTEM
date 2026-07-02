@@ -1552,11 +1552,22 @@
 - [✓] `php artisan tournament:pdf-regression` で `single_elimination_existing` のPDF生成OKを確認した
 - [✓] 残り未チェックは2件
 
+#### 2026-07-03 メモ（ST Summer 2026 B会場 公式PDF実データ通し確認）
+- [✓] JPBA公式ページ `ST_Summer2026.html` のB会場（サンスクエアボウル）PDFを対象に、予選レーン移動表、予選前半4G、予選8G、準決勝4G（通算12G）、最終成績を抽出テキスト化して確認した
+- [✓] `jpba:import-st-summer-2026-b` を追加し、公式PDF抽出テキストから大会作成、参加者登録、レーン配置、予選/準決勝スコア取込、準決勝/決勝進出者、シュートアウト、最終成績まで再作成できるようにした
+- [✓] 大会ID 34として、参加者50名、エントリー49件、レーン配置50件を作成した
+- [✓] 予選8Gは `payload.rows` 48行から `score_import_rows` 384行を作成し、384行すべて `accepted` / `game_scores` 確定済みになった
+- [✓] 準決勝4Gは `payload.rows` 24行から `score_import_rows` 96行を作成し、96行すべて `accepted` / `game_scores` 確定済みになった
+- [✓] シュートアウトは `game_scores` 10行（SO1/SO2/SO3）を作成し、既存 `ShootoutService` で3試合完了、優勝者「市原 竜太」、最終順位8名が公式PDFと一致することを確認した
+- [✓] snapshots は `prelim_4g` / `prelim_total` / `semifinal_total` / `shootout_final` を作成し、`tournament_results` 8行へ公式最終成績（ポイント、賞金、12G総ピン）を反映した
+- [✓] `php artisan tournament:result-flow-regression` と `php artisan tournament:pdf-regression` を実行し、既存方式別回帰が全OKであることを確認した
+- [✓] 残り未チェックは0件
+
 ##### 次に行う候補（Active Backlog）
 
 ###### A. 直近のスコア/OCR運用
-- [ ] 実データの紙成績表画像/PDFから外部OCR/AI出力を作り、貼り付け変換プレビューで `payload.rows` を確認する
-- [ ] 貼り付け変換から `score_import_rows` 作成、要確認行修正、`game_scores` 確定反映まで通し確認する
+- [✓] 実データの紙成績表画像/PDFから外部OCR/AI出力を作り、貼り付け変換プレビューで `payload.rows` を確認する
+- [✓] 貼り付け変換から `score_import_rows` 作成、要確認行修正、`game_scores` 確定反映まで通し確認する
 - [✓] OCR/AI変換結果の警告・信頼度・変換元行を、取込詳細画面でより見やすく表示する
 - [✓] 実OCRエンジンを接続する場合の境界を、画像/PDF原本バッチ -> OCR処理 -> アダプタ -> `score_import_rows` として固定する
 - [✓] CSV / Excel / OCR JSON / OCR貼り付け変換を同じ運用手順書にまとめる

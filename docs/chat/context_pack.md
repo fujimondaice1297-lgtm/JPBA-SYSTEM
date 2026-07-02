@@ -366,3 +366,13 @@
 - 認証ありHTTPで `/scores/result?tournament_id=27&stage=トーナメント&upto_game=2` がstatus 200、優勝者名、`R2-M1` を含むことを確認した。
 - `tournament:result-flow-regression` と `tournament:pdf-regression` は大会ID 27込みでOK。
 - 未チェックは2件。残りは実物の紙成績表画像/PDFが必要なOCR/AI取込通し確認2件。
+
+## 2026-07-03 追記: ST Summer 2026 B会場 公式PDF実データ通し確認
+
+- `jpba:import-st-summer-2026-b` を追加し、JPBA公式ページのB会場（サンスクエアボウル）PDF抽出テキストから大会ID 34を再作成できるようにした。
+- 参加者50名、エントリー49件、レーン配置50件、予選 `game_scores` 384行、準決勝 `game_scores` 96行、シュートアウト `game_scores` 10行を作成した。
+- 予選8Gは `payload.rows` 48行 -> `score_import_rows` 384行 -> `game_scores` 384行、準決勝4Gは `payload.rows` 24行 -> `score_import_rows` 96行 -> `game_scores` 96行で、全行 `accepted` / `confirmed` になった。
+- `prelim_4g`、`prelim_total`、`semifinal_total`、`shootout_final` の4 snapshotと、公式最終成績8行の `tournament_results` を作成した。
+- 既存 `ShootoutService` でSO1/SO2/SO3の3試合が完了し、優勝者「市原 竜太」と最終順位8名が公式PDFと一致した。
+- `php artisan tournament:result-flow-regression` と `php artisan tournament:pdf-regression` は全OK。
+- Active Backlog Aの実データOCR/PDF取込2件を完了扱いにし、未チェックは0件。

@@ -8155,3 +8155,77 @@ User::where('email','domaine-d@i.softbank.jp')->exists(); // true
 ### 未チェック更新
 - Active Backlog Cの「シングルエリミネーションの実データを現DBへ復元/再作成し、速報画面、正式成績snapshot、`tournament_results` 同期、PDFまで通し確認する」を完了扱いにした。
 - 残り未チェックは2件。
+
+## 2026-07-03 ST Summer 2026 B会場 公式PDF実データ通し確認
+
+### 目的
+- ユーザー指定のJPBA公式ページ `ST_Summer2026.html` のB会場（サンスクエアボウル）を対象に、公式PDFから実データ取込の通し確認を行う。
+- 大会作成、選手登録、レーン配置、予選1Gから8G、準決勝4G、決勝シュートアウト、最終成績反映までを実DBで確認する。
+
+### 追加したもの
+- `app/Services/StSummer2026BOfficialImportService.php`
+  - 公式PDF抽出テキストを読み、エントリー、予選4G、予選8G、準決勝4G、最終成績を解析する。
+  - 対象大会を再作成し、参加者、エントリー、レーン配置、スコア取込、snapshot、最終成績を作成する。
+  - 予選/準決勝は既存の `ScoreImportOcrEngineBoundaryService` を通し、直接 `game_scores` へ書かず `score_import_rows` を経由する。
+- `app/Console/Commands/ImportStSummer2026BOfficialResultCommand.php`
+  - `php artisan jpba:import-st-summer-2026-b`
+  - `--dry-run` でPDF抽出テキストの解析件数だけ確認できる。
+
+### 作成した現DBデータ
+- 大会ID: 34
+- 大会名: `メリーランドカップ JPBAシーズントライアル2026 サマーシリーズ B会場`
+- 参加者: 50名
+- エントリー: 49件
+- レーン配置: 50件
+- `score_import_batches`
+  - 予選8G batch id 15: confirmed / 384行 / rejected 0
+  - 準決勝4G batch id 16: confirmed / 96行 / rejected 0
+- `score_import_rows`
+  - accepted 480行
+- `game_scores`
+  - 予選: 384行
+  - 準決勝: 96行
+  - シュートアウト: 10行
+- snapshots
+  - `prelim_4g`
+  - `prelim_total`
+  - `semifinal_total`
+  - `shootout_final`
+- `tournament_results`
+  - 8行
+  - 優勝: 市原 竜太 / `M00000978`
+
+### 確認結果
+- ドライラン:
+  - entry rows 51、active entries 50
+  - prelim 4G rows 48
+  - prelim 8G rows 50（scored 48 / BL 2）
+  - semifinal rows 24
+  - final award rows 8
+  - expected score import rows: prelim 384 / semifinal 96
+- 実取込:
+  - 予選8Gは `payload.rows` 48行から `score_import_rows` 384行を作成し、384行すべて `game_scores` へ確定した。
+  - 準決勝4Gは `payload.rows` 24行から `score_import_rows` 96行を作成し、96行すべて `game_scores` へ確定した。
+  - シュートアウトは既存 `ShootoutService` でSO1/SO2/SO3の3試合完了、優勝者「市原 竜太」、最終順位8名が公式最終成績と一致した。
+
+### 検証
+- `php -l app/Services/StSummer2026BOfficialImportService.php`
+- `php -l app/Console/Commands/ImportStSummer2026BOfficialResultCommand.php`
+- `php artisan jpba:import-st-summer-2026-b --dry-run`
+- `php artisan jpba:import-st-summer-2026-b`
+- DB確認:
+  - `score_import_batches` confirmed 2件
+  - `score_import_rows` accepted 480行
+  - `game_scores` 490行
+  - snapshots 4件
+  - `tournament_results` 8行
+- `php artisan tournament:result-flow-regression`
+  - 全ケースOK
+- `php artisan tournament:pdf-regression`
+  - 全ケースOK
+
+### 未チェック更新
+- Active Backlog Aの以下2件を完了扱いにした。
+  - 実データの紙成績表画像/PDFから外部OCR/AI出力を作り、貼り付け変換プレビューで `payload.rows` を確認する。
+  - 貼り付け変換から `score_import_rows` 作成、要確認行修正、`game_scores` 確定反映まで通し確認する。
+- 残り未チェックは0件。
