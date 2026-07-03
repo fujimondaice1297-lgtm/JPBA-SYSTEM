@@ -8229,3 +8229,52 @@ User::where('email','domaine-d@i.softbank.jp')->exists(); // true
   - 実データの紙成績表画像/PDFから外部OCR/AI出力を作り、貼り付け変換プレビューで `payload.rows` を確認する。
   - 貼り付け変換から `score_import_rows` 作成、要確認行修正、`game_scores` 確定反映まで通し確認する。
 - 残り未チェックは0件。
+## 2026-07-03 シーズントライアル最終成績PDF 表示修正
+### 目的
+- ユーザー確認で判明した、2026 ST Summer B会場PDFのシュートアウトページ欠落と、2025/2026シーズントライアル準決勝表の列ずれを修正する。
+- 修正後は必ずPDFを再生成し、PNGレンダリングで配置確認する。
+
+### 原因
+- 2026 ST Summer B会場の `semifinal_total` snapshot は `gender = M` を持っていたが、PDF用シュートアウト生成の seed snapshot 検索が `gender IS NULL` のみを対象にしていたため、`shootoutPdf` が `null` になりシュートアウトページが出力されなかった。
+- シーズントライアル準決勝表では、本文側に「入賞者リスト参照 / ステップポイント」列を追加していたが、ヘッダー側に同じ列が無く、`順位` / `ライセンスNo.` 以降の見出しが1列ずれていた。
+- CLI回帰のように同一PHPプロセス内で複数PDFを連続生成すると、`view()->share()` で共有した大会成績PDF用変数が前大会から残る可能性があった。
+
+### 変更内容
+- `app/Http/Controllers/TournamentResultController.php`
+  - `findCurrentSnapshotByCode()` を、性別なしsnapshotだけでなく大会の `gender` と一致するsnapshotも拾うように変更。
+  - `makePdfWithJapaneseFont()` の前処理で大会成績PDF用のBlade共有値をクリアし、連続PDF生成時の値混入を抑止。
+- `resources/views/tournament_results/pdfs/partials/snapshots.blade.php`
+  - シーズントライアル準決勝表のヘッダーに、本文の特別列に対応する空ヘッダー列を追加。
+- `app/Console/Commands/RunTournamentPdfRegression.php`
+  - `season_trial_gender_snapshot_existing` ケースを追加し、大会ID 34のような性別付きsnapshotのPDF生成を回帰確認対象にした。
+  - シュートアウト方式PDFでは `buildShootoutPdfData()` の payload が存在し、seed 8名・match 3件を持つことを検査するようにした。
+
+### 表示確認
+- 2026 ST Summer B会場の修正版PDFを生成し、PopplerでPNG化して確認。
+  - シュートアウトページが復活し、8名シュートアウト図にスコアと優勝者「市原 竜太」が表示されることを確認。
+  - 準決勝4G・通算12G表で、左端の「入賞者リスト参照 / 16P〜1P」列、順位、ライセンスNo.、氏名の見出しが本文列と揃うことを確認。
+- 2025 ST Autumn C会場の修正版PDFを単独生成し、PNG化して確認。
+  - 準決勝通算表の列ずれが解消したことを確認。
+  - 既存のシュートアウト図とスコアシートページは維持されていることを確認。
+- 確認用PDFを `Downloads` に保存。
+  - `2026_メリーランドカップ JPBAシーズントライアル2026 サマーシリーズ B会場_results_fixed.pdf`
+  - `2025_ＪＰＢＡシーズントライアル ２０２５ オータムシリーズ　Ｃ会場：アソビックスあさひ_results_fixed.pdf`
+
+### 検証
+- `php -l app/Http/Controllers/TournamentResultController.php`
+- `php -l app/Console/Commands/RunTournamentPdfRegression.php`
+- `php artisan view:clear`
+- `php artisan tournament:pdf-regression`
+  - `season_trial_existing` OK
+  - `season_trial_gender_snapshot_existing` OK（tournament_id 34 / bytes 499449）
+  - `round_robin_step_ladder_existing` OK
+  - `single_elimination_existing` OK
+  - `standard_fixture` OK
+  - `shootout_fixture` OK
+  - `single_elimination_fixture` OK
+- `php artisan tournament:result-flow-regression`
+  - 全ケースOK
+
+### 未チェック更新
+- 新規の未チェックは追加なし。
+- 残り未チェックは0件。

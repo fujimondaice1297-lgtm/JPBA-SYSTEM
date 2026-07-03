@@ -1054,12 +1054,30 @@ class TournamentResultController extends Controller
 
     private function findCurrentSnapshotByCode(int $tournamentId, string $resultCode): ?object
     {
-        return DB::table('tournament_result_snapshots')
+        $gender = DB::table('tournaments')
+            ->where('id', $tournamentId)
+            ->value('gender');
+        $gender = is_string($gender) ? strtoupper(trim($gender)) : '';
+
+        $query = DB::table('tournament_result_snapshots')
             ->where('tournament_id', $tournamentId)
             ->where('result_code', $resultCode)
             ->where('is_current', true)
-            ->whereNull('gender')
-            ->whereNull('shift')
+            ->whereNull('shift');
+
+        if ($gender !== '') {
+            $query
+                ->where(function ($query) use ($gender) {
+                    $query
+                        ->whereNull('gender')
+                        ->orWhereRaw('upper(gender) = ?', [$gender]);
+                })
+                ->orderByRaw('case when upper(coalesce(gender, \'\')) = ? then 0 when gender is null then 1 else 2 end', [$gender]);
+        } else {
+            $query->whereNull('gender');
+        }
+
+        return $query
             ->orderByDesc('reflected_at')
             ->orderByDesc('id')
             ->first();
@@ -2444,6 +2462,8 @@ private function attachResultPdfDisplayFields($results): void
             @ini_set('max_execution_time', '300');
         }
 
+        $this->forgetTournamentResultPdfSharedViewData();
+
         $dompdfTempDir = storage_path('framework/cache/dompdf');
         if (!is_dir($dompdfTempDir)) {
             @mkdir($dompdfTempDir, 0775, true);
@@ -2477,5 +2497,95 @@ private function attachResultPdfDisplayFields($results): void
         }
 
         return $pdf->download($downloadName);
+    }
+
+    private function forgetTournamentResultPdfSharedViewData(): void
+    {
+        $keys = [
+            'shootoutPdf',
+            'shootoutBracketImage',
+            'matchScoreSheets',
+            'matchScoreSheetImages',
+            'stepLadderPdf',
+            'stepLadderBracketImage',
+            'singleEliminationPdf',
+            'singleEliminationBracketImage',
+            'scoreImages',
+            'firstScoreImage',
+            'remainingScoreImages',
+            'scoreHeading',
+            'resultRows',
+            'jpbaLogoSrc',
+            'venueText',
+            'dateText',
+            'pdfMode',
+            'pdfCategory',
+            'finalFormat',
+            'isSeasonTrialPdf',
+            'isShootoutFlow',
+            'isSingleEliminationFlow',
+            'isStepLadderFlow',
+            'stageNumber',
+            'officialMainTitle',
+            'officialSeriesTitle',
+            'officialSeasonTitle',
+            'officialVenueTitle',
+            'finalQualifierCount',
+            'finalFormatLabel',
+            'seriesTitle',
+            'resolveName',
+            'resolveLicense',
+            'resolveRank',
+            'resolvePeriod',
+            'resolveBelong',
+            'belongTextClass',
+            'resolveNumber',
+            'formatNumber',
+            'formatPrize',
+            'pdfScoreSnapshots',
+            'prelimPlayerCount',
+            'prelimGameCount',
+            'prelimQualifierCount',
+            'semifinalGameCount',
+            'semifinalTotalGameCount',
+            'roundRobinGameCount',
+            'semifinalQualifierCount',
+            'snapshotValue',
+            'snapshotLicense',
+            'snapshotName',
+            'snapshotPeriod',
+            'snapshotArm',
+            'snapshotBelong',
+            'snapshotBelongClass',
+            'snapshotScoreFor',
+            'snapshotTitle',
+            'scoreTextClass',
+            'snapshotLicenseKey',
+            'snapshotPrelimRank',
+            'stepPointLabelForSemifinalRank',
+        ];
+
+        try {
+            $factory = view();
+            $reflection = new \ReflectionObject($factory);
+            if (! $reflection->hasProperty('shared')) {
+                return;
+            }
+
+            $property = $reflection->getProperty('shared');
+            $property->setAccessible(true);
+            $shared = $property->getValue($factory);
+            if (! is_array($shared)) {
+                return;
+            }
+
+            foreach ($keys as $key) {
+                unset($shared[$key]);
+            }
+
+            $property->setValue($factory, $shared);
+        } catch (\Throwable) {
+            // Best-effort cleanup for long-running CLI PDF regression/export processes.
+        }
     }
 }

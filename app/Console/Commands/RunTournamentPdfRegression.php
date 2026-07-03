@@ -33,6 +33,22 @@ class RunTournamentPdfRegression extends Command
                     ->first(),
             ],
             [
+                'case' => 'season_trial_gender_snapshot_existing',
+                'mode' => 'season_trial_gender_snapshot',
+                'tournament' => Tournament::query()
+                    ->where('title_category', 'season_trial')
+                    ->where('result_flow_type', 'like', '%shootout%')
+                    ->whereExists(function ($query) {
+                        $query->selectRaw('1')
+                            ->from('tournament_result_snapshots')
+                            ->whereColumn('tournament_result_snapshots.tournament_id', 'tournaments.id')
+                            ->where('tournament_result_snapshots.is_current', true)
+                            ->whereNotNull('tournament_result_snapshots.gender');
+                    })
+                    ->orderByDesc('id')
+                    ->first(),
+            ],
+            [
                 'case' => 'round_robin_step_ladder_existing',
                 'mode' => 'standard_with_step_ladder',
                 'tournament' => Tournament::query()
@@ -170,6 +186,19 @@ class RunTournamentPdfRegression extends Command
             ];
         }
 
+        $shootoutPayloadMessage = $this->validateShootoutPdfPayload($controller, $tournament);
+        if ($shootoutPayloadMessage !== null) {
+            return [
+                'case' => $caseName,
+                'mode' => $expectedMode,
+                'tournament_id' => $tournament->id,
+                'fixture' => $isFixture,
+                'status' => 'FAIL',
+                'bytes' => $bytes,
+                'message' => $shootoutPayloadMessage,
+            ];
+        }
+
         return [
             'case' => $caseName,
             'mode' => $expectedMode,
@@ -179,6 +208,34 @@ class RunTournamentPdfRegression extends Command
             'bytes' => $bytes,
             'message' => 'PDF generated.',
         ];
+    }
+
+    private function validateShootoutPdfPayload(TournamentResultController $controller, Tournament $tournament): ?string
+    {
+        $flowType = trim((string) ($tournament->result_flow_type ?? ''));
+        if (!str_contains($flowType, 'shootout')) {
+            return null;
+        }
+
+        try {
+            $method = new \ReflectionMethod($controller, 'buildShootoutPdfData');
+            $method->setAccessible(true);
+            $payload = $method->invoke($controller, $tournament);
+        } catch (Throwable $e) {
+            return 'Shootout PDF payload failed: ' . $e->getMessage();
+        }
+
+        if (!is_array($payload)) {
+            return 'Shootout PDF payload is missing.';
+        }
+
+        $seedCount = count((array) ($payload['seed_rows'] ?? []));
+        $matchCount = count((array) ($payload['matches'] ?? []));
+        if ($seedCount < 8 || $matchCount < 3) {
+            return "Shootout PDF payload is incomplete. seeds={$seedCount}, matches={$matchCount}";
+        }
+
+        return null;
     }
 
     private function missingResult(string $caseName, string $mode, string $message): array

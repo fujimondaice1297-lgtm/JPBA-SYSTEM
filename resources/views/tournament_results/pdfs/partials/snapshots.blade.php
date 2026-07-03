@@ -159,6 +159,9 @@
                 <table class="official-snapshot-table jpba-heavy">
                     <thead>
                         <tr>
+                            @if ($isSeasonTrialPdf ?? false)
+                                <th rowspan="2" class="snap-step-col">&nbsp;</th>
+                            @endif
                             <th rowspan="2" class="snap-rank-col">順位</th>
                             <th rowspan="2" class="snap-license-col">ﾗｲｾﾝｽ<br>No.</th>
                             <th rowspan="2" class="snap-name-col">氏　名</th>

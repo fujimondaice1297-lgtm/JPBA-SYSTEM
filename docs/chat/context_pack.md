@@ -376,3 +376,12 @@
 - 既存 `ShootoutService` でSO1/SO2/SO3の3試合が完了し、優勝者「市原 竜太」と最終順位8名が公式PDFと一致した。
 - `php artisan tournament:result-flow-regression` と `php artisan tournament:pdf-regression` は全OK。
 - Active Backlog Aの実データOCR/PDF取込2件を完了扱いにし、未チェックは0件。
+## 2026-07-03 追記: シーズントライアルPDF表示修正
+- 2026 ST Summer B会場の最終成績PDFでシュートアウトページが欠落していた原因は、PDF用 seed snapshot 検索が `gender IS NULL` のみを対象にし、`gender = M` の `semifinal_total` snapshot を拾えなかったこと。
+- `TournamentResultController::findCurrentSnapshotByCode()` は、大会の `gender` に一致するsnapshotも対象にするよう修正済み。
+- シーズントライアル準決勝表の列ずれは、本文側の「入賞者リスト参照 / ステップポイント」列に対するヘッダー列が無かったことが原因。`snapshots.blade.php` へ空ヘッダー列を追加して修正済み。
+- 同一PHPプロセスで複数PDFを連続生成すると `view()->share()` の値が混ざる可能性があったため、PDF生成前に大会成績PDF用共有値をクリアする処理を追加済み。
+- `tournament:pdf-regression` に `season_trial_gender_snapshot_existing` とシュートアウトPDF payload 検査を追加済み。
+- 2026版・2025版ともPDFを再生成し、PopplerでPNG化して目視確認済み。確認用PDFは `Downloads` の `_fixed.pdf`。
+- `php artisan tournament:pdf-regression` / `php artisan tournament:result-flow-regression` は全OK。
+- 残り未チェックは0件。

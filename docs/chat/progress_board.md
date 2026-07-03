@@ -1622,3 +1622,13 @@
 - [✓] `docs/db` の辞書、ER、SCHEMA、columns資料を現DBと定期的に照合する
 - [✓] 公開側はDB正本を読むだけ、管理側は入力・確認・反映を行う役割分担を維持する
 - [✓] 現行サイトの見た目を保つため、HTML構造、画像/バナー、PDF/外部リンク、フッターリンクを公開画面ごとに照合する
+
+#### 2026-07-03 メモ（シーズントライアルPDF表示修正）
+- [✓] 2026 ST Summer B会場の最終成績PDFで、`gender = M` 付き `semifinal_total` snapshot をPDF用シュートアウト生成が拾えず、シュートアウトページが欠落していた原因を修正した
+- [✓] シーズントライアル準決勝表で、本文に「入賞者リスト参照 / ステップポイント」列があるのにヘッダー側に対応列がなく、見出しが1列ずれていた問題を修正した
+- [✓] 同一PHPプロセス内で複数PDFを連続生成した場合に、Bladeの共有値が前大会から混ざる可能性があったため、PDF生成前に大会成績PDF専用の共有値をクリアする処理を追加した
+- [✓] `tournament:pdf-regression` に、性別付きsnapshotの既存シーズントライアル大会ケースと、シュートアウトPDF payload 欠落検知を追加した
+- [✓] 2026版・2025版の修正版PDFを生成し、PopplerでPNG化して目視確認した
+- [✓] 確認用PDFを `Downloads` に `_fixed.pdf` として保存した
+- [✓] `php artisan tournament:pdf-regression` と `php artisan tournament:result-flow-regression` は全OK
+- [✓] 残り未チェックは0件
