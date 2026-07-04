@@ -411,6 +411,7 @@
     $belongTextClass = function ($text): string {
         $text = trim((string) $text);
         $width = function_exists('mb_strwidth') ? mb_strwidth($text, 'UTF-8') : strlen($text);
+        if ($width >= 76) return 'belong-text belong-text-size-8';
         if ($width >= 62) return 'belong-text belong-text-size-7';
         if ($width >= 54) return 'belong-text belong-text-size-6';
         if ($width >= 46) return 'belong-text belong-text-size-5';
@@ -462,6 +463,29 @@
             $latestByResultCode[$code] = $snapshotSet;
         }
     }
+
+    if ((!is_numeric($prelimQualifierCount) || (int) $prelimQualifierCount <= 0) && isset($latestByResultCode['semifinal_total'])) {
+        $semifinalRowsForQualifier = collect($latestByResultCode['semifinal_total']['rows'] ?? []);
+        $inferredQualifierCount = $semifinalRowsForQualifier
+            ->filter(function ($row) use ($valueOf): bool {
+                $scratchPin = $valueOf($row, ['scratch_pin'], null);
+                if (is_numeric($scratchPin) && (int) $scratchPin > 0) {
+                    return true;
+                }
+
+                return false;
+            })
+            ->count();
+
+        if ($inferredQualifierCount <= 0) {
+            $inferredQualifierCount = $semifinalRowsForQualifier->count();
+        }
+
+        if ($inferredQualifierCount > 0) {
+            $prelimQualifierCount = $inferredQualifierCount;
+        }
+    }
+
     $orderedCodes = ['round_robin_total', 'semifinal_total', 'prelim_total'];
     $pdfScoreSnapshots = [];
     foreach ($orderedCodes as $code) {
@@ -689,10 +713,16 @@
     };
 
     $snapshotBelongClass = function (string $text): string {
-        $length = mb_strlen($text);
-        if ($length >= 34) return 'snapshot-belong-cell extra-long-text';
-        if ($length >= 22) return 'snapshot-belong-cell long-text';
-        return 'snapshot-belong-cell';
+        $text = trim((string) $text);
+        $width = function_exists('mb_strwidth') ? mb_strwidth($text, 'UTF-8') : strlen($text);
+        if ($width >= 76) return 'snapshot-belong-cell snapshot-belong-size-8';
+        if ($width >= 66) return 'snapshot-belong-cell snapshot-belong-size-7';
+        if ($width >= 58) return 'snapshot-belong-cell snapshot-belong-size-6';
+        if ($width >= 50) return 'snapshot-belong-cell snapshot-belong-size-5';
+        if ($width >= 42) return 'snapshot-belong-cell snapshot-belong-size-4';
+        if ($width >= 34) return 'snapshot-belong-cell snapshot-belong-size-3';
+        if ($width >= 26) return 'snapshot-belong-cell snapshot-belong-size-2';
+        return 'snapshot-belong-cell snapshot-belong-size-1';
     };
 
     $snapshotScoreFor = function ($stage, $row, int $gameNumber) use ($snapshotValue, $snapshotName, $normalizeText, $normalizeLicenseKey, $licenseTailKey, $gameScoreMap, $prelimGameCount) {

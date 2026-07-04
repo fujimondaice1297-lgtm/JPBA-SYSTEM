@@ -8278,3 +8278,13 @@ User::where('email','domaine-d@i.softbank.jp')->exists(); // true
 ### 未チェック更新
 - 新規の未チェックは追加なし。
 - 残り未チェックは0件。
+
+## 2026-07-04 追記・シーズントライアルPDF追加修正と成績一覧補完
+
+- 2025 ST Autumn C / 2026 ST Summer B のシーズントライアル最終成績PDFについて、所属・用品契約が長い場合でもセル高が乱れないよう、文字幅に応じてフォントサイズを段階縮小し1行表示へ寄せた。
+- 予選成績の準決勝進出ラインは、明示設定が空でも `semifinal_total` snapshot の人数から補完し、準決勝進出者の下に二重線を表示できるようにした。
+- シュートアウト図のスコアは、今後の運用に合わせて公開済みスコアシート入力の `final_score` を優先し、従来の簡易SOスコア入力はフォールバック扱いにした。
+- `/tournaments/{id}/results` は正式最終成績が一部だけの場合でも、最新snapshotに全員分があるときは確認用としてsnapshot行を表示する。大会ID 34は48名、既存大会ID 10は64名を確認した。
+- 成績一覧上部テーブルは「年度」列を外し、「順位」を左端へ移動した。
+- 生成後PDFはPopplerでPNG化し、所属セル、準決勝進出ライン、準決勝表、シュートアウト図、スコアシートの配置を目視確認した。
+- 検証は `php -l`、`php artisan view:cache`、`php artisan tournament:pdf-regression`、`php artisan tournament:result-flow-regression` が全OK。

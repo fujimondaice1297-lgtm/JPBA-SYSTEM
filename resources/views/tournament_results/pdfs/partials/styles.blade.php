@@ -227,16 +227,17 @@
             line-height: 1.05;
             text-align: center;
             white-space: nowrap;
-            letter-spacing: -0.15px;
+            letter-spacing: 0;
         }
 
         .official-prize-table .belong-text-size-1 { font-size: 10.8px; }
-        .official-prize-table .belong-text-size-2 { font-size: 9.8px; letter-spacing: -0.25px; }
-        .official-prize-table .belong-text-size-3 { font-size: 8.8px; letter-spacing: -0.35px; }
-        .official-prize-table .belong-text-size-4 { font-size: 7.8px; letter-spacing: -0.45px; }
-        .official-prize-table .belong-text-size-5 { font-size: 6.9px; letter-spacing: -0.55px; }
-        .official-prize-table .belong-text-size-6 { font-size: 6.1px; letter-spacing: -0.65px; }
-        .official-prize-table .belong-text-size-7 { font-size: 5.4px; letter-spacing: -0.75px; }
+        .official-prize-table .belong-text-size-2 { font-size: 9.8px; }
+        .official-prize-table .belong-text-size-3 { font-size: 8.8px; }
+        .official-prize-table .belong-text-size-4 { font-size: 7.8px; }
+        .official-prize-table .belong-text-size-5 { font-size: 6.9px; }
+        .official-prize-table .belong-text-size-6 { font-size: 6.1px; }
+        .official-prize-table .belong-text-size-7 { font-size: 5.4px; }
+        .official-prize-table .belong-text-size-8 { font-size: 4.8px; }
 
         .official-record-box {
             width: 88%;
@@ -509,18 +510,31 @@
         .official-snapshot-table .snap-avg-col { width: 4.8%; }
         .official-snapshot-table .snap-wide-total-col { width: 5.5%; }
 
-        .official-snapshot-table .snapshot-belong-cell {
-            font-size: 5.6px;
-            line-height: 1.0;
-            overflow-wrap: anywhere;
-            word-break: break-all;
-            white-space: normal;
+        .official-snapshot-table .snapshot-belong-td {
             padding-left: 1px;
             padding-right: 1px;
+            overflow: hidden;
         }
 
-        .official-snapshot-table .snapshot-belong-cell.long-text { font-size: 4.8px; }
-        .official-snapshot-table .snapshot-belong-cell.extra-long-text { font-size: 4.1px; }
+        .official-snapshot-table .snapshot-belong-cell {
+            display: block;
+            width: 100%;
+            line-height: 1.0;
+            overflow: hidden;
+            overflow-wrap: normal;
+            word-break: keep-all;
+            white-space: nowrap;
+            letter-spacing: 0;
+        }
+
+        .official-snapshot-table .snapshot-belong-size-1 { font-size: 6.0px; }
+        .official-snapshot-table .snapshot-belong-size-2 { font-size: 5.4px; }
+        .official-snapshot-table .snapshot-belong-size-3 { font-size: 4.9px; }
+        .official-snapshot-table .snapshot-belong-size-4 { font-size: 4.5px; }
+        .official-snapshot-table .snapshot-belong-size-5 { font-size: 4.1px; }
+        .official-snapshot-table .snapshot-belong-size-6 { font-size: 3.7px; }
+        .official-snapshot-table .snapshot-belong-size-7 { font-size: 3.4px; }
+        .official-snapshot-table .snapshot-belong-size-8 { font-size: 3.1px; }
 
         .official-snapshot-table .qualified-cell,
         .official-snapshot-table .step-point-cell {

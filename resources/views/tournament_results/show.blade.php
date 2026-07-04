@@ -158,16 +158,22 @@
         @endif
     </div>
 
+    @if(isset($resultIndexSnapshot) && $resultIndexSnapshot)
+        <div class="alert alert-warning py-2">
+            正式最終成績の登録件数よりスナップショットの人数が多いため、一覧確認用に
+            「{{ $resultIndexSnapshot->result_name ?? $resultIndexSnapshot->result_code ?? '成績スナップショット' }}」を表示しています。
+        </div>
+    @endif
+
     @if ($results->isEmpty())
         <p>この大会の成績はまだ登録されていません。</p>
     @else
         <table class="table table-bordered">
             <thead class="table-dark">
                 <tr>
-                    <th>年度</th>
+                    <th>順位</th>
                     <th>選手名</th>
                     <th>ライセンスNo</th>
-                    <th>順位</th>
                     <th>合計ポイント</th>
                     <th>入賞ポイント</th>
                     <th>ステップポイント</th>
@@ -183,6 +189,7 @@
                 @php
                     $name = optional($result->player)->name_kanji
                         ?? optional($result->bowler)->name_kanji
+                        ?? $result->display_name
                         ?? $result->amateur_name
                         ?? '不明な選手';
 
@@ -203,10 +210,9 @@
                 @endphp
 
                 <tr>
-                    <td>{{ $result->ranking_year }}</td>
+                    <td>{{ $rank }}</td>
                     <td>{{ $name }}</td>
                     <td>{{ $licenseDisplay }}</td>
-                    <td>{{ $rank }}</td>
                     <td>{{ number_format($result->points ?? 0) }}</td>
                     <td>{{ number_format($result->award_points ?? 0) }}</td>
                     <td>{{ number_format($result->step_points ?? 0) }}</td>
@@ -215,9 +221,13 @@
                     <td>{{ isset($result->average) ? number_format($result->average, 2) : '-' }}</td>
                     <td>{{ isset($result->prize_money) ? '¥' . number_format($result->prize_money) : '-' }}</td>
                     <td>
-                        <a href="{{ route('results.edit', $result) }}" class="btn btn-primary btn-sm">編集</a>
+                        @if(empty($result->is_snapshot_preview) && !empty($result->id))
+                            <a href="{{ route('results.edit', $result) }}" class="btn btn-primary btn-sm">編集</a>
+                        @else
+                            <span class="text-muted small">確認用</span>
+                        @endif
 
-                        @if(auth()->user()?->isAdmin())
+                        @if(empty($result->is_snapshot_preview) && auth()->user()?->isAdmin())
                             <form action="{{ route('admin.tournaments.results.destroy', [$result->tournament_id, $result->id]) }}"
                                   method="POST"
                                   class="d-inline"

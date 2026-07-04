@@ -1632,3 +1632,15 @@
 - [✓] 確認用PDFを `Downloads` に `_fixed.pdf` として保存した
 - [✓] `php artisan tournament:pdf-regression` と `php artisan tournament:result-flow-regression` は全OK
 - [✓] 残り未チェックは0件
+
+#### 2026-07-04 メモ（シーズントライアルPDF追加修正・成績一覧補完）
+- [✓] PDFの所属 / 用品契約セルは、長文でも行高が乱れないよう、文字幅に応じて縮小し1行表示へ寄せるように修正した
+- [✓] 予選成績の準決勝進出ラインは、設定値が空の場合でも `semifinal_total` snapshot の人数から補完して二重線を出せるようにした
+- [✓] シュートアウト図のスコアは、公開済みスコアシート入力の `final_score` を優先し、従来の簡易SOスコア入力はフォールバックとして使うようにした
+- [✓] `/tournaments/{id}/results` は、正式最終成績が少なく途中snapshotが多い場合、確認用に全員分のsnapshot行を表示するようにした（大会ID 34は48名表示）
+- [✓] 成績一覧の左端列を「年度」から「順位」へ変更した
+- [✓] 2025 ST Autumn C / 2026 ST Summer B のPDFを再生成し、PopplerでPNG化して、所属セル、準決勝進出ライン、準決勝表、シュートアウト図、スコアシートを目視確認した
+- [✓] `tournament:pdf-regression` / `tournament:result-flow-regression` は全OK
+- [✓] 34番大会の成績一覧はController直接確認で48行、10番大会は従来どおり64行を確認した
+- [✓] 実ブラウザの `127.0.0.1` 成績一覧は認証によりログイン画面へ遷移したため、未ログイン状態では実URLの目視確認は不可。コントローラー出力データで補完表示を確認済み
+- [✓] 残り未チェックは0件

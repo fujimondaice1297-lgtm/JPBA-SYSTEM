@@ -385,3 +385,12 @@
 - 2026版・2025版ともPDFを再生成し、PopplerでPNG化して目視確認済み。確認用PDFは `Downloads` の `_fixed.pdf`。
 - `php artisan tournament:pdf-regression` / `php artisan tournament:result-flow-regression` は全OK。
 - 残り未チェックは0件。
+
+## 2026-07-04 追記・直近の状態
+
+- シーズントライアルPDFの追加修正では、所属・用品契約の長文表示、予選の準決勝進出二重線、準決勝表の列ずれ、シュートアウト図とスコアシート表示を確認済み。
+- シュートアウト表示は、公開済み `TournamentMatchScoreSheet` の `sheet_type = shootout` かつ `is_published = true` の `final_score` を優先する。従来の `game_scores` SO入力はフォールバックとして残す。
+- 成績一覧 `/tournaments/{id}/results` は、`tournament_results` が少なくても最新snapshotに全員分がある場合、確認用snapshot行を表示する。大会ID 34は48名表示の確認済み。
+- 成績一覧の左端列は「順位」。年度列は非表示にした。
+- PDF修正後は、必ずPDF生成、Poppler PNG化、ページ目視確認を行う運用とする。
+- 検証済みコマンド: `php artisan view:cache`、`php artisan tournament:pdf-regression`、`php artisan tournament:result-flow-regression`。

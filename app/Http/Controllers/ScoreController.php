@@ -6,6 +6,7 @@ namespace App\Http\Controllers;
 use App\Models\GameScore;
 use App\Models\ProBowler;
 use App\Models\Tournament;
+use App\Models\TournamentMatchScoreSheet;
 use App\Services\ScoreService;
 use App\Services\TournamentResultCarryService;
 use App\Services\RoundRobinService;
@@ -2529,7 +2530,114 @@ final class ScoreController extends Controller
             ];
         }
 
+        foreach ($this->loadShootoutMatchScoresFromScoreSheets($tournamentId) as $matchKey => $slotScores) {
+            foreach ($slotScores as $slotCode => $scoreRow) {
+                $scores[$matchKey][$slotCode] = $scoreRow;
+            }
+        }
+
         return $scores;
+    }
+
+    /**
+     * @return array<string,array<string,array<string,mixed>>>
+     */
+    private function loadShootoutMatchScoresFromScoreSheets(int $tournamentId): array
+    {
+        $scoreSheets = TournamentMatchScoreSheet::query()
+            ->with(['players'])
+            ->where('tournament_id', $tournamentId)
+            ->where('sheet_type', 'shootout')
+            ->where('is_published', true)
+            ->orderBy('match_order')
+            ->orderBy('id')
+            ->get();
+
+        $scores = [];
+
+        foreach ($scoreSheets as $scoreSheet) {
+            $matchKey = $this->normalizeShootoutMatchKeyFromScoreSheet($scoreSheet);
+            if ($matchKey === null) {
+                continue;
+            }
+
+            foreach ($scoreSheet->players->values() as $index => $player) {
+                $slotCode = $this->normalizeShootoutSlotCode($player->player_slot ?? null, $index);
+                if ($slotCode === null) {
+                    continue;
+                }
+
+                if ($player->final_score === null || !is_numeric($player->final_score)) {
+                    continue;
+                }
+
+                $scores[$matchKey][$slotCode] = [
+                    'score' => (int) $player->final_score,
+                    'score_sheet_id' => (int) $scoreSheet->id,
+                    'score_sheet_player_id' => (int) $player->id,
+                    'license_number' => $player->pro_bowler_license_no ?? null,
+                    'name' => $player->display_name ?? null,
+                    'pro_bowler_id' => $player->pro_bowler_id ?? null,
+                    'source' => 'score_sheet',
+                ];
+            }
+        }
+
+        return $scores;
+    }
+
+    private function normalizeShootoutMatchKeyFromScoreSheet(TournamentMatchScoreSheet $scoreSheet): ?string
+    {
+        $text = trim(implode(' ', array_filter([
+            (string) ($scoreSheet->match_code ?? ''),
+            (string) ($scoreSheet->match_label ?? ''),
+            (string) ($scoreSheet->stage_code ?? ''),
+        ], fn (string $value): bool => trim($value) !== '')));
+
+        if ($text === '') {
+            return null;
+        }
+
+        $normalized = function_exists('mb_convert_kana')
+            ? mb_convert_kana($text, 'as', 'UTF-8')
+            : $text;
+        $upper = strtoupper($normalized);
+
+        if (preg_match('/SO\s*:?\s*SO?\s*([123])/', $upper, $matches)
+            || preg_match('/\bSO\s*([123])\b/', $upper, $matches)
+        ) {
+            return 'SO' . $matches[1];
+        }
+
+        if (str_contains($upper, 'FINAL') || str_contains($text, '優勝')) {
+            return 'SO3';
+        }
+
+        if (str_contains($upper, '2ND') || str_contains($upper, 'SECOND') || str_contains($text, '２') || str_contains($text, '2')) {
+            return 'SO2';
+        }
+
+        if (str_contains($upper, '1ST') || str_contains($upper, 'FIRST') || str_contains($text, '１') || str_contains($text, '1')) {
+            return 'SO1';
+        }
+
+        return null;
+    }
+
+    private function normalizeShootoutSlotCode(mixed $slot, int $fallbackIndex): ?string
+    {
+        $slotCode = strtoupper(trim((string) ($slot ?? '')));
+        $slotCode = function_exists('mb_convert_kana')
+            ? strtoupper(mb_convert_kana($slotCode, 'as', 'UTF-8'))
+            : $slotCode;
+
+        if (preg_match('/^[ABCD]$/', $slotCode)) {
+            return $slotCode;
+        }
+
+        $fallback = chr(65 + $fallbackIndex);
+
+        return preg_match('/^[ABCD]$/', $fallback) ? $fallback : null;
     }
 
     private function findCurrentSnapshotForShootout(int $tournamentId, string $resultCode, ?string $gender, string $shift): ?object

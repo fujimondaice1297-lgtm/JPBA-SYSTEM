@@ -140,7 +140,7 @@
                                 <td class="text-left" style="{{ $snapshotNameCellStyle($snapshotName($row)) }}">{{ $snapshotName($row) }}</td>
                                 <td>{{ $snapshotPeriod($row) }}</td>
                                 <td>{{ $snapshotArm($row) }}</td>
-                                <td class="{{ $snapshotBelongClass($belong) }}">{{ $belong }}</td>
+                                <td class="snapshot-belong-td"><span class="{{ $snapshotBelongClass($belong) }}">{{ $belong }}</span></td>
                                 <td>{{ $formatNumber($carryPin) }}</td>
                                 @for ($game = 1; $game <= $gameCount; $game++)
                                     @php $score = $snapshotScoreFor($targetStage, $row, $game); @endphp
@@ -218,7 +218,7 @@
                                 <td class="text-left" style="{{ $snapshotNameCellStyle($snapshotName($row)) }}">{{ $snapshotName($row) }}</td>
                                 <td>{{ $snapshotPeriod($row) }}</td>
                                 <td>{{ $snapshotArm($row) }}</td>
-                                <td class="{{ $snapshotBelongClass($belong) }}">{{ $belong }}</td>
+                                <td class="snapshot-belong-td"><span class="{{ $snapshotBelongClass($belong) }}">{{ $belong }}</span></td>
                                 <td>{{ $formatNumber($carryPin) }}</td>
                                 <td>{{ $prelimAverage === null ? '-' : number_format($prelimAverage, 2) }}</td>
                                 <td>{{ $prelimRank ?? '-' }}</td>
@@ -303,7 +303,7 @@
                                 <td class="text-left" style="{{ $snapshotNameCellStyle($snapshotName($row)) }}">{{ $snapshotName($row) }}</td>
                                 <td>{{ $snapshotPeriod($row) }}</td>
                                 <td>{{ $snapshotArm($row) }}</td>
-                                <td class="{{ $snapshotBelongClass($belong) }}">{{ $belong }}</td>
+                                <td class="snapshot-belong-td"><span class="{{ $snapshotBelongClass($belong) }}">{{ $belong }}</span></td>
                                 @if ($prelimTotalGames > 8)
                                     <td>{{ $formatNumber($firstTotal) }}</td>
                                     <td>{{ $firstAvg === null ? '-' : number_format($firstAvg, 2) }}</td>

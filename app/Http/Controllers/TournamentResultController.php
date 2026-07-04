@@ -51,6 +51,13 @@ class TournamentResultController extends Controller
 
         $rankCol ? $q->orderBy($rankCol) : $q->orderBy('id');
         $results = $q->get();
+        $resultIndexSnapshot = null;
+
+        $snapshotIndexData = $this->buildResultIndexSnapshotRows($tournament, $results->count());
+        if (is_array($snapshotIndexData)) {
+            $results = $snapshotIndexData['rows'];
+            $resultIndexSnapshot = $snapshotIndexData['snapshot'];
+        }
 
         if ($results->isEmpty()) {
             $hasSnapshots = TournamentResultSnapshot::query()
@@ -65,7 +72,84 @@ class TournamentResultController extends Controller
             }
         }
 
-        return view('tournament_results.show', compact('tournament', 'results'));
+        return view('tournament_results.show', compact('tournament', 'results', 'resultIndexSnapshot'));
+    }
+
+    private function buildResultIndexSnapshotRows(Tournament $tournament, int $currentResultCount): ?array
+    {
+        $snapshots = DB::table('tournament_result_snapshots')
+            ->where('tournament_id', $tournament->id)
+            ->where('is_current', true)
+            ->whereIn('result_code', ['prelim_total', 'semifinal_total', 'round_robin_total', 'shootout_final'])
+            ->orderByDesc('id')
+            ->get();
+
+        if ($snapshots->isEmpty()) {
+            return null;
+        }
+
+        $candidates = $snapshots->map(function ($snapshot) {
+            $rowCount = DB::table('tournament_result_snapshot_rows')
+                ->where('snapshot_id', $snapshot->id)
+                ->count();
+
+            return [
+                'snapshot' => $snapshot,
+                'row_count' => $rowCount,
+                'priority' => match ((string) ($snapshot->result_code ?? '')) {
+                    'prelim_total' => 1,
+                    'semifinal_total' => 2,
+                    'round_robin_total' => 3,
+                    'shootout_final' => 4,
+                    default => 9,
+                },
+            ];
+        })
+            ->filter(fn (array $candidate): bool => (int) $candidate['row_count'] > $currentResultCount)
+            ->sort(fn (array $a, array $b): int => ((int) $b['row_count'] <=> (int) $a['row_count'])
+                ?: ((int) $a['priority'] <=> (int) $b['priority']))
+            ->values();
+
+        if ($candidates->isEmpty()) {
+            return null;
+        }
+
+        $snapshot = $candidates->first()['snapshot'];
+        $rows = DB::table('tournament_result_snapshot_rows')
+            ->where('snapshot_id', $snapshot->id)
+            ->orderBy('ranking')
+            ->orderByDesc('total_pin')
+            ->orderBy('id')
+            ->get()
+            ->map(function ($row) use ($tournament) {
+                $result = new \stdClass();
+                $result->id = null;
+                $result->is_snapshot_preview = true;
+                $result->snapshot_row_id = $row->id ?? null;
+                $result->tournament_id = $tournament->id;
+                $result->ranking_year = $tournament->year;
+                $result->ranking = $row->ranking ?? null;
+                $result->points = $row->points ?? 0;
+                $result->award_points = null;
+                $result->step_points = null;
+                $result->total_pin = $row->total_pin ?? 0;
+                $result->games = $row->games ?? null;
+                $result->average = $row->average ?? null;
+                $result->prize_money = $row->prize_money ?? null;
+                $result->pro_bowler_id = $row->pro_bowler_id ?? null;
+                $result->pro_bowler_license_no = $row->pro_bowler_license_no ?? null;
+                $result->amateur_name = $row->amateur_name ?? null;
+                $result->display_name = $row->display_name ?? null;
+                $result->player = null;
+                $result->bowler = null;
+
+                return $result;
+            });
+
+        return [
+            'snapshot' => $snapshot,
+            'rows' => $rows,
+        ];
     }
 
     /* ---- 以降はあなたの現状ロジックを維持 ---- */
@@ -1155,7 +1239,114 @@ class TournamentResultController extends Controller
             ];
         }
 
+        foreach ($this->loadShootoutMatchScoresFromScoreSheets($tournamentId) as $matchKey => $slotScores) {
+            foreach ($slotScores as $slotCode => $scoreRow) {
+                $scores[$matchKey][$slotCode] = $scoreRow;
+            }
+        }
+
         return $scores;
+    }
+
+    /**
+     * @return array<string,array<string,array<string,mixed>>>
+     */
+    private function loadShootoutMatchScoresFromScoreSheets(int $tournamentId): array
+    {
+        $scoreSheets = TournamentMatchScoreSheet::query()
+            ->with(['players'])
+            ->where('tournament_id', $tournamentId)
+            ->where('sheet_type', 'shootout')
+            ->where('is_published', true)
+            ->orderBy('match_order')
+            ->orderBy('id')
+            ->get();
+
+        $scores = [];
+
+        foreach ($scoreSheets as $scoreSheet) {
+            $matchKey = $this->normalizeShootoutMatchKeyFromScoreSheet($scoreSheet);
+            if ($matchKey === null) {
+                continue;
+            }
+
+            foreach ($scoreSheet->players->values() as $index => $player) {
+                $slotCode = $this->normalizeShootoutSlotCode($player->player_slot ?? null, $index);
+                if ($slotCode === null) {
+                    continue;
+                }
+
+                if ($player->final_score === null || !is_numeric($player->final_score)) {
+                    continue;
+                }
+
+                $scores[$matchKey][$slotCode] = [
+                    'score' => (int) $player->final_score,
+                    'score_sheet_id' => (int) $scoreSheet->id,
+                    'score_sheet_player_id' => (int) $player->id,
+                    'license_number' => $player->pro_bowler_license_no ?? null,
+                    'name' => $player->display_name ?? null,
+                    'pro_bowler_id' => $player->pro_bowler_id ?? null,
+                    'source' => 'score_sheet',
+                ];
+            }
+        }
+
+        return $scores;
+    }
+
+    private function normalizeShootoutMatchKeyFromScoreSheet(TournamentMatchScoreSheet $scoreSheet): ?string
+    {
+        $text = trim(implode(' ', array_filter([
+            (string) ($scoreSheet->match_code ?? ''),
+            (string) ($scoreSheet->match_label ?? ''),
+            (string) ($scoreSheet->stage_code ?? ''),
+        ], fn (string $value): bool => trim($value) !== '')));
+
+        if ($text === '') {
+            return null;
+        }
+
+        $normalized = function_exists('mb_convert_kana')
+            ? mb_convert_kana($text, 'as', 'UTF-8')
+            : $text;
+        $upper = strtoupper($normalized);
+
+        if (preg_match('/SO\s*:?\s*SO?\s*([123])/', $upper, $matches)
+            || preg_match('/\bSO\s*([123])\b/', $upper, $matches)
+        ) {
+            return 'SO' . $matches[1];
+        }
+
+        if (str_contains($upper, 'FINAL') || str_contains($text, '優勝')) {
+            return 'SO3';
+        }
+
+        if (str_contains($upper, '2ND') || str_contains($upper, 'SECOND') || str_contains($text, '２') || str_contains($text, '2')) {
+            return 'SO2';
+        }
+
+        if (str_contains($upper, '1ST') || str_contains($upper, 'FIRST') || str_contains($text, '１') || str_contains($text, '1')) {
+            return 'SO1';
+        }
+
+        return null;
+    }
+
+    private function normalizeShootoutSlotCode(mixed $slot, int $fallbackIndex): ?string
+    {
+        $slotCode = strtoupper(trim((string) ($slot ?? '')));
+        $slotCode = function_exists('mb_convert_kana')
+            ? strtoupper(mb_convert_kana($slotCode, 'as', 'UTF-8'))
+            : $slotCode;
+
+        if (preg_match('/^[ABCD]$/', $slotCode)) {
+            return $slotCode;
+        }
+
+        $fallback = chr(65 + $fallbackIndex);
+
+        return preg_match('/^[ABCD]$/', $fallback) ? $fallback : null;
     }
 
     private function shootoutParticipantKeyFromSnapshotRow(object $row, int $seed): string
