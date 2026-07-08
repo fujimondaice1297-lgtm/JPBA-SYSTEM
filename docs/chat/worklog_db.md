@@ -8297,3 +8297,21 @@ User::where('email','domaine-d@i.softbank.jp')->exists(); // true
 - 2025 ST Autumn C のPDFを再生成・PNG化し、優勝決定戦および1st/2ndマッチのフレーム別投球マークと累計スコアが表示されていることを目視確認した。
 - 2026 ST Summer B のPDFを再生成・PNG化し、シュートアウト図、準決勝表、予選表、準決勝進出二重線が維持されていることを目視確認した。
 - 検証: `php -l app/Http/Controllers/TournamentResultController.php`、`php -l app/Services/MatchScoreSheetImageService.php`、`php artisan view:cache`、`php artisan tournament:pdf-regression`、`php artisan tournament:result-flow-regression`。
+## 2026-07-08 実運用フォワードテスト用データリセット計画
+
+### 目的
+- プロトタイプ中に投入した会員、インストラクター、大会、成績、スケジュール、ログイン権限を整理し、実運用に近い空の状態からフォワードテストを始める。
+- その後、2026年7月現在の正会員/インストラクター情報、2025年度シード、2026年1月以降の大会成績を再投入し、現行JPBAサイトと整合させる。
+
+### 方針
+- 実削除は未実行。
+- 新管理者アカウントを先に作成し、ログイン確認してから既存管理者/一般ユーザーを整理する。
+- DBバックアップ、アップロードファイルバックアップ、対象テーブル件数ドライラン、ユーザー確認を必須条件にする。
+- UI、入力導線、自動反映システム、PDF生成、OCR/スコア取込、公開互換、コード資産、マスタ/設定データは残す。
+- 詳細計画は `docs/operations/forward_test_data_reset_plan.md` に記録した。
+
+### 次に行う候補
+- 新管理者アカウント情報の確定。
+- 全テーブル件数と削除候補/残す候補/要確認候補のドライラン作成。
+- ドライラン既定のリセットコマンド作成。
+- ドライラン確認後、承認を得てからリセット実行。
