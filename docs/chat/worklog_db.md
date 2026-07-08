@@ -8288,3 +8288,12 @@ User::where('email','domaine-d@i.softbank.jp')->exists(); // true
 - 成績一覧上部テーブルは「年度」列を外し、「順位」を左端へ移動した。
 - 生成後PDFはPopplerでPNG化し、所属セル、準決勝進出ライン、準決勝表、シュートアウト図、スコアシートの配置を目視確認した。
 - 検証は `php -l`、`php artisan view:cache`、`php artisan tournament:pdf-regression`、`php artisan tournament:result-flow-regression` が全OK。
+## 2026-07-08 追記・シーズントライアル成績一覧ポイント復旧とPDFスコア累計維持
+
+- 前回の34番大会成績一覧補完は、全員表示を優先して `prelim_total` snapshot 行をそのまま表示したため、正式最終成績に残っているポイント・賞金が一覧上で0扱いになっていた。
+- 修正後は、シーズントライアルの一覧補完を「正式最終成績（上位8名） + 準決勝通算snapshot（9〜24位） + 予選通算snapshot（25位以下）」として組み立てる。
+- 34番大会のController直接確認で、48名表示、上位8名の `points` / `award_points` / `step_points` / `prize_money`、9〜24位の `step_points` が表示されることを確認した。
+- PDFスコアシート画像は、投球マークから累計スコアを再計算できない場合でも、保存済みの `cumulative_score`、なければ `frame_score` の累積を表示するフォールバックを追加した。
+- 2025 ST Autumn C のPDFを再生成・PNG化し、優勝決定戦および1st/2ndマッチのフレーム別投球マークと累計スコアが表示されていることを目視確認した。
+- 2026 ST Summer B のPDFを再生成・PNG化し、シュートアウト図、準決勝表、予選表、準決勝進出二重線が維持されていることを目視確認した。
+- 検証: `php -l app/Http/Controllers/TournamentResultController.php`、`php -l app/Services/MatchScoreSheetImageService.php`、`php artisan view:cache`、`php artisan tournament:pdf-regression`、`php artisan tournament:result-flow-regression`。

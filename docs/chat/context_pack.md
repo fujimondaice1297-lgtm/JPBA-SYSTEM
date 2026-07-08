@@ -394,3 +394,9 @@
 - 成績一覧の左端列は「順位」。年度列は非表示にした。
 - PDF修正後は、必ずPDF生成、Poppler PNG化、ページ目視確認を行う運用とする。
 - 検証済みコマンド: `php artisan view:cache`、`php artisan tournament:pdf-regression`、`php artisan tournament:result-flow-regression`。
+## 2026-07-08 追記・回帰防止ポイント
+
+- シーズントライアル成績一覧で正式成績より多い人数を表示する場合、単一snapshotだけを使うとポイント・賞金が落ちる。上位は `tournament_results`、準決勝通過後の順位は `semifinal_total`、予選敗退者は `prelim_total` で補完する。
+- 34番大会は48名表示を維持しつつ、上位8名の `points` / `award_points` / `step_points` / `prize_money` と、9〜24位の `step_points` を表示する。
+- PDFスコアシートは、投球マークからの再計算が正本だが、表示欠落防止のため `cumulative_score` / `frame_score` をフォールバックとして使う。
+- PDF変更後は必ずPDF生成、Poppler PNG化、該当ページの目視確認を行う。2025 ST Autumn C はスコアシート累計、2026 ST Summer B はシュートアウト図・準決勝表・予選表・二重線を確認対象にする。

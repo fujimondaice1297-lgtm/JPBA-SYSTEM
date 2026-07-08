@@ -19,6 +19,7 @@ use App\Services\StepLadderBracketImageService;
 use App\Services\MatchScoreSheetImageService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
@@ -53,7 +54,7 @@ class TournamentResultController extends Controller
         $results = $q->get();
         $resultIndexSnapshot = null;
 
-        $snapshotIndexData = $this->buildResultIndexSnapshotRows($tournament, $results->count());
+        $snapshotIndexData = $this->buildResultIndexSnapshotRows($tournament, $results);
         if (is_array($snapshotIndexData)) {
             $results = $snapshotIndexData['rows'];
             $resultIndexSnapshot = $snapshotIndexData['snapshot'];
@@ -75,8 +76,9 @@ class TournamentResultController extends Controller
         return view('tournament_results.show', compact('tournament', 'results', 'resultIndexSnapshot'));
     }
 
-    private function buildResultIndexSnapshotRows(Tournament $tournament, int $currentResultCount): ?array
+    private function buildResultIndexSnapshotRows(Tournament $tournament, Collection $currentResults): ?array
     {
+        $currentResultCount = $currentResults->count();
         $snapshots = DB::table('tournament_result_snapshots')
             ->where('tournament_id', $tournament->id)
             ->where('is_current', true)
@@ -86,6 +88,11 @@ class TournamentResultController extends Controller
 
         if ($snapshots->isEmpty()) {
             return null;
+        }
+
+        $seasonTrialRows = $this->buildSeasonTrialResultIndexRows($tournament, $currentResults, $snapshots);
+        if (is_array($seasonTrialRows)) {
+            return $seasonTrialRows;
         }
 
         $candidates = $snapshots->map(function ($snapshot) {
@@ -115,36 +122,8 @@ class TournamentResultController extends Controller
         }
 
         $snapshot = $candidates->first()['snapshot'];
-        $rows = DB::table('tournament_result_snapshot_rows')
-            ->where('snapshot_id', $snapshot->id)
-            ->orderBy('ranking')
-            ->orderByDesc('total_pin')
-            ->orderBy('id')
-            ->get()
-            ->map(function ($row) use ($tournament) {
-                $result = new \stdClass();
-                $result->id = null;
-                $result->is_snapshot_preview = true;
-                $result->snapshot_row_id = $row->id ?? null;
-                $result->tournament_id = $tournament->id;
-                $result->ranking_year = $tournament->year;
-                $result->ranking = $row->ranking ?? null;
-                $result->points = $row->points ?? 0;
-                $result->award_points = null;
-                $result->step_points = null;
-                $result->total_pin = $row->total_pin ?? 0;
-                $result->games = $row->games ?? null;
-                $result->average = $row->average ?? null;
-                $result->prize_money = $row->prize_money ?? null;
-                $result->pro_bowler_id = $row->pro_bowler_id ?? null;
-                $result->pro_bowler_license_no = $row->pro_bowler_license_no ?? null;
-                $result->amateur_name = $row->amateur_name ?? null;
-                $result->display_name = $row->display_name ?? null;
-                $result->player = null;
-                $result->bowler = null;
-
-                return $result;
-            });
+        $rows = $this->loadResultIndexSnapshotRows($snapshot)
+            ->map(fn ($row) => $this->makeResultIndexSnapshotPreviewRow($tournament, $row));
 
         return [
             'snapshot' => $snapshot,
@@ -153,6 +132,200 @@ class TournamentResultController extends Controller
     }
 
     /* ---- 以降はあなたの現状ロジックを維持 ---- */
+
+    private function buildSeasonTrialResultIndexRows(Tournament $tournament, Collection $currentResults, Collection $snapshots): ?array
+    {
+        if (!$this->isSeasonTrialTournament($tournament)) {
+            return null;
+        }
+
+        $prelimSnapshot = $snapshots->first(fn ($snapshot): bool => (string) ($snapshot->result_code ?? '') === 'prelim_total');
+        if (!$prelimSnapshot) {
+            return null;
+        }
+
+        $prelimRows = $this->loadResultIndexSnapshotRows($prelimSnapshot);
+        if ($prelimRows->count() <= $currentResults->count()) {
+            return null;
+        }
+
+        $semifinalSnapshot = $snapshots->first(fn ($snapshot): bool => (string) ($snapshot->result_code ?? '') === 'semifinal_total');
+        $semifinalRows = $semifinalSnapshot ? $this->loadResultIndexSnapshotRows($semifinalSnapshot) : collect();
+
+        $rows = [];
+        $usedKeys = [];
+        $maxCurrentRank = 0;
+
+        foreach ($currentResults->sortBy(fn ($result) => $this->resultIndexRankValue($result))->values() as $result) {
+            $rank = $this->resultIndexRankValue($result);
+            if ($rank > 0) {
+                $maxCurrentRank = max($maxCurrentRank, $rank);
+            }
+
+            $key = $this->resultIndexIdentityKey($result);
+            if ($key !== '') {
+                $usedKeys[$key] = true;
+            }
+
+            $rows[] = $result;
+        }
+
+        $maxSemifinalRank = 0;
+        foreach ($semifinalRows as $row) {
+            $rank = $this->resultIndexRankValue($row);
+            if ($rank > 0) {
+                $maxSemifinalRank = max($maxSemifinalRank, $rank);
+            }
+
+            if ($rank > 0 && $rank <= $maxCurrentRank) {
+                continue;
+            }
+
+            $key = $this->resultIndexIdentityKey($row);
+            if ($key !== '' && isset($usedKeys[$key])) {
+                continue;
+            }
+
+            if ($key !== '') {
+                $usedKeys[$key] = true;
+            }
+
+            $stepPoints = $this->numericOrNull($row->points ?? null);
+            $rows[] = $this->makeResultIndexSnapshotPreviewRow($tournament, $row, [
+                'points' => $stepPoints ?? 0,
+                'award_points' => 0,
+                'step_points' => $stepPoints ?? 0,
+                'prize_money' => $this->numericOrNull($row->prize_money ?? null),
+            ]);
+        }
+
+        $prelimStartRank = max($maxCurrentRank, $maxSemifinalRank);
+        foreach ($prelimRows as $row) {
+            $rank = $this->resultIndexRankValue($row);
+            if ($rank > 0 && $rank <= $prelimStartRank) {
+                continue;
+            }
+
+            $key = $this->resultIndexIdentityKey($row);
+            if ($key !== '' && isset($usedKeys[$key])) {
+                continue;
+            }
+
+            if ($key !== '') {
+                $usedKeys[$key] = true;
+            }
+
+            $rows[] = $this->makeResultIndexSnapshotPreviewRow($tournament, $row, [
+                'points' => 0,
+                'award_points' => 0,
+                'step_points' => 0,
+                'prize_money' => null,
+            ]);
+        }
+
+        if (count($rows) <= $currentResults->count()) {
+            return null;
+        }
+
+        return [
+            'snapshot' => $prelimSnapshot,
+            'rows' => collect($rows)
+                ->sortBy(fn ($row) => $this->resultIndexRankValue($row) ?: PHP_INT_MAX)
+                ->values(),
+        ];
+    }
+
+    private function loadResultIndexSnapshotRows(object $snapshot): Collection
+    {
+        return DB::table('tournament_result_snapshot_rows')
+            ->where('snapshot_id', $snapshot->id)
+            ->orderBy('ranking')
+            ->orderByDesc('total_pin')
+            ->orderBy('id')
+            ->get();
+    }
+
+    private function makeResultIndexSnapshotPreviewRow(Tournament $tournament, object $row, array $overrides = []): \stdClass
+    {
+        $result = new \stdClass();
+        $result->id = null;
+        $result->is_snapshot_preview = true;
+        $result->snapshot_row_id = $row->id ?? null;
+        $result->tournament_id = $tournament->id;
+        $result->ranking_year = $tournament->year;
+        $result->ranking = $overrides['ranking'] ?? ($row->ranking ?? null);
+        $result->points = $overrides['points'] ?? ($row->points ?? 0);
+        $result->award_points = $overrides['award_points'] ?? null;
+        $result->step_points = $overrides['step_points'] ?? null;
+        $result->total_pin = $overrides['total_pin'] ?? ($row->total_pin ?? 0);
+        $result->games = $overrides['games'] ?? ($row->games ?? null);
+        $result->average = $overrides['average'] ?? ($row->average ?? null);
+        $result->prize_money = array_key_exists('prize_money', $overrides) ? $overrides['prize_money'] : ($row->prize_money ?? null);
+        $result->pro_bowler_id = $row->pro_bowler_id ?? null;
+        $result->pro_bowler_license_no = $row->pro_bowler_license_no ?? null;
+        $result->amateur_name = $row->amateur_name ?? null;
+        $result->display_name = $row->display_name ?? null;
+        $result->player = null;
+        $result->bowler = null;
+
+        return $result;
+    }
+
+    private function isSeasonTrialTournament(Tournament $tournament): bool
+    {
+        if ((string) ($tournament->title_category ?? '') === 'season_trial') {
+            return true;
+        }
+
+        return str_contains((string) ($tournament->name ?? ''), 'シーズントライアル');
+    }
+
+    private function resultIndexRankValue(object $row): int
+    {
+        foreach (['ranking', 'rank', 'position', 'placing', 'result_rank', 'order_no'] as $key) {
+            if (isset($row->{$key}) && is_numeric($row->{$key})) {
+                return (int) $row->{$key};
+            }
+        }
+
+        return 0;
+    }
+
+    private function resultIndexIdentityKey(object $row): string
+    {
+        $proBowlerId = $row->pro_bowler_id
+            ?? optional($row->player ?? null)->id
+            ?? optional($row->bowler ?? null)->id
+            ?? null;
+
+        if ($proBowlerId !== null && (int) $proBowlerId > 0) {
+            return 'pro:' . (int) $proBowlerId;
+        }
+
+        $license = $row->pro_bowler_license_no
+            ?? optional($row->player ?? null)->license_no
+            ?? optional($row->bowler ?? null)->license_no
+            ?? null;
+
+        $licenseDigits = preg_replace('/\D+/', '', (string) $license);
+        if (is_string($licenseDigits) && $licenseDigits !== '') {
+            return 'lic:' . $licenseDigits;
+        }
+
+        $name = (string) ($row->display_name ?? $row->amateur_name ?? '');
+        $name = preg_replace('/\s+/u', '', trim($name)) ?? '';
+
+        return $name !== '' ? 'name:' . $name : '';
+    }
+
+    private function numericOrNull(mixed $value): ?int
+    {
+        if ($value === null || $value === '' || !is_numeric($value)) {
+            return null;
+        }
+
+        return (int) $value;
+    }
 
     public function create()
     {

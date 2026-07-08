@@ -85,6 +85,7 @@ class MatchScoreSheetImageService
                 : collect($player->frames ?? [])->keyBy('frame_no');
 
             $calculatedCumulativeScores = $this->calculateCumulativeScoresForPdf($frames);
+            $storedCumulativeScores = $this->storedCumulativeScoresForPdf($frames);
 
             $name = trim((string) ($player->display_name ?? ''));
             $arm = $this->formatArm((string) ($player->dominant_arm ?? ''));
@@ -119,7 +120,7 @@ class MatchScoreSheetImageService
                     $this->drawMarkCell($image, $marks[2] ?? '', $x + ($third * 2), $markTop, $w - ($third * 2), $markH, $black);
                 }
 
-                $total = $calculatedCumulativeScores[$frameNo] ?? null;
+                $total = $calculatedCumulativeScores[$frameNo] ?? $storedCumulativeScores[$frameNo] ?? null;
                 $this->drawCenteredText(
                     $image,
                     $total !== null ? (string) $total : '',
@@ -361,6 +362,37 @@ class MatchScoreSheetImageService
             } else {
                 $cumulative[$frameNo] = null;
             }
+        }
+
+        return $cumulative;
+    }
+
+    private function storedCumulativeScoresForPdf(Collection $frames): array
+    {
+        $cumulative = [];
+        $runningTotal = 0;
+
+        for ($frameNo = 1; $frameNo <= 10; $frameNo++) {
+            $frame = $frames->get($frameNo);
+
+            if (!$frame) {
+                $cumulative[$frameNo] = null;
+                continue;
+            }
+
+            if (isset($frame->cumulative_score) && is_numeric($frame->cumulative_score)) {
+                $runningTotal = (int) $frame->cumulative_score;
+                $cumulative[$frameNo] = $runningTotal;
+                continue;
+            }
+
+            if (isset($frame->frame_score) && is_numeric($frame->frame_score)) {
+                $runningTotal += (int) $frame->frame_score;
+                $cumulative[$frameNo] = $runningTotal;
+                continue;
+            }
+
+            $cumulative[$frameNo] = null;
         }
 
         return $cumulative;
