@@ -8349,3 +8349,27 @@ User::where('email','domaine-d@i.softbank.jp')->exists(); // true
 - テーブル、カラム、インデックス、外部キー、migration、Model、Controller、Service、View、Route は残す。
 - `record_types` は名前だけ見るとマスタに見えるが、現スキーマでは `perfect` / `seven_ten` / `eight_hundred` などの達成・褒章レコード用テーブル。構造は残し、今回のリセットでは入力済み行だけを削除対象にする。
 - 空の将来用テーブルや空カラムは削除しない。名称変更が必要な場合は、リセットとは別作業としてmigrationと全参照修正を行う。
+
+## 2026-07-09 実運用フォワードテスト用リセット実行
+
+### 実行内容
+- `php artisan jpba:forward-test-reset --force --confirm=FORWARD-TEST-RESET --backup-confirmed` を、新管理者情報付きで実行した。
+- `--include-content` と `--include-pro-test` は付けていない。
+- `informations` 1行は残した。
+- テーブル、カラム、インデックス、外部キー、migration、Model、Controller、Service、View、Route は削除していない。
+
+### 削除後確認
+- `jpba:forward-test-reset --admin-email="yamaguchi@jpba.or.jp" --json` のドライランで、通常対象の削除候補0行を確認した。
+- 新管理者は `yamaguchi@jpba.or.jp` 1件のみ。`role=admin`、`is_admin=true`、`pro_bowler_id=null`、`pro_bowler_license_no=null`。
+- 初期パスワードのハッシュ検証OKを確認した。パスワードはログへ記録しない。
+- `pro_bowlers`、`instructors`、`instructor_registry`、`tournaments`、`tournament_results`、`game_scores`、`score_import_rows` は0行。
+- `record_types` は0行だが、褒章系カラムは維持されている。
+- `informations` は1行残存。
+
+### 構成確認
+- `php artisan view:cache`: OK。
+- `php artisan route:list --except-vendor`: 319 routes 読み込みOK。
+- `php artisan public:parity-audit`: `/`、`/about`、`/schedule`、`/players`、`/tournament`、`/instructor`、`/protest`、`/topics`、`/contact`、`/media`、`/commerce`、`/privacy` の12ページがすべて200/OK。
+
+### 詳細
+- `docs/operations/forward_test_reset_execution_20260709.md` に記録した。

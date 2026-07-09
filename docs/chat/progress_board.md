@@ -1687,3 +1687,17 @@
 - [✓] `record_types` はパーフェクト等の達成・褒章レコード用テーブルとして扱い、テーブルとカラムは残して入力済み行だけを削除対象にすることを明記した
 - [✓] 空の将来用テーブルや空カラムは削除しない方針を `docs/operations/forward_test_reset_dry_run_20260709.md` と `docs/operations/forward_test_data_reset_plan.md` に追記した
 - [ ] `record_types` の名称を変更するかは、リセット実行とは分けた別作業として検討する
+
+#### 2026-07-09 メモ（実運用フォワードテスト用リセット実行）
+- [✓] 新管理者 `yamaguchi@jpba.or.jp` / `admin` を作成し、`role=admin`、`is_admin=true`、`pro_bowler_id=null`、`pro_bowler_license_no=null` を確認した
+- [✓] 指定された初期パスワードで新管理者のハッシュ検証OKを確認した（パスワードはログへ記録しない）
+- [✓] `--include-content` / `--include-pro-test` は付けず、`informations` 1行とプロテスト構造は残した
+- [✓] プロボウラー、インストラクター、大会、成績、スコア、ランキング/シード、スコア取込、スコアシート入力などの入力済み行を削除した
+- [✓] 削除後ドライランで通常対象の削除候補0行を確認した
+- [✓] `record_types` は0行だが、パーフェクト等の褒章系カラムが残っていることを確認した
+- [✓] `php artisan view:cache`、`php artisan route:list --except-vendor`、`php artisan public:parity-audit` はOK。公開12ページはすべて200/OK
+- [✓] 詳細結果を `docs/operations/forward_test_reset_execution_20260709.md` に記録した
+- [ ] 2026年7月現在の正会員/プロボウラー情報を再投入する
+- [ ] 2026年7月現在のインストラクター情報を再投入する
+- [ ] 2025年度シードプロ設定を再作成する
+- [ ] 2026年1月以降の大会、参加者、成績、ポイント/賞金/タイトルを再投入する
