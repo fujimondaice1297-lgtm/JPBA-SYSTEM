@@ -35,7 +35,7 @@ class ProBowlerImportController extends Controller
 
         @stream_filter_append($fh, 'convert.iconv.CP932/UTF-8//IGNORE');
 
-        $header = fgetcsv($fh);
+        $header = fgetcsv($fh, 0, ',', '"', '\\');
         if (!$header) {
             fclose($fh);
             return back()->withErrors(['csv' => 'ヘッダー行を読めません。']);
@@ -68,7 +68,7 @@ class ProBowlerImportController extends Controller
         $normalizeDistrictKey = function ($value) use ($normalizeCompact): string {
             $s = $normalizeCompact($value);
 
-            return str_replace(['・', '･', '·', '•', '‧'], '', $s);
+            return str_replace(['・', '･', '·', '•', '‧', '／', '/', '沖縄'], '', $s);
         };
 
         $headerMap = [];
@@ -447,7 +447,7 @@ class ProBowlerImportController extends Controller
         DB::beginTransaction();
 
         try {
-            while (($row = fgetcsv($fh)) !== false) {
+            while (($row = fgetcsv($fh, 0, ',', '"', '\\')) !== false) {
                 if (!array_filter($row, fn ($v) => $v !== null && $v !== '')) {
                     continue;
                 }

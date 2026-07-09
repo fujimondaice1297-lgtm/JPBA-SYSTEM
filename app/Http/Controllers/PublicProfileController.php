@@ -68,7 +68,9 @@ class PublicProfileController extends Controller
             'titles' => function ($q) {
                 $q->with('tournament')->orderBy('year', 'desc');
             },
-        ])->findOrFail($id);
+        ])
+            ->where('is_visible', true)
+            ->findOrFail($id);
 
         // 基本
         $name    = $p->name_kanji ?? $p->name ?? '';
@@ -153,10 +155,6 @@ class PublicProfileController extends Controller
             'organization'    => [
                 'name' => $p->organization_name ?: null,
                 'url'  => $p->organization_url ?: null,
-                'zip'  => $p->public_addr_same_as_org ? ($p->organization_zip ?: null)  : ($p->public_zip ?: null),
-                'addr1'=> $p->public_addr_same_as_org ? ($p->organization_addr1 ?: null): ($p->public_addr1 ?: null),
-                'addr2'=> $p->public_addr_same_as_org ? ($p->organization_addr2 ?: null): ($p->public_addr2 ?: null),
-                'same_as_org' => (bool)$p->public_addr_same_as_org,
             ],
             'a_license_number'=> $p->a_license_number ?: '—',
             'permanent_seed'  => $p->permanent_seed_date ? $p->permanent_seed_date->format('Y-m-d') : '—',

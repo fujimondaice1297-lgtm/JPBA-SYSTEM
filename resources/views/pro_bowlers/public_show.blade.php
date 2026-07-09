@@ -58,25 +58,18 @@
     </div>
   </div>
 
-  {{-- 住所・所属先（公開） --}}
+  {{-- 所属先（公開） --}}
   <div class="card mb-4">
-    <div class="card-header fw-bold">公開住所 / 所属先</div>
+    <div class="card-header fw-bold">所属先</div>
     <div class="card-body">
       <div class="row g-2">
-        <div class="col-md-6">
+        <div class="col-md-12">
           <div><strong>所属先名：</strong>{{ $view['organization']['name'] ?? '—' }}</div>
           <div><strong>所属先URL：</strong>
             @if(!empty($view['organization']['url']))
               <a href="{{ $view['organization']['url'] }}" target="_blank">{{ $view['organization']['url'] }}</a>
             @else — @endif
           </div>
-        </div>
-        <div class="col-md-6">
-          <div class="small text-muted mb-1">
-            （{{ $view['organization']['same_as_org'] ? '公開住所＝所属先' : '公開住所（個別）' }}）
-          </div>
-          <div><strong>〒</strong>{{ $view['organization']['zip'] ?? '—' }}</div>
-          <div>{{ $view['organization']['addr1'] ?? '—' }} {{ $view['organization']['addr2'] ?? '' }}</div>
         </div>
       </div>
     </div>

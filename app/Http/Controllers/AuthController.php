@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use App\Models\ProBowler;
 use App\Models\User;
 
 class AuthController extends Controller
@@ -35,13 +36,7 @@ class AuthController extends Controller
         // 大文字小文字の揺れ対策（メールは小文字、ライセンスは大文字）
         $emailOrLicense = $isEmail ? strtolower($login) : strtoupper($login);
 
-        // users.email もしくは users.pro_bowler_license_no で取得
-        $user = User::query()
-            ->when($isEmail,
-                fn ($q) => $q->where('email', $emailOrLicense),
-                fn ($q) => $q->where('pro_bowler_license_no', $emailOrLicense)
-            )
-            ->first();
+        $user = $this->findUserForLogin($emailOrLicense, $isEmail);
 
         if (!$user || !Hash::check($password, $user->password)) {
             return back()->withErrors([
@@ -54,6 +49,43 @@ class AuthController extends Controller
 
         // ここもマイページに統一
         return redirect()->intended(route('member.dashboard'));
+    }
+
+    private function findUserForLogin(string $login, bool $isEmail): ?User
+    {
+        if ($isEmail) {
+            return User::query()
+                ->whereRaw('LOWER(email) = ?', [mb_strtolower($login, 'UTF-8')])
+                ->first();
+        }
+
+        $candidate = mb_strtoupper(trim($login), 'UTF-8');
+
+        $user = User::query()
+            ->where('pro_bowler_license_no', $candidate)
+            ->orWhere('license_no', $candidate)
+            ->first();
+
+        if ($user) {
+            return $user;
+        }
+
+        $bowlers = ProBowler::query()
+            ->whereRaw('UPPER(login_id) = ?', [$candidate])
+            ->limit(2)
+            ->get(['id', 'license_no']);
+
+        if ($bowlers->count() !== 1) {
+            return null;
+        }
+
+        $bowler = $bowlers->first();
+
+        return User::query()
+            ->where('pro_bowler_id', $bowler->id)
+            ->orWhere('pro_bowler_license_no', $bowler->license_no)
+            ->orWhere('license_no', $bowler->license_no)
+            ->first();
     }
 
     public function logout(Request $request)

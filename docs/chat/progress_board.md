@@ -1697,7 +1697,19 @@
 - [✓] `record_types` は0行だが、パーフェクト等の褒章系カラムが残っていることを確認した
 - [✓] `php artisan view:cache`、`php artisan route:list --except-vendor`、`php artisan public:parity-audit` はOK。公開12ページはすべて200/OK
 - [✓] 詳細結果を `docs/operations/forward_test_reset_execution_20260709.md` に記録した
-- [ ] 2026年7月現在の正会員/プロボウラー情報を再投入する
+- [✓] 2026年7月現在の正会員/プロボウラー情報を再投入する
 - [ ] 2026年7月現在のインストラクター情報を再投入する
 - [ ] 2025年度シードプロ設定を再作成する
 - [ ] 2026年1月以降の大会、参加者、成績、ポイント/賞金/タイトルを再投入する
+
+#### 2026-07-09 メモ（Pro.csv 正会員/プロボウラー再投入）
+- [✓] 旧DBから出力された `C:\Users\user\OneDrive\デスクトップ\Pro.csv` を正本として、`pro_bowlers` へ2286件を投入した
+- [✓] 通常公開対象は1239件、退会者検索対象は1047件、`instructors` / `instructor_registry` は各1343件
+- [✓] `九州･南／沖縄` 表記をDBマスタ `九州南` に寄せるようCSV取込の地区正規化を補正し、地区未設定0件を確認した
+- [✓] 公開プロフィールは `is_visible=true` のみ表示し、一般公開では所属先名/URLのみを出して住所系フィールドを公開Viewへ渡さないようにした
+- [✓] ログインはメールアドレス、ライセンスNo、またはCSV由来 `login_id` に紐づく既存Userから解決し、必ず `users.password` のハッシュ検証を通す形にした
+- [✓] 会員ページのプロフィール編集リンクは、一般会員では本人用 `/athlete` へ向くようにした
+- [✓] `/players` と公開プロフィールをブラウザ確認し、メール/TEL/送付先/自宅住所/公開住所/郵便番号系ラベルが出ていないことを確認した
+- [✓] 未ログイン `/member` / `/athlete` は `/login` へ302で保護されることを確認した
+- [✓] `php -l`、`php artisan view:cache`、`php artisan public:parity-audit` はOK
+- [✓] 詳細結果を `docs/operations/pro_bowler_csv_import_20260709.md` に記録した

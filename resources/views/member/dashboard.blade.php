@@ -4,7 +4,7 @@
 @php
     // Controller から $user / $bowler が来てなくても自己完結するように保険
     $user   = $user   ?? auth()->user();
-    $bowler = $bowler ?? $user?->proBowler;
+    $bowler = $bowler ?? $user?->proBowler ?? $user?->proBowlerByLicense;
 @endphp
 
   <div class="d-flex align-items-center gap-2 mb-3">
@@ -12,10 +12,10 @@
     <span class="text-muted fs-6">（{{ $bowler?->license_no ?? 'N/A' }}）</span>
   </div>
 
-  {{-- 操作ボタン --}}
+    {{-- 操作ボタン --}}
   <div class="mb-3 d-flex gap-2 flex-wrap">
     <a href="{{ url()->previous() }}" class="btn btn-outline-secondary">前のページへ</a>
-    <a href="{{ route('athlete.index') }}" class="btn btn-outline-primary">インデックスへ戻る</a>
+    <a href="{{ route('member.dashboard') }}" class="btn btn-outline-primary">マイページトップ</a>
 
     {{-- ★ ロールごとの専用リンク --}}
     @if($user?->isAdmin())
@@ -32,8 +32,9 @@
     <a href="{{ route('password.change.form') }}" class="btn btn-warning">パスワードを変更</a>
 
     @if($bowler?->id)
-      {{-- 管理側の編集画面（権限はRoute/Policy側で制御） --}}
-      <a href="{{ route('pro_bowlers.edit', $bowler->id) }}" class="btn btn-outline-dark">
+      <a href="{{ ($user?->isAdmin() || $user?->isEditor())
+          ? route('pro_bowlers.edit', $bowler->id)
+          : route('athlete.edit') }}" class="btn btn-outline-dark">
         プロフィール編集
       </a>
     @endif
