@@ -8341,3 +8341,11 @@ User::where('email','domaine-d@i.softbank.jp')->exists(); // true
 - 実削除はまだ行っていない。
 - 新管理者の氏名、メールアドレス、初期パスワードの確定が必要。
 - `informations` 1行を削除対象に含めるか確認が必要。
+
+## 2026-07-09 入力データ以外を消さない安全補強
+
+- `jpba:forward-test-reset` のレポートに、行削除のみでスキーマを触らない方針を追加した。
+- リセットコマンドは `Schema::drop*` / `dropColumn` / `truncate` を使わず、対象テーブルの入力済み行へ `DB::table($table)->delete()` を行うだけに限定する。
+- テーブル、カラム、インデックス、外部キー、migration、Model、Controller、Service、View、Route は残す。
+- `record_types` は名前だけ見るとマスタに見えるが、現スキーマでは `perfect` / `seven_ten` / `eight_hundred` などの達成・褒章レコード用テーブル。構造は残し、今回のリセットでは入力済み行だけを削除対象にする。
+- 空の将来用テーブルや空カラムは削除しない。名称変更が必要な場合は、リセットとは別作業としてmigrationと全参照修正を行う。

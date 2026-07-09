@@ -7,6 +7,14 @@
 - 実削除には `--confirm=FORWARD-TEST-RESET`、`--backup-confirmed`、`--admin-email`、`--admin-password` が必須。
 - 新管理者以外のユーザーは、ユーザー参照ログを削除した後、プロボウラー本体を削除する前に整理する。
 
+## スキーマ保護方針
+
+- このリセットで消すのは入力済みレコード行のみ。
+- テーブル、カラム、インデックス、外部キー、migration、Model、Controller、Service、View、Route は削除しない。
+- 実装上も `Schema::drop*` / `dropColumn` / `truncate` は使わず、存在する対象テーブルへ `DB::table($table)->delete()` を実行するだけに限定する。
+- `record_types` は名前だけ見るとマスタに見えるが、現スキーマでは `perfect` / `seven_ten` / `eight_hundred` などの達成・褒章レコードを保存する入力データ用テーブル。テーブルとカラムは残し、今回のリセットでは将来入るレコード行だけを削除対象にする。
+- 空の将来用テーブルや空カラムは、今後の運用で使うため削除しない。
+
 ## バックアップ
 
 - DB dump: `storage/backups/forward_test_reset_20260709_092735/jpba_main.dump`
@@ -82,6 +90,7 @@ php artisan jpba:forward-test-reset --include-content --include-pro-test --json
 - 新管理者のメールアドレス
 - 初期パスワード
 - 公開ニュース/お知らせを今回の削除に含めるか
+- `record_types` など褒章系テーブル名を将来的に変更するかどうか。変更する場合は別作業としてmigrationと全参照修正を行い、今回のリセット実行とは分ける。
 
 ## 実削除コマンド例
 

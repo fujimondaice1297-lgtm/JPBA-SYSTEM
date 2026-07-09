@@ -11,6 +11,23 @@ use Throwable;
 class ForwardTestDataResetCommand extends Command
 {
     private const CONFIRM_TOKEN = 'FORWARD-TEST-RESET';
+    private const SCHEMA_POLICY = [
+        'row_delete_only' => true,
+        'schema_operations' => 'none',
+        'delete_method' => 'DB::table($table)->delete()',
+        'preserved_structures' => [
+            'tables',
+            'columns',
+            'indexes',
+            'foreign keys',
+            'migrations',
+            'models',
+            'controllers',
+            'services',
+            'views',
+            'routes',
+        ],
+    ];
 
     protected $signature = 'jpba:forward-test-reset
         {--force : Actually delete data. Without this option, the command is dry-run only}
@@ -154,6 +171,8 @@ class ForwardTestDataResetCommand extends Command
                 'include_content' => $includeContent,
                 'include_pro_test' => $includeProTest,
             ],
+            'schema_policy' => self::SCHEMA_POLICY,
+            'table_notes' => $this->tableNotes(),
             'preserved_by_default' => [
                 'code',
                 'routes',
@@ -310,7 +329,7 @@ class ForwardTestDataResetCommand extends Command
                 ],
             ],
             'pro_bowler_and_instructor_data' => [
-                'label' => 'Pro bowler, instructor, ball, training, title, and record data',
+                'label' => 'Pro bowler, instructor, ball, training, title, achievement, and award-record rows',
                 'tables' => [
                     'approved_ball_pro_bowler',
                     'record_types',
@@ -359,6 +378,19 @@ class ForwardTestDataResetCommand extends Command
         }
 
         return $groups;
+    }
+
+    private function tableNotes(): array
+    {
+        return [
+            'record_types' => 'Achievement/award record rows such as perfect, seven-ten, and eight-hundred. The table and columns are preserved.',
+            'point_distributions' => 'Tournament-specific point rows. The distribution table shape is preserved.',
+            'prize_distributions' => 'Tournament-specific prize rows. The distribution table shape is preserved.',
+            'pro_bowler_titles' => 'Award/title rows derived from tournament results. The title reflection system is preserved.',
+            'instructor_registry' => 'Instructor registry rows. Registry schema and public/admin flows are preserved.',
+            'pro_test_*' => 'Optional operational rows only when --include-pro-test is explicitly set. Pro-test schema is preserved.',
+            'informations' => 'Optional public content rows only when --include-content is explicitly set. Public content schema is preserved.',
+        ];
     }
 
     private function createOrUpdateAdmin(string $adminEmail): void
@@ -451,6 +483,7 @@ class ForwardTestDataResetCommand extends Command
         $this->line('Admin email: '.($report['admin']['admin_email'] ?? '(not set)'));
         $this->line('Users total: '.$report['admin']['users_total']);
         $this->line('Users to delete on force: '.$report['admin']['users_to_delete']);
+        $this->line('Schema policy: row delete only; no tables, columns, indexes, migrations, or code are deleted.');
 
         $this->newLine();
         $this->line('Current admin candidates:');
@@ -463,6 +496,9 @@ class ForwardTestDataResetCommand extends Command
             $this->line(sprintf('[%s] %s rows - %s', $key, $group['row_count'], $group['label']));
             foreach ($group['tables'] as $table => $count) {
                 $this->line(sprintf('  %s: %s', $table, $count === null ? 'missing' : (string) $count));
+                if (isset($report['table_notes'][$table])) {
+                    $this->line('    note: '.$report['table_notes'][$table]);
+                }
             }
         }
 
