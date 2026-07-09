@@ -1670,3 +1670,14 @@
 - [ ] 新管理者ログイン確認後に、入力済みデータのリセットを実行する
 - [ ] リセット後に公開トップ、選手検索、インストラクター一覧、大会作成、スコア入力、PDF生成、成績一覧をスモークテストする
 - [ ] 2026年7月現在の正会員/インストラクター、2025年度シード、2026年1月以降の大会成績を順に再投入する
+
+#### 2026-07-09 メモ（削除フェーズ準備・ドライラン）
+- [✓] `jpba:forward-test-reset` を追加し、既定ではドライランのみ、実削除には `--force` / `--confirm=FORWARD-TEST-RESET` / `--backup-confirmed` / 新管理者情報を必須にした
+- [✓] 実削除前バックアップとして `storage/backups/forward_test_reset_20260709_092735/jpba_main.dump` と `storage/backups/forward_test_reset_20260709_092735/storage_app_public.zip` を作成した
+- [✓] 通常ドライランで削除候補16,212行を確認した（プロ/インストラクター7,923行、大会/成績/設定3,332行、snapshot/entry2,744行、score import1,434行など）
+- [✓] `--include-content --include-pro-test` 付きドライランでは16,213行。追加分は `informations` 1行、`pro_test_*` は0行
+- [✓] 現在の管理者候補は `admin@example.com` 1件で、`pro_bowler_id=56` に紐づいているため、実削除前に独立した新管理者情報が必要
+- [✓] 詳細ドライラン結果を `docs/operations/forward_test_reset_dry_run_20260709.md` に記録した
+- [ ] 新管理者の氏名、メールアドレス、初期パスワードを確定する
+- [ ] 公開ニュース/お知らせ（`informations` 1行）を今回の削除に含めるか確認する
+- [ ] 新管理者情報と削除対象確認後、実削除を実行する

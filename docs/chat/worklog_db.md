@@ -8315,3 +8315,29 @@ User::where('email','domaine-d@i.softbank.jp')->exists(); // true
 - 全テーブル件数と削除候補/残す候補/要確認候補のドライラン作成。
 - ドライラン既定のリセットコマンド作成。
 - ドライラン確認後、承認を得てからリセット実行。
+## 2026-07-09 実運用フォワードテスト削除フェーズ準備
+
+### 追加したもの
+- `app/Console/Commands/ForwardTestDataResetCommand.php`
+- `docs/operations/forward_test_reset_dry_run_20260709.md`
+
+### 安全設計
+- `php artisan jpba:forward-test-reset` は既定でドライランのみ。
+- 実削除には `--force`、`--confirm=FORWARD-TEST-RESET`、`--backup-confirmed`、`--admin-email`、`--admin-password` を必須にした。
+- 新管理者を作成/更新してから、ユーザー参照ログを削除し、その後に新管理者以外のユーザーを削除する。
+- プロボウラー本体は、ユーザー整理後に削除する順序へ固定した。
+
+### バックアップ
+- `storage/backups/forward_test_reset_20260709_092735/jpba_main.dump`
+- `storage/backups/forward_test_reset_20260709_092735/storage_app_public.zip`
+
+### ドライラン結果
+- 通常対象の削除候補は16,212行。
+- `--include-content --include-pro-test` 付きでは16,213行。
+- 追加差分は `informations` 1行のみ。`pro_test_*` は0行。
+- 現在の管理者候補は `admin@example.com` 1件で、`pro_bowler_id=56` / `pro_bowler_license_no=F00000015` に紐づいている。
+
+### 未実行
+- 実削除はまだ行っていない。
+- 新管理者の氏名、メールアドレス、初期パスワードの確定が必要。
+- `informations` 1行を削除対象に含めるか確認が必要。
