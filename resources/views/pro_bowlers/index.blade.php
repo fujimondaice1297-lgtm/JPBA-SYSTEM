@@ -76,6 +76,8 @@
     @php
         $renewalStatusSelected = (string) request('renewal_status', 'renewed');
         $officialTournamentEligibleSelected = (string) request('official_tournament_eligible', '1');
+        $playerStatusSelected = $playerStatusSelected ?? (string) request('player_status', 'active');
+        $playerStatusOptions = $playerStatusOptions ?? ['active' => '現役選手', 'overseas' => '海外プロ', 'retired' => '退会者'];
         $genderSelected = in_array((string) request('gender', '男性'), ['男性', '女性'], true)
             ? (string) request('gender', '男性')
             : '男性';
@@ -99,6 +101,15 @@
                             <option value="">すべて地区</option>
                             @foreach ($districts as $label)
                                 <option value="{{ $label }}" {{ request('district') == $label ? 'selected' : '' }}>{{ $label }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <select name="player_status" class="form-select">
+                            @foreach ($playerStatusOptions as $value => $label)
+                                <option value="{{ $value }}" {{ $playerStatusSelected === $value ? 'selected' : '' }}>
+                                    検索区分：{{ $label }}
+                                </option>
                             @endforeach
                         </select>
                     </div>

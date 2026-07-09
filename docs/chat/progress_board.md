@@ -1713,3 +1713,17 @@
 - [✓] 未ログイン `/member` / `/athlete` は `/login` へ302で保護されることを確認した
 - [✓] `php -l`、`php artisan view:cache`、`php artisan public:parity-audit` はOK
 - [✓] 詳細結果を `docs/operations/pro_bowler_csv_import_20260709.md` に記録した
+
+#### 2026-07-10 メモ（プロフィール揺れ補正・検索区分整理）
+- [✓] 作業前に直近ログを確認し、公開プロフィールの個人情報非表示と既存導線を壊さない前提で着手した
+- [✓] `九州南` 表記を公式サイトに近い `九州・南／沖縄` へ更新し、CSV取込/管理/公開の地区並びも新表記を優先するようにした
+- [✓] `ProBowlerProfileNormalizer` と `jpba:normalize-pro-bowler-profiles` を追加し、年度表記・郵便番号・住所欄の明確な揺れを安全に補正できるようにした
+- [✓] 実DBへ正規化を実行し、2286件中300件を補正した。再ドライランで補正残り0件を確認した
+- [✓] 公開/管理/ログイン状態で共通利用する `ProBowlerSearchScopeService` を追加し、通常検索は現役選手のみ、海外プロ/退会者は専用区分選択時のみ表示するようにした
+- [✓] 公開選手検索、管理一覧、管理検索に「検索区分」プルダウンを追加した
+- [✓] DB側で現役882件、海外プロ357件、退会者1047件を確認し、現役検索に退会者/海外・名誉系が混入しないことを確認した
+- [✓] 公開 `/players` は現役/海外プロ/退会者それぞれ200応答と見出し表示を確認し、一般公開HTMLにメール/TEL/電話ラベルが出ていないことを確認した
+- [✓] ブラウザで `/players` を表示し、検索区分セレクトの表示、既定値 `現役選手`、`現役選手検索結果`、該当件数、旧 `九州南` とメール/TEL系ラベルの非表示を確認した
+- [✓] 管理一覧/検索はController描画で検索区分が表示され、旧 `九州南` ラベルが出ないことを確認した
+- [✓] `php -l`、`php artisan view:cache`、`php artisan route:list --except-vendor`、`php artisan public:parity-audit` はOK
+- [✓] 詳細結果を `docs/operations/pro_bowler_profile_normalization_20260710.md` に記録した

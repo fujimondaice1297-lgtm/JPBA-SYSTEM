@@ -7,6 +7,8 @@ use App\Models\ProBowler;
 use App\Models\District;
 use App\Models\Instructor;
 use App\Models\InstructorRegistry;
+use App\Services\ProBowlerProfileNormalizer;
+use App\Services\ProBowlerSearchScopeService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Storage;
@@ -34,10 +36,14 @@ class ProBowlerController extends Controller
 
         $renewalStatusFilter = trim((string) $request->query('renewal_status', 'renewed'));
         $officialTournamentEligibleFilter = trim((string) $request->query('official_tournament_eligible', '1'));
+        $statusService = app(ProBowlerSearchScopeService::class);
+        $playerStatus = $statusService->normalizeStatus($request->query('player_status', 'active'));
         $genderFilter = trim((string) $request->query('gender', '男性'));
         if (!in_array($genderFilter, ['男性', '女性'], true)) {
             $genderFilter = '男性';
         }
+
+        $statusService->applyStatus($query, $playerStatus);
 
         if ($renewalStatusFilter === 'renewed') {
             $query->whereHas('currentInstructorRegistry', fn ($q) => $q->where('renewal_status', 'renewed'));
@@ -98,19 +104,24 @@ class ProBowlerController extends Controller
 
         $bowlers = $query->orderBy('license_no')->paginate(20)->withQueryString();
 
-        $order = ['北海道', '東北', '北関東', '埼玉', '千葉', '城東', '城南', '城西', '三多摩', '神奈川・東', '神奈川・西', '静岡', '甲信越', '東海', '北陸', '関西・東', '関西・西', '関西・南', '中国四国', '九州・北', '九州･南／沖縄', '海外'];
+        $order = ['北海道', '東北', '北関東', '埼玉', '千葉', '城東', '城南', '城西', '三多摩', '神奈川・東', '神奈川・西', '静岡', '甲信越', '東海', '北陸', '関西・東', '関西・西', '関西・南', '中国四国', '九州・北', '九州・南／沖縄', '九州･南／沖縄', '海外'];
         $districts = District::all()
             ->sortBy(fn ($d) => array_search($d->label, $order))
             ->mapWithKeys(fn ($d) => [$d->id => $d->label]);
 
-        return view('pro_bowlers.index', compact('districts', 'bowlers'));
+        return view('pro_bowlers.index', [
+            'districts' => $districts,
+            'bowlers' => $bowlers,
+            'playerStatusOptions' => $statusService->statusOptions(),
+            'playerStatusSelected' => $playerStatus,
+        ]);
     }
 
     public function create()
     {
         $this->authorizeAdmin();
 
-        $order = ['北海道', '東北', '北関東', '埼玉', '千葉', '城東', '城南', '城西', '三多摩', '神奈川・東', '神奈川・西', '静岡', '甲信越', '東海', '北陸', '関西・東', '関西・西', '関西・南', '中国四国', '九州・北', '九州･南／沖縄', '海外'];
+        $order = ['北海道', '東北', '北関東', '埼玉', '千葉', '城東', '城南', '城西', '三多摩', '神奈川・東', '神奈川・西', '静岡', '甲信越', '東海', '北陸', '関西・東', '関西・西', '関西・南', '中国四国', '九州・北', '九州・南／沖縄', '九州･南／沖縄', '海外'];
 
         $districts = District::all()
             ->sortBy(fn ($d) => array_search($d->label, $order))
@@ -196,7 +207,7 @@ class ProBowlerController extends Controller
         // シーズントライアル優勝は title 履歴には残すが、公式タイトル数には加算しない。
         $bowler->setAttribute('titles_count', (int) ($bowler->official_titles_count ?? 0));
 
-        $order = ['北海道', '東北', '北関東', '埼玉', '千葉', '城東', '城南', '城西', '三多摩', '神奈川・東', '神奈川・西', '静岡', '甲信越', '東海', '北陸', '関西・東', '関西・西', '関西・南', '中国四国', '九州・北', '九州･南／沖縄', '海外'];
+        $order = ['北海道', '東北', '北関東', '埼玉', '千葉', '城東', '城南', '城西', '三多摩', '神奈川・東', '神奈川・西', '静岡', '甲信越', '東海', '北陸', '関西・東', '関西・西', '関西・南', '中国四国', '九州・北', '九州・南／沖縄', '九州･南／沖縄', '海外'];
         $districts = District::all()
             ->sortBy(fn ($d) => array_search($d->label, $order))
             ->pluck('label', 'id');
@@ -308,6 +319,7 @@ class ProBowlerController extends Controller
             'coach_name',
             'membership_type',
             'member_class',
+            'player_status',
             'renewal_status',
             'official_tournament_eligible',
             'include_inactive',
@@ -353,10 +365,10 @@ class ProBowlerController extends Controller
             ->addSelect('pro_bowlers.*')
             ->addSelect(DB::raw('coalesce(titles_agg.titles_count, 0) as titles_count'));
 
-        $includeInactive = (bool) ($request->input('include_inactive') ?? false);
-        if (!$includeInactive) {
-            $query->where('is_active', true);
-        }
+        $statusService = app(ProBowlerSearchScopeService::class);
+        $playerStatus = $statusService->normalizeStatus((string) ($filters['player_status'] ?? ''));
+        $filters['player_status'] = $playerStatus;
+        $statusService->applyStatus($query, $playerStatus);
 
         $renewalStatusFilter = trim((string) ($filters['renewal_status'] ?? ''));
         if (!$request->has('renewal_status') || $renewalStatusFilter === '') {
@@ -375,22 +387,6 @@ class ProBowlerController extends Controller
         $membershipType = trim((string) ($filters['membership_type'] ?? ''));
         if ($membershipType !== '') {
             $query->where('membership_type', $membershipType);
-        }
-
-        if (!$includeInactive && $membershipType === '') {
-            $retiredNames = DB::table('kaiin_status')
-                ->where('is_retired', true)
-                ->pluck('name')
-                ->filter()
-                ->values()
-                ->all();
-
-            if (!empty($retiredNames)) {
-                $query->where(function ($q) use ($retiredNames) {
-                    $q->whereNull('membership_type')
-                        ->orWhereNotIn('membership_type', $retiredNames);
-                });
-            }
         }
 
         if (!empty($filters['name'])) {
@@ -564,7 +560,13 @@ class ProBowlerController extends Controller
 
         session(['pro_bowlers.last_filters' => $filters]);
 
-        return view('pro_bowlers.list', compact('proBowlers', 'filters', 'kaiinStatuses'));
+        return view('pro_bowlers.list', [
+            'proBowlers' => $proBowlers,
+            'filters' => $filters,
+            'kaiinStatuses' => $kaiinStatuses,
+            'playerStatusOptions' => $statusService->statusOptions(),
+            'playerStatusSelected' => $playerStatus,
+        ]);
     }
 
     /* =========================
@@ -718,7 +720,7 @@ class ProBowlerController extends Controller
         $derivedIsActive = $this->resolveIsActiveFromMembershipType($membershipType, (bool) ($current?->is_active ?? true));
         $memberClass = $this->resolveMemberClass($membershipType, $licenseNo, $current?->member_class);
 
-        return [
+        $data = [
             'license_no'         => $licenseNo,
             'name_kanji'         => $validated['name'],
             'name_kana'          => $validated['furigana'] ?? null,
@@ -819,6 +821,8 @@ class ProBowlerController extends Controller
             'member_class'                  => $memberClass,
             'can_enter_official_tournament' => $memberClass === 'player' && $derivedIsActive,
         ];
+
+        return app(ProBowlerProfileNormalizer::class)->normalizeData($data);
     }
 
     /* =========================

@@ -4,48 +4,32 @@ namespace App\Http\Controllers;
 
 use App\Models\District;
 use App\Models\ProBowler;
+use App\Services\ProBowlerSearchScopeService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\View\View;
 
 class PublicPlayerController extends Controller
 {
     public function index(Request $request): View
     {
+        $statusService = app(ProBowlerSearchScopeService::class);
+
         $filters = [
             'name' => trim((string) $request->query('name', '')),
             'license_from' => trim((string) $request->query('license_from', '')),
             'license_to' => trim((string) $request->query('license_to', '')),
             'gender' => trim((string) $request->query('gender', '')),
             'district_id' => trim((string) $request->query('district_id', '')),
-            'retired' => $request->boolean('retired'),
+            'player_status' => $statusService->normalizeStatus(
+                $request->query('player_status', $request->boolean('retired') ? 'retired' : 'active')
+            ),
         ];
-
-        $retiredNames = $this->retiredMembershipNames();
 
         $query = ProBowler::query()
             ->with('district')
             ->where('is_visible', true);
 
-        if ($filters['retired']) {
-            $query->where(function ($q) use ($retiredNames) {
-                $q->where('is_active', false);
-
-                if (!empty($retiredNames)) {
-                    $q->orWhereIn('membership_type', $retiredNames);
-                }
-            });
-        } else {
-            $query->where('is_active', true);
-
-            if (!empty($retiredNames)) {
-                $query->where(function ($q) use ($retiredNames) {
-                    $q->whereNull('membership_type')
-                        ->orWhereNotIn('membership_type', $retiredNames);
-                });
-            }
-        }
+        $statusService->applyStatus($query, $filters['player_status']);
 
         if ($filters['name'] !== '') {
             $name = $filters['name'];
@@ -78,6 +62,7 @@ class PublicPlayerController extends Controller
         return view('public.players.index', [
             'publicConfig' => config('jpba_public', []),
             'filters' => $filters,
+            'playerStatusOptions' => $statusService->statusOptions(),
             'districts' => $this->orderedDistricts(),
             'bowlers' => $bowlers,
         ]);
@@ -127,7 +112,7 @@ class PublicPlayerController extends Controller
             '北海道', '東北', '北関東', '埼玉', '千葉', '城東', '城南', '城西', '三多摩',
             '神奈川・東', '神奈川東', '神奈川・西', '神奈川西', '静岡', '甲信越', '東海', '北陸',
             '関西・東', '関西東', '関西・西', '関西西', '関西・南', '関西南', '中国四国',
-            '九州・北', '九州北', '九州･南／沖縄', '九州南', '海外',
+            '九州・北', '九州北', '九州・南／沖縄', '九州･南／沖縄', '九州南', '海外',
         ];
 
         return District::query()
@@ -138,21 +123,5 @@ class PublicPlayerController extends Controller
                 return $index === false ? 999 : $index;
             })
             ->values();
-    }
-
-    private function retiredMembershipNames(): array
-    {
-        if (!Schema::hasTable('kaiin_status')) {
-            return ['死亡', '除名', '退会届', '退会員'];
-        }
-
-        $names = DB::table('kaiin_status')
-            ->where('is_retired', true)
-            ->pluck('name')
-            ->filter()
-            ->values()
-            ->all();
-
-        return !empty($names) ? $names : ['死亡', '除名', '退会届', '退会員'];
     }
 }

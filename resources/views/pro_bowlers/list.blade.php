@@ -65,6 +65,8 @@
       $memberClassSelected = (string)request('member_class', '');
       $renewalStatusSelected = (string)request('renewal_status', 'renewed');
       $officialEligibleSelected = (string)request('official_tournament_eligible', '1');
+      $playerStatusSelected = $playerStatusSelected ?? (string)request('player_status', 'active');
+      $playerStatusOptions = $playerStatusOptions ?? ['active' => '現役選手', 'overseas' => '海外プロ', 'retired' => '退会者'];
       $genderSelected = in_array((string)request('gender', '男性'), ['男性', '女性'], true)
           ? (string)request('gender', '男性')
           : '男性';
@@ -168,6 +170,16 @@
             </div>
 
             <div class="col-md-2">
+                <select name="player_status" class="form-select">
+                    @foreach ($playerStatusOptions as $value => $label)
+                        <option value="{{ $value }}" {{ $playerStatusSelected === $value ? 'selected' : '' }}>
+                            検索区分：{{ $label }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
+
+            <div class="col-md-2">
                 <select name="member_class" class="form-select">
                     <option value="">会員区分（全て）</option>
                     <option value="player" {{ $memberClassSelected === 'player' ? 'selected' : '' }}>プロボウラー</option>
@@ -236,11 +248,6 @@
                            value="{{ request('coach_name') }}">
                 </div>
 
-                <div class="form-check form-check-inline ms-2">
-                    <input class="form-check-input" type="checkbox" name="include_inactive" value="1"
-                           {{ request()->boolean('include_inactive') ? 'checked' : '' }}>
-                    <label class="form-check-label">退会者も含む</label>
-                </div>
             </div>
 
             <div class="col-md-12 d-flex gap-2 mt-2">

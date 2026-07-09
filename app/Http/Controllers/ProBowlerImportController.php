@@ -6,6 +6,7 @@ use App\Models\District;
 use App\Models\Instructor;
 use App\Models\InstructorRegistry;
 use App\Models\ProBowler;
+use App\Services\ProBowlerProfileNormalizer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -571,6 +572,8 @@ class ProBowlerImportController extends Controller
                     'member_class'                  => $memberClass,
                     'can_enter_official_tournament' => $memberClass === 'player' && $derivedIsActive,
                 ];
+
+                $data = app(ProBowlerProfileNormalizer::class)->normalizeData($data);
 
                 $model = ProBowler::where('license_no', $licenseNo)->first();
 

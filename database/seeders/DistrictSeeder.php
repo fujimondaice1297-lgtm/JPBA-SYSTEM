@@ -30,7 +30,7 @@ class DistrictSeeder extends Seeder
             ['name' => 'kansai_south',   'label' => '関西南'],
             ['name' => 'chugokushikoku', 'label' => '中国四国'],
             ['name' => 'kyushu_north',   'label' => '九州北'],
-            ['name' => 'kyushu_south',   'label' => '九州南'],
+            ['name' => 'kyushu_south',   'label' => '九州・南／沖縄'],
             ['name' => 'overseas',       'label' => '海外'],
             ['name' => 'not_applicable', 'label' => '該当なし'],
         ];

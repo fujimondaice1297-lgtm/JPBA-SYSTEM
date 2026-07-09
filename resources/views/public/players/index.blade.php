@@ -181,6 +181,15 @@
     </div>
 
     <div class="span-2">
+      <label for="player_status">検索区分</label>
+      <select id="player_status" name="player_status">
+        @foreach(($playerStatusOptions ?? ['active' => '現役選手', 'overseas' => '海外プロ', 'retired' => '退会者']) as $value => $label)
+          <option value="{{ $value }}" @selected(($filters['player_status'] ?? 'active') === $value)>{{ $label }}</option>
+        @endforeach
+      </select>
+    </div>
+
+    <div class="span-2">
       <label for="district_id">地区</label>
       <select id="district_id" name="district_id">
         <option value="">すべて</option>
@@ -196,14 +205,11 @@
       ライセンスNo.は半角数字で入力してください。アルファベットが含まれる場合は、片方の入力欄に入力して検索してください。
     </div>
 
-    @if(!empty($filters['retired']))
-      <input type="hidden" name="retired" value="1">
-    @endif
-
     <div class="span-12 jpba-action-row">
       <button type="submit" class="jpba-search-button">検索する</button>
       <a class="jpba-outline-button" href="{{ route('public.players.index') }}">通常検索</a>
-      <a class="jpba-outline-button" href="{{ route('public.players.index', ['retired' => 1]) }}">退会者</a>
+      <a class="jpba-outline-button" href="{{ route('public.players.index', ['player_status' => 'overseas']) }}">海外プロ</a>
+      <a class="jpba-outline-button" href="{{ route('public.players.index', ['player_status' => 'retired']) }}">退会者</a>
     </div>
   </form>
 </section>
@@ -211,7 +217,7 @@
 <section class="jpba-panel" aria-labelledby="player-result-heading">
   <div class="jpba-result-meta">
     <h2 id="player-result-heading" class="jpba-section-title mb-0">
-      {{ !empty($filters['retired']) ? '退会者検索結果' : '検索結果' }}
+      {{ ($playerStatusOptions[$filters['player_status'] ?? 'active'] ?? '現役選手') }}検索結果
     </h2>
     <div class="text-muted">該当件数: {{ number_format($bowlers->total()) }}件</div>
   </div>
