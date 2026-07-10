@@ -1727,3 +1727,19 @@
 - [✓] 管理一覧/検索はController描画で検索区分が表示され、旧 `九州南` ラベルが出ないことを確認した
 - [✓] `php -l`、`php artisan view:cache`、`php artisan route:list --except-vendor`、`php artisan public:parity-audit` はOK
 - [✓] 詳細結果を `docs/operations/pro_bowler_profile_normalization_20260710.md` に記録した
+
+#### 2026-07-10 メモ（現行JPBAサイトから個人成績取込）
+- [✓] `Pro.csv` のヘッダーを確認し、獲得タイトル明細、公認パーフェクト、800シリーズ、7-10スプリットメイド、公式戦通算成績は含まれていないことを確認した
+- [✓] 継続同期ではなく、現行JPBAサイト閉鎖/更新停止前の数値写し取りとして扱う方針にした
+- [✓] JPBA公式選手詳細ページ `https://www.jpba1.jp/player1/detail.html?id={license_no}` から公式戦記録を取得する取込処理を追加した
+- [✓] `pro_bowlers` に `official_win_count` / `official_total_games` / `official_total_pins` / `official_total_prize_money` / `official_career_average` / 公式プロフィール取込情報カラムを追加した
+- [✓] `jpba:import-official-player-profile-stats` を追加し、既定ドライラン、`--force` で実更新、`--missing-only` で途中再開可能にした
+- [✓] 公式サイトの `41 (ST 1)` のような注記付き数値を先頭数値だけ読むよう補正した
+- [✓] 公式戦集計表の値が後続の年度別/大会別テーブルで上書きされないよう補正した
+- [✓] 矢島純一（M00000018）で実取込し、優勝41、総ゲーム15516、トータルピン3293826、賞金127192700、AVG212.28、PF28、800シリーズ8をDBで確認した
+- [✓] 公開プロフィール `http://127.0.0.1:8000/players/12374` で `公式戦記録`、`優勝回数`、`公認パーフェクト`、`3,293,826` の表示を確認した
+- [✓] 現役・表示対象M/Fライセンス862件をすべて取込した。残件0、取込エラー0
+- [✓] 網代羅夢（F00000636）と久冨木広（M00001505）は現行サイト側で優勝回数/通算AVGが空欄だったため、DBでも空欄として保持した
+- [✓] 表示確認を矢島純一（M00000018）・網代羅夢（F00000636）・久冨木広（M00001505）で実施し、`view:cache`、`route:list`、`public:parity-audit` はOK
+- [ ] 優勝大会名ごとの `pro_bowler_titles` 明細復元は、年度別成績ページの `1位` 行取得が必要なため次段階で扱う
+- [✓] 詳細結果を `docs/operations/official_player_profile_import_20260710.md` に記録した

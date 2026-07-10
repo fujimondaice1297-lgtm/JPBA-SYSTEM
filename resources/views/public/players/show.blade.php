@@ -107,6 +107,20 @@
       'セールスポイント' => $view['selling_point'] ?? null,
       '自由入力' => $view['free_comment'] ?? null,
   ];
+
+  $formatOfficialStat = function ($label, $value) {
+      if ($value === null || $value === '') {
+          return '-';
+      }
+      if ($label === '総賞金額') {
+          return '¥' . number_format((int) $value);
+      }
+      if ($label === '通算アベレージ') {
+          return number_format((float) $value, 2);
+      }
+
+      return number_format((int) $value);
+  };
 @endphp
 
 <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-3">
@@ -139,6 +153,25 @@
         @endforeach
       </div>
     </div>
+  </div>
+</section>
+
+<section class="jpba-panel" aria-labelledby="official-stats-heading">
+  <h2 id="official-stats-heading" class="jpba-section-title">公式戦記録</h2>
+
+  <div class="jpba-profile-grid">
+    @foreach(($view['official_stats'] ?? []) as $label => $value)
+      <div class="jpba-profile-item">
+        <div class="jpba-profile-label">{{ $label }}</div>
+        <div class="jpba-profile-value">{{ $formatOfficialStat($label, $value) }}</div>
+      </div>
+    @endforeach
+    @foreach(($view['award_counts'] ?? []) as $label => $value)
+      <div class="jpba-profile-item">
+        <div class="jpba-profile-label">{{ $label }}</div>
+        <div class="jpba-profile-value">{{ number_format((int) $value) }}</div>
+      </div>
+    @endforeach
   </div>
 </section>
 

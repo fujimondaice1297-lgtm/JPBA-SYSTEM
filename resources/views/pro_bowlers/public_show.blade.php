@@ -2,6 +2,21 @@
 
 @section('content')
 <div class="container py-4">
+  @php
+    $formatOfficialStat = function ($label, $value) {
+        if ($value === null || $value === '') {
+            return '—';
+        }
+        if ($label === '総賞金額') {
+            return '¥' . number_format((int) $value);
+        }
+        if ($label === '通算アベレージ') {
+            return number_format((float) $value, 2);
+        }
+
+        return number_format((int) $value);
+    };
+  @endphp
 
   <div class="d-flex justify-content-between align-items-center mb-3">
     <a href="{{ request('return', url()->previous()) }}" class="btn btn-outline-secondary btn-sm">← 戻る</a>
@@ -55,6 +70,26 @@
           </div>
         </div>
       </div>
+    </div>
+  </div>
+
+  {{-- 公式戦記録 --}}
+  <div class="card mb-4">
+    <div class="card-header fw-bold">公式戦記録</div>
+    <div class="card-body">
+      <div class="row g-2">
+        @foreach(($view['official_stats'] ?? []) as $label => $value)
+          <div class="col-sm-6 col-lg-3"><strong>{{ $label }}</strong>：{{ $formatOfficialStat($label, $value) }}</div>
+        @endforeach
+        @foreach(($view['award_counts'] ?? []) as $label => $value)
+          <div class="col-sm-6 col-lg-3"><strong>{{ $label }}</strong>：{{ number_format((int) $value) }}</div>
+        @endforeach
+      </div>
+      @if(!empty($view['official_profile_imported_at']))
+        <div class="text-muted small mt-2">
+          現行サイト取込: {{ \Carbon\Carbon::parse($view['official_profile_imported_at'])->format('Y-m-d H:i') }}
+        </div>
+      @endif
     </div>
   </div>
 

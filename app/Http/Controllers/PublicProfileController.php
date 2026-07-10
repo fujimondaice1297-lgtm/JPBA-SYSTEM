@@ -132,6 +132,24 @@ class PublicProfileController extends Controller
         $seasonTrialTitles = $titles
             ->filter(fn ($title) => method_exists($title, 'isSeasonTrialTitle') && $title->isSeasonTrialTitle())
             ->values();
+        $officialTitleCount = max(
+            $officialTitles->count(),
+            (int) ($p->official_win_count ?? $p->titles_count ?? 0)
+        );
+
+        $officialStats = [
+            '優勝回数' => $p->official_win_count,
+            '総ゲーム数' => $p->official_total_games,
+            'トータルピン' => $p->official_total_pins,
+            '総賞金額' => $p->official_total_prize_money,
+            '通算アベレージ' => $p->official_career_average,
+        ];
+
+        $awardCounts = [
+            '公認パーフェクト' => (int) ($p->perfect_count ?? 0),
+            '800シリーズ' => (int) ($p->eight_hundred_count ?? 0),
+            '7-10スプリットメイド' => (int) ($p->seven_ten_count ?? 0),
+        ];
 
         // その他公開項目
         $view = [
@@ -178,9 +196,13 @@ class PublicProfileController extends Controller
             'instructors'    => $instructors,
             'usbc_coach'     => $usbc,
             'titles'         => $officialTitles,
-            'official_titles_count' => $officialTitles->count(),
+            'official_titles_count' => $officialTitleCount,
             'season_trial_titles' => $seasonTrialTitles,
             'season_trial_titles_count' => $seasonTrialTitles->count(),
+            'official_stats' => $officialStats,
+            'award_counts' => $awardCounts,
+            'official_profile_url' => $p->official_profile_url,
+            'official_profile_imported_at' => $p->official_profile_imported_at,
         ];
 
         $viewName = request()->routeIs('public.players.show')
