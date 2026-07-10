@@ -136,6 +136,10 @@ class PublicProfileController extends Controller
             $officialTitles->count(),
             (int) ($p->official_win_count ?? $p->titles_count ?? 0)
         );
+        $seasonTrialTitleCount = max(
+            $seasonTrialTitles->count(),
+            (int) ($p->season_trial_win_count ?? 0)
+        );
 
         $officialStats = [
             '優勝回数' => $p->official_win_count,
@@ -198,7 +202,7 @@ class PublicProfileController extends Controller
             'titles'         => $officialTitles,
             'official_titles_count' => $officialTitleCount,
             'season_trial_titles' => $seasonTrialTitles,
-            'season_trial_titles_count' => $seasonTrialTitles->count(),
+            'season_trial_titles_count' => $seasonTrialTitleCount,
             'official_stats' => $officialStats,
             'award_counts' => $awardCounts,
             'official_profile_url' => $p->official_profile_url,

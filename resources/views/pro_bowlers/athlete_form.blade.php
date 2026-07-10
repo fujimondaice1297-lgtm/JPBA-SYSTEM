@@ -316,8 +316,16 @@
 
           $seasonTrialTitles = $allTitles->filter($isSeasonTrialTitle)->values();
           $officialTitles = $allTitles->reject($isSeasonTrialTitle)->values();
-          $officialTitleCount = (int) ($bowler->official_titles_count ?? $bowler->titles_count ?? $officialTitles->count());
-          $seasonTrialTitleCount = (int) ($bowler->season_trial_titles_count ?? $seasonTrialTitles->count());
+          $officialTitleCount = max(
+              $officialTitles->count(),
+              (int) ($bowler->official_titles_count ?? 0),
+              (int) ($bowler->official_win_count ?? $bowler->titles_count ?? 0)
+          );
+          $seasonTrialTitleCount = max(
+              $seasonTrialTitles->count(),
+              (int) ($bowler->season_trial_titles_count ?? 0),
+              (int) ($bowler->season_trial_win_count ?? 0)
+          );
         @endphp
 
         <div class="col-12">
@@ -345,7 +353,12 @@
                   <button type="submit" form="title-del-{{ $t->id }}" class="btn btn-sm btn-outline-danger" onclick="return confirm('削除しますか？')">削除</button>
                 </li>
               @empty
-                <li class="list-group-item text-muted">登録された公式タイトルはありません</li>
+                <li class="list-group-item text-muted">
+                  登録された公式タイトル明細はありません
+                  @if($officialTitleCount > 0)
+                    （現行JPBAサイト集計値: {{ $officialTitleCount }}件）
+                  @endif
+                </li>
               @endforelse
             </ul>
           </div>
@@ -359,7 +372,12 @@
                   <button type="submit" form="title-del-{{ $t->id }}" class="btn btn-sm btn-outline-danger" onclick="return confirm('削除しますか？')">削除</button>
                 </li>
               @empty
-                <li class="list-group-item text-muted">登録されたシーズントライアル優勝はありません</li>
+                <li class="list-group-item text-muted">
+                  登録されたシーズントライアル優勝明細はありません
+                  @if($seasonTrialTitleCount > 0)
+                    （現行JPBAサイト集計値: {{ $seasonTrialTitleCount }}件）
+                  @endif
+                </li>
               @endforelse
             </ul>
           </div>

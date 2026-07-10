@@ -73,6 +73,24 @@
     gap: 8px;
   }
 
+  .jpba-profile-badge-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+
+  .jpba-profile-badge {
+    display: inline-flex;
+    align-items: center;
+    min-height: 30px;
+    padding: 4px 10px;
+    border: 1px solid var(--jpba-line);
+    border-radius: 4px;
+    background: var(--jpba-soft);
+    font-size: .86rem;
+    font-weight: 700;
+  }
   @media (max-width: 760px) {
     .jpba-profile-head { grid-template-columns: 1fr; }
     .jpba-profile-grid { grid-template-columns: 1fr; }
@@ -193,6 +211,10 @@
 <section class="jpba-panel" aria-labelledby="title-heading">
   <h2 id="title-heading" class="jpba-section-title">タイトル</h2>
 
+  <div class="jpba-profile-badge-row">
+    <span class="jpba-profile-badge">公式タイトル：{{ number_format((int) ($view['official_titles_count'] ?? 0)) }}</span>
+    <span class="jpba-profile-badge">シーズントライアル優勝：{{ number_format((int) ($view['season_trial_titles_count'] ?? 0)) }}</span>
+  </div>
   @if(($view['titles'] ?? collect())->count())
     <ul class="jpba-profile-list">
       @foreach($view['titles'] as $title)

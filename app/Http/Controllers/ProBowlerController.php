@@ -27,7 +27,7 @@ class ProBowlerController extends Controller
 
         $query = ProBowler::query()
             ->with(['district', 'currentInstructorRegistry'])
-            ->withCount(['officialTitles as titles_count'])
+            ->withCount(['officialTitles as official_titles_row_count'])
             ->withCount([
                 'records as perfect_count'       => fn ($q) => $q->where('record_type', 'perfect'),
                 'records as seven_ten_count'     => fn ($q) => $q->where('record_type', 'seven_ten'),
@@ -96,13 +96,24 @@ class ProBowlerController extends Controller
             $query->where('kibetsu', '<=', $request->term_to);
         }
         if ($request->boolean('has_title')) {
-            $query->has('officialTitles');
+            $query->where(function ($q) {
+                $q->has('officialTitles')
+                    ->orWhere('official_win_count', '>', 0);
+            });
         }
         if ($request->boolean('has_sports_coach_license')) {
             $query->where(fn ($q) => $q->where('coach_1_status', '有')->orWhere('coach_3_status', '有')->orWhere('coach_4_status', '有'));
         }
 
         $bowlers = $query->orderBy('license_no')->paginate(20)->withQueryString();
+        $bowlers->getCollection()->transform(function (ProBowler $bowler) {
+            $bowler->setAttribute('titles_count', max(
+                (int) ($bowler->official_titles_row_count ?? 0),
+                (int) ($bowler->official_win_count ?? $bowler->titles_count ?? 0)
+            ));
+
+            return $bowler;
+        });
 
         $order = ['北海道', '東北', '北関東', '埼玉', '千葉', '城東', '城南', '城西', '三多摩', '神奈川・東', '神奈川・西', '静岡', '甲信越', '東海', '北陸', '関西・東', '関西・西', '関西・南', '中国四国', '九州・北', '九州・南／沖縄', '九州･南／沖縄', '海外'];
         $districts = District::all()
@@ -205,6 +216,14 @@ class ProBowlerController extends Controller
 
         // 管理画面の「タイトル数」は公式タイトルのみ。
         // シーズントライアル優勝は title 履歴には残すが、公式タイトル数には加算しない。
+        $bowler->setAttribute('official_titles_count', max(
+            (int) ($bowler->official_titles_count ?? 0),
+            (int) ($bowler->official_win_count ?? $bowler->titles_count ?? 0)
+        ));
+        $bowler->setAttribute('season_trial_titles_count', max(
+            (int) ($bowler->season_trial_titles_count ?? 0),
+            (int) ($bowler->season_trial_win_count ?? 0)
+        ));
         $bowler->setAttribute('titles_count', (int) ($bowler->official_titles_count ?? 0));
 
         $order = ['北海道', '東北', '北関東', '埼玉', '千葉', '城東', '城南', '城西', '三多摩', '神奈川・東', '神奈川・西', '静岡', '甲信越', '東海', '北陸', '関西・東', '関西・西', '関西・南', '中国四国', '九州・北', '九州・南／沖縄', '九州･南／沖縄', '海外'];
@@ -339,6 +358,7 @@ class ProBowlerController extends Controller
 
         // 公式タイトル数の集計。
         // シーズントライアルは「タイトルホルダー」履歴として残すが、公式タイトル数には加算しない。
+        $titleCountSql = 'greatest(coalesce(titles_agg.titles_count, 0), coalesce(pro_bowlers.official_win_count, 0))';
         $titlesAgg = DB::table('pro_bowler_titles')
             ->leftJoin('tournaments', 'tournaments.id', '=', 'pro_bowler_titles.tournament_id')
             ->where(function ($q) {
@@ -363,7 +383,7 @@ class ProBowlerController extends Controller
                 $join->on('pro_bowlers.id', '=', 'titles_agg.pro_bowler_id');
             })
             ->addSelect('pro_bowlers.*')
-            ->addSelect(DB::raw('coalesce(titles_agg.titles_count, 0) as titles_count'));
+            ->addSelect(DB::raw($titleCountSql . ' as titles_count'));
 
         $statusService = app(ProBowlerSearchScopeService::class);
         $playerStatus = $statusService->normalizeStatus((string) ($filters['player_status'] ?? ''));
@@ -500,13 +520,13 @@ class ProBowlerController extends Controller
         }
 
         if (!empty($filters['has_title'])) {
-            $query->whereRaw('coalesce(titles_agg.titles_count, 0) > 0');
+            $query->whereRaw($titleCountSql . ' > 0');
         }
         if (!empty($filters['titles_from'])) {
-            $query->whereRaw('coalesce(titles_agg.titles_count, 0) >= ?', [(int) $filters['titles_from']]);
+            $query->whereRaw($titleCountSql . ' >= ?', [(int) $filters['titles_from']]);
         }
         if (!empty($filters['titles_to'])) {
-            $query->whereRaw('coalesce(titles_agg.titles_count, 0) <= ?', [(int) $filters['titles_to']]);
+            $query->whereRaw($titleCountSql . ' <= ?', [(int) $filters['titles_to']]);
         }
 
         if (!empty($filters['is_district_leader'])) {
@@ -546,7 +566,7 @@ class ProBowlerController extends Controller
                 ->orderByRaw("license_no_num asc nulls last")
                 ->orderBy('license_no');
         } elseif ($sort === 'titles') {
-            $query->orderByRaw('coalesce(titles_agg.titles_count, 0) ' . $dir)
+            $query->orderByRaw($titleCountSql . ' ' . $dir)
                 ->orderByRaw("license_no_num asc nulls last")
                 ->orderBy('license_no');
         } else {

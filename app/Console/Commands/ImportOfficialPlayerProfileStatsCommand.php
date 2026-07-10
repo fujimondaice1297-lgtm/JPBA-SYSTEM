@@ -14,8 +14,10 @@ class ImportOfficialPlayerProfileStatsCommand extends Command
     protected $signature = 'jpba:import-official-player-profile-stats
         {--license=* : Import only the specified license number(s)}
         {--limit= : Limit number of players}
+        {--offset=0 : Skip this many players after ordering by license number}
         {--all-visible : Include all visible players instead of active players only}
         {--missing-only : Import only players without an official profile import timestamp}
+        {--season-trial-missing-only : Import only players with official wins and no season trial win count yet}
         {--sleep-ms=250 : Sleep between official-site requests}
         {--force : Actually update DB. Without this option, the command is dry-run only}
         {--json : Output JSON report}';
@@ -49,7 +51,17 @@ class ImportOfficialPlayerProfileStatsCommand extends Command
             $query->whereNull('official_profile_imported_at');
         }
 
+        if ($this->option('season-trial-missing-only')) {
+            $query->where('official_win_count', '>', 0)
+                ->whereNull('season_trial_win_count');
+        }
+
         $limit = $this->option('limit');
+        $offset = max(0, (int) $this->option('offset'));
+        if ($offset > 0) {
+            $query->offset($offset);
+        }
+
         if ($limit !== null && $limit !== '') {
             $query->limit(max(1, (int) $limit));
         }
@@ -93,6 +105,7 @@ class ImportOfficialPlayerProfileStatsCommand extends Command
                         'license_no' => $bowler->license_no,
                         'name' => $bowler->name_kanji,
                         'official_win_count' => $payload['official_win_count'] ?? null,
+                        'season_trial_win_count' => $payload['season_trial_win_count'] ?? null,
                         'perfect_count' => $payload['perfect_count'] ?? null,
                         'eight_hundred_count' => $payload['eight_hundred_count'] ?? null,
                         'seven_ten_count' => $payload['seven_ten_count'] ?? null,

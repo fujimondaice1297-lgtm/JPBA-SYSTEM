@@ -67,7 +67,7 @@ class JpbaOfficialPlayerProfileService
                 }
 
                 match ($header) {
-                    '優勝回数' => $this->putParsedValue($summary, 'official_win_count', $this->intValue($value)),
+                    '優勝回数' => $this->putWinCounts($summary, $value),
                     '総ゲーム数' => $this->putParsedValue($summary, 'official_total_games', $this->intValue($value)),
                     'トータルピン' => $this->putParsedValue($summary, 'official_total_pins', $this->intValue($value)),
                     '総賞金額' => $this->putParsedValue($summary, 'official_total_prize_money', $this->intValue($value)),
@@ -82,6 +82,7 @@ class JpbaOfficialPlayerProfileService
 
         $summary += [
             'official_win_count' => null,
+            'season_trial_win_count' => 0,
             'official_total_games' => null,
             'official_total_pins' => null,
             'official_total_prize_money' => null,
@@ -156,6 +157,19 @@ class JpbaOfficialPlayerProfileService
         $target[$key] = $value;
     }
 
+    /**
+     * @param array<string,mixed> $summary
+     */
+    private function putWinCounts(array &$summary, string $value): void
+    {
+        $this->putParsedValue($summary, 'official_win_count', $this->intValue($value));
+
+        $seasonTrialWins = $this->seasonTrialWinCountValue($value);
+        if ($seasonTrialWins !== null) {
+            $this->putParsedValue($summary, 'season_trial_win_count', $seasonTrialWins);
+        }
+    }
+
     private function cleanText(?string $value): string
     {
         $value = html_entity_decode((string) $value, ENT_QUOTES, 'UTF-8');
@@ -173,6 +187,17 @@ class JpbaOfficialPlayerProfileService
         }
 
         return (int) str_replace(',', '', $m[0]);
+    }
+
+    private function seasonTrialWinCountValue(?string $value): ?int
+    {
+        $value = mb_convert_kana((string) $value, 'n', 'UTF-8');
+
+        if (preg_match('/(?:ST|ＳＴ|シーズントライアル)\s*[^\d]*(\d[\d,]*)/iu', $value, $m)) {
+            return (int) str_replace(',', '', $m[1]);
+        }
+
+        return null;
     }
 
     private function decimalValue(?string $value): ?string
