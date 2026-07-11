@@ -13,6 +13,8 @@ class ProBowlerTitle extends Model
         'year',
         'won_date',
         'source',
+        'source_url',
+        'source_label',
         'tournament_name',
     ];
 

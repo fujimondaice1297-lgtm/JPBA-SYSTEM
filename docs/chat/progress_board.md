@@ -1768,3 +1768,17 @@
 - [✓] 公開プロフィール `/players/13799` 相当のBlade描画で、公式戦記録とタイトル欄に `優勝回数 5`、`公式タイトル：5`、`シーズントライアル優勝：3`、`公認パーフェクト 7`、`800シリーズ 4`、`7-10スプリットメイド 0` を確認した
 - [✓] `php -l`、`php artisan view:cache`、`php artisan route:list --except-vendor`、`php artisan public:parity-audit` はOK
 - [✓] 詳細結果を `docs/operations/official_player_profile_title_count_recheck_20260711.md` に記録した
+
+#### 2026-07-11 メモ（公式タイトル明細復元の候補方式）
+- [✓] タイトル数ズレ防止のため、公式サイトから拾った大会優勝情報を直接 `pro_bowler_titles` へ入れず、`official_title_import_candidates` に一度保存する方式へした
+- [✓] `pro_bowler_titles` に `source_url` / `source_label` を追加し、タイトル明細の公式ページ根拠を追跡できるようにした
+- [✓] `jpba:import-official-title-history` を追加し、既定ドライラン、`--force` で候補保存、`--promote` で完全一致分のみ本登録するようにした
+- [✓] 2026サマーシリーズ公式ページから、江川司・市原竜太・安里秀策のシーズントライアル優勝候補3件を取得した
+- [✓] 江川司・市原竜太は `season_trial_win_count = 1` と候補1件が一致したため本登録した
+- [✓] 安里秀策は `season_trial_win_count = 2` に対して候補1件のみのため、本登録せず候補止まりにした
+- [✓] DB確認で、候補3件、`source_url` 付き本登録2件、安里秀策のブロック状態を確認した
+- [✓] 公開プロフィール内部レンダリングで、市原竜太・江川司のみタイトル名が表示され、安里秀策には表示されないことを確認した
+- [✓] `php -l`、`php artisan view:cache`、`php artisan route:list --except-vendor`、`php artisan public:parity-audit` はOK
+- [ ] 安里秀策のもう1件のシーズントライアル優勝元を公式サイトから特定する
+- [ ] 年度別公式大会ページを順次たどり、候補保存と完全一致昇格でタイトル明細を復元する
+- [✓] 詳細結果を `docs/operations/official_title_history_import_foundation_20260711.md` に記録した
