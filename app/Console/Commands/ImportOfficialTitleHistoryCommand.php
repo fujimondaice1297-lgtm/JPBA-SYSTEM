@@ -14,6 +14,7 @@ class ImportOfficialTitleHistoryCommand extends Command
 {
     protected $signature = 'jpba:import-official-title-history
         {--url=* : JPBA official tournament page URL(s) to scan}
+        {--discover-season-trials= : JPBA tournament index URL used to discover season-trial pages}
         {--license=* : Limit candidates to the specified license number(s)}
         {--force : Store candidates. Without this option, the command is dry-run only}
         {--promote : Promote only bowlers whose candidate detail count exactly matches their aggregate title count}
@@ -25,8 +26,19 @@ class ImportOfficialTitleHistoryCommand extends Command
     public function handle(JpbaOfficialTitleCandidateService $service): int
     {
         $urls = array_values(array_filter(array_map('trim', (array) $this->option('url'))));
+        $discoverSeasonTrials = trim((string) $this->option('discover-season-trials'));
+        if ($discoverSeasonTrials !== '') {
+            try {
+                $urls = array_merge($urls, $service->discoverSeasonTrialUrls($discoverSeasonTrials));
+            } catch (Throwable $e) {
+                $this->error('Season-trial discovery failed: ' . $e->getMessage());
+                return self::FAILURE;
+            }
+        }
+
+        $urls = array_values(array_unique($urls));
         if ($urls === []) {
-            $this->error('At least one --url is required.');
+            $this->error('At least one --url or --discover-season-trials is required.');
             return self::FAILURE;
         }
 
@@ -38,6 +50,7 @@ class ImportOfficialTitleHistoryCommand extends Command
         $report = [
             'mode' => $force ? 'executed' : 'dry-run',
             'pages' => 0,
+            'target_urls' => count($urls),
             'candidates' => 0,
             'matched' => 0,
             'unmatched' => 0,
@@ -46,6 +59,7 @@ class ImportOfficialTitleHistoryCommand extends Command
             'promoted' => 0,
             'would_promote' => 0,
             'promotion_blocked' => 0,
+            'promotion_state_synced' => 0,
             'errors' => 0,
             'samples' => [],
             'blocked_samples' => [],
@@ -88,11 +102,11 @@ class ImportOfficialTitleHistoryCommand extends Command
                 ]);
 
                 if ($force) {
-                    OfficialTitleImportCandidate::updateOrCreate(
-                        ['candidate_hash' => $candidate['candidate_hash']],
-                        $candidate
-                    );
+                    $row = $this->storeCandidate($candidate);
                     $report['stored']++;
+                    if ($this->syncExistingPromotionState($row)) {
+                        $report['promotion_state_synced']++;
+                    }
                 } else {
                     $report['would_store']++;
                 }
@@ -252,6 +266,55 @@ class ImportOfficialTitleHistoryCommand extends Command
         return $report;
     }
 
+    /**
+     * @param array<string,mixed> $candidate
+     */
+    private function storeCandidate(array $candidate): OfficialTitleImportCandidate
+    {
+        $row = OfficialTitleImportCandidate::query()
+            ->where('candidate_hash', $candidate['candidate_hash'])
+            ->first();
+
+        if (! $row) {
+            $row = OfficialTitleImportCandidate::query()
+                ->where('pro_bowler_id', $candidate['pro_bowler_id'])
+                ->where('title_name', $candidate['title_name'])
+                ->where('source_url', $candidate['source_url'])
+                ->where('venue_name', $candidate['venue_name'])
+                ->orderByRaw("case when status = 'promoted' then 0 else 1 end")
+                ->orderBy('id')
+                ->first();
+        }
+
+        if (! $row) {
+            $venueName = $this->normalizeVenueName((string) $candidate['venue_name']);
+            $row = OfficialTitleImportCandidate::query()
+                ->where('pro_bowler_id', $candidate['pro_bowler_id'])
+                ->where('title_name', $candidate['title_name'])
+                ->where('source_url', $candidate['source_url'])
+                ->orderByRaw("case when status = 'promoted' then 0 else 1 end")
+                ->orderBy('id')
+                ->get()
+                ->first(function (OfficialTitleImportCandidate $existing) use ($venueName) {
+                    return $this->normalizeVenueName((string) $existing->venue_name) === $venueName;
+                });
+        }
+
+        if ($row) {
+            $row->forceFill($candidate)->save();
+            return $row->refresh();
+        }
+
+        return OfficialTitleImportCandidate::create($candidate);
+    }
+
+    private function normalizeVenueName(string $venueName): string
+    {
+        $venueName = preg_replace('/^[\[【\s]+/u', '', trim($venueName)) ?: $venueName;
+
+        return trim($venueName, " \t\n\r\0\x0B[]【】");
+    }
+
     private function currentTitleCount(int $bowlerId, string $category): int
     {
         $query = ProBowlerTitle::query()->where('pro_bowler_id', $bowlerId);
@@ -300,6 +363,58 @@ class ImportOfficialTitleHistoryCommand extends Command
                 'source_label' => $candidate->source_label,
             ]
         );
+    }
+
+    private function syncExistingPromotionState(OfficialTitleImportCandidate $candidate): bool
+    {
+        if (! $candidate->pro_bowler_id) {
+            return false;
+        }
+
+        $query = ProBowlerTitle::query()
+            ->where('pro_bowler_id', $candidate->pro_bowler_id)
+            ->where('title_name', $candidate->title_name)
+            ->where('year', $candidate->year)
+            ->where('source_url', $candidate->source_url);
+
+        if ($candidate->won_date) {
+            $query->whereDate('won_date', $candidate->won_date);
+        } else {
+            $query->whereNull('won_date');
+        }
+
+        $title = $query->first();
+        if (! $title && $candidate->won_date) {
+            $title = ProBowlerTitle::query()
+                ->where('pro_bowler_id', $candidate->pro_bowler_id)
+                ->where('title_name', $candidate->title_name)
+                ->where('year', $candidate->year)
+                ->where('source_url', $candidate->source_url)
+                ->whereNull('won_date')
+                ->first();
+
+            if ($title) {
+                $title->forceFill(['won_date' => $candidate->won_date])->save();
+            }
+        }
+
+        if (! $title) {
+            return false;
+        }
+
+        if ($candidate->status === 'promoted'
+            && (int) $candidate->promoted_pro_bowler_title_id === (int) $title->id
+            && $candidate->error === null) {
+            return false;
+        }
+
+        $candidate->forceFill([
+            'status' => 'promoted',
+            'promoted_pro_bowler_title_id' => $title->id,
+            'error' => null,
+        ])->save();
+
+        return true;
     }
 
     private function refreshBowlerTitleCounter(ProBowler $bowler): void

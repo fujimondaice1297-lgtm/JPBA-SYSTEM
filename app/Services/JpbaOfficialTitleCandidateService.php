@@ -31,6 +31,41 @@ class JpbaOfficialTitleCandidateService
     }
 
     /**
+     * @return array<int,string>
+     */
+    public function discoverSeasonTrialUrls(string $indexUrl): array
+    {
+        $response = Http::timeout(20)
+            ->retry(2, 500)
+            ->withoutVerifying()
+            ->withHeaders([
+                'User-Agent' => 'JPBA-SYSTEM official title candidate import',
+            ])
+            ->get($indexUrl);
+
+        if (! $response->successful()) {
+            throw new RuntimeException('Official tournament index HTTP status ' . $response->status());
+        }
+
+        $html = $this->decodeHtml((string) $response->body());
+        preg_match_all('/<a[^>]+href=["\']([^"\']+)["\'][^>]*>(.*?)<\/a>/is', $html, $matches, PREG_SET_ORDER);
+
+        $urls = [];
+        foreach ($matches as $match) {
+            $href = html_entity_decode((string) $match[1], ENT_QUOTES, 'UTF-8');
+            $text = $this->cleanText(strip_tags((string) $match[2]));
+            $haystack = strtolower($href . ' ' . $text);
+            if (! $this->looksLikeSeasonTrialLink($haystack, $text)) {
+                continue;
+            }
+
+            $urls[$this->resolveUrl($href, $indexUrl)] = true;
+        }
+
+        return array_values(array_keys($urls));
+    }
+
+    /**
      * @return array<int,array<string,mixed>>
      */
     public function parseCandidates(string $html, string $url): array
@@ -58,18 +93,21 @@ class JpbaOfficialTitleCandidateService
 
             $licenseNumber = $this->licenseNumber($winnerText);
             $name = $this->winnerName($winnerText);
+            if ($name === null || $this->looksLikeInvalidWinnerName($name)) {
+                $name = $this->winnerNameFromVenueLine($line);
+            }
             if ($licenseNumber === null || $name === null) {
                 continue;
             }
 
             $bowler = $this->resolveBowler($licenseNumber, $name, $lines);
-            $venueName = $this->cleanText(preg_replace('/\s*優勝.*$/u', '', $line) ?: $line);
+            $venueName = $this->venueNameFromWinnerLine($line);
             $wonDate = $this->dateForVenue($venueName, $venueDates);
 
             $payload = [
                 'pro_bowler_id' => $bowler?->id,
                 'license_no' => $bowler?->license_no,
-                'license_no_num' => $licenseNumber,
+                'license_no_num' => $bowler?->license_no_num ?: $licenseNumber,
                 'name_kanji' => $bowler?->name_kanji ?: $name,
                 'title_name' => $titleName,
                 'title_category' => $category,
@@ -184,6 +222,33 @@ class JpbaOfficialTitleCandidateService
         return false;
     }
 
+    private function looksLikeSeasonTrialLink(string $haystack, string $text): bool
+    {
+        return str_contains($haystack, '/st_')
+            || str_contains($haystack, '/st1')
+            || str_contains($haystack, '/st2')
+            || str_contains($haystack, '/st3')
+            || str_contains($haystack, '/st4')
+            || str_contains($haystack, 'stspring')
+            || str_contains($haystack, 'stsummer')
+            || str_contains($haystack, 'stautumn')
+            || str_contains($haystack, 'stwinter')
+            || str_contains($text, 'シーズントライアル');
+    }
+
+    private function resolveUrl(string $href, string $baseUrl): string
+    {
+        if (str_starts_with($href, 'http://') || str_starts_with($href, 'https://')) {
+            return $href;
+        }
+
+        if (str_starts_with($href, '/')) {
+            return rtrim(self::BASE_URL, '/') . $href;
+        }
+
+        return preg_replace('/[^\/]+$/', '', $baseUrl) . $href;
+    }
+
     /**
      * @param array<int,string> $lines
      */
@@ -219,14 +284,27 @@ class JpbaOfficialTitleCandidateService
 
         $dates = [];
         for ($i = 0; $i < count($lines); $i++) {
-            if (preg_match('/^(\d{1,2})\/(\d{1,2})$/u', $lines[$i], $m) !== 1) {
+            if (preg_match('/(\d{1,2})\/(\d{1,2})/u', $lines[$i], $m) !== 1) {
                 continue;
             }
 
             $date = sprintf('%04d-%02d-%02d', $year, (int) $m[1], (int) $m[2]);
+            if (preg_match_all('/([A-ZＡ-Ｚ])\s*会場/u', $lines[$i], $venues) >= 1) {
+                foreach ($venues[1] as $venueLetter) {
+                    $key = $this->normalizeVenueKey($venueLetter . '会場');
+                    if (! isset($dates[$key])) {
+                        $dates[$key] = $date;
+                    }
+                }
+                continue;
+            }
+
             for ($j = $i + 1; $j <= min($i + 4, count($lines) - 1); $j++) {
-                if (preg_match('/^([A-ZＡ-Ｚ])会場/u', $lines[$j], $venue) === 1) {
-                    $dates[$this->normalizeVenueKey($venue[1] . '会場')] = $date;
+                if (preg_match('/([A-ZＡ-Ｚ])\s*会場/u', $lines[$j], $venue) === 1) {
+                    $key = $this->normalizeVenueKey($venue[1] . '会場');
+                    if (! isset($dates[$key])) {
+                        $dates[$key] = $date;
+                    }
                     break;
                 }
             }
@@ -271,9 +349,26 @@ class JpbaOfficialTitleCandidateService
         $text = $this->cleanText($text);
         $text = preg_replace('/[（(].*$/u', '', $text) ?: $text;
         $text = preg_replace('/\s*No\.?\s*\d+.*$/iu', '', $text) ?: $text;
+        $text = preg_replace('/\s*\d+期.*$/u', '', $text) ?: $text;
         $text = $this->cleanText($text);
 
         return $text !== '' ? $text : null;
+    }
+
+    private function winnerNameFromVenueLine(string $text): ?string
+    {
+        $text = $this->cleanText($text);
+        if (preg_match('/優勝\s*([^】\]]+)/u', $text, $m) !== 1) {
+            return null;
+        }
+
+        $name = $this->cleanText($m[1]);
+        return $name !== '' ? $name : null;
+    }
+
+    private function looksLikeInvalidWinnerName(string $name): bool
+    {
+        return preg_match('/^\d+期/u', $this->cleanText($name)) === 1;
     }
 
     /**
@@ -296,6 +391,15 @@ class JpbaOfficialTitleCandidateService
         }
 
         $needle = $this->normalizeName($name);
+        if ($matches->isEmpty()) {
+            return ProBowler::query()
+                ->orderBy('id')
+                ->get()
+                ->first(function (ProBowler $bowler) use ($needle) {
+                    return $this->normalizeName((string) $bowler->name_kanji) === $needle;
+                });
+        }
+
         return $matches->first(function (ProBowler $bowler) use ($needle) {
             return $this->normalizeName((string) $bowler->name_kanji) === $needle;
         });
@@ -327,6 +431,14 @@ class JpbaOfficialTitleCandidateService
         }
 
         return $venueDates[$this->normalizeVenueKey($m[1] . '会場')] ?? null;
+    }
+
+    private function venueNameFromWinnerLine(string $line): string
+    {
+        $venueName = $this->cleanText(preg_replace('/\s*優勝.*$/u', '', $line) ?: $line);
+        $venueName = preg_replace('/^[\[【\s]+/u', '', $venueName) ?: $venueName;
+
+        return trim($venueName, " \t\n\r\0\x0B[]【】");
     }
 
     private function normalizeVenueKey(string $value): string

@@ -67,6 +67,13 @@
     padding-left: 1.2rem;
   }
 
+  .jpba-profile-subtitle {
+    margin: 14px 0 8px;
+    color: var(--jpba-blue);
+    font-size: .95rem;
+    font-weight: 700;
+  }
+
   .jpba-profile-link-row {
     display: flex;
     flex-wrap: wrap;
@@ -215,6 +222,8 @@
     <span class="jpba-profile-badge">公式タイトル：{{ number_format((int) ($view['official_titles_count'] ?? 0)) }}</span>
     <span class="jpba-profile-badge">シーズントライアル優勝：{{ number_format((int) ($view['season_trial_titles_count'] ?? 0)) }}</span>
   </div>
+
+  <h3 class="jpba-profile-subtitle">公式タイトル</h3>
   @if(($view['titles'] ?? collect())->count())
     <ul class="jpba-profile-list">
       @foreach($view['titles'] as $title)
@@ -228,6 +237,22 @@
     </ul>
   @else
     <p class="mb-0 text-muted">公式タイトルは登録されていません。</p>
+  @endif
+
+  <h3 class="jpba-profile-subtitle">シーズントライアル優勝履歴</h3>
+  @if(($view['season_trial_titles'] ?? collect())->count())
+    <ul class="jpba-profile-list">
+      @foreach($view['season_trial_titles'] as $title)
+        <li>
+          {{ $title->year }}年 / {{ $title->title_name }}
+          @if($title->won_date)
+            （{{ \Carbon\Carbon::parse($title->won_date)->format('Y/m/d') }}）
+          @endif
+        </li>
+      @endforeach
+    </ul>
+  @else
+    <p class="mb-0 text-muted">確認済みのシーズントライアル優勝履歴は登録されていません。</p>
   @endif
 </section>
 
