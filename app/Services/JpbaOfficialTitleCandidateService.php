@@ -303,13 +303,18 @@ class JpbaOfficialTitleCandidateService
                 continue;
             }
 
-            for ($j = $i + 1; $j <= min($i + 4, count($lines) - 1); $j++) {
-                if (preg_match('/([A-ZＡ-Ｚ])\s*会場/u', $lines[$j], $venue) === 1) {
-                    $key = $this->normalizeVenueKey($venue[1] . '会場');
-                    if (! isset($dates[$key])) {
-                        $dates[$key] = $date;
-                    }
+            for ($j = $i + 1; $j <= min($i + 30, count($lines) - 1); $j++) {
+                if (preg_match('/\d{1,2}\/\d{1,2}/u', $lines[$j]) === 1) {
                     break;
+                }
+
+                if (preg_match_all('/([A-ZＡ-Ｚ])\s*会場/u', $lines[$j], $venues) >= 1) {
+                    foreach ($venues[1] as $venueLetter) {
+                        $key = $this->normalizeVenueKey($venueLetter . '会場');
+                        if (! isset($dates[$key])) {
+                            $dates[$key] = $date;
+                        }
+                    }
                 }
             }
         }

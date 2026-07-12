@@ -150,6 +150,7 @@ php artisan jpba:import-official-title-history --discover-season-trials=https://
 - 未発見の過去実績がある選手の集計値は減らさない
 - 公式プロフィールの更新遅れにより本登録明細数が上回った場合は、集計回数を自動で増やす
 - 同一選手、大会、年度、開催日、出典URLが同じ候補は、会場表記が違っても1件に統合する
+- 同一日付の下に複数会場が並ぶ旧ページは、次の日付行までの全会場に同じ開催日を割り当てる
 
 実行結果:
 
@@ -159,6 +160,7 @@ php artisan jpba:import-official-title-history --discover-season-trials=https://
 - `official_title_import_candidates`: promoted 131件
 - `pro_bowler_titles`: ST明細131件
 - 重複明細: 0件
+- `won_date` NULL: 0件（2018スプリングC会場は2018-05-21、D会場は2018-05-22として補完）
 - 明細数より集計回数が少ない選手: 0件
 - 安里秀策: ST集計3回、ST明細3件（2024スプリング、2024サマー、2026サマー）
 
