@@ -1811,6 +1811,11 @@ private function attachResultPdfDisplayFields($results): void
         $counted = 0;
 
         foreach ($bowlerIds as $bowlerId) {
+            $bowler = ProBowler::find($bowlerId);
+            if (! $bowler) {
+                continue;
+            }
+
             $officialTitleCount = ProBowlerTitle::query()
                 ->leftJoin('tournaments', 'tournaments.id', '=', 'pro_bowler_titles.tournament_id')
                 ->where('pro_bowler_titles.pro_bowler_id', $bowlerId)
@@ -1819,12 +1824,44 @@ private function attachResultPdfDisplayFields($results): void
                         ->orWhere('tournaments.title_category', '<>', 'season_trial');
                 })
                 ->where('pro_bowler_titles.title_name', 'not like', '%シーズントライアル%')
+                ->where(function ($q) {
+                    $q->whereNull('pro_bowler_titles.tournament_name')
+                        ->orWhere('pro_bowler_titles.tournament_name', 'not like', '%シーズントライアル%');
+                })
+                ->where(function ($q) {
+                    $q->whereNull('pro_bowler_titles.source')
+                        ->orWhere('pro_bowler_titles.source', '<>', 'sync_from_results_season_trial');
+                })
                 ->count();
 
-            ProBowler::where('id', $bowlerId)->update([
-                'titles_count' => $officialTitleCount,
-                'has_title' => $officialTitleCount > 0,
+            $seasonTrialTitleCount = ProBowlerTitle::query()
+                ->leftJoin('tournaments', 'tournaments.id', '=', 'pro_bowler_titles.tournament_id')
+                ->where('pro_bowler_titles.pro_bowler_id', $bowlerId)
+                ->where(function ($q) {
+                    $q->where('tournaments.title_category', 'season_trial')
+                        ->orWhere('pro_bowler_titles.title_name', 'like', '%シーズントライアル%')
+                        ->orWhere('pro_bowler_titles.tournament_name', 'like', '%シーズントライアル%')
+                        ->orWhere('pro_bowler_titles.source', 'sync_from_results_season_trial');
+                })
+                ->count();
+
+            $officialAggregate = max(
+                $officialTitleCount,
+                (int) ($bowler->official_win_count ?? 0),
+                (int) ($bowler->titles_count ?? 0)
+            );
+            $seasonTrialAggregate = max(
+                $seasonTrialTitleCount,
+                (int) ($bowler->season_trial_win_count ?? 0)
+            );
+
+            $bowler->forceFill([
+                'official_win_count' => $officialAggregate,
+                'titles_count' => $officialAggregate,
+                'season_trial_win_count' => $seasonTrialAggregate,
+                'has_title' => $officialAggregate > 0,
             ]);
+            $bowler->save();
 
             $counted++;
         }

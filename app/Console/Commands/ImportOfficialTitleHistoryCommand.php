@@ -17,7 +17,7 @@ class ImportOfficialTitleHistoryCommand extends Command
         {--discover-season-trials= : JPBA tournament index URL used to discover season-trial pages}
         {--license=* : Limit candidates to the specified license number(s)}
         {--force : Store candidates. Without this option, the command is dry-run only}
-        {--promote : Promote only bowlers whose candidate detail count exactly matches their aggregate title count}
+        {--promote : Promote every matched official-page candidate and raise aggregate counts when needed}
         {--sleep-ms=250 : Sleep between official-site requests}
         {--json : Output JSON report}';
 
@@ -60,6 +60,8 @@ class ImportOfficialTitleHistoryCommand extends Command
             'would_promote' => 0,
             'promotion_blocked' => 0,
             'promotion_state_synced' => 0,
+            'aggregate_count_updated' => 0,
+            'would_update_aggregate_count' => 0,
             'errors' => 0,
             'samples' => [],
             'blocked_samples' => [],
@@ -119,7 +121,7 @@ class ImportOfficialTitleHistoryCommand extends Command
 
         if ($promote) {
             $promotion = $this->promoteEligible($collected, $force);
-            foreach (['promoted', 'would_promote', 'promotion_blocked'] as $key) {
+            foreach (['promoted', 'would_promote', 'promotion_blocked', 'aggregate_count_updated', 'would_update_aggregate_count'] as $key) {
                 $report[$key] += $promotion[$key] ?? 0;
             }
             $report['blocked_samples'] = array_slice($promotion['blocked_samples'] ?? [], 0, 10);
@@ -181,6 +183,8 @@ class ImportOfficialTitleHistoryCommand extends Command
             'promoted' => 0,
             'would_promote' => 0,
             'promotion_blocked' => 0,
+            'aggregate_count_updated' => 0,
+            'would_update_aggregate_count' => 0,
             'blocked_samples' => [],
         ];
 
@@ -198,14 +202,6 @@ class ImportOfficialTitleHistoryCommand extends Command
             }
 
             foreach (['normal', 'season_trial'] as $category) {
-                $expected = $category === 'season_trial'
-                    ? (int) ($bowler->season_trial_win_count ?? 0)
-                    : (int) ($bowler->official_win_count ?? $bowler->titles_count ?? 0);
-
-                if ($expected <= 0) {
-                    continue;
-                }
-
                 $candidateRows = $force
                     ? OfficialTitleImportCandidate::query()
                         ->where('pro_bowler_id', $bowlerId)
@@ -223,42 +219,30 @@ class ImportOfficialTitleHistoryCommand extends Command
                     continue;
                 }
 
-                $currentTitleCount = $this->currentTitleCount($bowlerId, $category);
-                $candidateCount = $candidateRows->count();
-
-                if ($currentTitleCount === $expected) {
-                    continue;
-                }
-
-                if ($currentTitleCount > 0 || $candidateCount !== $expected) {
-                    $report['promotion_blocked']++;
-                    $this->pushSample($report['blocked_samples'], [
-                        'license_no' => $bowler->license_no,
-                        'name' => $bowler->name_kanji,
-                        'category' => $category,
-                        'expected' => $expected,
-                        'candidate_count' => $candidateCount,
-                        'current_title_count' => $currentTitleCount,
-                    ]);
-                    continue;
-                }
-
                 foreach ($candidateRows as $candidate) {
                     if ($force) {
                         $title = $this->createTitleFromCandidate($candidate);
+                        $wasPromoted = $candidate->status === 'promoted'
+                            && (int) $candidate->promoted_pro_bowler_title_id === (int) $title->id;
                         $candidate->forceFill([
                             'status' => 'promoted',
                             'promoted_pro_bowler_title_id' => $title->id,
                             'error' => null,
                         ])->save();
-                        $report['promoted']++;
-                    } else {
+                        if (! $wasPromoted) {
+                            $report['promoted']++;
+                        }
+                    } elseif (($candidate['status'] ?? 'candidate') !== 'promoted') {
                         $report['would_promote']++;
                     }
                 }
 
                 if ($force) {
-                    $this->refreshBowlerTitleCounter($bowler);
+                    if ($this->refreshBowlerTitleCounter($bowler->refresh(), $category)) {
+                        $report['aggregate_count_updated']++;
+                    }
+                } elseif ($this->aggregateCountNeedsUpdate($bowler, $category, $candidateRows->count())) {
+                    $report['would_update_aggregate_count']++;
                 }
             }
         }
@@ -274,6 +258,22 @@ class ImportOfficialTitleHistoryCommand extends Command
         $row = OfficialTitleImportCandidate::query()
             ->where('candidate_hash', $candidate['candidate_hash'])
             ->first();
+
+        if (! $row) {
+            $row = OfficialTitleImportCandidate::query()
+                ->where('pro_bowler_id', $candidate['pro_bowler_id'])
+                ->where('title_name', $candidate['title_name'])
+                ->where('year', $candidate['year'])
+                ->where('source_url', $candidate['source_url'])
+                ->when(
+                    $candidate['won_date'] ?? null,
+                    fn ($query, $date) => $query->whereDate('won_date', $date),
+                    fn ($query) => $query->whereNull('won_date')
+                )
+                ->orderByRaw("case when status = 'promoted' then 0 else 1 end")
+                ->orderBy('id')
+                ->first();
+        }
 
         if (! $row) {
             $row = OfficialTitleImportCandidate::query()
@@ -301,11 +301,34 @@ class ImportOfficialTitleHistoryCommand extends Command
         }
 
         if ($row) {
+            if ($row->status === 'promoted' && $row->promoted_pro_bowler_title_id) {
+                $candidate['status'] = 'promoted';
+                $candidate['promoted_pro_bowler_title_id'] = $row->promoted_pro_bowler_title_id;
+                $candidate['error'] = null;
+            }
             $row->forceFill($candidate)->save();
-            return $row->refresh();
+            return $this->removeDuplicateCandidates($row->refresh());
         }
 
-        return OfficialTitleImportCandidate::create($candidate);
+        return $this->removeDuplicateCandidates(OfficialTitleImportCandidate::create($candidate));
+    }
+
+    private function removeDuplicateCandidates(OfficialTitleImportCandidate $candidate): OfficialTitleImportCandidate
+    {
+        OfficialTitleImportCandidate::query()
+            ->whereKeyNot($candidate->id)
+            ->where('pro_bowler_id', $candidate->pro_bowler_id)
+            ->where('title_name', $candidate->title_name)
+            ->where('year', $candidate->year)
+            ->where('source_url', $candidate->source_url)
+            ->when(
+                $candidate->won_date,
+                fn ($query, $date) => $query->whereDate('won_date', $date),
+                fn ($query) => $query->whereNull('won_date')
+            )
+            ->delete();
+
+        return $candidate;
     }
 
     private function normalizeVenueName(string $venueName): string
@@ -417,15 +440,48 @@ class ImportOfficialTitleHistoryCommand extends Command
         return true;
     }
 
-    private function refreshBowlerTitleCounter(ProBowler $bowler): void
+    private function refreshBowlerTitleCounter(ProBowler $bowler, string $category): bool
     {
-        $officialTitleCount = $this->currentTitleCount((int) $bowler->id, 'normal');
-        $aggregateCount = (int) ($bowler->official_win_count ?? $bowler->titles_count ?? 0);
-        $count = max($officialTitleCount, $aggregateCount);
+        $detailCount = $this->currentTitleCount((int) $bowler->id, $category);
+
+        if ($category === 'season_trial') {
+            $current = (int) ($bowler->season_trial_win_count ?? 0);
+            $count = max($detailCount, $current);
+            if ($count === $current) {
+                return false;
+            }
+
+            $bowler->forceFill(['season_trial_win_count' => $count])->save();
+            return true;
+        }
+
+        $officialWinCount = (int) ($bowler->official_win_count ?? 0);
+        $titlesCount = (int) ($bowler->titles_count ?? 0);
+        $count = max($detailCount, $officialWinCount, $titlesCount);
+        if ($count === $officialWinCount
+            && $count === $titlesCount
+            && (bool) $bowler->has_title === ($count > 0)) {
+            return false;
+        }
 
         $bowler->forceFill([
+            'official_win_count' => $count,
             'titles_count' => $count,
             'has_title' => $count > 0,
         ])->save();
+
+        return true;
+    }
+
+    private function aggregateCountNeedsUpdate(ProBowler $bowler, string $category, int $candidateCount): bool
+    {
+        if ($category === 'season_trial') {
+            return $candidateCount > (int) ($bowler->season_trial_win_count ?? 0);
+        }
+
+        return $candidateCount > max(
+            (int) ($bowler->official_win_count ?? 0),
+            (int) ($bowler->titles_count ?? 0)
+        );
     }
 }

@@ -124,10 +124,14 @@ class JpbaOfficialTitleCandidateService
             ];
             $payload['candidate_hash'] = $this->candidateHash($payload);
 
-            $candidates[] = $payload;
+            $identity = $this->candidateIdentity($payload);
+            if (! isset($candidates[$identity])
+                || mb_strlen((string) $payload['venue_name']) > mb_strlen((string) $candidates[$identity]['venue_name'])) {
+                $candidates[$identity] = $payload;
+            }
         }
 
-        return $candidates;
+        return array_values($candidates);
     }
 
     private function decodeHtml(string $html): string
@@ -456,6 +460,14 @@ class JpbaOfficialTitleCandidateService
      */
     private function candidateHash(array $payload): string
     {
+        return $this->candidateIdentity($payload);
+    }
+
+    /**
+     * @param array<string,mixed> $payload
+     */
+    private function candidateIdentity(array $payload): string
+    {
         return sha1(implode('|', [
             $payload['license_no'] ?? '',
             $payload['license_no_num'] ?? '',
@@ -463,7 +475,6 @@ class JpbaOfficialTitleCandidateService
             $payload['title_category'] ?? '',
             $payload['year'] ?? '',
             $payload['won_date'] ?? '',
-            $payload['venue_name'] ?? '',
             $payload['source_url'] ?? '',
         ]));
     }
