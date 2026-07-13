@@ -15,6 +15,7 @@ class ImportOfficialTitleHistoryCommand extends Command
     protected $signature = 'jpba:import-official-title-history
         {--url=* : JPBA official tournament page URL(s) to scan}
         {--discover-season-trials= : JPBA tournament index URL used to discover season-trial pages}
+        {--discover-official-tournaments= : JPBA tournament index URL used to discover normal official tournament pages}
         {--license=* : Limit candidates to the specified license number(s)}
         {--force : Store candidates. Without this option, the command is dry-run only}
         {--promote : Promote every matched official-page candidate and raise aggregate counts when needed}
@@ -31,14 +32,27 @@ class ImportOfficialTitleHistoryCommand extends Command
             try {
                 $urls = array_merge($urls, $service->discoverSeasonTrialUrls($discoverSeasonTrials));
             } catch (Throwable $e) {
-                $this->error('Season-trial discovery failed: ' . $e->getMessage());
+                $this->error('Season-trial discovery failed: '.$e->getMessage());
+
+                return self::FAILURE;
+            }
+        }
+
+        $discoverOfficialTournaments = trim((string) $this->option('discover-official-tournaments'));
+        if ($discoverOfficialTournaments !== '') {
+            try {
+                $urls = array_merge($urls, $service->discoverOfficialTournamentUrls($discoverOfficialTournaments));
+            } catch (Throwable $e) {
+                $this->error('Official-tournament discovery failed: '.$e->getMessage());
+
                 return self::FAILURE;
             }
         }
 
         $urls = array_values(array_unique($urls));
         if ($urls === []) {
-            $this->error('At least one --url or --discover-season-trials is required.');
+            $this->error('At least one --url, --discover-season-trials, or --discover-official-tournaments is required.');
+
             return self::FAILURE;
         }
 
@@ -51,10 +65,13 @@ class ImportOfficialTitleHistoryCommand extends Command
             'mode' => $force ? 'executed' : 'dry-run',
             'pages' => 0,
             'target_urls' => count($urls),
+            'pages_with_candidates' => 0,
+            'pages_without_candidates' => 0,
             'candidates' => 0,
             'matched' => 0,
             'unmatched' => 0,
             'stored' => 0,
+            'stale_candidates_deleted' => 0,
             'would_store' => 0,
             'promoted' => 0,
             'would_promote' => 0,
@@ -66,6 +83,8 @@ class ImportOfficialTitleHistoryCommand extends Command
             'samples' => [],
             'blocked_samples' => [],
             'error_samples' => [],
+            'no_candidate_samples' => [],
+            'unmatched_samples' => [],
         ];
 
         $collected = collect();
@@ -81,7 +100,15 @@ class ImportOfficialTitleHistoryCommand extends Command
                     'url' => $url,
                     'message' => $e->getMessage(),
                 ]);
+
                 continue;
+            }
+
+            if ($candidates === []) {
+                $report['pages_without_candidates']++;
+                $this->pushSample($report['no_candidate_samples'], ['url' => $url]);
+            } else {
+                $report['pages_with_candidates']++;
             }
 
             foreach ($candidates as $candidate) {
@@ -90,7 +117,18 @@ class ImportOfficialTitleHistoryCommand extends Command
                 }
 
                 $report['candidates']++;
-                ((int) ($candidate['pro_bowler_id'] ?? 0) > 0) ? $report['matched']++ : $report['unmatched']++;
+                if ((int) ($candidate['pro_bowler_id'] ?? 0) > 0) {
+                    $report['matched']++;
+                } else {
+                    $report['unmatched']++;
+                    $this->pushSample($report['unmatched_samples'], [
+                        'license_no_num' => $candidate['license_no_num'] ?? null,
+                        'name' => $candidate['name_kanji'] ?? null,
+                        'title_name' => $candidate['title_name'] ?? null,
+                        'source_url' => $candidate['source_url'] ?? null,
+                        'raw_text' => $candidate['raw_text'] ?? null,
+                    ]);
+                }
                 $collected->push($candidate);
 
                 $this->pushSample($report['samples'], [
@@ -119,6 +157,17 @@ class ImportOfficialTitleHistoryCommand extends Command
             }
         }
 
+        if ($force && $licenses === []) {
+            $hashes = $collected->pluck('candidate_hash')->filter()->unique()->values();
+            $staleQuery = OfficialTitleImportCandidate::query()
+                ->whereIn('source_url', $urls)
+                ->where('status', '<>', 'promoted');
+            if ($hashes->isNotEmpty()) {
+                $staleQuery->whereNotIn('candidate_hash', $hashes);
+            }
+            $report['stale_candidates_deleted'] = $staleQuery->delete();
+        }
+
         if ($promote) {
             $promotion = $this->promoteEligible($collected, $force);
             foreach (['promoted', 'would_promote', 'promotion_blocked', 'aggregate_count_updated', 'would_update_aggregate_count'] as $key) {
@@ -134,7 +183,7 @@ class ImportOfficialTitleHistoryCommand extends Command
                 if (is_array($value)) {
                     continue;
                 }
-                $this->line($key . ': ' . $value);
+                $this->line($key.': '.$value);
             }
         }
 
@@ -142,7 +191,7 @@ class ImportOfficialTitleHistoryCommand extends Command
     }
 
     /**
-     * @param array<int,string> $values
+     * @param  array<int,string>  $values
      * @return array<int,string>
      */
     private function normalizedLicenses(array $values): array
@@ -153,7 +202,7 @@ class ImportOfficialTitleHistoryCommand extends Command
                 return null;
             }
             if (preg_match('/^([MF])(\d+)$/', $value, $m) === 1) {
-                return $m[1] . str_pad((string) ((int) $m[2]), 8, '0', STR_PAD_LEFT);
+                return $m[1].str_pad((string) ((int) $m[2]), 8, '0', STR_PAD_LEFT);
             }
 
             return $value;
@@ -161,8 +210,8 @@ class ImportOfficialTitleHistoryCommand extends Command
     }
 
     /**
-     * @param array<int,array<string,mixed>> $samples
-     * @param array<string,mixed> $sample
+     * @param  array<int,array<string,mixed>>  $samples
+     * @param  array<string,mixed>  $sample
      */
     private function pushSample(array &$samples, array $sample): void
     {
@@ -174,7 +223,7 @@ class ImportOfficialTitleHistoryCommand extends Command
     }
 
     /**
-     * @param \Illuminate\Support\Collection<int,array<string,mixed>> $collected
+     * @param  \Illuminate\Support\Collection<int,array<string,mixed>>  $collected
      * @return array<string,mixed>
      */
     private function promoteEligible(Collection $collected, bool $force): array
@@ -251,7 +300,7 @@ class ImportOfficialTitleHistoryCommand extends Command
     }
 
     /**
-     * @param array<string,mixed> $candidate
+     * @param  array<string,mixed>  $candidate
      */
     private function storeCandidate(array $candidate): OfficialTitleImportCandidate
     {
@@ -307,6 +356,7 @@ class ImportOfficialTitleHistoryCommand extends Command
                 $candidate['error'] = null;
             }
             $row->forceFill($candidate)->save();
+
             return $this->removeDuplicateCandidates($row->refresh());
         }
 
@@ -452,6 +502,7 @@ class ImportOfficialTitleHistoryCommand extends Command
             }
 
             $bowler->forceFill(['season_trial_win_count' => $count])->save();
+
             return true;
         }
 
