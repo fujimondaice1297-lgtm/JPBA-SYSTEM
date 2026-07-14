@@ -268,7 +268,7 @@ class ImportOfficialPlayerTitleHistoryCommand extends Command
 
             if ($promote && ! $blocked) {
                 if ($force) {
-                    $title = $this->createTitle($candidate);
+                    $title = $this->createTitle($candidate, $history);
                     $row?->forceFill([
                         'status' => 'promoted',
                         'promoted_pro_bowler_title_id' => $title->id,
@@ -374,19 +374,26 @@ class ImportOfficialPlayerTitleHistoryCommand extends Command
     /**
      * @param  array<string,mixed>  $candidate
      */
-    private function createTitle(array $candidate): ProBowlerTitle
-    {
+    private function createTitle(
+        array $candidate,
+        JpbaOfficialPlayerTitleHistoryService $history
+    ): ProBowlerTitle {
+        $titleName = $history->titleDisplayName(
+            (string) $candidate['title_name'],
+            (int) $candidate['year']
+        );
+
         return ProBowlerTitle::firstOrCreate(
             [
                 'pro_bowler_id' => $candidate['pro_bowler_id'],
-                'title_name' => $candidate['title_name'],
+                'title_name' => $titleName,
                 'year' => $candidate['year'],
                 'won_date' => $candidate['won_date'],
                 'source_url' => $candidate['source_url'],
             ],
             [
                 'tournament_id' => null,
-                'tournament_name' => $candidate['title_name'],
+                'tournament_name' => $titleName,
                 'source' => $candidate['title_category'] === 'season_trial'
                     ? 'sync_from_results_season_trial'
                     : 'official_site_player_history_import',

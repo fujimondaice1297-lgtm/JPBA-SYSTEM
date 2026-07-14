@@ -76,8 +76,21 @@ class JpbaOfficialPlayerTitleHistoryServiceTest extends TestCase
             $service->titleFingerprint('中日杯2018東海オープン'),
             $service->titleFingerprint('中日杯2018東海オープンボウリングトーナメント')
         );
+        $this->assertSame(
+            $service->titleFingerprint('コカコーラ2016千葉オープン'),
+            $service->titleFingerprint('コカ・コーラカップ2016千葉オープンボウリングトーナメント')
+        );
         $this->assertSame('season_trial', $service->titleCategory('ST2014オータムシリーズＡ会場'));
         $this->assertSame('season_trial', $service->titleCategory('シーズントライラウ2012ウィンターS'));
+        $this->assertSame(
+            'JPBAシーズントライアル2008 サマーシリーズ',
+            $service->titleDisplayName('ｼｰｽﾞﾝTｻﾏｰｼﾘｰｽﾞ', 2008)
+        );
+        $this->assertSame(
+            'JPBAシーズントライアル2024 スプリングシリーズ',
+            $service->titleDisplayName('JPBAシーズントライアル2024 スプリングシリーズB', 2024)
+        );
+        $this->assertSame('KUWATA CUP 2023男子', $service->titleDisplayName('KUWATA CUP 2023男子', 2023));
     }
 
     public function test_it_excludes_selection_and_qualifying_round_wins(): void
@@ -90,6 +103,10 @@ class JpbaOfficialPlayerTitleHistoryServiceTest extends TestCase
         $this->assertFalse($method->invoke($service, "Dream Match \u{4E88}\u{9078}\u{30D5}\u{30A1}\u{30A4}\u{30CA}\u{30EB}\u{30E9}\u{30A6}\u{30F3}\u{30C9}"));
         $this->assertFalse($method->invoke($service, "ROUND1 GRAND CHAMPIONSHIP BOWLING 2026 JPBA\u{4E88}\u{9078}\u{30E9}\u{30A6}\u{30F3}\u{30C9} A\u{4F1A}\u{5834} \u{7537}\u{5B50}R"));
         $this->assertFalse($method->invoke($service, "ROUND1 CUP \u{30D7}\u{30ED}\u{4E88}\u{9078} \u{7B2C}1\u{4F1A}\u{5834}"));
+        $this->assertFalse($method->invoke($service, 'JPBAプレイヤーズドリームマッチ2022C'));
+        $this->assertFalse($method->invoke($service, 'プレイヤーズドリームマッチ２０２２Ｅ'));
+        $this->assertTrue($method->invoke($service, 'JPBAプレイヤーズドリームマッチ2022'));
+        $this->assertTrue($method->invoke($service, 'JPBAプレイヤーズドリームマッチ2023A'));
         $this->assertTrue($method->invoke($service, 'ROUND1 GRAND CHAMPIONSHIP BOWLING 2025 JPBA FINAL'));
         $this->assertTrue($method->invoke($service, 'MK Charity Cup'));
     }

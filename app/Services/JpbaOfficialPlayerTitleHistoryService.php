@@ -196,8 +196,24 @@ class JpbaOfficialPlayerTitleHistoryService
         $value = $this->normalizeTitleText($titleName);
         $value = str_replace(['JPBA', '公益社団法人日本プロボウリング協会'], '', $value);
         $value = preg_replace('/(?:19|20)\d{2}/u', '', $value) ?: $value;
-        $value = str_replace(['プロボウリング', 'ボウリングトーナメント', 'ボウリング'], '', $value);
+        $value = str_replace(['プロボウリング', 'ボウリングトーナメント', 'ボウリング', 'カップ'], '', $value);
         $value = preg_replace('/[\p{Z}\p{P}\p{S}_]+/u', '', $value) ?: $value;
+
+        return trim($value);
+    }
+
+    public function titleDisplayName(string $titleName, ?int $year = null): string
+    {
+        if ($this->titleCategory($titleName) !== 'season_trial') {
+            return trim($titleName);
+        }
+
+        $value = $this->normalizeTitleText($titleName);
+        $value = preg_replace('/^(?:JPBA)?シーズントライアル/u', 'JPBAシーズントライアル', $value) ?: $value;
+        if ($year !== null && preg_match('/(?:19|20)\d{2}/u', $value) !== 1) {
+            $value = preg_replace('/^JPBAシーズントライアル/u', 'JPBAシーズントライアル'.$year, $value) ?: $value;
+        }
+        $value = preg_replace('/^(JPBAシーズントライアル(?:19|20)\d{2})\s*/u', '$1 ', $value) ?: $value;
 
         return trim($value);
     }
@@ -209,6 +225,10 @@ class JpbaOfficialPlayerTitleHistoryService
         }
 
         $normalized = preg_replace('/[\s　]+/u', '', $this->normalizeTitleText($titleName)) ?: $titleName;
+
+        if (preg_match('/(?:JPBA)?プレイヤーズドリームマッチ2022[A-Z]$/u', $normalized) === 1) {
+            return false;
+        }
 
         return preg_match('/(?:選抜|予選)/u', $normalized) !== 1;
     }
