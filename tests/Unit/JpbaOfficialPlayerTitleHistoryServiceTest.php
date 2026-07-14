@@ -87,6 +87,7 @@ class JpbaOfficialPlayerTitleHistoryServiceTest extends TestCase
 
         $this->assertFalse($method->invoke($service, "East Open Tournament \u{9078}\u{629C}"));
         $this->assertFalse($method->invoke($service, "Official \u{4E88}\u{9078}\u{4F1A}"));
+        $this->assertFalse($method->invoke($service, "Dream Match \u{4E88}\u{9078}\u{30D5}\u{30A1}\u{30A4}\u{30CA}\u{30EB}\u{30E9}\u{30A6}\u{30F3}\u{30C9}"));
         $this->assertTrue($method->invoke($service, 'MK Charity Cup'));
     }
 }

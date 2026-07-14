@@ -210,7 +210,7 @@ class JpbaOfficialPlayerTitleHistoryService
 
         $normalized = preg_replace('/[\s　]+/u', '', $this->normalizeTitleText($titleName)) ?: $titleName;
 
-        return preg_match('/(?:選抜(?:大会|ラウンド)?|予選(?:会|大会|ラウンド)?)$/u', $normalized) !== 1;
+        return preg_match('/(?:選抜(?:大会|ラウンド)?|予選(?:会|大会|(?:ファイナル)?ラウンド)?)$/u', $normalized) !== 1;
     }
 
     private function normalizeTitleText(string $titleName): string
