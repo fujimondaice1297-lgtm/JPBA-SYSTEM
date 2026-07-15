@@ -209,6 +209,9 @@ class JpbaOfficialPlayerTitleHistoryService
         $value = str_replace('レディース新人戦', '女子新人戦', $value);
         $value = preg_replace('/(?:19|20)\d{2}/u', '', $value) ?: $value;
         $value = str_replace(['プロボウリング', 'ボウリングトーナメント', 'ボウリング', 'カップ'], '', $value);
+        if (str_contains($value, 'ジャパンオープン')) {
+            $value = str_replace(['STORM', '選手権大会', '選手権'], '', $value);
+        }
         $value = preg_replace('/[\p{Z}\p{P}\p{S}_]+/u', '', $value) ?: $value;
         $value = str_replace('JLBCクイーンズオープンプリンス', 'JLBCプリンス', $value);
         $value = preg_replace('/^コカコーラ(?:千葉オープン女子)?$/u', 'コカコーラ', $value) ?: $value;
@@ -257,7 +260,7 @@ class JpbaOfficialPlayerTitleHistoryService
             return false;
         }
 
-        return preg_match('/(?:選抜|予選|出場優先順位(?:決定)?戦|(?:上|下)半期女子順位(?:決定)?戦|オールエベンツ|ALLEVENTS)/u', $normalized) !== 1;
+        return preg_match('/(?:選抜|予選|出場優先順位(?:決定)?戦|(?:上|下)半期(?:男子|女子)?順位(?:決定)?戦|オールエベンツ|ALLEVENTS)/u', $normalized) !== 1;
     }
 
     private function normalizeTitleText(string $titleName): string

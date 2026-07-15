@@ -116,6 +116,10 @@ class JpbaOfficialPlayerTitleHistoryServiceTest extends TestCase
             $service->titleFingerprint('Ｈ.Ｃ 第47回全日本女子プロ'),
             $service->titleFingerprint('HANDA CUP 第47回全日本女子プロボウリング選手権大会')
         );
+        $this->assertSame(
+            $service->titleFingerprint('第39回ジャパンオープン'),
+            $service->titleFingerprint('第39回STORMジャパンオープンボウリング選手権')
+        );
         $this->assertSame('season_trial', $service->titleCategory('ST2014オータムシリーズＡ会場'));
         $this->assertSame('season_trial', $service->titleCategory('シーズントライラウ2012ウィンターS'));
         $this->assertSame('season_trial', $service->titleCategory('STウィンターシリーズC'));
@@ -166,6 +170,7 @@ class JpbaOfficialPlayerTitleHistoryServiceTest extends TestCase
         $this->assertFalse($method->invoke($service, '2021年度 下半期女子トーナメント出場優先順位決定戦'));
         $this->assertFalse($method->invoke($service, '2022年度 下半期女子トーナメント出場優先順位戦'));
         $this->assertFalse($method->invoke($service, '2016下半期女子順位戦'));
+        $this->assertFalse($method->invoke($service, '2004下半期順位決定戦'));
         $this->assertTrue($method->invoke($service, 'JPBAプレイヤーズドリームマッチ2022'));
         $this->assertTrue($method->invoke($service, 'JPBAプレイヤーズドリームマッチ2023A'));
         $this->assertTrue($method->invoke($service, 'R1 GCB JPBA決勝大会R'));
