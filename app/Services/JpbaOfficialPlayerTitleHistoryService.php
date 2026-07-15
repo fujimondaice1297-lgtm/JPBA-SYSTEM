@@ -238,7 +238,13 @@ class JpbaOfficialPlayerTitleHistoryService
             return false;
         }
 
-        return preg_match('/(?:選抜|予選|オールエベンツ|ALLEVENTS)/u', $normalized) !== 1;
+        if (preg_match('/^(?:R1|ROUND1)GCB2018R(?:部門)?$/u', $normalized) === 1
+            || (str_contains($normalized, 'ROUND1GRANDCHAMPIONSHIPBOWLING2018')
+                && str_contains($normalized, '三団体グランドチャンピオン大会'))) {
+            return false;
+        }
+
+        return preg_match('/(?:選抜|予選|出場優先順位(?:決定)?戦|オールエベンツ|ALLEVENTS)/u', $normalized) !== 1;
     }
 
     private function normalizeTitleText(string $titleName): string

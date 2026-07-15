@@ -98,6 +98,10 @@ class JpbaOfficialTitleCandidateService
         $html = $this->decodeHtml($html);
         $lines = $this->htmlToLines($html);
         $titleName = $this->extractTitleName($html, $lines);
+        if ($this->isExplicitNonTitleTournament($url, $titleName)) {
+            return [];
+        }
+
         $year = $this->extractYearFromUrl($url) ?? $this->extractYear($titleName, $lines);
         $category = $this->titleCategory($titleName, $lines);
         $venueDates = $this->extractVenueDates($lines, $year);
@@ -377,7 +381,20 @@ class JpbaOfficialTitleCandidateService
             || str_contains($haystack, 'prioritypositions')
             || str_contains($haystack, 'jpba_qualify')
             || preg_match('#/jpba_final\.html(?:[?\#].*)?$#iu', $url) === 1
-            || preg_match('#/wtr/#iu', $url) === 1;
+            || preg_match('#/wtr/#iu', $url) === 1
+            || $this->isExplicitNonTitleTournament($url, $text);
+    }
+
+    private function isExplicitNonTitleTournament(string $url, string $titleName): bool
+    {
+        $normalized = preg_replace('/[\s　]+/u', '', $this->cleanText($titleName)) ?: $titleName;
+
+        return preg_match(
+            '#/tournament2018/01round1/final/round1gcb2018_final\.html(?:[?\#].*)?$#iu',
+            $url
+        ) === 1
+            || (str_contains($normalized, 'ROUND1GRANDCHAMPIONSHIPBOWLING2018')
+                && str_contains($normalized, '三団体グランドチャンピオン大会'));
     }
 
     private function resolveUrl(string $href, string $baseUrl): string
