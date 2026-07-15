@@ -195,26 +195,39 @@ class JpbaOfficialPlayerTitleHistoryService
     public function titleFingerprint(string $titleName): string
     {
         $value = $this->normalizeTitleText($titleName);
+        $value = preg_replace(
+            '/^H\.C\s*第47回全日本女子プロ$/u',
+            'HANDA CUP 第47回全日本女子プロボウリング選手権大会',
+            $value
+        ) ?: $value;
         $value = preg_replace('/^(?:R1|ROUND1)\s*GCS?B/u', 'ROUND1 GRAND CHAMPIONSHIP BOWLING', $value) ?: $value;
         $value = preg_replace('/^((?:第\d+回)?)HC(?=プロボウリングマスターズ)/u', '$1HANDACUP', $value) ?: $value;
         $value = str_replace(['JPBA', '公益社団法人日本プロボウリング協会'], '', $value);
         $value = preg_replace('/^創立50周年記念(?:大会|レギュラーの部)$/u', '創立50周年記念', $value) ?: $value;
         $value = preg_replace('/決勝大会\s*R$/u', '決勝大会', $value) ?: $value;
         $value = preg_replace('/FINAL\s*R部門$/u', 'FINAL', $value) ?: $value;
+        $value = str_replace('レディース新人戦', '女子新人戦', $value);
         $value = preg_replace('/(?:19|20)\d{2}/u', '', $value) ?: $value;
         $value = str_replace(['プロボウリング', 'ボウリングトーナメント', 'ボウリング', 'カップ'], '', $value);
         $value = preg_replace('/[\p{Z}\p{P}\p{S}_]+/u', '', $value) ?: $value;
+        $value = str_replace('JLBCクイーンズオープンプリンス', 'JLBCプリンス', $value);
+        $value = preg_replace('/^コカコーラ(?:千葉オープン女子)?$/u', 'コカコーラ', $value) ?: $value;
 
         return trim($value);
     }
 
     public function titleDisplayName(string $titleName, ?int $year = null): string
     {
+        $normalized = $this->normalizeTitleText($titleName);
+        if ($year === 2015 && preg_match('/^H\.C\s*第47回全日本女子プロ$/u', $normalized) === 1) {
+            return 'HANDA CUP 第47回全日本女子プロボウリング選手権大会';
+        }
+
         if ($this->titleCategory($titleName) !== 'season_trial') {
             return trim($titleName);
         }
 
-        $value = $this->normalizeTitleText($titleName);
+        $value = $normalized;
         $value = preg_replace('/^[\'’‘]?\d{2}(?=シーズントライアル)/u', '', $value) ?: $value;
         $value = preg_replace('/^(?:JPBA)?シーズントライアル/u', 'JPBAシーズントライアル', $value) ?: $value;
         if ($year !== null && preg_match('/(?:19|20)\d{2}/u', $value) !== 1) {
@@ -244,7 +257,7 @@ class JpbaOfficialPlayerTitleHistoryService
             return false;
         }
 
-        return preg_match('/(?:選抜|予選|出場優先順位(?:決定)?戦|オールエベンツ|ALLEVENTS)/u', $normalized) !== 1;
+        return preg_match('/(?:選抜|予選|出場優先順位(?:決定)?戦|(?:上|下)半期女子順位(?:決定)?戦|オールエベンツ|ALLEVENTS)/u', $normalized) !== 1;
     }
 
     private function normalizeTitleText(string $titleName): string

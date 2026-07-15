@@ -100,6 +100,22 @@ class JpbaOfficialPlayerTitleHistoryServiceTest extends TestCase
             $service->titleFingerprint('ROUND1 GCB 2018 R'),
             $service->titleFingerprint('ROUND1 GRAND CHAMPIONSHIP BOWLING 2018 三団体グランドチャンピオン大会')
         );
+        $this->assertSame(
+            $service->titleFingerprint('ｽｶｲAｶｯﾌﾟ2019女子新人戦'),
+            $service->titleFingerprint('スカイAカップ 2019プロボウリングレディース新人戦')
+        );
+        $this->assertSame(
+            $service->titleFingerprint('ｺｶｺｰﾗｶｯﾌﾟ2019千葉ｵｰﾌﾟﾝ女子'),
+            $service->titleFingerprint('コカ・コーラカップ')
+        );
+        $this->assertSame(
+            $service->titleFingerprint('第41回JLBCプリンスカップ'),
+            $service->titleFingerprint('第41回JLBCクイーンズオープンプリンスカップ')
+        );
+        $this->assertSame(
+            $service->titleFingerprint('Ｈ.Ｃ 第47回全日本女子プロ'),
+            $service->titleFingerprint('HANDA CUP 第47回全日本女子プロボウリング選手権大会')
+        );
         $this->assertSame('season_trial', $service->titleCategory('ST2014オータムシリーズＡ会場'));
         $this->assertSame('season_trial', $service->titleCategory('シーズントライラウ2012ウィンターS'));
         $this->assertSame('season_trial', $service->titleCategory('STウィンターシリーズC'));
@@ -125,6 +141,10 @@ class JpbaOfficialPlayerTitleHistoryServiceTest extends TestCase
             $service->titleDisplayName('JPBAシーズントライアル2024 スプリングシリーズB', 2024)
         );
         $this->assertSame('KUWATA CUP 2023男子', $service->titleDisplayName('KUWATA CUP 2023男子', 2023));
+        $this->assertSame(
+            'HANDA CUP 第47回全日本女子プロボウリング選手権大会',
+            $service->titleDisplayName('Ｈ.Ｃ 第47回全日本女子プロ', 2015)
+        );
     }
 
     public function test_it_excludes_selection_and_qualifying_round_wins(): void
@@ -145,6 +165,7 @@ class JpbaOfficialPlayerTitleHistoryServiceTest extends TestCase
         $this->assertFalse($method->invoke($service, 'ROUND1 GRAND CHAMPIONSHIP BOWLING 2018 三団体グランドチャンピオン大会'));
         $this->assertFalse($method->invoke($service, '2021年度 下半期女子トーナメント出場優先順位決定戦'));
         $this->assertFalse($method->invoke($service, '2022年度 下半期女子トーナメント出場優先順位戦'));
+        $this->assertFalse($method->invoke($service, '2016下半期女子順位戦'));
         $this->assertTrue($method->invoke($service, 'JPBAプレイヤーズドリームマッチ2022'));
         $this->assertTrue($method->invoke($service, 'JPBAプレイヤーズドリームマッチ2023A'));
         $this->assertTrue($method->invoke($service, 'R1 GCB JPBA決勝大会R'));

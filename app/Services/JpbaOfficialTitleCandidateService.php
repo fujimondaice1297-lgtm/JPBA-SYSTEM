@@ -268,7 +268,17 @@ class JpbaOfficialTitleCandidateService
         $titleKeywords = [
             'シーズントライアル', '選手権', 'オープン', 'カップ', 'トーナメント',
             '新人戦', '記念大会', 'ドリームマッチ', 'マッチ', 'マスターズ', 'ROUND1', 'FINAL',
+            'ALL☆STAR', 'ALL★STAR', 'ALL STAR', 'ALLSTAR',
         ];
+
+        foreach (array_slice($lines, 0, 120) as $line) {
+            $normalized = mb_strtoupper($line, 'UTF-8');
+            if (preg_match('/ALL[☆★\s]*STAR/u', $normalized) === 1
+                && ! $this->looksLikeNonTitleLine($line)
+                && ! $this->looksLikeNavigationLine($line)) {
+                return $line;
+            }
+        }
 
         foreach (array_slice($lines, 8, 55) as $line) {
             if ($this->looksLikeTournamentTitle($line, $titleKeywords)

@@ -33,4 +33,18 @@ class JpbaOfficialTitleCandidateServiceTest extends TestCase
             'ROUND1 GRAND CHAMPIONSHIP BOWLING 2018 JPBA決勝大会'
         ));
     }
+
+    public function test_it_prefers_the_all_star_game_heading_over_the_pre_event_note(): void
+    {
+        $method = new ReflectionMethod(JpbaOfficialTitleCandidateService::class, 'extractTitleName');
+        $service = new JpbaOfficialTitleCandidateService;
+        $lines = array_fill(0, 12, 'navigation');
+        $lines[2] = "JPBA WOMEN'S ALL☆STAR GAME 2020";
+        $lines[9] = '※1月31日 前夜祭トーナメント';
+
+        $this->assertSame(
+            "JPBA WOMEN'S ALL☆STAR GAME 2020",
+            $method->invoke($service, '<html></html>', $lines)
+        );
+    }
 }
