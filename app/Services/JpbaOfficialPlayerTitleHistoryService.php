@@ -187,6 +187,7 @@ class JpbaOfficialPlayerTitleHistoryService
 
         return str_contains($normalized, 'シーズントライアル')
             || str_contains($normalized, 'SEASONTRIAL')
+            || preg_match('/^ST(?:ウィンター|スプリング|サマー|オータム)(?:シリーズ)?[A-D]?$/u', $normalized) === 1
                 ? 'season_trial'
                 : 'normal';
     }
@@ -194,6 +195,7 @@ class JpbaOfficialPlayerTitleHistoryService
     public function titleFingerprint(string $titleName): string
     {
         $value = $this->normalizeTitleText($titleName);
+        $value = preg_replace('/^((?:第\d+回)?)HC(?=プロボウリングマスターズ)/u', '$1HANDACUP', $value) ?: $value;
         $value = str_replace(['JPBA', '公益社団法人日本プロボウリング協会'], '', $value);
         $value = preg_replace('/(?:19|20)\d{2}/u', '', $value) ?: $value;
         $value = str_replace(['プロボウリング', 'ボウリングトーナメント', 'ボウリング', 'カップ'], '', $value);
@@ -209,11 +211,13 @@ class JpbaOfficialPlayerTitleHistoryService
         }
 
         $value = $this->normalizeTitleText($titleName);
+        $value = preg_replace('/^[\'’‘]?\d{2}(?=シーズントライアル)/u', '', $value) ?: $value;
         $value = preg_replace('/^(?:JPBA)?シーズントライアル/u', 'JPBAシーズントライアル', $value) ?: $value;
         if ($year !== null && preg_match('/(?:19|20)\d{2}/u', $value) !== 1) {
             $value = preg_replace('/^JPBAシーズントライアル/u', 'JPBAシーズントライアル'.$year, $value) ?: $value;
         }
         $value = preg_replace('/^(JPBAシーズントライアル(?:19|20)\d{2})\s*/u', '$1 ', $value) ?: $value;
+        $value = preg_replace('/(ウィンター|スプリング|サマー|オータム)$/u', '$1シリーズ', $value) ?: $value;
 
         return trim($value);
     }
@@ -230,7 +234,7 @@ class JpbaOfficialPlayerTitleHistoryService
             return false;
         }
 
-        return preg_match('/(?:選抜|予選)/u', $normalized) !== 1;
+        return preg_match('/(?:選抜|予選|オールエベンツ|ALLEVENTS)/u', $normalized) !== 1;
     }
 
     private function normalizeTitleText(string $titleName): string
@@ -239,6 +243,7 @@ class JpbaOfficialPlayerTitleHistoryService
         $value = str_replace('シーズントライラウ', 'シーズントライアル', $value);
         $value = preg_replace('/シーズン(?:T|Ｔ)/u', 'シーズントライアル', $value) ?: $value;
         $value = preg_replace('/\bST(?=(?:19|20)\d{2})/u', 'シーズントライアル', $value) ?: $value;
+        $value = preg_replace('/^ST(?=(?:ウィンター|スプリング|サマー|オータム))/u', 'シーズントライアル', $value) ?: $value;
         $value = preg_replace(
             '/(ウィンター|スプリング|サマー|オータム)\s*S(?:\s*[A-D]\s*会場?)?$/u',
             '$1シリーズ',

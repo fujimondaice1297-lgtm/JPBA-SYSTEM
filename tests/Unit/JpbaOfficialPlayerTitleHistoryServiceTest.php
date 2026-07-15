@@ -80,11 +80,29 @@ class JpbaOfficialPlayerTitleHistoryServiceTest extends TestCase
             $service->titleFingerprint('コカコーラ2016千葉オープン'),
             $service->titleFingerprint('コカ・コーラカップ2016千葉オープンボウリングトーナメント')
         );
+        $this->assertSame(
+            $service->titleFingerprint('第9回HCプロボウリングマスターズ'),
+            $service->titleFingerprint('第9回HANDA CUPプロボウリングマスターズ')
+        );
         $this->assertSame('season_trial', $service->titleCategory('ST2014オータムシリーズＡ会場'));
         $this->assertSame('season_trial', $service->titleCategory('シーズントライラウ2012ウィンターS'));
+        $this->assertSame('season_trial', $service->titleCategory('STウィンターシリーズC'));
+        $this->assertSame('normal', $service->titleCategory('STORMジャパンオープン'));
         $this->assertSame(
             'JPBAシーズントライアル2008 サマーシリーズ',
             $service->titleDisplayName('ｼｰｽﾞﾝTｻﾏｰｼﾘｰｽﾞ', 2008)
+        );
+        $this->assertSame(
+            'JPBAシーズントライアル2013 ウィンターシリーズ',
+            $service->titleDisplayName('STウィンターシリーズC', 2013)
+        );
+        $this->assertSame(
+            'JPBAシーズントライアル2011 サマーシリーズ',
+            $service->titleDisplayName('ｼｰｽﾞﾝﾄﾗｲｱﾙ2011サマー', 2011)
+        );
+        $this->assertSame(
+            'JPBAシーズントライアル2009 ウィンターシリーズ',
+            $service->titleDisplayName('‘09ｼｰｽﾞﾝﾄﾗｲｱﾙｳｨﾝﾀｰS', 2009)
         );
         $this->assertSame(
             'JPBAシーズントライアル2024 スプリングシリーズ',
@@ -105,6 +123,8 @@ class JpbaOfficialPlayerTitleHistoryServiceTest extends TestCase
         $this->assertFalse($method->invoke($service, "ROUND1 CUP \u{30D7}\u{30ED}\u{4E88}\u{9078} \u{7B2C}1\u{4F1A}\u{5834}"));
         $this->assertFalse($method->invoke($service, 'JPBAプレイヤーズドリームマッチ2022C'));
         $this->assertFalse($method->invoke($service, 'プレイヤーズドリームマッチ２０２２Ｅ'));
+        $this->assertFalse($method->invoke($service, '第46回STORMジャパンオープン 男子オールエベンツ'));
+        $this->assertFalse($method->invoke($service, 'JAPAN OPEN MEN ALL EVENTS'));
         $this->assertTrue($method->invoke($service, 'JPBAプレイヤーズドリームマッチ2022'));
         $this->assertTrue($method->invoke($service, 'JPBAプレイヤーズドリームマッチ2023A'));
         $this->assertTrue($method->invoke($service, 'ROUND1 GRAND CHAMPIONSHIP BOWLING 2025 JPBA FINAL'));
