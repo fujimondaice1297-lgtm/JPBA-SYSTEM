@@ -84,6 +84,22 @@ class JpbaOfficialPlayerTitleHistoryServiceTest extends TestCase
             $service->titleFingerprint('第9回HCプロボウリングマスターズ'),
             $service->titleFingerprint('第9回HANDA CUPプロボウリングマスターズ')
         );
+        $this->assertSame(
+            $service->titleFingerprint('JPBA創立50周年記念レギュラーの部'),
+            $service->titleFingerprint('公益社団法人日本プロボウリング協会創立50周年記念大会')
+        );
+        $this->assertSame(
+            $service->titleFingerprint('R1 GCB JPBA決勝大会R'),
+            $service->titleFingerprint('ROUND1 GRAND CHAMPIONSHIP BOWLING 2018 JPBA決勝大会')
+        );
+        $this->assertSame(
+            $service->titleFingerprint('R1 GCSB 2019 FINAL R部門'),
+            $service->titleFingerprint('ROUND1 GRAND CHAMPIONSHIP BOWLING 2019 FINAL')
+        );
+        $this->assertNotSame(
+            $service->titleFingerprint('ROUND1 GCB 2018 R'),
+            $service->titleFingerprint('ROUND1 GRAND CHAMPIONSHIP BOWLING 2018 三団体グランドチャンピオン大会')
+        );
         $this->assertSame('season_trial', $service->titleCategory('ST2014オータムシリーズＡ会場'));
         $this->assertSame('season_trial', $service->titleCategory('シーズントライラウ2012ウィンターS'));
         $this->assertSame('season_trial', $service->titleCategory('STウィンターシリーズC'));

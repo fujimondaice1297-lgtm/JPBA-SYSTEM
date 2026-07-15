@@ -272,3 +272,48 @@ STの残り                    31名 / 86件
 - `/players/13643` で藤井信人の公式11件・ST5件、追加大会名、オールエベンツ・予選表記なし、横方向のはみ出しなしを実ブラウザ描画で確認した。
 - ユニットテストは6件・37アサーション成功、Pint検査と `php artisan view:cache` も成功した。
 - `php artisan public:parity-audit` は公開12ページすべてHTTP 200/OK、欠落アセット0だった。
+
+## 追加実行（2026-07-15・第5バッチ）
+
+### 既存タイトルとの表記差照合
+
+- 谷合貴志の年度別表記 `JPBA創立50周年記念レギュラーの部` は、公式大会ページの `公益社団法人日本プロボウリング協会創立50周年記念大会` 男子レギュラー部門優勝と同一であることを確認した。
+- 日置秀一の `R1 GCB JPBA決勝大会R` は、登録済みの `ROUND1 GRAND CHAMPIONSHIP BOWLING 2018 JPBA決勝大会` と同一大会として照合した。
+- 市原竜太の `R1 GCSB 2019 FINAL R部門` は、登録済みの `ROUND1 GRAND CHAMPIONSHIP BOWLING 2019 FINAL` と同一大会として照合した。
+- `ROUND1 GCB 2018 R` と `ROUND1 GRAND CHAMPIONSHIP BOWLING 2018 三団体グランドチャンピオン大会` は別の表記差として残し、上記の限定照合によって誤って一致しないテストを追加した。
+- 公式根拠:
+  - `https://www.jpba.or.jp/information/tournament/tournament2017/01The50th/50thAnniversary.html`
+  - `https://www.jpba.or.jp/information/tournament/tournament2019/ROUND1GCB/TheFINAL/ROUND1GCB2019_Final.html`
+  - `https://www.jpba.or.jp/information/tournament/tournament2023/R1GCB_2023/JPBA_Final/Result/FinalResult.pdf`
+
+### 追加登録
+
+通常公式戦6件、シーズントライアル7件、合計13件を追加した。
+
+- 谷合貴志: ROUND1 GRAND CHAMPIONSHIP BOWLING 2023 RM / グリコ17アイス杯第4回プロアマ / 2015男子新人戦 / 2013サマー / 2015スプリング / 2015ウィンター
+- 森本健太: 第38回ジャパンオープン
+- 日置秀一: HANDA CUP第43回全日本プロボウリング選手権大会 / 2012サマー / 2013サマー / 2014オータム / 2015オータム
+- 市原竜太: 2003プロボウリング新人戦
+
+### 保留
+
+- 和田秀和は公式集計2件に対し、年度別通常1位が `ROUND1 GRAND CHAMPIONSHIP BOWLING 2025 JPBA決勝大会 男子R`、`ROUND1 GCB 2018 R`、`第30回全日本ミックスダブルス` の3件ある。
+- 登録済みの2018年三団体グランドチャンピオン大会との関係を含め、公式集計と一意に一致しないため今回は登録していない。
+
+### 追加後監査
+
+```text
+通常公式戦明細合計          430
+ST明細合計                  165
+全タイトル明細合計          595
+候補行                      656
+promoted候補行              656
+通常公式戦の残り            130名 / 559件
+STの残り                    29名 / 79件
+```
+
+- 谷合貴志は公式5件・ST6件、森本健太は公式4件・ST5件、日置秀一は公式4件・ST7件、市原竜太は公式2件・ST2件で、それぞれ集計回数と明細数が一致した。
+- `/players/13645` で谷合貴志の公式5件・ST6件、追加大会名、横方向のはみ出しなしを実ブラウザ描画で確認した。
+- `/players/13406` で日置秀一の公式4件・ST7件、追加大会名、横方向のはみ出しなしを実ブラウザ描画と画面キャプチャで確認した。
+- ユニットテストは6件・41アサーション成功、Pint検査と `php artisan view:cache` も成功した。
+- `php artisan public:parity-audit` は公開12ページすべてHTTP 200/OK、欠落アセット0だった。
