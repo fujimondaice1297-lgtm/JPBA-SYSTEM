@@ -260,6 +260,10 @@ class JpbaOfficialPlayerTitleHistoryService
             return false;
         }
 
+        if ($normalized === '第25回全日本ミックスダブルス') {
+            return false;
+        }
+
         return preg_match('/(?:選抜|予選|出場優先順位(?:決定)?戦|(?:上|下)半期(?:男子|女子)?順位(?:決定)?戦|オールエベンツ|ALLEVENTS)/u', $normalized) !== 1;
     }
 
