@@ -128,6 +128,10 @@ class JpbaOfficialPlayerTitleHistoryServiceTest extends TestCase
             $service->titleFingerprint('第３２回六甲クイーンズＯＰ'),
             $service->titleFingerprint('第32回六甲クイーンズオープントーナメント')
         );
+        $this->assertSame(
+            $service->titleFingerprint('ROUND1 GRAND CHAMPIONSHIP BOWLING 2024 JPBA決勝大会 女子A'),
+            $service->titleFingerprint('ROUND1 GRAND CHAMPIONSHIP BOWLING 2024 JPBA決勝大会 女子アクティブジェネレーション部門')
+        );
         $this->assertSame('season_trial', $service->titleCategory('ST2014オータムシリーズＡ会場'));
         $this->assertSame('season_trial', $service->titleCategory('シーズントライラウ2012ウィンターS'));
         $this->assertSame('season_trial', $service->titleCategory('STウィンターシリーズC'));
@@ -153,6 +157,10 @@ class JpbaOfficialPlayerTitleHistoryServiceTest extends TestCase
             $service->titleDisplayName('JPBAシーズントライアル2024 スプリングシリーズB', 2024)
         );
         $this->assertSame('KUWATA CUP 2023男子', $service->titleDisplayName('KUWATA CUP 2023男子', 2023));
+        $this->assertSame(
+            'ROUND1 GRAND CHAMPIONSHIP BOWLING 2024 JPBA決勝大会 女子アクティブジェネレーション部門',
+            $service->titleDisplayName('ROUND1 GRAND CHAMPIONSHIP BOWLING 2024 JPBA決勝大会 女子A', 2024)
+        );
         $this->assertSame(
             'HANDA CUP 第47回全日本女子プロボウリング選手権大会',
             $service->titleDisplayName('Ｈ.Ｃ 第47回全日本女子プロ', 2015)

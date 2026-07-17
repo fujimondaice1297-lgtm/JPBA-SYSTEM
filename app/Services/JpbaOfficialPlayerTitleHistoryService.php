@@ -195,6 +195,7 @@ class JpbaOfficialPlayerTitleHistoryService
     public function titleFingerprint(string $titleName): string
     {
         $value = $this->normalizeTitleText($titleName);
+        $value = $this->expandRoundOneDivisionName($value);
         $value = preg_replace(
             '/^H\.C\s*第47回全日本女子プロ$/u',
             'HANDA CUP 第47回全日本女子プロボウリング選手権大会',
@@ -225,12 +226,15 @@ class JpbaOfficialPlayerTitleHistoryService
     public function titleDisplayName(string $titleName, ?int $year = null): string
     {
         $normalized = $this->normalizeTitleText($titleName);
+        $expandedDivisionName = $this->expandRoundOneDivisionName($normalized);
         if ($year === 2015 && preg_match('/^H\.C\s*第47回全日本女子プロ$/u', $normalized) === 1) {
             return 'HANDA CUP 第47回全日本女子プロボウリング選手権大会';
         }
 
         if ($this->titleCategory($titleName) !== 'season_trial') {
-            return trim($titleName);
+            return $expandedDivisionName !== $normalized
+                ? trim($expandedDivisionName)
+                : trim($titleName);
         }
 
         $value = $normalized;
@@ -243,6 +247,23 @@ class JpbaOfficialPlayerTitleHistoryService
         $value = preg_replace('/(ウィンター|スプリング|サマー|オータム)$/u', '$1シリーズ', $value) ?: $value;
 
         return trim($value);
+    }
+
+    private function expandRoundOneDivisionName(string $titleName): string
+    {
+        if (! str_contains($titleName, 'JPBA決勝大会')) {
+            return $titleName;
+        }
+
+        return preg_replace_callback('/\s*(男子|女子)([RAG])$/u', function (array $matches) {
+            $division = match ($matches[2]) {
+                'R' => 'レギュラー',
+                'A' => 'アクティブジェネレーション',
+                'G' => 'グランドジェネレーション',
+            };
+
+            return ' '.$matches[1].$division.'部門';
+        }, $titleName) ?: $titleName;
     }
 
     private function isTitleEvent(string $titleName): bool
