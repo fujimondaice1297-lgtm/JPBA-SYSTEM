@@ -120,6 +120,14 @@ class JpbaOfficialPlayerTitleHistoryServiceTest extends TestCase
             $service->titleFingerprint('第39回ジャパンオープン'),
             $service->titleFingerprint('第39回STORMジャパンオープンボウリング選手権')
         );
+        $this->assertSame(
+            $service->titleFingerprint('グリコ17アイス杯第５回プロアマ'),
+            $service->titleFingerprint('「グリコセブンティーンアイス杯」第5回プロアマボウリングトーナメント')
+        );
+        $this->assertSame(
+            $service->titleFingerprint('第３２回六甲クイーンズＯＰ'),
+            $service->titleFingerprint('第32回六甲クイーンズオープントーナメント')
+        );
         $this->assertSame('season_trial', $service->titleCategory('ST2014オータムシリーズＡ会場'));
         $this->assertSame('season_trial', $service->titleCategory('シーズントライラウ2012ウィンターS'));
         $this->assertSame('season_trial', $service->titleCategory('STウィンターシリーズC'));
