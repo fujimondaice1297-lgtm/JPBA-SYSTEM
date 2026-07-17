@@ -260,11 +260,14 @@ class JpbaOfficialPlayerTitleHistoryService
             return false;
         }
 
-        if ($normalized === '第25回全日本ミックスダブルス') {
+        if (in_array($normalized, [
+            '第25回全日本ミックスダブルス',
+            '第28回全日本ミックスダブルス',
+        ], true)) {
             return false;
         }
 
-        return preg_match('/(?:選抜|予選|出場優先順位(?:決定)?戦|(?:上|下)半期(?:男子|女子)?順位(?:決定)?戦|オールエベンツ|ALLEVENTS)/u', $normalized) !== 1;
+        return preg_match('/(?:^順位(?:決定)?戦$|選抜|予選|出場優先順位(?:決定)?戦|(?:上|下)半期(?:男子|女子)?順位(?:決定)?戦|オールエベンツ|ALLEVENTS)/u', $normalized) !== 1;
     }
 
     private function normalizeTitleText(string $titleName): string
