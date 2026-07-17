@@ -260,10 +260,8 @@ class JpbaOfficialPlayerTitleHistoryService
             return false;
         }
 
-        if (in_array($normalized, [
-            '第25回全日本ミックスダブルス',
-            '第28回全日本ミックスダブルス',
-        ], true)) {
+        if (preg_match('/^第(\d+)回全日本ミックス(?:ダブルス)?$/u', $normalized, $matches) === 1
+            && (int) $matches[1] < 30) {
             return false;
         }
 
