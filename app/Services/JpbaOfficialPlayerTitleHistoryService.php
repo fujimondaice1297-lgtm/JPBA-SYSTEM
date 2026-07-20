@@ -219,6 +219,12 @@ class JpbaOfficialPlayerTitleHistoryService
         $value = preg_replace('/[\p{Z}\p{P}\p{S}_]+/u', '', $value) ?: $value;
         $value = str_replace('JLBCクイーンズオープンプリンス', 'JLBCプリンス', $value);
         $value = preg_replace('/^コカコーラ(?:千葉オープン女子)?$/u', 'コカコーラ', $value) ?: $value;
+        if (str_contains($value, 'ちゃおちゃお')) {
+            $value = 'ちゃおちゃお';
+        }
+        if ($value === '第30回千葉オープン女子') {
+            $value = 'コカコーラ';
+        }
 
         return trim($value);
     }
