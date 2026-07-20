@@ -85,6 +85,10 @@ class JpbaOfficialPlayerTitleHistoryServiceTest extends TestCase
             $service->titleFingerprint('第9回HANDA CUPプロボウリングマスターズ')
         );
         $this->assertSame(
+            $service->titleFingerprint('第7回Hプロボウリングマスターズ'),
+            $service->titleFingerprint('第7回 HANDACUP・プロボウリングマスターズ')
+        );
+        $this->assertSame(
             $service->titleFingerprint('JPBA創立50周年記念レギュラーの部'),
             $service->titleFingerprint('公益社団法人日本プロボウリング協会創立50周年記念大会')
         );

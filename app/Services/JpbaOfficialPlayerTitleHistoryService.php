@@ -202,7 +202,7 @@ class JpbaOfficialPlayerTitleHistoryService
             $value
         ) ?: $value;
         $value = preg_replace('/^(?:R1|ROUND1)\s*GCS?B/u', 'ROUND1 GRAND CHAMPIONSHIP BOWLING', $value) ?: $value;
-        $value = preg_replace('/^((?:第\d+回)?)HC(?=プロボウリングマスターズ)/u', '$1HANDACUP', $value) ?: $value;
+        $value = preg_replace('/^((?:第\d+回)?)H(?:C)?(?=プロボウリングマスターズ)/u', '$1HANDACUP', $value) ?: $value;
         $value = str_replace(['JPBA', '公益社団法人日本プロボウリング協会'], '', $value);
         $value = str_replace('グリコ17アイス', 'グリコセブンティーンアイス', $value);
         $value = preg_replace('/^創立50周年記念(?:大会|レギュラーの部)$/u', '創立50周年記念', $value) ?: $value;
