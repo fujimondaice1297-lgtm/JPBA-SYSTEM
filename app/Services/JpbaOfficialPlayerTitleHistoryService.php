@@ -145,7 +145,7 @@ class JpbaOfficialPlayerTitleHistoryService
                 }
 
                 $titleName = $this->cleanText($row[$indexes['大会名']] ?? '');
-                if ($titleName === '' || ! $this->isTitleEvent($titleName)) {
+                if ($titleName === '' || ! $this->isTitleEvent($titleName, $bowler)) {
                     continue;
                 }
 
@@ -266,7 +266,7 @@ class JpbaOfficialPlayerTitleHistoryService
         }, $titleName) ?: $titleName;
     }
 
-    private function isTitleEvent(string $titleName): bool
+    private function isTitleEvent(string $titleName, ?ProBowler $bowler = null): bool
     {
         if ($this->titleCategory($titleName) === 'season_trial') {
             return true;
@@ -284,9 +284,14 @@ class JpbaOfficialPlayerTitleHistoryService
             return false;
         }
 
-        if (preg_match('/^第(\d+)回全日本ミックス(?:ダブルス)?$/u', $normalized, $matches) === 1
-            && (int) $matches[1] < 30) {
-            return false;
+        if (preg_match('/^第(\d+)回全日本ミックス(?:ダブルス)?$/u', $normalized, $matches) === 1) {
+            $licenseNo = $bowler === null
+                ? ''
+                : $this->normalizeLicense((string) $bowler->license_no);
+
+            if ((int) $matches[1] < 30 || str_starts_with($licenseNo, 'F')) {
+                return false;
+            }
         }
 
         return preg_match('/(?:^順位(?:決定)?戦$|^記録会$|選抜|予選|出場優先順位(?:決定)?戦|(?:上|下)半期(?:男子|女子)?順位(?:決定)?戦|オールエベンツ|ALLEVENTS)/u', $normalized) !== 1;

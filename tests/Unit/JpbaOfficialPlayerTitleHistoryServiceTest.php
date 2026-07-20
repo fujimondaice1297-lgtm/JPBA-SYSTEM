@@ -171,6 +171,8 @@ class JpbaOfficialPlayerTitleHistoryServiceTest extends TestCase
     {
         $method = new ReflectionMethod(JpbaOfficialPlayerTitleHistoryService::class, 'isTitleEvent');
         $service = new JpbaOfficialPlayerTitleHistoryService;
+        $maleBowler = (new ProBowler)->forceFill(['license_no' => 'M00001190']);
+        $femaleBowler = (new ProBowler)->forceFill(['license_no' => 'F00000268']);
 
         $this->assertFalse($method->invoke($service, "East Open Tournament \u{9078}\u{629C}"));
         $this->assertFalse($method->invoke($service, "Official \u{4E88}\u{9078}\u{4F1A}"));
@@ -198,6 +200,8 @@ class JpbaOfficialPlayerTitleHistoryServiceTest extends TestCase
         $this->assertTrue($method->invoke($service, 'R1 GCB JPBA決勝大会R'));
         $this->assertTrue($method->invoke($service, 'ROUND1 GRAND CHAMPIONSHIP BOWLING 2025 JPBA FINAL'));
         $this->assertTrue($method->invoke($service, '第30回全日本ミックスダブルス'));
+        $this->assertTrue($method->invoke($service, '第30回全日本ミックスダブルス', $maleBowler));
+        $this->assertFalse($method->invoke($service, '第32回全日本ミックスダブルス', $femaleBowler));
         $this->assertTrue($method->invoke($service, 'MK Charity Cup'));
     }
 }
