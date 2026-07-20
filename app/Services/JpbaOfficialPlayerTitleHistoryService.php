@@ -225,6 +225,9 @@ class JpbaOfficialPlayerTitleHistoryService
         if ($value === '第30回千葉オープン女子') {
             $value = 'コカコーラ';
         }
+        if (str_contains($value, '全卸連プレゼンツ') && str_contains($value, 'SSS')) {
+            $value = '全卸連プレゼンツSSS';
+        }
 
         return trim($value);
     }

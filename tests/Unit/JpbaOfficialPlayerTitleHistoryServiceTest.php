@@ -121,6 +121,10 @@ class JpbaOfficialPlayerTitleHistoryServiceTest extends TestCase
             $service->titleFingerprint('コカ・コーラカップ2023')
         );
         $this->assertSame(
+            $service->titleFingerprint('全卸連プレゼンツ JPBA☆SSSカップ2023(B公認)'),
+            $service->titleFingerprint('全卸連プレゼンツ JPBA☆SSSカップ2023 男子')
+        );
+        $this->assertSame(
             $service->titleFingerprint('Ｈ.Ｃ 第47回全日本女子プロ'),
             $service->titleFingerprint('HANDA CUP 第47回全日本女子プロボウリング選手権大会')
         );
