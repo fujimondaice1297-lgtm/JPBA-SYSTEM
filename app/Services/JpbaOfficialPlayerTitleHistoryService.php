@@ -290,11 +290,16 @@ class JpbaOfficialPlayerTitleHistoryService
             return false;
         }
 
-        if (preg_match('/^第(\d+)回(?:全日本)?ミックス(?:ダブルス)?$/u', $normalized, $matches) === 1) {
-            $licenseNo = $bowler === null
-                ? ''
-                : $this->normalizeLicense((string) $bowler->license_no);
+        $licenseNo = $bowler === null
+            ? ''
+            : $this->normalizeLicense((string) $bowler->license_no);
 
+        if (in_array($normalized, ['ミックス', 'ミックスダブルス', '全日本ミックス', '全日本ミックスダブルス'], true)
+            && str_starts_with($licenseNo, 'F')) {
+            return false;
+        }
+
+        if (preg_match('/^第(\d+)回(?:全日本)?ミックス(?:ダブルス)?$/u', $normalized, $matches) === 1) {
             if ((int) $matches[1] < 30 || str_starts_with($licenseNo, 'F')) {
                 return false;
             }

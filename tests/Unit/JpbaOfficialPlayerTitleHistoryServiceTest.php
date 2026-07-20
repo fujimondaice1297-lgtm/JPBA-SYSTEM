@@ -198,6 +198,8 @@ class JpbaOfficialPlayerTitleHistoryServiceTest extends TestCase
         $this->assertFalse($method->invoke($service, '第28回全日本ﾐｯｸｽﾀﾞﾌﾞﾙｽ'));
         $this->assertFalse($method->invoke($service, '第29回全日本ﾐｯｸｽﾀﾞﾌﾞﾙｽ'));
         $this->assertFalse($method->invoke($service, '第18回ミックスダブルス'));
+        $this->assertFalse($method->invoke($service, 'ミックスダブルス', $femaleBowler));
+        $this->assertTrue($method->invoke($service, 'ミックスダブルス', $maleBowler));
         $this->assertFalse($method->invoke($service, '順位決定戦'));
         $this->assertFalse($method->invoke($service, '記録会'));
         $this->assertFalse($method->invoke($service, '2021年度 下半期女子トーナメント出場優先順位決定戦'));
