@@ -89,6 +89,10 @@ class JpbaOfficialPlayerTitleHistoryServiceTest extends TestCase
             $service->titleFingerprint('第7回 HANDACUP・プロボウリングマスターズ')
         );
         $this->assertSame(
+            $service->titleFingerprint('第8回プロボウリングマスターズ'),
+            $service->titleFingerprint('第8回HANDACUPプロボウリングマスターズ')
+        );
+        $this->assertSame(
             $service->titleFingerprint('JPBA創立50周年記念レギュラーの部'),
             $service->titleFingerprint('公益社団法人日本プロボウリング協会創立50周年記念大会')
         );
@@ -214,6 +218,7 @@ class JpbaOfficialPlayerTitleHistoryServiceTest extends TestCase
         $this->assertTrue($method->invoke($service, 'ミックスダブルス', $maleBowler));
         $this->assertFalse($method->invoke($service, '順位決定戦'));
         $this->assertFalse($method->invoke($service, '記録会'));
+        $this->assertFalse($method->invoke($service, '年度記録'));
         $this->assertFalse($method->invoke($service, '2021年度 下半期女子トーナメント出場優先順位決定戦'));
         $this->assertFalse($method->invoke($service, '2022年度 下半期女子トーナメント出場優先順位戦'));
         $this->assertFalse($method->invoke($service, '2016下半期女子順位戦'));

@@ -208,6 +208,9 @@ class JpbaOfficialPlayerTitleHistoryService
         ) ?: $value;
         $value = preg_replace('/^(?:R1|ROUND1)\s*GCS?B/u', 'ROUND1 GRAND CHAMPIONSHIP BOWLING', $value) ?: $value;
         $value = preg_replace('/^((?:第\d+回)?)H(?:C)?(?=プロボウリングマスターズ)/u', '$1HANDACUP', $value) ?: $value;
+        if (str_contains($value, 'プロボウリングマスターズ')) {
+            $value = str_replace(['HANDA CUP', 'HANDACUP'], '', $value);
+        }
         $value = str_replace(['JPBA', '公益社団法人日本プロボウリング協会'], '', $value);
         $value = str_replace('グリコ17アイス', 'グリコセブンティーンアイス', $value);
         $value = preg_replace('/^創立50周年記念(?:大会|レギュラーの部)$/u', '創立50周年記念', $value) ?: $value;
@@ -318,7 +321,7 @@ class JpbaOfficialPlayerTitleHistoryService
             }
         }
 
-        return preg_match('/(?:^順位(?:決定)?戦$|^記録会$|選抜|予選|出場優先順位(?:決定)?戦|(?:上|下)半期(?:男子|女子)?順位(?:決定)?戦|オールエベンツ|ALLEVENTS)/u', $normalized) !== 1;
+        return preg_match('/(?:^順位(?:決定)?戦$|^記録会$|^年度記録$|選抜|予選|出場優先順位(?:決定)?戦|(?:上|下)半期(?:男子|女子)?順位(?:決定)?戦|オールエベンツ|ALLEVENTS)/u', $normalized) !== 1;
     }
 
     private function normalizeTitleText(string $titleName): string
