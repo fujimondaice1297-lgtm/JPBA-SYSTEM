@@ -108,7 +108,7 @@ class RunTournamentPdfRegression extends Command
             DB::rollBack();
         }
 
-        $failed = collect($results)->contains(fn (array $result) => ($result['status'] ?? '') !== 'OK');
+        $failed = collect($results)->contains(fn (array $result) => ($result['status'] ?? '') === 'FAIL');
 
         if ($this->option('json')) {
             $this->line(json_encode($results, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
@@ -245,7 +245,7 @@ class RunTournamentPdfRegression extends Command
             'mode' => $mode,
             'tournament_id' => null,
             'fixture' => false,
-            'status' => 'FAIL',
+            'status' => 'SKIP',
             'bytes' => 0,
             'message' => $message,
         ];

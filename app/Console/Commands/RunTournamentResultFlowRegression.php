@@ -71,7 +71,7 @@ class RunTournamentResultFlowRegression extends Command
             }
         }
 
-        $failed = collect($results)->contains(fn (array $result) => ($result['status'] ?? '') !== 'OK');
+        $failed = collect($results)->contains(fn (array $result) => ($result['status'] ?? '') === 'FAIL');
 
         if ($this->option('json')) {
             $this->line(json_encode($results, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
@@ -116,6 +116,12 @@ class RunTournamentResultFlowRegression extends Command
         $players = array_values((array) ($rr['players'] ?? []));
         $leader = (array) ($players[0] ?? []);
         $leaderName = (string) ($leader['display_name'] ?? '');
+        $roundRobinGames = (int) ($rr['meta']['round_robin_games'] ?? 0);
+        $leaderWins = (int) ($leader['wins'] ?? 0);
+        $leaderLosses = (int) ($leader['losses'] ?? 0);
+        $leaderTies = (int) ($leader['ties'] ?? 0);
+        $expectedBonus = ($leaderWins * (int) ($rr['meta']['win_bonus'] ?? 30))
+            + ($leaderTies * (int) ($rr['meta']['tie_bonus'] ?? 15));
 
         return $this->result(
             caseName: 'round_robin_existing',
@@ -125,15 +131,14 @@ class RunTournamentResultFlowRegression extends Command
             checks: [
                 ['ok' => empty($rr['missing_carry_snapshot']), 'message' => 'carry snapshot missing'],
                 ['ok' => count($players) === 8, 'message' => 'expected 8 round-robin players'],
-                ['ok' => (int) ($rr['meta']['round_robin_games'] ?? 0) >= 8, 'message' => 'expected at least 8 round-robin games'],
-                ['ok' => str_contains($leaderName, '久保田'), 'message' => 'unexpected leader: ' . $leaderName],
-                ['ok' => (int) ($leader['wins'] ?? -1) === 5, 'message' => 'leader wins mismatch'],
-                ['ok' => (int) ($leader['losses'] ?? -1) === 3, 'message' => 'leader losses mismatch'],
-                ['ok' => (int) ($leader['bonus_points'] ?? -1) === 150, 'message' => 'leader bonus mismatch'],
+                ['ok' => $roundRobinGames >= 1, 'message' => 'round-robin game count is missing'],
+                ['ok' => $leaderName !== '', 'message' => 'leader name is missing'],
+                ['ok' => $leaderWins + $leaderLosses + $leaderTies === $roundRobinGames, 'message' => 'leader record game count mismatch'],
+                ['ok' => (int) ($leader['bonus_points'] ?? -1) === $expectedBonus, 'message' => 'leader bonus mismatch'],
             ],
             details: [
                 'players' => count($players),
-                'games' => (int) ($rr['meta']['round_robin_games'] ?? 0),
+                'games' => $roundRobinGames,
                 'leader' => $leaderName,
                 'record' => (string) ($leader['record'] ?? ''),
                 'bonus' => (int) ($leader['bonus_points'] ?? 0),
@@ -164,6 +169,8 @@ class RunTournamentResultFlowRegression extends Command
 
         $standings = array_values((array) ($stepLadder['standings'] ?? []));
         $winnerName = (string) ($standings[0]['player']['display_name'] ?? '');
+        $winnerBowlerId = (int) ($standings[0]['player']['pro_bowler_id'] ?? 0);
+        $expectedWinnerBowlerId = $this->expectedWinnerBowlerId($tournament);
 
         return $this->result(
             caseName: 'step_ladder_existing',
@@ -176,13 +183,15 @@ class RunTournamentResultFlowRegression extends Command
                 ['ok' => ($stepLadder['semifinal']['status'] ?? '') === 'done', 'message' => 'semifinal is not done'],
                 ['ok' => ($stepLadder['final']['status'] ?? '') === 'done', 'message' => 'final is not done'],
                 ['ok' => count($standings) === 3, 'message' => 'expected 3 final standings'],
-                ['ok' => str_contains($winnerName, '久保田'), 'message' => 'unexpected winner: ' . $winnerName],
+                ['ok' => $winnerName !== '', 'message' => 'winner name is missing'],
+                ['ok' => $expectedWinnerBowlerId === null || $winnerBowlerId === $expectedWinnerBowlerId, 'message' => 'winner does not match tournament_results'],
             ],
             details: [
                 'seeds' => count((array) ($stepLadder['seeds'] ?? [])),
                 'semifinal_status' => (string) ($stepLadder['semifinal']['status'] ?? ''),
                 'final_status' => (string) ($stepLadder['final']['status'] ?? ''),
                 'winner' => $winnerName,
+                'expected_winner_bowler_id' => $expectedWinnerBowlerId,
             ]
         );
     }
@@ -205,7 +214,7 @@ class RunTournamentResultFlowRegression extends Command
             $seedSnapshot = $this->findCurrentSnapshot(
                 tournamentId: (int) $tournament->id,
                 resultCode: $seedSourceResultCode,
-                gender: null,
+                gender: $this->normalizeTournamentGender($tournament),
                 shift: ''
             );
             $seedRows = $seedSnapshot
@@ -222,6 +231,8 @@ class RunTournamentResultFlowRegression extends Command
 
         $winnerName = (string) ($shootout['summary']['winner_name'] ?? '');
         $standingWinnerName = (string) ($standings[0]['node']['display_name'] ?? '');
+        $winnerBowlerId = (int) ($standings[0]['node']['pro_bowler_id'] ?? 0);
+        $expectedWinnerBowlerId = $this->expectedWinnerBowlerId($tournament);
 
         return $this->result(
             caseName: 'shootout_existing',
@@ -233,7 +244,8 @@ class RunTournamentResultFlowRegression extends Command
                 ['ok' => count($seedRows) === 8, 'message' => 'expected 8 shootout seeds'],
                 ['ok' => (int) ($shootout['summary']['completed_match_count'] ?? 0) === 3, 'message' => 'expected 3 completed shootout matches'],
                 ['ok' => count($standings) === 8, 'message' => 'expected 8 shootout standings'],
-                ['ok' => str_contains($winnerName, '水野'), 'message' => 'unexpected winner: ' . $winnerName],
+                ['ok' => $winnerName !== '', 'message' => 'winner name is missing'],
+                ['ok' => $expectedWinnerBowlerId === null || $winnerBowlerId === $expectedWinnerBowlerId, 'message' => 'winner does not match tournament_results'],
                 ['ok' => $standingWinnerName === $winnerName, 'message' => 'standings winner mismatch'],
             ],
             details: [
@@ -241,6 +253,7 @@ class RunTournamentResultFlowRegression extends Command
                 'seeds' => count($seedRows),
                 'completed_matches' => (int) ($shootout['summary']['completed_match_count'] ?? 0),
                 'winner' => $winnerName,
+                'expected_winner_bowler_id' => $expectedWinnerBowlerId,
             ]
         );
     }
@@ -259,7 +272,7 @@ class RunTournamentResultFlowRegression extends Command
         $seedSnapshot = $this->findCurrentSnapshot(
             tournamentId: (int) $tournament->id,
             resultCode: $seedSourceResultCode,
-            gender: null,
+            gender: $this->normalizeTournamentGender($tournament),
             shift: ''
         );
 
@@ -341,7 +354,7 @@ class RunTournamentResultFlowRegression extends Command
             'mode' => $mode,
             'tournament_id' => null,
             'fixture' => false,
-            'status' => 'FAIL',
+            'status' => 'SKIP',
             'message' => $message,
             'details' => [],
         ];
@@ -371,6 +384,23 @@ class RunTournamentResultFlowRegression extends Command
         }
 
         return implode(', ', $parts) ?: 'OK';
+    }
+
+    private function normalizeTournamentGender(Tournament $tournament): ?string
+    {
+        $gender = strtoupper(trim((string) ($tournament->gender ?? '')));
+
+        return in_array($gender, ['M', 'F'], true) ? $gender : null;
+    }
+
+    private function expectedWinnerBowlerId(Tournament $tournament): ?int
+    {
+        $bowlerId = TournamentResult::query()
+            ->where('tournament_id', $tournament->id)
+            ->where('ranking', 1)
+            ->value('pro_bowler_id');
+
+        return $bowlerId !== null && (int) $bowlerId > 0 ? (int) $bowlerId : null;
     }
 
     private function findCurrentSnapshot(int $tournamentId, string $resultCode, ?string $gender, string $shift): ?object

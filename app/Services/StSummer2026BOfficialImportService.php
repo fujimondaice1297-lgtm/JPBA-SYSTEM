@@ -18,7 +18,8 @@ class StSummer2026BOfficialImportService
     public function __construct(
         private readonly ScoreImportOcrEngineBoundaryService $ocrBoundary,
         private readonly ScoreImportCommitService $commitService,
-        private readonly ShootoutService $shootoutService
+        private readonly ShootoutService $shootoutService,
+        private readonly TournamentTitleSyncService $titleSyncService,
     ) {
     }
 
@@ -51,6 +52,11 @@ class StSummer2026BOfficialImportService
         $data = $this->loadData($sourceDir);
         $this->validateData($data);
 
+        return DB::transaction(fn (): array => $this->persistImport($data));
+    }
+
+    private function persistImport(array $data): array
+    {
         $now = now();
         $tournament = $this->upsertTournament();
 
@@ -76,6 +82,7 @@ class StSummer2026BOfficialImportService
         $shootoutScoreCount = $this->insertShootoutGameScores($tournament, $data['semifinal'], $now);
         $shootoutSummary = $this->validateShootout($data);
         $resultCount = $this->insertTournamentResults($tournament, $data, $now);
+        $titleSync = $this->titleSyncService->sync($tournament);
 
         return [
             'tournament_id' => (int) $tournament->id,
@@ -92,6 +99,7 @@ class StSummer2026BOfficialImportService
             'snapshots' => $snapshots,
             'shootout' => $shootoutSummary,
             'tournament_result_count' => $resultCount,
+            'title_sync' => $titleSync,
         ];
     }
 

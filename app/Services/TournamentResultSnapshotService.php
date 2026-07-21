@@ -17,6 +17,11 @@ class TournamentResultSnapshotService
 {
     private array $proBowlerResolveCache = [];
 
+    public function __construct(
+        private readonly TournamentTitleSyncService $titleSyncService,
+    ) {
+    }
+
     /**
      * トータルピン方式の正式成績スナップショットを作成する。
      *
@@ -727,12 +732,18 @@ class TournamentResultSnapshotService
 
     private function syncFinalSnapshotToTournamentResults(TournamentResultSnapshot $snapshot): bool
     {
-        if ($snapshot->gender !== null || $snapshot->shift !== null) {
+        if (trim((string) ($snapshot->shift ?? '')) !== '') {
             return false;
         }
 
         $tournament = Tournament::query()->find($snapshot->tournament_id);
         if (!$tournament) {
+            return false;
+        }
+
+        $snapshotGender = strtoupper(trim((string) ($snapshot->gender ?? '')));
+        $tournamentGender = strtoupper(trim((string) ($tournament->gender ?? '')));
+        if ($snapshotGender !== '' && $snapshotGender !== $tournamentGender) {
             return false;
         }
 
@@ -800,6 +811,8 @@ class TournamentResultSnapshotService
                 'prize_money' => $prizeMoney,
             ])->save();
         }
+
+        $this->titleSyncService->sync($tournament);
 
         return true;
     }

@@ -9,7 +9,6 @@ use App\Models\TournamentResultSnapshot;
 use App\Models\TournamentMatchScoreSheet;
 use App\Models\PointDistribution;
 use App\Models\PrizeDistribution;
-use App\Models\ProBowlerTitle;
 use App\Services\ShootoutService;
 use App\Services\ShootoutBracketImageService;
 use App\Services\SingleEliminationService;
@@ -17,6 +16,7 @@ use App\Services\SingleEliminationBracketImageService;
 use App\Services\StepLadderService;
 use App\Services\StepLadderBracketImageService;
 use App\Services\MatchScoreSheetImageService;
+use App\Services\TournamentTitleSyncService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -663,78 +663,29 @@ class TournamentResultController extends Controller
         return back()->with('success','賞金とポイントを反映しました。');
     }
 
-    public function syncTitles(Request $request, Tournament $tournament)
+    public function syncTitles(
+        Request $request,
+        Tournament $tournament,
+        TournamentTitleSyncService $titleSyncService,
+    )
     {
-        $year = $request->input('year');
+        $year = $request->filled('year') ? (int) $request->input('year') : null;
+        $summary = $titleSyncService->sync($tournament, $year);
 
-        // 順位列は存在するものを自動検出して 1 位だけ拾う
-        $winners = TournamentResult::query()
-            ->where('tournament_id', $tournament->id)
-            ->where(function ($q) {
-                foreach (['ranking','rank','position','placing','result_rank','order_no'] as $col) {
-                    if (Schema::hasColumn('tournament_results', $col)) {
-                        $q->orWhere($col, 1);
-                    }
-                }
-            })
-            ->when($year, function ($q) use ($year) {
-                if (Schema::hasColumn('tournament_results','ranking_year')) {
-                    $q->where('ranking_year', $year);
-                } elseif (Schema::hasColumn('tournament_results','year')) {
-                    $q->where('year', $year);
-                } elseif (Schema::hasColumn('tournament_results','date')) {
-                    $q->whereYear('date', $year);
-                }
-            })
-            ->get();
-
-        $created = 0;
-        $skipped = 0;
-        $missing = 0;
-        $affectedBowlerIds = [];
-
-        $isSeasonTrial = (string) ($tournament->title_category ?? '') === 'season_trial'
-            || str_contains((string) ($tournament->name ?? ''), 'シーズントライアル');
-
-        foreach ($winners as $r) {
-            // 成績→選手IDの特定（license_no 経由も許容）
-            $bowlerId = $r->pro_bowler_id
-                ?? ProBowler::where('license_no', $r->license_no ?? $r->pro_bowler_license_no ?? null)->value('id');
-
-            if (!$bowlerId) {
-                $missing++;
-                continue;
-            }
-
-            $payload = [
-                'pro_bowler_id'   => $bowlerId,
-                'tournament_id'   => $tournament->id,
-                'title_name'      => $tournament->name,
-                'tournament_name' => $tournament->name,
-                'year'            => $r->ranking_year
-                    ?? ($r->year ?? (optional($r->date)->year) ?? $tournament->year),
-                'won_date'        => $r->date ?? null,
-                // season_trial はタイトル履歴には残すが、公式タイトル数には加算しない
-                'source'          => $isSeasonTrial ? 'sync_from_results_season_trial' : 'sync_from_results',
-            ];
-
-            $unique = [
-                'pro_bowler_id' => $payload['pro_bowler_id'],
-                'tournament_id' => $payload['tournament_id'],
-            ];
-
-            $title = ProBowlerTitle::firstOrCreate($unique, $payload);
-            $title->wasRecentlyCreated ? $created++ : $skipped++;
-            $affectedBowlerIds[] = (int) $bowlerId;
+        if (! $summary['eligible']) {
+            return back()->with('info', 'この大会は予選・選抜・順位決定戦・承認イベント等のため、公式タイトルへ反映しません。');
         }
 
-        $recalculated = $this->refreshBowlerTitleCounters($affectedBowlerIds);
-
-        $suffix = $isSeasonTrial
-            ? '（シーズントライアルは履歴登録のみ。公式タイトル数には加算していません）'
-            : '';
-
-        return back()->with('success', "タイトル反映：新規 {$created}／既存 {$skipped}／選手未特定 {$missing}／タイトル数再計算 {$recalculated} {$suffix}");
+        return back()->with('success', sprintf(
+            'タイトル反映：新規 %d／既存明細へ接続 %d／接続済み %d／旧優勝者から削除 %d／選手未特定 %d／既存候補重複 %d／タイトル数再計算 %d',
+            $summary['created'],
+            $summary['linked_existing'],
+            $summary['already_linked'],
+            $summary['removed_stale'],
+            $summary['missing_bowler'],
+            $summary['ambiguous_existing'],
+            $summary['recalculated'],
+        ));
     }
 
     public function rankings(Request $request)
@@ -1794,79 +1745,6 @@ private function attachResultPdfDisplayFields($results): void
     private function sameAffiliationToken(string $a, string $b): bool
     {
         return $this->normalizeAffiliationToken($a) === $this->normalizeAffiliationToken($b);
-    }
-
-    private function refreshBowlerTitleCounters(array $bowlerIds): int
-    {
-        $bowlerIds = collect($bowlerIds)
-            ->filter()
-            ->map(fn ($id) => (int) $id)
-            ->unique()
-            ->values();
-
-        if ($bowlerIds->isEmpty()) {
-            return 0;
-        }
-
-        $counted = 0;
-
-        foreach ($bowlerIds as $bowlerId) {
-            $bowler = ProBowler::find($bowlerId);
-            if (! $bowler) {
-                continue;
-            }
-
-            $officialTitleCount = ProBowlerTitle::query()
-                ->leftJoin('tournaments', 'tournaments.id', '=', 'pro_bowler_titles.tournament_id')
-                ->where('pro_bowler_titles.pro_bowler_id', $bowlerId)
-                ->where(function ($q) {
-                    $q->whereNull('tournaments.title_category')
-                        ->orWhere('tournaments.title_category', '<>', 'season_trial');
-                })
-                ->where('pro_bowler_titles.title_name', 'not like', '%シーズントライアル%')
-                ->where(function ($q) {
-                    $q->whereNull('pro_bowler_titles.tournament_name')
-                        ->orWhere('pro_bowler_titles.tournament_name', 'not like', '%シーズントライアル%');
-                })
-                ->where(function ($q) {
-                    $q->whereNull('pro_bowler_titles.source')
-                        ->orWhere('pro_bowler_titles.source', '<>', 'sync_from_results_season_trial');
-                })
-                ->count();
-
-            $seasonTrialTitleCount = ProBowlerTitle::query()
-                ->leftJoin('tournaments', 'tournaments.id', '=', 'pro_bowler_titles.tournament_id')
-                ->where('pro_bowler_titles.pro_bowler_id', $bowlerId)
-                ->where(function ($q) {
-                    $q->where('tournaments.title_category', 'season_trial')
-                        ->orWhere('pro_bowler_titles.title_name', 'like', '%シーズントライアル%')
-                        ->orWhere('pro_bowler_titles.tournament_name', 'like', '%シーズントライアル%')
-                        ->orWhere('pro_bowler_titles.source', 'sync_from_results_season_trial');
-                })
-                ->count();
-
-            $officialAggregate = max(
-                $officialTitleCount,
-                (int) ($bowler->official_win_count ?? 0),
-                (int) ($bowler->titles_count ?? 0)
-            );
-            $seasonTrialAggregate = max(
-                $seasonTrialTitleCount,
-                (int) ($bowler->season_trial_win_count ?? 0)
-            );
-
-            $bowler->forceFill([
-                'official_win_count' => $officialAggregate,
-                'titles_count' => $officialAggregate,
-                'season_trial_win_count' => $seasonTrialAggregate,
-                'has_title' => $officialAggregate > 0,
-            ]);
-            $bowler->save();
-
-            $counted++;
-        }
-
-        return $counted;
     }
 
     private function attachBowlerPeriodLabels($results): void
