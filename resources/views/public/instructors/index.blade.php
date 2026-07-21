@@ -175,10 +175,12 @@
   $summary = $instructorConfig['summary'] ?? [];
   $featureLinks = $instructorConfig['feature_links'] ?? [];
   $licenseLinks = $instructorConfig['license_links'] ?? [];
-  $displayCode = fn ($instructor) => $instructor->license_no
+  $displayCode = fn ($instructor) => $instructor->instructor_category === 'certified'
+      ? '-'
+      : ($instructor->license_no
       ?? $instructor->cert_no
       ?? $instructor->legacy_instructor_license_no
-      ?? '-';
+      ?? '-');
   $sexLabel = fn ($instructor) => $instructor->sex === null
       ? '-'
       : ($instructor->sex ? '男性' : '女性');

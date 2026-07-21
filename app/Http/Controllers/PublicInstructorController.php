@@ -39,8 +39,7 @@ class PublicInstructorController extends Controller
             $query->where(function ($q) use ($keyword) {
                 $like = "%{$keyword}%";
                 $q->where('license_no', 'like', $like)
-                    ->orWhere('legacy_instructor_license_no', 'like', $like)
-                    ->orWhere('cert_no', 'like', $like);
+                    ->orWhere('legacy_instructor_license_no', 'like', $like);
             });
         }
 

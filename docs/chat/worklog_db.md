@@ -8373,3 +8373,61 @@ User::where('email','domaine-d@i.softbank.jp')->exists(); // true
 
 ### 詳細
 - `docs/operations/forward_test_reset_execution_20260709.md` に記録した。
+
+## 2026-07-21 認定インストラクター再投入と一般公開ID保護
+
+### 目的
+- フォワードテスト用リセット後に未投入だった2026年認定インストラクター情報を復元する。
+- CSV取込前に現行JPBA公式名簿と照合し、件数・氏名・認定級・公開範囲の整合を確認する。
+- CSV内部識別子を一般公開画面へ出さず、正式なプロライセンス番号だけを従来どおり公開する。
+
+### 取込元と事前監査
+- 取込元: `OLD_JPBA/csv/AuthInstructor.csv`
+- CSV行数: 2,952件
+- 欠損行: 0件
+- `#ID`重複: 0組
+- 地区変換漏れ: 0件
+- 有効: 872件
+- 有効かつ公開: 828件（1級318名、2級510名）
+- 2026-07-21に現行公式ページ `https://www.jpba1.jp/instructor/ins_12.html` を取得し、有効かつ公開の氏名・級別一覧を照合した。
+- 公式ページも1級318名、2級510名、合計828名で、CSVのみ0件・公式のみ0件だった。
+
+### 安全な投入
+- 実際の `AuthInstructorImportController` を外側トランザクション内で実行し、取込後検証のあと全変更をロールバックする試走を先に行った。
+- 試走後にDBが `instructor_registry=1,343` / `auth_instructor_csv=0` へ戻っていることを確認した。
+- 同じ処理を確定モードで一度だけ実行し、2026年度更新として投入した。
+
+### 確定後DB
+- `instructor_registry`: 4,295件
+- `auth_instructor_csv`: 2,952件（source_keyユニーク2,952件）
+- current/active認定: 867件
+- 一般公開認定: 823件
+- 認定履歴/非active: 2,085件
+- current/active全体: 1,791件
+- 一般公開全体: 1,747件
+- 一般公開内訳: プロボウラー905件、プロ・インストラクター19件、認定823件
+- プロ資格とのcurrent重複: 0件
+- source_key重複: 0組
+- 同一CSV再取込予測: 新規0件、更新2,952件、未掲載失効0件
+
+### 公開画面修正
+- `PublicInstructorController` の一般公開ライセンス検索から認定CSVの `cert_no` を除外した。
+- `public/instructors/index.blade.php` では `instructor_category=certified` の番号欄を `-` とし、内部 `#ID` の `X...` を公開しないようにした。
+- プロボウラー/プロ・インストラクターの正式ライセンス番号表示と検索は維持した。
+- 公開説明文に出ていた内部DB名 `instructor_registry` を利用者向け文面へ変更した。
+- 内部ID非表示の回帰テスト `PublicInstructorPrivacyTest` を追加した。
+
+### 検証
+- 実ブラウザ `/instructor`: 1,747件、内訳905/19/823でDB一致。
+- 通常一覧1ページ目: 内部 `X...` 表示0件。
+- `license_no=X00002077`: 0件。
+- 正式プロライセンス検索: 1件かつ番号表示を確認。
+- PC幅と390px幅: 横方向の表示崩れなし。
+- ブラウザ警告/エラー: 0件。
+- DB不要の単体・公開画面テスト: 13件、96アサーション、全件OK。
+- `php artisan view:cache`: OK。
+- `php artisan public:parity-audit`: 公開12ページすべてHTTP 200/OK、欠落アセット0。
+- 全テストでは既存認証系24件がPCのPHPに `pdo_sqlite` が無いためDB接続前に失敗。今回対象のテストとDB不要テストはすべて通過した。
+
+### 次に行う作業
+- 2026年1月以降の大会、参加者、成績、ポイント/賞金/タイトルを公式資料と照合しながら再投入する。
