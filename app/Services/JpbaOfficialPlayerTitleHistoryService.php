@@ -201,6 +201,11 @@ class JpbaOfficialPlayerTitleHistoryService
             'HANDA CUP 第47回全日本女子プロボウリング選手権大会',
             $value
         ) ?: $value;
+        $value = preg_replace(
+            '/^H\.?C(?=第\d+回全日本女子プロ(?:ボウリング)?選手権大会)/u',
+            'HANDACUP',
+            $value
+        ) ?: $value;
         $value = preg_replace('/^(?:R1|ROUND1)\s*GCS?B/u', 'ROUND1 GRAND CHAMPIONSHIP BOWLING', $value) ?: $value;
         $value = preg_replace('/^((?:第\d+回)?)H(?:C)?(?=プロボウリングマスターズ)/u', '$1HANDACUP', $value) ?: $value;
         $value = str_replace(['JPBA', '公益社団法人日本プロボウリング協会'], '', $value);
@@ -213,6 +218,11 @@ class JpbaOfficialPlayerTitleHistoryService
         $value = str_replace('レディース新人戦', '女子新人戦', $value);
         $value = preg_replace('/(?:19|20)\d{2}/u', '', $value) ?: $value;
         $value = str_replace(['プロボウリング', 'ボウリングトーナメント', 'ボウリング', 'カップ'], '', $value);
+        $value = preg_replace(
+            '/^(HANDACUP第\d+回全日本女子)プロ(?=選手権大会$)/u',
+            '$1',
+            $value
+        ) ?: $value;
         if (str_contains($value, 'ジャパンオープン')) {
             $value = str_replace(['STORM', '選手権大会', '選手権'], '', $value);
         }
