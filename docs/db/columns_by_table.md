@@ -1,7 +1,7 @@
 # Columns by table (generated)
 
 - Source: `docs/db/columns_public.csv`
-- Generated: 2026-07-22 00:12:12
+- Generated: 2026-07-22 08:30:05
 
 > ⚠️ このファイルは自動生成です。手で編集しないでください。
 
@@ -1861,7 +1861,7 @@
 | 12 | pro_bowler_id | bigint | YES |
 | 13 | license_no | character varying | YES |
 
-## venues (12 columns)
+## venues (19 columns)
 
 | # | column | type | nullable |
 |---:|---|---|---|
@@ -1877,3 +1877,10 @@
 | 10 | fax | character varying | YES |
 | 11 | website_url | character varying | YES |
 | 12 | note | text | YES |
+| 13 | canonical_key | character varying | YES |
+| 14 | aliases | json | YES |
+| 15 | is_active | boolean | NO |
+| 16 | source_url | character varying | YES |
+| 17 | source_checked_at | date | YES |
+| 18 | first_hosted_year | smallint | YES |
+| 19 | last_hosted_year | smallint | YES |

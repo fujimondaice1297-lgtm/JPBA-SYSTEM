@@ -1332,3 +1332,10 @@ venues,9,tel,character varying,YES
 venues,10,fax,character varying,YES
 venues,11,website_url,character varying,YES
 venues,12,note,text,YES
+venues,13,canonical_key,character varying,YES
+venues,14,aliases,json,YES
+venues,15,is_active,boolean,NO
+venues,16,source_url,character varying,YES
+venues,17,source_checked_at,date,YES
+venues,18,first_hosted_year,smallint,YES
+venues,19,last_hosted_year,smallint,YES

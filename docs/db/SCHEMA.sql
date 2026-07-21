@@ -5387,7 +5387,14 @@ CREATE TABLE public.venues (
     tel character varying(50),
     fax character varying(50),
     website_url character varying(255),
-    note text
+    note text,
+    canonical_key character varying(255),
+    aliases json,
+    is_active boolean DEFAULT true NOT NULL,
+    source_url character varying(255),
+    source_checked_at date,
+    first_hosted_year smallint,
+    last_hosted_year smallint
 );
 
 
@@ -7283,6 +7290,14 @@ ALTER TABLE ONLY public.users
 
 
 --
+-- Name: venues venues_canonical_key_unique; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.venues
+    ADD CONSTRAINT venues_canonical_key_unique UNIQUE (canonical_key);
+
+
+--
 -- Name: venues venues_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -8240,6 +8255,20 @@ CREATE INDEX users_pro_bowler_id_idx ON public.users USING btree (pro_bowler_id)
 --
 
 CREATE INDEX users_pro_bowler_license_no_index ON public.users USING btree (pro_bowler_license_no);
+
+
+--
+-- Name: venues_is_active_index; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX venues_is_active_index ON public.venues USING btree (is_active);
+
+
+--
+-- Name: venues_last_hosted_year_index; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX venues_last_hosted_year_index ON public.venues USING btree (last_hosted_year);
 
 
 --

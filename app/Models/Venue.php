@@ -9,13 +9,30 @@ class Venue extends Model
     protected $table = 'venues';
 
     protected $fillable = [
-        'name',          // 会場名
-        'address',       // 住所
-        'postal_code',   // 郵便番号（例: 101-0047）
-        'tel',           // 電話
-        'fax',           // FAX
-        'website_url',   // 公式サイトURL
-        'note',          // 会場データ（旧: 備考）
+        'name',
+        'canonical_key',
+        'aliases',
+        'address',
+        'postal_code',
+        'city',
+        'prefecture',
+        'tel',
+        'fax',
+        'website_url',
+        'note',
+        'is_active',
+        'source_url',
+        'source_checked_at',
+        'first_hosted_year',
+        'last_hosted_year',
+    ];
+
+    protected $casts = [
+        'aliases' => 'array',
+        'is_active' => 'boolean',
+        'source_checked_at' => 'date',
+        'first_hosted_year' => 'integer',
+        'last_hosted_year' => 'integer',
     ];
 
     public function tournaments()

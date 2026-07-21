@@ -248,14 +248,23 @@ class TournamentController extends Controller
     private function formReferenceData(?Tournament $currentTournament = null): array
     {
         return [
-            'venues' => Venue::query()->orderBy('name')->get([
-                'id',
-                'name',
-                'address',
-                'tel',
-                'fax',
-                'website_url',
-            ]),
+            'venues' => Venue::query()
+                ->where(function ($query) use ($currentTournament) {
+                    $query->where('is_active', true);
+
+                    if ($currentTournament?->venue_id) {
+                        $query->orWhereKey($currentTournament->venue_id);
+                    }
+                })
+                ->orderBy('name')
+                ->get([
+                    'id',
+                    'name',
+                    'address',
+                    'tel',
+                    'fax',
+                    'website_url',
+                ]),
             'seriesList' => TournamentSeries::query()
                 ->where('is_active', true)
                 ->orderBy('name')

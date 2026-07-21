@@ -9,6 +9,21 @@
     @error('name')<div class="invalid-feedback">{{ $message }}</div>@enderror
   </div>
 
+  <div class="col-md-8">
+    <label class="form-label">別名</label>
+    <textarea name="aliases_text" rows="2" class="form-control @error('aliases_text') is-invalid @enderror"
+              placeholder="旧称や大会要項上の短縮名を1行ずつ入力">{{ old('aliases_text', implode("\n", $venue->aliases ?? [])) }}</textarea>
+    @error('aliases_text')<div class="invalid-feedback">{{ $message }}</div>@enderror
+  </div>
+
+  <div class="col-md-4 d-flex align-items-end">
+    <div class="form-check mb-2">
+      <input type="checkbox" name="is_active" value="1" id="is_active" class="form-check-input"
+             @checked(old('is_active', $venue->exists ? $venue->is_active : true))>
+      <label class="form-check-label" for="is_active">大会会場の候補に表示する</label>
+    </div>
+  </div>
+
   <div class="col-md-4">
     <label class="form-label">郵便番号</label>
     <div class="input-group">
@@ -57,6 +72,17 @@
               placeholder="駐車場、レーン数、レーンメンテ情報など">{{ old('note', $venue->note) }}</textarea>
     @error('note')<div class="invalid-feedback">{{ $message }}</div>@enderror
   </div>
+
+  @if($venue->source_url)
+    <div class="col-12">
+      <div class="small text-muted">
+        確認元：<a href="{{ $venue->source_url }}" target="_blank" rel="noopener">JPBA公式大会ページ</a>
+        @if($venue->source_checked_at)
+          （{{ $venue->source_checked_at->format('Y-m-d') }}確認）
+        @endif
+      </div>
+    </div>
+  @endif
 </div>
 
 @push('scripts')
