@@ -34,6 +34,7 @@
             <div class="text-muted">大会: {{ $tournament->name }}</div>
         </div>
         <div class="d-flex gap-2">
+            <a href="{{ route('tournaments.result_publications.index', $tournament) }}" class="btn btn-outline-danger">公式結果の確定・公開</a>
             <a href="{{ route('scores.result', ['tournament_id' => $tournament->id]) }}" class="btn btn-outline-secondary">速報表示へ</a>
             <a href="{{ route('tournaments.results.index', $tournament) }}" class="btn btn-outline-secondary">大会成績一覧へ</a>
             @if($currentFinalSnapshot && $finalResultsCount > 0)
@@ -78,6 +79,7 @@
                 <div class="small">大会成績一覧への同期件数: {{ $finalResultsCount }} 件</div>
             </div>
             <div class="d-flex gap-2">
+                <a href="{{ route('tournaments.result_publications.index', ['tournament' => $tournament->id, 'snapshot_id' => $currentFinalSnapshot->id]) }}" class="btn btn-danger">内容を確認して確定</a>
                 <a href="{{ route('tournaments.result_snapshots.show', ['tournament' => $tournament->id, 'snapshot' => $currentFinalSnapshot->id]) }}" class="btn btn-primary">snapshotを見る</a>
                 @if($finalResultsCount > 0)
                     <a href="{{ route('tournaments.results.index', $tournament) }}" class="btn btn-success">最終成績を見る</a>

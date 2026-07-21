@@ -2,21 +2,21 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Tournament;
-use App\Models\ProBowler;
-use App\Models\TournamentResult;
-use App\Models\TournamentResultSnapshot;
-use App\Models\TournamentMatchScoreSheet;
 use App\Models\PointDistribution;
 use App\Models\PrizeDistribution;
-use App\Services\ShootoutService;
-use App\Services\ShootoutBracketImageService;
-use App\Services\SingleEliminationService;
-use App\Services\SingleEliminationBracketImageService;
-use App\Services\StepLadderService;
-use App\Services\StepLadderBracketImageService;
+use App\Models\ProBowler;
+use App\Models\Tournament;
+use App\Models\TournamentMatchScoreSheet;
+use App\Models\TournamentResult;
+use App\Models\TournamentResultPublication;
+use App\Models\TournamentResultSnapshot;
 use App\Services\MatchScoreSheetImageService;
-use App\Services\TournamentTitleSyncService;
+use App\Services\ShootoutBracketImageService;
+use App\Services\ShootoutService;
+use App\Services\SingleEliminationBracketImageService;
+use App\Services\SingleEliminationService;
+use App\Services\StepLadderBracketImageService;
+use App\Services\StepLadderService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -33,7 +33,7 @@ class TournamentResultController extends Controller
             $q->where('year', $request->year);
         }
         if ($request->filled('name')) {
-            $q->where('name', 'like', '%' . $request->name . '%');
+            $q->where('name', 'like', '%'.$request->name.'%');
         }
         $tournaments = $q->orderByDesc('year')->orderBy('start_date')->get();
 
@@ -44,15 +44,16 @@ class TournamentResultController extends Controller
     /** 大会ごとの成績一覧（←“成績一覧” 入口） */
     public function index(Tournament $tournament)
     {
-        $rankCol = collect(['ranking','rank','position','placing','result_rank','order_no'])
-            ->first(fn($c) => Schema::hasColumn('tournament_results', $c));
+        $rankCol = collect(['ranking', 'rank', 'position', 'placing', 'result_rank', 'order_no'])
+            ->first(fn ($c) => Schema::hasColumn('tournament_results', $c));
 
-        $q = TournamentResult::with(['bowler','player'])
+        $q = TournamentResult::with(['bowler', 'player'])
             ->where('tournament_id', $tournament->id);
 
         $rankCol ? $q->orderBy($rankCol) : $q->orderBy('id');
         $results = $q->get();
         $resultIndexSnapshot = null;
+        $currentPublication = $this->currentResultPublication((int) $tournament->id);
 
         $snapshotIndexData = $this->buildResultIndexSnapshotRows($tournament, $results);
         if (is_array($snapshotIndexData)) {
@@ -73,7 +74,7 @@ class TournamentResultController extends Controller
             }
         }
 
-        return view('tournament_results.show', compact('tournament', 'results', 'resultIndexSnapshot'));
+        return view('tournament_results.show', compact('tournament', 'results', 'resultIndexSnapshot', 'currentPublication'));
     }
 
     private function buildResultIndexSnapshotRows(Tournament $tournament, Collection $currentResults): ?array
@@ -135,12 +136,12 @@ class TournamentResultController extends Controller
 
     private function buildSeasonTrialResultIndexRows(Tournament $tournament, Collection $currentResults, Collection $snapshots): ?array
     {
-        if (!$this->isSeasonTrialTournament($tournament)) {
+        if (! $this->isSeasonTrialTournament($tournament)) {
             return null;
         }
 
         $prelimSnapshot = $snapshots->first(fn ($snapshot): bool => (string) ($snapshot->result_code ?? '') === 'prelim_total');
-        if (!$prelimSnapshot) {
+        if (! $prelimSnapshot) {
             return null;
         }
 
@@ -247,7 +248,7 @@ class TournamentResultController extends Controller
 
     private function makeResultIndexSnapshotPreviewRow(Tournament $tournament, object $row, array $overrides = []): \stdClass
     {
-        $result = new \stdClass();
+        $result = new \stdClass;
         $result->id = null;
         $result->is_snapshot_preview = true;
         $result->snapshot_row_id = $row->id ?? null;
@@ -299,7 +300,7 @@ class TournamentResultController extends Controller
             ?? null;
 
         if ($proBowlerId !== null && (int) $proBowlerId > 0) {
-            return 'pro:' . (int) $proBowlerId;
+            return 'pro:'.(int) $proBowlerId;
         }
 
         $license = $row->pro_bowler_license_no
@@ -309,18 +310,18 @@ class TournamentResultController extends Controller
 
         $licenseDigits = preg_replace('/\D+/', '', (string) $license);
         if (is_string($licenseDigits) && $licenseDigits !== '') {
-            return 'lic:' . $licenseDigits;
+            return 'lic:'.$licenseDigits;
         }
 
         $name = (string) ($row->display_name ?? $row->amateur_name ?? '');
         $name = preg_replace('/\s+/u', '', trim($name)) ?? '';
 
-        return $name !== '' ? 'name:' . $name : '';
+        return $name !== '' ? 'name:'.$name : '';
     }
 
     private function numericOrNull(mixed $value): ?int
     {
-        if ($value === null || $value === '' || !is_numeric($value)) {
+        if ($value === null || $value === '' || ! is_numeric($value)) {
             return null;
         }
 
@@ -330,10 +331,10 @@ class TournamentResultController extends Controller
     public function create()
     {
         $tournaments = Tournament::all();
-        $players     = ProBowler::all();
-        return view('tournament_results.create', compact('tournaments','players'));
-    }
+        $players = ProBowler::all();
 
+        return view('tournament_results.create', compact('tournaments', 'players'));
+    }
 
     private function resolvePoints(int $tournamentId, int $rank): int
     {
@@ -352,26 +353,28 @@ class TournamentResultController extends Controller
     public function store(Request $request)
     {
         $v = $request->validate([
-            'tournament_id'  => ['required','integer','exists:tournaments,id'],
-            'player_mode'    => ['required','in:pro,ama'],
-            'pro_key'        => ['required_if:player_mode,pro','nullable','string','max:255'],
-            'amateur_name'   => ['required_if:player_mode,ama','nullable','string','max:255'],
-            'ranking'        => ['required','integer','min:1','max:10000'],
-            'total_pin'      => ['required','integer','min:0','max:200000'],
-            'games'          => ['required','integer','min:1','max:200'],
-            'ranking_year'   => ['required','integer','min:1900','max:2100'],
+            'tournament_id' => ['required', 'integer', 'exists:tournaments,id'],
+            'player_mode' => ['required', 'in:pro,ama'],
+            'pro_key' => ['required_if:player_mode,pro', 'nullable', 'string', 'max:255'],
+            'amateur_name' => ['required_if:player_mode,ama', 'nullable', 'string', 'max:255'],
+            'ranking' => ['required', 'integer', 'min:1', 'max:10000'],
+            'total_pin' => ['required', 'integer', 'min:0', 'max:200000'],
+            'games' => ['required', 'integer', 'min:1', 'max:200'],
+            'ranking_year' => ['required', 'integer', 'min:1900', 'max:2100'],
         ], [], [
-            'player_mode'  => '選手区分',
-            'pro_key'      => 'プロ選手（ライセンス/氏名）',
+            'player_mode' => '選手区分',
+            'pro_key' => 'プロ選手（ライセンス/氏名）',
             'amateur_name' => 'アマチュア選手名',
         ]);
 
-        $pro     = null;
+        $this->assertResultIsEditable((int) $v['tournament_id']);
+
+        $pro = null;
         $license = null;
 
         if ($v['player_mode'] === 'pro') {
             $pro = $this->resolvePro($v['pro_key'] ?? '');
-            if (!$pro) {
+            if (! $pro) {
                 return back()
                     ->withErrors(['pro_key' => '該当するプロが見つかりません。ライセンスNo（例: M0123 / F0456 / m000123 等）または氏名を正確に入力してください。'])
                     ->withInput();
@@ -379,21 +382,21 @@ class TournamentResultController extends Controller
             $license = $pro->license_no ?? null;
         }
 
-        $games   = max(1, (int)$v['games']);
-        $average = round(((int)$v['total_pin']) / $games, 2);
-        $points  = $pro ? $this->resolvePoints((int) $v['tournament_id'], (int) $v['ranking']) : 0;
-        $prize   = $pro ? $this->resolvePrize((int) $v['tournament_id'], (int) $v['ranking']) : 0;
+        $games = max(1, (int) $v['games']);
+        $average = round(((int) $v['total_pin']) / $games, 2);
+        $points = $pro ? $this->resolvePoints((int) $v['tournament_id'], (int) $v['ranking']) : 0;
+        $prize = $pro ? $this->resolvePrize((int) $v['tournament_id'], (int) $v['ranking']) : 0;
 
         $data = [
-            'tournament_id'  => (int)$v['tournament_id'],
-            'ranking_year'   => (int)$v['ranking_year'],
-            'ranking'        => (int)$v['ranking'],
-            'total_pin'      => (int)$v['total_pin'],
-            'games'          => (int)$v['games'],
-            'average'        => $average,
-            'points'         => $points,
-            'prize_money'    => $prize,
-            'amateur_name'   => $pro ? null : ($v['amateur_name'] ?? null),
+            'tournament_id' => (int) $v['tournament_id'],
+            'ranking_year' => (int) $v['ranking_year'],
+            'ranking' => (int) $v['ranking'],
+            'total_pin' => (int) $v['total_pin'],
+            'games' => (int) $v['games'],
+            'average' => $average,
+            'points' => $points,
+            'prize_money' => $prize,
+            'amateur_name' => $pro ? null : ($v['amateur_name'] ?? null),
         ];
 
         if ($pro) {
@@ -406,7 +409,7 @@ class TournamentResultController extends Controller
         TournamentResult::create($data);
 
         return redirect()
-            ->route('tournaments.results.index', (int)$v['tournament_id'])
+            ->route('tournaments.results.index', (int) $v['tournament_id'])
             ->with('success', '大会成績を登録しました。');
     }
 
@@ -415,152 +418,182 @@ class TournamentResultController extends Controller
      */
     private function resolvePro(?string $key): ?ProBowler
     {
-        if (!$key) return null;
+        if (! $key) {
+            return null;
+        }
         $k = trim($key);
 
         // 1) まずは完全一致（大文字で）
         $exactByLicense = ProBowler::whereRaw('upper(license_no) = ?', [strtoupper($k)])->first();
-        if ($exactByLicense) return $exactByLicense;
+        if ($exactByLicense) {
+            return $exactByLicense;
+        }
 
         // 2) "M/F + 0* + 数字" を標準化して探す（M1278 と M01278 の相互ヒット）
         if (preg_match('/^([MF])\s*0*?(\d+)$/i', $k, $m)) {
             $letter = strtoupper($m[1]);
             $digits = ltrim($m[2], '0');   // 標準化（頭の0除去）
-            if ($digits === '') $digits = '0';
+            if ($digits === '') {
+                $digits = '0';
+            }
 
             // a) 正規化版（M1278）
             $hit = ProBowler::whereRaw('upper(license_no) = ?', [$letter.$digits])->first();
-            if ($hit) return $hit;
+            if ($hit) {
+                return $hit;
+            }
 
             // b) よくあるゼロ詰め（3～6桁まで面倒見ます）
-            foreach ([3,4,5,6] as $len) {
-                $candidate = $letter . str_pad($digits, $len, '0', STR_PAD_LEFT);
+            foreach ([3, 4, 5, 6] as $len) {
+                $candidate = $letter.str_pad($digits, $len, '0', STR_PAD_LEFT);
                 $hit = ProBowler::whereRaw('upper(license_no) = ?', [$candidate])->first();
-                if ($hit) return $hit;
+                if ($hit) {
+                    return $hit;
+                }
             }
 
             // c) 最後の手段：同じ先頭文字の候補を取り出し、ゼロ無視で照合
             $candidates = ProBowler::whereRaw('upper(left(license_no,1)) = ?', [$letter])->get();
             foreach ($candidates as $p) {
                 $pDigits = preg_replace('/^[MF]0*/i', '', $p->license_no);
-                if ((string)$pDigits === (string)$digits) return $p;
+                if ((string) $pDigits === (string) $digits) {
+                    return $p;
+                }
             }
         }
 
         // 3) 氏名（漢字・フリガナ）
         $byExact = ProBowler::where('name_kanji', $k)->orWhere('name_kana', $k)->get();
-        if ($byExact->count() === 1) return $byExact->first();
-        if ($byExact->count() > 1)  return null;
+        if ($byExact->count() === 1) {
+            return $byExact->first();
+        }
+        if ($byExact->count() > 1) {
+            return null;
+        }
 
         $byLike = ProBowler::where('name_kanji', 'like', $k.'%')
-                    ->orWhere('name_kana', 'like', $k.'%')
-                    ->limit(2)->get();
+            ->orWhere('name_kana', 'like', $k.'%')
+            ->limit(2)->get();
+
         return $byLike->count() === 1 ? $byLike->first() : null;
     }
 
     public function edit($id)
     {
-        $result      = TournamentResult::findOrFail($id);
-        $players     = ProBowler::all();
+        $result = TournamentResult::findOrFail($id);
+        $this->assertResultIsEditable((int) $result->tournament_id);
+        $players = ProBowler::all();
         $tournaments = Tournament::all();
-        return view('tournament_results.edit', compact('result','players','tournaments'));
+
+        return view('tournament_results.edit', compact('result', 'players', 'tournaments'));
     }
 
     public function update(Request $request, $id)
     {
         $request->validate([
             'pro_bowler_license_no' => 'required',
-            'tournament_id'         => 'required',
-            'ranking'               => 'required|integer',
-            'total_pin'             => 'required|integer',
-            'games'                 => 'required|integer|min:1',
-            'ranking_year'          => 'required|integer',
+            'tournament_id' => 'required',
+            'ranking' => 'required|integer',
+            'total_pin' => 'required|integer',
+            'games' => 'required|integer|min:1',
+            'ranking_year' => 'required|integer',
         ]);
 
-        $result  = TournamentResult::findOrFail($id);
+        $result = TournamentResult::findOrFail($id);
+        $this->assertResultIsEditable((int) $result->tournament_id);
 
-        $average = round($request->total_pin / max(1,$request->games), 2);
-        $point   = $this->resolvePoints((int) $request->tournament_id, (int) $request->ranking);
-        $prize   = $this->resolvePrize((int) $request->tournament_id, (int) $request->ranking);
+        if ((int) $request->tournament_id !== (int) $result->tournament_id) {
+            $this->assertResultIsEditable((int) $request->tournament_id);
+        }
+
+        $average = round($request->total_pin / max(1, $request->games), 2);
+        $point = $this->resolvePoints((int) $request->tournament_id, (int) $request->ranking);
+        $prize = $this->resolvePrize((int) $request->tournament_id, (int) $request->ranking);
 
         $result->update([
             'pro_bowler_license_no' => $request->pro_bowler_license_no,
-            'tournament_id'         => $request->tournament_id,
-            'ranking'               => $request->ranking,
-            'points'                => $point,
-            'total_pin'             => $request->total_pin,
-            'games'                 => $request->games,
-            'average'               => $average,
-            'prize_money'           => $prize,
-            'ranking_year'          => $request->ranking_year,
+            'tournament_id' => $request->tournament_id,
+            'ranking' => $request->ranking,
+            'points' => $point,
+            'total_pin' => $request->total_pin,
+            'games' => $request->games,
+            'average' => $average,
+            'prize_money' => $prize,
+            'ranking_year' => $request->ranking_year,
         ]);
 
         return redirect()
-            ->route('tournaments.results.index', (int)$result->tournament_id)
+            ->route('tournaments.results.index', (int) $result->tournament_id)
             ->with('success', '成績を更新しました。');
     }
 
     public function createForTournament(Tournament $tournament)
     {
         $players = ProBowler::all();
-        return view('tournament_results.create_for_tournament', compact('tournament','players'));
+
+        return view('tournament_results.create_for_tournament', compact('tournament', 'players'));
     }
 
     public function storeForTournament(Request $request, Tournament $tournament)
     {
+        $this->assertResultIsEditable((int) $tournament->id);
+
         $validated = $request->validate([
-            'results'                           => 'required|array',
-            'results.*.pro_bowler_license_no'   => 'required',
-            'results.*.ranking'                 => 'required|integer',
-            'results.*.total_pin'               => 'required|integer',
-            'results.*.games'                   => 'required|integer|min:1',
-            'results.*.ranking_year'            => 'required|integer',
+            'results' => 'required|array',
+            'results.*.pro_bowler_license_no' => 'required',
+            'results.*.ranking' => 'required|integer',
+            'results.*.total_pin' => 'required|integer',
+            'results.*.games' => 'required|integer|min:1',
+            'results.*.ranking_year' => 'required|integer',
         ]);
 
         foreach ($validated['results'] as $data) {
             $average = round($data['total_pin'] / $data['games'], 2);
-            $point   = $this->resolvePoints((int) $tournament->id, (int) $data['ranking']);
-            $prize   = $this->resolvePrize((int) $tournament->id, (int) $data['ranking']);
+            $point = $this->resolvePoints((int) $tournament->id, (int) $data['ranking']);
+            $prize = $this->resolvePrize((int) $tournament->id, (int) $data['ranking']);
 
             TournamentResult::create([
                 'pro_bowler_license_no' => $data['pro_bowler_license_no'],
-                'tournament_id'         => $tournament->id,
-                'ranking'               => $data['ranking'],
-                'points'                => $point,
-                'total_pin'             => $data['total_pin'],
-                'games'                 => $data['games'],
-                'average'               => $average,
-                'prize_money'           => $prize,
-                'ranking_year'          => $data['ranking_year'],
+                'tournament_id' => $tournament->id,
+                'ranking' => $data['ranking'],
+                'points' => $point,
+                'total_pin' => $data['total_pin'],
+                'games' => $data['games'],
+                'average' => $average,
+                'prize_money' => $prize,
+                'ranking_year' => $data['ranking_year'],
             ]);
         }
 
-        return redirect()->route('tournaments.results.index', $tournament)->with('success','成績を登録しました。');
+        return redirect()->route('tournaments.results.index', $tournament)->with('success', '成績を登録しました。');
     }
 
     public function batchCreate(Request $request)
     {
         $tournamentId = $request->query('tournament_id');
-        $tournaments  = Tournament::all();
-        $players      = ProBowler::all();
-        return view('tournament_results.batch_create', compact('tournaments','players','tournamentId'));
+        $tournaments = Tournament::all();
+        $players = ProBowler::all();
+
+        return view('tournament_results.batch_create', compact('tournaments', 'players', 'tournamentId'));
     }
 
     public function batchStore(Request $request)
     {
         $request->validate([
-            'tournament_id' => ['required','integer','exists:tournaments,id'],
-            'ranking_year'  => ['required','integer','min:1900','max:2100'],
+            'tournament_id' => ['required', 'integer', 'exists:tournaments,id'],
+            'ranking_year' => ['required', 'integer', 'min:1900', 'max:2100'],
         ]);
 
-        $tid  = (int) $request->input('tournament_id');
+        $tid = (int) $request->input('tournament_id');
         $year = (int) $request->input('ranking_year');
+
+        $this->assertResultIsEditable($tid);
 
         // 旧: results[ { pro_bowler_license_no, ranking, total_pin, games } ... ]
         $legacyRows = $request->input('results', []);
 
         // 新: rows[ { player_mode, pro_key, amateur_name, ranking, total_pin, games } ... ]
-        $newRows    = $request->input('rows', []);
+        $newRows = $request->input('rows', []);
 
         // どちらか一方（両方来てもOK）
         $rows = [];
@@ -571,12 +604,12 @@ class TournamentResultController extends Controller
                 continue;
             }
             $rows[] = [
-                'player_mode'  => 'pro',
-                'pro_key'      => $r['pro_bowler_license_no'] ?? null,
+                'player_mode' => 'pro',
+                'pro_key' => $r['pro_bowler_license_no'] ?? null,
                 'amateur_name' => null,
-                'ranking'      => (int)($r['ranking'] ?? 0),
-                'total_pin'    => (int)($r['total_pin'] ?? 0),
-                'games'        => (int)($r['games'] ?? 0),
+                'ranking' => (int) ($r['ranking'] ?? 0),
+                'total_pin' => (int) ($r['total_pin'] ?? 0),
+                'games' => (int) ($r['games'] ?? 0),
             ];
         }
 
@@ -587,43 +620,43 @@ class TournamentResultController extends Controller
                 continue;
             }
             $rows[] = [
-                'player_mode'  => $r['player_mode'] ?? 'pro',
-                'pro_key'      => $r['pro_key'] ?? null,
+                'player_mode' => $r['player_mode'] ?? 'pro',
+                'pro_key' => $r['pro_key'] ?? null,
                 'amateur_name' => $r['amateur_name'] ?? null,
-                'ranking'      => (int)($r['ranking'] ?? 0),
-                'total_pin'    => (int)($r['total_pin'] ?? 0),
-                'games'        => (int)($r['games'] ?? 0),
+                'ranking' => (int) ($r['ranking'] ?? 0),
+                'total_pin' => (int) ($r['total_pin'] ?? 0),
+                'games' => (int) ($r['games'] ?? 0),
             ];
         }
 
         foreach ($rows as $entry) {
-            $isPro  = ($entry['player_mode'] ?? 'pro') === 'pro';
-            $pro    = null;
-            $license= null;
+            $isPro = ($entry['player_mode'] ?? 'pro') === 'pro';
+            $pro = null;
+            $license = null;
 
             if ($isPro) {
                 $pro = $this->resolvePro($entry['pro_key'] ?? '');
-                if (!$pro) {
+                if (! $pro) {
                     return back()->withErrors(['rows' => '不明なプロ選手があります（'.$entry['pro_key'].'）。'])->withInput();
                 }
                 $license = $pro->license_no ?? null;
             }
 
-            $games   = max(1, (int)$entry['games']);
-            $average = round(((int)$entry['total_pin']) / $games, 2);
-            $points  = $isPro ? $this->resolvePoints($tid, (int) $entry['ranking']) : 0;
-            $prize   = $isPro ? $this->resolvePrize($tid, (int) $entry['ranking']) : 0;
+            $games = max(1, (int) $entry['games']);
+            $average = round(((int) $entry['total_pin']) / $games, 2);
+            $points = $isPro ? $this->resolvePoints($tid, (int) $entry['ranking']) : 0;
+            $prize = $isPro ? $this->resolvePrize($tid, (int) $entry['ranking']) : 0;
 
             $data = [
-                'tournament_id'           => $tid,
-                'ranking_year'            => $year,
-                'ranking'                 => (int)$entry['ranking'],
-                'total_pin'               => (int)$entry['total_pin'],
-                'games'                   => (int)$entry['games'],
-                'average'                 => $average,
-                'points'                  => $points,
-                'prize_money'             => $prize,
-                'amateur_name'            => $isPro ? null : ($entry['amateur_name'] ?? null),
+                'tournament_id' => $tid,
+                'ranking_year' => $year,
+                'ranking' => (int) $entry['ranking'],
+                'total_pin' => (int) $entry['total_pin'],
+                'games' => (int) $entry['games'],
+                'average' => $average,
+                'points' => $points,
+                'prize_money' => $prize,
+                'amateur_name' => $isPro ? null : ($entry['amateur_name'] ?? null),
             ];
 
             if ($isPro) {
@@ -639,53 +672,7 @@ class TournamentResultController extends Controller
         }
 
         return redirect()->route('tournaments.results.index', $tid)
-                        ->with('success','一括登録を完了しました。');
-    }
-
-    public function applyAwardsAndPoints(Tournament $tournament)
-    {
-        $id      = $tournament->id;
-        $results = TournamentResult::where('tournament_id', $id)->get();
-
-        foreach ($results as $result) {
-            $point = PointDistribution::where('tournament_id', $id)
-                        ->where('rank', $result->ranking)->value('points') ?? 0;
-
-            $prize = PrizeDistribution::where('tournament_id', $id)
-                        ->where('rank', $result->ranking)->value('amount') ?? 0;
-
-            $result->update([
-                'points'      => $point,
-                'prize_money' => $prize,
-            ]);
-        }
-
-        return back()->with('success','賞金とポイントを反映しました。');
-    }
-
-    public function syncTitles(
-        Request $request,
-        Tournament $tournament,
-        TournamentTitleSyncService $titleSyncService,
-    )
-    {
-        $year = $request->filled('year') ? (int) $request->input('year') : null;
-        $summary = $titleSyncService->sync($tournament, $year);
-
-        if (! $summary['eligible']) {
-            return back()->with('info', 'この大会は予選・選抜・順位決定戦・承認イベント等のため、公式タイトルへ反映しません。');
-        }
-
-        return back()->with('success', sprintf(
-            'タイトル反映：新規 %d／既存明細へ接続 %d／接続済み %d／旧優勝者から削除 %d／選手未特定 %d／既存候補重複 %d／タイトル数再計算 %d',
-            $summary['created'],
-            $summary['linked_existing'],
-            $summary['already_linked'],
-            $summary['removed_stale'],
-            $summary['missing_bowler'],
-            $summary['ambiguous_existing'],
-            $summary['recalculated'],
-        ));
+            ->with('success', '一括登録を完了しました。');
     }
 
     public function rankings(Request $request)
@@ -701,9 +688,9 @@ class TournamentResultController extends Controller
             ->pluck('ranking_year');
 
         $moneyRanks = $this->applyRankingGenderFilter(
-                TournamentResult::query()->where('ranking_year', $year),
-                $gender
-            )
+            TournamentResult::query()->where('ranking_year', $year),
+            $gender
+        )
             ->whereNotNull('pro_bowler_license_no')
             ->where('pro_bowler_license_no', '<>', '')
             ->select('pro_bowler_license_no', DB::raw('SUM(COALESCE(prize_money, 0)) as total_prize_money'))
@@ -712,13 +699,14 @@ class TournamentResultController extends Controller
             ->get()
             ->map(function ($item) {
                 $item->name_kanji = optional(ProBowler::where('license_no', $item->pro_bowler_license_no)->first())->name_kanji;
+
                 return $item;
             });
 
         $pointRanks = $this->applyRankingGenderFilter(
-                TournamentResult::query()->where('ranking_year', $year),
-                $gender
-            )
+            TournamentResult::query()->where('ranking_year', $year),
+            $gender
+        )
             ->whereNotNull('pro_bowler_license_no')
             ->where('pro_bowler_license_no', '<>', '')
             ->select('pro_bowler_license_no', DB::raw('SUM(COALESCE(points, 0)) as total_points'))
@@ -727,13 +715,14 @@ class TournamentResultController extends Controller
             ->get()
             ->map(function ($item) {
                 $item->name_kanji = optional(ProBowler::where('license_no', $item->pro_bowler_license_no)->first())->name_kanji;
+
                 return $item;
             });
 
         $averageRanks = $this->applyRankingGenderFilter(
-                TournamentResult::query()->where('ranking_year', $year),
-                $gender
-            )
+            TournamentResult::query()->where('ranking_year', $year),
+            $gender
+        )
             ->whereNotNull('pro_bowler_license_no')
             ->where('pro_bowler_license_no', '<>', '')
             ->select('pro_bowler_license_no', DB::raw('AVG(average) as avg_average'))
@@ -742,6 +731,7 @@ class TournamentResultController extends Controller
             ->get()
             ->map(function ($item) {
                 $item->name_kanji = optional(ProBowler::where('license_no', $item->pro_bowler_license_no)->first())->name_kanji;
+
                 return $item;
             });
 
@@ -767,7 +757,7 @@ class TournamentResultController extends Controller
     private function applyRankingGenderFilter($query, ?string $gender)
     {
         if (in_array($gender, ['M', 'F'], true)) {
-            $query->whereRaw("upper(coalesce(pro_bowler_license_no, '')) like ?", [$gender . '%']);
+            $query->whereRaw("upper(coalesce(pro_bowler_license_no, '')) like ?", [$gender.'%']);
         }
 
         return $query;
@@ -792,7 +782,7 @@ class TournamentResultController extends Controller
         $singleEliminationPdf = $this->buildSingleEliminationPdfData($tournament);
         $singleEliminationBracketImage = null;
 
-        if (is_array($singleEliminationPdf) && !empty($singleEliminationPdf['bracket']['rounds'] ?? [])) {
+        if (is_array($singleEliminationPdf) && ! empty($singleEliminationPdf['bracket']['rounds'] ?? [])) {
             try {
                 /** @var SingleEliminationBracketImageService $singleEliminationBracketImageService */
                 $singleEliminationBracketImageService = app(SingleEliminationBracketImageService::class);
@@ -806,7 +796,7 @@ class TournamentResultController extends Controller
         $shootoutPdf = $this->buildShootoutPdfData($tournament);
         $shootoutBracketImage = null;
 
-        if (is_array($shootoutPdf) && !empty($shootoutPdf['seed_rows'])) {
+        if (is_array($shootoutPdf) && ! empty($shootoutPdf['seed_rows'])) {
             try {
                 /** @var ShootoutBracketImageService $bracketImageService */
                 $bracketImageService = app(ShootoutBracketImageService::class);
@@ -822,7 +812,7 @@ class TournamentResultController extends Controller
 
         if (is_array($stepLadderPdf)
             && empty($stepLadderPdf['missing_seed_snapshot'])
-            && !empty($stepLadderPdf['seeds'] ?? [])
+            && ! empty($stepLadderPdf['seeds'] ?? [])
         ) {
             try {
                 /** @var StepLadderBracketImageService $stepLadderBracketImageService */
@@ -877,8 +867,6 @@ class TournamentResultController extends Controller
         );
     }
 
-
-
     public function exportSnapshotPdf(Tournament $tournament, TournamentResultSnapshot $snapshot)
     {
         if ((int) $snapshot->tournament_id !== (int) $tournament->id) {
@@ -907,9 +895,11 @@ class TournamentResultController extends Controller
 
     public function destroy(Tournament $tournament, TournamentResult $result)
     {
-        if (!auth()->user()?->isAdmin()) {
+        if (! auth()->user()?->isAdmin()) {
             abort(403, 'この操作は許可されていません。');
         }
+
+        $this->assertResultIsEditable((int) $tournament->id);
 
         $result->delete();
 
@@ -918,10 +908,30 @@ class TournamentResultController extends Controller
             ->with('success', '成績を削除しました。');
     }
 
+    private function currentResultPublication(int $tournamentId): ?TournamentResultPublication
+    {
+        if (! Schema::hasTable('tournament_result_publications')) {
+            return null;
+        }
+
+        return TournamentResultPublication::query()
+            ->where('tournament_id', $tournamentId)
+            ->where('status', TournamentResultPublication::STATUS_CURRENT)
+            ->latest('revision')
+            ->first();
+    }
+
+    private function assertResultIsEditable(int $tournamentId): void
+    {
+        if ($this->currentResultPublication($tournamentId) !== null) {
+            abort(409, '公式結果は確定済みです。元の成績表を訂正し、公式結果の確定・公開画面から改訂版を公開してください。');
+        }
+    }
+
     private function buildStepLadderPdfData(Tournament $tournament): ?array
     {
         $flowType = trim((string) ($tournament->result_flow_type ?? ''));
-        if (!in_array($flowType, ['prelim_to_rr_to_final', 'prelim_to_quarterfinal_to_rr_to_final'], true)) {
+        if (! in_array($flowType, ['prelim_to_rr_to_final', 'prelim_to_quarterfinal_to_rr_to_final'], true)) {
             return null;
         }
 
@@ -941,7 +951,6 @@ class TournamentResultController extends Controller
             return null;
         }
     }
-
 
     private function loadPublishedMatchScoreSheets(Tournament $tournament)
     {
@@ -965,7 +974,7 @@ class TournamentResultController extends Controller
     private function buildSingleEliminationPdfData(Tournament $tournament): ?array
     {
         $flowType = trim((string) ($tournament->result_flow_type ?? ''));
-        if (!str_contains($flowType, 'single_elimination')) {
+        if (! str_contains($flowType, 'single_elimination')) {
             return null;
         }
 
@@ -978,7 +987,7 @@ class TournamentResultController extends Controller
             ?: $this->defaultSingleEliminationSeedSourceResultCode($flowType);
 
         $seedSnapshot = $this->findCurrentSnapshotByCode((int) $tournament->id, $seedSourceResultCode);
-        if (!$seedSnapshot) {
+        if (! $seedSnapshot) {
             return null;
         }
 
@@ -1059,7 +1068,7 @@ class TournamentResultController extends Controller
                 $displayName = trim((string) ($row->amateur_name ?? ''));
             }
             if ($displayName === '') {
-                $displayName = trim((string) ($row->pro_bowler_license_no ?? ('seed' . $seed)));
+                $displayName = trim((string) ($row->pro_bowler_license_no ?? ('seed'.$seed)));
             }
 
             $entries[] = [
@@ -1097,7 +1106,7 @@ class TournamentResultController extends Controller
         $scores = [];
         foreach ($rows as $row) {
             $entryNumber = trim((string) ($row->entry_number ?? ''));
-            if (!preg_match('/^SE:(R\d+-M\d+):([AB])$/i', $entryNumber, $m)) {
+            if (! preg_match('/^SE:(R\d+-M\d+):([AB])$/i', $entryNumber, $m)) {
                 continue;
             }
 
@@ -1132,6 +1141,7 @@ class TournamentResultController extends Controller
         }
 
         $winnerNode = (array) ($finalMatch['winner_node'] ?? []);
+
         return trim((string) ($winnerNode['display_name'] ?? $winnerNode['label'] ?? ''));
     }
 
@@ -1141,10 +1151,10 @@ class TournamentResultController extends Controller
         foreach ((array) ($bracket['rounds'] ?? []) as $round) {
             foreach ((array) ($round['matches'] ?? []) as $match) {
                 $match = (array) $match;
-                if (!empty($match['is_bye'])) {
+                if (! empty($match['is_bye'])) {
                     continue;
                 }
-                if (!empty($match['is_complete']) && !empty($match['winner_node'])) {
+                if (! empty($match['is_complete']) && ! empty($match['winner_node'])) {
                     $count++;
                 }
             }
@@ -1157,20 +1167,20 @@ class TournamentResultController extends Controller
     {
         $proBowlerId = (int) ($row->pro_bowler_id ?? 0);
         if ($proBowlerId > 0) {
-            return 'pro_bowler:' . $proBowlerId;
+            return 'pro_bowler:'.$proBowlerId;
         }
 
         $license = trim((string) ($row->pro_bowler_license_no ?? ''));
         if ($license !== '') {
-            return 'license:' . strtoupper($license);
+            return 'license:'.strtoupper($license);
         }
 
         $displayName = preg_replace('/\s+/u', '', trim((string) ($row->display_name ?? $row->amateur_name ?? '')));
         if (is_string($displayName) && $displayName !== '') {
-            return 'name:' . $displayName;
+            return 'name:'.$displayName;
         }
 
-        return 'seed:' . $seed;
+        return 'seed:'.$seed;
     }
 
     private function defaultSingleEliminationSeedSourceResultCode(string $flowType): string
@@ -1200,6 +1210,7 @@ class TournamentResultController extends Controller
 
         if (is_string($value) && trim($value) !== '') {
             $decoded = json_decode($value, true);
+
             return is_array($decoded) ? $decoded : [];
         }
 
@@ -1209,7 +1220,7 @@ class TournamentResultController extends Controller
     private function buildShootoutPdfData(Tournament $tournament): ?array
     {
         $flowType = trim((string) ($tournament->result_flow_type ?? ''));
-        if (!in_array($flowType, [
+        if (! in_array($flowType, [
             'prelim_to_shootout_to_final',
             'prelim_to_quarterfinal_to_shootout_to_final',
             'prelim_to_semifinal_to_shootout_to_final',
@@ -1221,7 +1232,7 @@ class TournamentResultController extends Controller
             ?: $this->defaultShootoutSeedSourceResultCode($flowType);
 
         $seedSnapshot = $this->findCurrentSnapshotByCode((int) $tournament->id, $seedSourceResultCode);
-        if (!$seedSnapshot) {
+        if (! $seedSnapshot) {
             return null;
         }
 
@@ -1267,10 +1278,16 @@ class TournamentResultController extends Controller
             ->value('gender');
         $gender = is_string($gender) ? strtoupper(trim($gender)) : '';
 
+        $hasCurrentPublication = Schema::hasTable('tournament_result_publications')
+            && DB::table('tournament_result_publications')
+                ->where('tournament_id', $tournamentId)
+                ->where('status', 'current')
+                ->exists();
+
         $query = DB::table('tournament_result_snapshots')
             ->where('tournament_id', $tournamentId)
             ->where('result_code', $resultCode)
-            ->where('is_current', true)
+            ->where($hasCurrentPublication ? 'is_published' : 'is_current', true)
             ->whereNull('shift');
 
         if ($gender !== '') {
@@ -1312,7 +1329,7 @@ class TournamentResultController extends Controller
                 $displayName = trim((string) ($row->amateur_name ?? ''));
             }
             if ($displayName === '') {
-                $displayName = trim((string) ($row->pro_bowler_license_no ?? ('seed' . $seed)));
+                $displayName = trim((string) ($row->pro_bowler_license_no ?? ('seed'.$seed)));
             }
 
             $entries[] = [
@@ -1350,7 +1367,7 @@ class TournamentResultController extends Controller
         $scores = [];
         foreach ($rows as $row) {
             $entryNumber = trim((string) ($row->entry_number ?? ''));
-            if (!preg_match('/^SO:(SO[123]):([ABCD])$/', $entryNumber, $m)) {
+            if (! preg_match('/^SO:(SO[123]):([ABCD])$/', $entryNumber, $m)) {
                 continue;
             }
 
@@ -1400,7 +1417,7 @@ class TournamentResultController extends Controller
                     continue;
                 }
 
-                if ($player->final_score === null || !is_numeric($player->final_score)) {
+                if ($player->final_score === null || ! is_numeric($player->final_score)) {
                     continue;
                 }
 
@@ -1439,7 +1456,7 @@ class TournamentResultController extends Controller
         if (preg_match('/SO\s*:?\s*SO?\s*([123])/', $upper, $matches)
             || preg_match('/\bSO\s*([123])\b/', $upper, $matches)
         ) {
-            return 'SO' . $matches[1];
+            return 'SO'.$matches[1];
         }
 
         if (str_contains($upper, 'FINAL') || str_contains($text, '優勝')) {
@@ -1477,26 +1494,26 @@ class TournamentResultController extends Controller
     {
         $proBowlerId = (int) ($row->pro_bowler_id ?? 0);
         if ($proBowlerId > 0) {
-            return 'pro_bowler:' . $proBowlerId;
+            return 'pro_bowler:'.$proBowlerId;
         }
 
         $license = trim((string) ($row->pro_bowler_license_no ?? ''));
         if ($license !== '') {
-            return 'license:' . strtoupper($license);
+            return 'license:'.strtoupper($license);
         }
 
         $displayName = preg_replace('/\s+/u', '', trim((string) ($row->display_name ?? $row->amateur_name ?? '')));
         if (is_string($displayName) && $displayName !== '') {
-            return 'name:' . $displayName;
+            return 'name:'.$displayName;
         }
 
-        return 'seed:' . $seed;
+        return 'seed:'.$seed;
     }
 
     private function resolveBowlerPeriodLabelFromSnapshotRow(object $row): ?string
     {
         $periodColumn = $this->detectProBowlerPeriodColumn();
-        if (!$periodColumn) {
+        if (! $periodColumn) {
             return null;
         }
 
@@ -1508,7 +1525,7 @@ class TournamentResultController extends Controller
                 ->find($proBowlerId);
         }
 
-        if (!$bowler) {
+        if (! $bowler) {
             $license = strtoupper(trim((string) ($row->pro_bowler_license_no ?? '')));
             if ($license !== '') {
                 $bowler = ProBowler::query()
@@ -1530,137 +1547,144 @@ class TournamentResultController extends Controller
         };
     }
 
-private function loadPdfScoreSnapshots(Tournament $tournament): array
-{
-    // PDFでは result_code ごとに最新の current snapshot 1件だけを使う。
-    // 古い current が残っていても、同じ成績表を複数ページ出さないための保険。
-    $snapshotRows = DB::table('tournament_result_snapshots')
-        ->where('tournament_id', $tournament->id)
-        ->where('is_current', true)
-        ->whereIn('result_code', ['prelim_total', 'semifinal_total', 'round_robin_total'])
-        ->orderByDesc('id')
-        ->get()
-        ->groupBy('result_code')
-        ->map(fn ($rows) => $rows->first());
+    private function loadPdfScoreSnapshots(Tournament $tournament): array
+    {
+        $hasCurrentPublication = Schema::hasTable('tournament_result_publications')
+            && DB::table('tournament_result_publications')
+                ->where('tournament_id', $tournament->id)
+                ->where('status', 'current')
+                ->exists();
 
-    $orderedCodes = ['round_robin_total', 'semifinal_total', 'prelim_total'];
-    $snapshots = [];
+        // 新しい確定フローでは公開時に固定したsnapshotだけを使う。
+        // 確定履歴がまだない既存大会は、従来どおりcurrentを使って表示を維持する。
+        $snapshotRows = DB::table('tournament_result_snapshots')
+            ->where('tournament_id', $tournament->id)
+            ->where($hasCurrentPublication ? 'is_published' : 'is_current', true)
+            ->whereIn('result_code', ['prelim_total', 'semifinal_total', 'round_robin_total'])
+            ->orderByDesc('id')
+            ->get()
+            ->groupBy('result_code')
+            ->map(fn ($rows) => $rows->first());
 
-    foreach ($orderedCodes as $code) {
-        $snapshot = $snapshotRows->get($code);
-        if (!$snapshot) {
-            continue;
-        }
+        $orderedCodes = ['round_robin_total', 'semifinal_total', 'prelim_total'];
+        $snapshots = [];
 
-        $rows = DB::table('tournament_result_snapshot_rows')
-            ->where('snapshot_id', $snapshot->id)
-            ->orderBy('ranking')
-            ->orderByDesc('total_pin')
-            ->orderBy('id')
-            ->get();
-
-        $isPreliminary = $this->isPreliminarySnapshot($snapshot);
-        $stageName = $this->resolveSnapshotStageName($snapshot);
-        $totalGames = max(0, (int) ($snapshot->games_count ?? 0));
-        $carryGames = max(0, (int) ($snapshot->carry_game_count ?? 0));
-        $stageGames = $isPreliminary ? $totalGames : max(0, $totalGames - $carryGames);
-
-        if ($stageGames <= 0) {
-            $stageGames = $totalGames > 0 ? $totalGames : 0;
-        }
-
-        $scoreMatrix = $this->buildSnapshotScoreMatrix($tournament, $rows, $stageName, $stageGames, $carryGames);
-        $participantProfiles = $this->buildSnapshotParticipantProfiles($rows, $tournament);
-        $carryRankMap = (!$isPreliminary && $carryGames > 0) ? $this->buildCarryRankMap($rows) : [];
-
-        $snapshots[] = [
-            'snapshot' => $snapshot,
-            'rows' => $rows,
-            'is_preliminary' => $isPreliminary,
-            'stage_name' => $stageName,
-            'total_games' => $totalGames,
-            'carry_games' => $carryGames,
-            'stage_games' => $stageGames,
-            'score_matrix' => $scoreMatrix,
-            'participant_profiles' => $participantProfiles,
-            'carry_rank_map' => $carryRankMap,
-        ];
-    }
-
-    return $snapshots;
-}
-
-private function attachResultPdfDisplayFields($results): void
-{
-    $licenses = $results
-        ->map(fn ($result) => $result->pro_bowler_license_no
-            ?? optional($result->player)->license_no
-            ?? optional($result->bowler)->license_no
-            ?? null)
-        ->filter()
-        ->map(fn ($license) => strtoupper(trim((string) $license)))
-        ->unique()
-        ->values();
-
-    $ids = $results
-        ->map(fn ($result) => $result->pro_bowler_id ?? optional($result->player)->id ?? optional($result->bowler)->id ?? null)
-        ->filter()
-        ->map(fn ($id) => (int) $id)
-        ->unique()
-        ->values();
-
-    if ($licenses->isEmpty() && $ids->isEmpty()) {
-        return;
-    }
-
-    $proBowlers = ProBowler::query()
-        ->select(['id', 'license_no', 'organization_name', 'equipment_contract'])
-        ->where(function ($q) use ($licenses, $ids) {
-            if ($licenses->isNotEmpty()) {
-                $q->orWhereIn(DB::raw('upper(license_no)'), $licenses->all());
+        foreach ($orderedCodes as $code) {
+            $snapshot = $snapshotRows->get($code);
+            if (! $snapshot) {
+                continue;
             }
 
-            if ($ids->isNotEmpty()) {
-                $q->orWhereIn('id', $ids->all());
+            $rows = DB::table('tournament_result_snapshot_rows')
+                ->where('snapshot_id', $snapshot->id)
+                ->orderBy('ranking')
+                ->orderByDesc('total_pin')
+                ->orderBy('id')
+                ->get();
+
+            $isPreliminary = $this->isPreliminarySnapshot($snapshot);
+            $stageName = $this->resolveSnapshotStageName($snapshot);
+            $totalGames = max(0, (int) ($snapshot->games_count ?? 0));
+            $carryGames = max(0, (int) ($snapshot->carry_game_count ?? 0));
+            $stageGames = $isPreliminary ? $totalGames : max(0, $totalGames - $carryGames);
+
+            if ($stageGames <= 0) {
+                $stageGames = $totalGames > 0 ? $totalGames : 0;
             }
-        })
-        ->get();
 
-    $byId = $proBowlers->keyBy('id');
-    $byLicense = $proBowlers->keyBy(fn ($bowler) => strtoupper(trim((string) $bowler->license_no)));
+            $scoreMatrix = $this->buildSnapshotScoreMatrix($tournament, $rows, $stageName, $stageGames, $carryGames);
+            $participantProfiles = $this->buildSnapshotParticipantProfiles($rows, $tournament);
+            $carryRankMap = (! $isPreliminary && $carryGames > 0) ? $this->buildCarryRankMap($rows) : [];
 
-    foreach ($results as $result) {
-        $existingAffiliation = trim((string) ($result->affiliation_display ?? ''));
-        if ($existingAffiliation !== '') {
-            $result->setAttribute('pdf_affiliation_display', $this->normalizeAffiliationDisplay($existingAffiliation));
-            continue;
+            $snapshots[] = [
+                'snapshot' => $snapshot,
+                'rows' => $rows,
+                'is_preliminary' => $isPreliminary,
+                'stage_name' => $stageName,
+                'total_games' => $totalGames,
+                'carry_games' => $carryGames,
+                'stage_games' => $stageGames,
+                'score_matrix' => $scoreMatrix,
+                'participant_profiles' => $participantProfiles,
+                'carry_rank_map' => $carryRankMap,
+            ];
         }
 
-        $bowler = null;
-        $proBowlerId = $result->pro_bowler_id ?? optional($result->player)->id ?? optional($result->bowler)->id ?? null;
-        if ($proBowlerId && $byId->has((int) $proBowlerId)) {
-            $bowler = $byId->get((int) $proBowlerId);
-        }
+        return $snapshots;
+    }
 
-        if (!$bowler) {
-            $license = strtoupper(trim((string) (
-                $result->pro_bowler_license_no
+    private function attachResultPdfDisplayFields($results): void
+    {
+        $licenses = $results
+            ->map(fn ($result) => $result->pro_bowler_license_no
                 ?? optional($result->player)->license_no
                 ?? optional($result->bowler)->license_no
-                ?? ''
-            )));
+                ?? null)
+            ->filter()
+            ->map(fn ($license) => strtoupper(trim((string) $license)))
+            ->unique()
+            ->values();
 
-            if ($license !== '' && $byLicense->has($license)) {
-                $bowler = $byLicense->get($license);
-            }
+        $ids = $results
+            ->map(fn ($result) => $result->pro_bowler_id ?? optional($result->player)->id ?? optional($result->bowler)->id ?? null)
+            ->filter()
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values();
+
+        if ($licenses->isEmpty() && $ids->isEmpty()) {
+            return;
         }
 
-        $organization = $bowler ? trim((string) ($bowler->organization_name ?? '')) : '';
-        $equipment = $bowler ? trim((string) ($bowler->equipment_contract ?? '')) : '';
+        $proBowlers = ProBowler::query()
+            ->select(['id', 'license_no', 'organization_name', 'equipment_contract'])
+            ->where(function ($q) use ($licenses, $ids) {
+                if ($licenses->isNotEmpty()) {
+                    $q->orWhereIn(DB::raw('upper(license_no)'), $licenses->all());
+                }
 
-        $result->setAttribute('pdf_affiliation_display', $this->buildAffiliationDisplay($organization, $equipment));
+                if ($ids->isNotEmpty()) {
+                    $q->orWhereIn('id', $ids->all());
+                }
+            })
+            ->get();
+
+        $byId = $proBowlers->keyBy('id');
+        $byLicense = $proBowlers->keyBy(fn ($bowler) => strtoupper(trim((string) $bowler->license_no)));
+
+        foreach ($results as $result) {
+            $existingAffiliation = trim((string) ($result->affiliation_display ?? ''));
+            if ($existingAffiliation !== '') {
+                $result->setAttribute('pdf_affiliation_display', $this->normalizeAffiliationDisplay($existingAffiliation));
+
+                continue;
+            }
+
+            $bowler = null;
+            $proBowlerId = $result->pro_bowler_id ?? optional($result->player)->id ?? optional($result->bowler)->id ?? null;
+            if ($proBowlerId && $byId->has((int) $proBowlerId)) {
+                $bowler = $byId->get((int) $proBowlerId);
+            }
+
+            if (! $bowler) {
+                $license = strtoupper(trim((string) (
+                    $result->pro_bowler_license_no
+                    ?? optional($result->player)->license_no
+                    ?? optional($result->bowler)->license_no
+                    ?? ''
+                )));
+
+                if ($license !== '' && $byLicense->has($license)) {
+                    $bowler = $byLicense->get($license);
+                }
+            }
+
+            $organization = $bowler ? trim((string) ($bowler->organization_name ?? '')) : '';
+            $equipment = $bowler ? trim((string) ($bowler->equipment_contract ?? '')) : '';
+
+            $result->setAttribute('pdf_affiliation_display', $this->buildAffiliationDisplay($organization, $equipment));
+        }
     }
-}
 
     private function buildAffiliationDisplay(?string $organization, ?string $equipment): string
     {
@@ -1670,7 +1694,7 @@ private function attachResultPdfDisplayFields($results): void
         $parts = [];
 
         foreach ($organizationParts as $part) {
-            if ($part !== '' && !in_array($part, $parts, true)) {
+            if ($part !== '' && ! in_array($part, $parts, true)) {
                 $parts[] = $part;
             }
         }
@@ -1681,12 +1705,12 @@ private function attachResultPdfDisplayFields($results): void
             }
 
             $alreadyExists = collect($parts)->contains(fn ($existing) => $this->sameAffiliationToken($existing, $part));
-            if (!$alreadyExists) {
+            if (! $alreadyExists) {
                 $parts[] = $part;
             }
         }
 
-        return !empty($parts) ? implode('/', $parts) : '-';
+        return ! empty($parts) ? implode('/', $parts) : '-';
     }
 
     private function normalizeAffiliationDisplay(string $value): string
@@ -1696,12 +1720,12 @@ private function attachResultPdfDisplayFields($results): void
 
         foreach ($parts as $part) {
             $alreadyExists = collect($normalized)->contains(fn ($existing) => $this->sameAffiliationToken($existing, $part));
-            if (!$alreadyExists) {
+            if (! $alreadyExists) {
                 $normalized[] = $part;
             }
         }
 
-        return !empty($normalized) ? implode('/', $normalized) : '-';
+        return ! empty($normalized) ? implode('/', $normalized) : '-';
     }
 
     private function splitAffiliationParts(string $value): array
@@ -1751,7 +1775,7 @@ private function attachResultPdfDisplayFields($results): void
     {
         $periodColumn = $this->detectProBowlerPeriodColumn();
 
-        if (!$periodColumn) {
+        if (! $periodColumn) {
             foreach ($results as $result) {
                 $result->setAttribute('bowler_period_label', null);
             }
@@ -1806,7 +1830,7 @@ private function attachResultPdfDisplayFields($results): void
                 $bowler = $byId->get((int) $proBowlerId);
             }
 
-            if (!$bowler) {
+            if (! $bowler) {
                 $license = strtoupper(trim((string) (
                     $result->pro_bowler_license_no
                     ?? optional($result->player)->license_no
@@ -1875,8 +1899,6 @@ private function attachResultPdfDisplayFields($results): void
         return $label;
     }
 
-
-
     private function buildSnapshotScorePdfData(Tournament $tournament, TournamentResultSnapshot $snapshot): array
     {
         $rows = DB::table('tournament_result_snapshot_rows')
@@ -1901,7 +1923,7 @@ private function attachResultPdfDisplayFields($results): void
         $participantProfiles = $this->buildSnapshotParticipantProfiles($rows, $tournament);
 
         $carryRankMap = [];
-        if (!$isPreliminary && $carryGames > 0) {
+        if (! $isPreliminary && $carryGames > 0) {
             $carryRankMap = $this->buildCarryRankMap($rows);
         }
 
@@ -2045,26 +2067,26 @@ private function attachResultPdfDisplayFields($results): void
 
         $proBowlerId = (int) ($row->pro_bowler_id ?? 0);
         if ($proBowlerId > 0) {
-            $keys[] = 'pro:' . $proBowlerId;
+            $keys[] = 'pro:'.$proBowlerId;
         }
 
         $entryNumber = trim((string) ($row->entry_number ?? ''));
         if ($entryNumber !== '') {
-            $keys[] = 'entry:' . $this->normalizeSnapshotKey($entryNumber);
+            $keys[] = 'entry:'.$this->normalizeSnapshotKey($entryNumber);
         }
 
         $license = trim((string) ($row->pro_bowler_license_no ?? ''));
         if ($license !== '' && $license !== 'アマ') {
-            $keys[] = 'license:' . $this->normalizeSnapshotKey($license);
+            $keys[] = 'license:'.$this->normalizeSnapshotKey($license);
             $license4 = $this->licenseLastDigits($license);
             if ($license4 !== '') {
-                $keys[] = 'license4:' . $license4;
+                $keys[] = 'license4:'.$license4;
             }
         }
 
         $name = trim((string) ($row->display_name ?? $row->amateur_name ?? ''));
         if ($name !== '') {
-            $keys[] = 'name:' . $this->normalizeSnapshotName($name);
+            $keys[] = 'name:'.$this->normalizeSnapshotName($name);
         }
 
         return array_values(array_unique($keys));
@@ -2076,26 +2098,26 @@ private function attachResultPdfDisplayFields($results): void
 
         $proBowlerId = (int) ($scoreRow->pro_bowler_id ?? 0);
         if ($proBowlerId > 0) {
-            $keys[] = 'pro:' . $proBowlerId;
+            $keys[] = 'pro:'.$proBowlerId;
         }
 
         $entryNumber = trim((string) ($scoreRow->entry_number ?? ''));
         if ($entryNumber !== '') {
-            $keys[] = 'entry:' . $this->normalizeSnapshotKey($entryNumber);
+            $keys[] = 'entry:'.$this->normalizeSnapshotKey($entryNumber);
         }
 
         $license = trim((string) ($scoreRow->license_number ?? ''));
         if ($license !== '' && $license !== 'アマ') {
-            $keys[] = 'license:' . $this->normalizeSnapshotKey($license);
+            $keys[] = 'license:'.$this->normalizeSnapshotKey($license);
             $license4 = $this->licenseLastDigits($license);
             if ($license4 !== '') {
-                $keys[] = 'license4:' . $license4;
+                $keys[] = 'license4:'.$license4;
             }
         }
 
         $name = trim((string) ($scoreRow->name ?? ''));
         if ($name !== '') {
-            $keys[] = 'name:' . $this->normalizeSnapshotName($name);
+            $keys[] = 'name:'.$this->normalizeSnapshotName($name);
         }
 
         return array_values(array_unique($keys));
@@ -2284,7 +2306,7 @@ private function attachResultPdfDisplayFields($results): void
         ];
 
         $existingColumns = function (string $table, array $columns): array {
-            if (!Schema::hasTable($table)) {
+            if (! Schema::hasTable($table)) {
                 return [];
             }
 
@@ -2295,7 +2317,7 @@ private function attachResultPdfDisplayFields($results): void
         };
 
         $firstValue = function (?object $source, array $columns): string {
-            if (!$source) {
+            if (! $source) {
                 return '';
             }
 
@@ -2358,7 +2380,7 @@ private function attachResultPdfDisplayFields($results): void
             ->values();
 
         $proBowlers = collect();
-        if (!empty($proSelect) && ($proBowlerIds->isNotEmpty() || $rowLicenses->isNotEmpty() || $rowLicenseLast4s->isNotEmpty() || $rowNames->isNotEmpty())) {
+        if (! empty($proSelect) && ($proBowlerIds->isNotEmpty() || $rowLicenses->isNotEmpty() || $rowLicenseLast4s->isNotEmpty() || $rowNames->isNotEmpty())) {
             $proQuery = ProBowler::query()->select($proSelect);
             $proQuery->where(function ($query) use ($proBowlerIds, $rowLicenses, $rowLicenseLast4s, $rowNames): void {
                 $hasCondition = false;
@@ -2416,7 +2438,7 @@ private function attachResultPdfDisplayFields($results): void
         }
 
         $participants = collect();
-        if (!empty($participantSelect) && Schema::hasTable('tournament_participants')) {
+        if (! empty($participantSelect) && Schema::hasTable('tournament_participants')) {
             $participants = DB::table('tournament_participants')
                 ->where('tournament_id', $tournament->id)
                 ->select($participantSelect)
@@ -2601,10 +2623,9 @@ private function attachResultPdfDisplayFields($results): void
         return $profiles;
     }
 
-
     private function buildSnapshotAmateurProfileLookup(Tournament $tournament): array
     {
-        if (!Schema::hasTable('amateur_bowlers') || !Schema::hasColumn('tournament_participants', 'amateur_bowler_id')) {
+        if (! Schema::hasTable('amateur_bowlers') || ! Schema::hasColumn('tournament_participants', 'amateur_bowler_id')) {
             return [];
         }
 
@@ -2636,13 +2657,13 @@ private function attachResultPdfDisplayFields($results): void
 
             $entryNumber = trim((string) ($row->pro_bowler_license_no ?? ''));
             if ($entryNumber !== '') {
-                $lookup['entry:' . $this->normalizeSnapshotKey($entryNumber)] = $profile;
+                $lookup['entry:'.$this->normalizeSnapshotKey($entryNumber)] = $profile;
             }
 
             foreach ([$row->display_name ?? '', $row->master_name ?? ''] as $name) {
                 $name = trim((string) $name);
                 if ($name !== '') {
-                    $lookup['name:' . $this->normalizeSnapshotName($name)] = $profile;
+                    $lookup['name:'.$this->normalizeSnapshotName($name)] = $profile;
                 }
             }
         }
@@ -2654,7 +2675,7 @@ private function attachResultPdfDisplayFields($results): void
     {
         $entryNumber = trim($entryNumber);
         if ($entryNumber !== '') {
-            $key = 'entry:' . $this->normalizeSnapshotKey($entryNumber);
+            $key = 'entry:'.$this->normalizeSnapshotKey($entryNumber);
             if (isset($lookup[$key])) {
                 return $lookup[$key];
             }
@@ -2666,7 +2687,7 @@ private function attachResultPdfDisplayFields($results): void
                 continue;
             }
 
-            $key = 'name:' . $this->normalizeSnapshotName($name);
+            $key = 'name:'.$this->normalizeSnapshotName($name);
             if (isset($lookup[$key])) {
                 return $lookup[$key];
             }
@@ -2703,6 +2724,7 @@ private function attachResultPdfDisplayFields($results): void
         }
 
         $upper = strtoupper($label);
+
         return match ($upper) {
             'R', 'RIGHT', '右投げ', '右' => '右',
             'L', 'LEFT', '左投げ', '左' => '左',
@@ -2744,7 +2766,7 @@ private function attachResultPdfDisplayFields($results): void
         $this->forgetTournamentResultPdfSharedViewData();
 
         $dompdfTempDir = storage_path('framework/cache/dompdf');
-        if (!is_dir($dompdfTempDir)) {
+        if (! is_dir($dompdfTempDir)) {
             @mkdir($dompdfTempDir, 0775, true);
         }
 

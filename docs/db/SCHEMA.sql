@@ -4408,6 +4408,114 @@ ALTER SEQUENCE public.tournament_result_outputs_id_seq OWNED BY public.tournamen
 
 
 --
+-- Name: tournament_result_publication_rows; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.tournament_result_publication_rows (
+    id bigint NOT NULL,
+    publication_id bigint NOT NULL,
+    source_snapshot_id bigint,
+    source_snapshot_row_id bigint,
+    source_result_code character varying(64),
+    ranking integer NOT NULL,
+    pro_bowler_id bigint,
+    amateur_bowler_id bigint,
+    pro_bowler_license_no character varying(255),
+    amateur_name character varying(255),
+    display_name character varying(255) NOT NULL,
+    identity_key character varying(255) NOT NULL,
+    gender character varying(1),
+    entry_number character varying(32),
+    total_pin integer DEFAULT 0 NOT NULL,
+    games integer DEFAULT 0 NOT NULL,
+    average numeric(7,3),
+    points integer DEFAULT 0 NOT NULL,
+    award_points integer DEFAULT 0 NOT NULL,
+    step_points integer DEFAULT 0 NOT NULL,
+    prize_money bigint DEFAULT '0'::bigint NOT NULL,
+    affiliation_display text,
+    breakdown json,
+    created_at timestamp(0) without time zone,
+    updated_at timestamp(0) without time zone
+);
+
+
+ALTER TABLE public.tournament_result_publication_rows OWNER TO postgres;
+
+--
+-- Name: tournament_result_publication_rows_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.tournament_result_publication_rows_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.tournament_result_publication_rows_id_seq OWNER TO postgres;
+
+--
+-- Name: tournament_result_publication_rows_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.tournament_result_publication_rows_id_seq OWNED BY public.tournament_result_publication_rows.id;
+
+
+--
+-- Name: tournament_result_publications; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.tournament_result_publications (
+    id bigint NOT NULL,
+    tournament_id bigint NOT NULL,
+    snapshot_id bigint,
+    revision integer NOT NULL,
+    status character varying(20) DEFAULT 'current'::character varying NOT NULL,
+    row_count integer DEFAULT 0 NOT NULL,
+    pro_count integer DEFAULT 0 NOT NULL,
+    amateur_count integer DEFAULT 0 NOT NULL,
+    total_points bigint DEFAULT '0'::bigint NOT NULL,
+    total_prize_money bigint DEFAULT '0'::bigint NOT NULL,
+    result_checksum character(64) NOT NULL,
+    distribution_checksum character(64) NOT NULL,
+    source_snapshot_ids json NOT NULL,
+    validation_summary json,
+    title_sync_summary json,
+    published_at timestamp(0) without time zone NOT NULL,
+    published_by bigint,
+    superseded_at timestamp(0) without time zone,
+    notes text,
+    created_at timestamp(0) without time zone,
+    updated_at timestamp(0) without time zone
+);
+
+
+ALTER TABLE public.tournament_result_publications OWNER TO postgres;
+
+--
+-- Name: tournament_result_publications_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.tournament_result_publications_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.tournament_result_publications_id_seq OWNER TO postgres;
+
+--
+-- Name: tournament_result_publications_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.tournament_result_publications_id_seq OWNED BY public.tournament_result_publications.id;
+
+
+--
 -- Name: tournament_result_snapshot_rows; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -5895,6 +6003,20 @@ ALTER TABLE ONLY public.tournament_result_outputs ALTER COLUMN id SET DEFAULT ne
 
 
 --
+-- Name: tournament_result_publication_rows id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.tournament_result_publication_rows ALTER COLUMN id SET DEFAULT nextval('public.tournament_result_publication_rows_id_seq'::regclass);
+
+
+--
+-- Name: tournament_result_publications id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.tournament_result_publications ALTER COLUMN id SET DEFAULT nextval('public.tournament_result_publications_id_seq'::regclass);
+
+
+--
 -- Name: tournament_result_snapshot_rows id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
@@ -6937,6 +7059,22 @@ ALTER TABLE ONLY public.tournament_result_outputs
 
 
 --
+-- Name: tournament_result_publication_rows tournament_result_publication_rows_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.tournament_result_publication_rows
+    ADD CONSTRAINT tournament_result_publication_rows_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: tournament_result_publications tournament_result_publications_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.tournament_result_publications
+    ADD CONSTRAINT tournament_result_publications_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: tournament_result_snapshot_rows tournament_result_snapshot_rows_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -7062,6 +7200,14 @@ ALTER TABLE ONLY public.tournament_round_lane_assignments
 
 ALTER TABLE ONLY public.tournament_result_outputs
     ADD CONSTRAINT tro_tournament_type_scope_unique UNIQUE (tournament_id, output_type, output_scope);
+
+
+--
+-- Name: tournament_result_publications trp_tournament_revision_unique; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.tournament_result_publications
+    ADD CONSTRAINT trp_tournament_revision_unique UNIQUE (tournament_id, revision);
 
 
 --
@@ -7971,6 +8117,41 @@ CREATE INDEX trla_tournament_stage_round_idx ON public.tournament_round_lane_ass
 
 
 --
+-- Name: trp_snapshot_published_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX trp_snapshot_published_idx ON public.tournament_result_publications USING btree (snapshot_id, published_at);
+
+
+--
+-- Name: trp_tournament_status_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX trp_tournament_status_idx ON public.tournament_result_publications USING btree (tournament_id, status);
+
+
+--
+-- Name: trpr_publication_bowler_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX trpr_publication_bowler_idx ON public.tournament_result_publication_rows USING btree (publication_id, pro_bowler_id);
+
+
+--
+-- Name: trpr_publication_identity_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX trpr_publication_identity_idx ON public.tournament_result_publication_rows USING btree (publication_id, identity_key);
+
+
+--
+-- Name: trpr_publication_ranking_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX trpr_publication_ranking_idx ON public.tournament_result_publication_rows USING btree (publication_id, ranking);
+
+
+--
 -- Name: trs_tournament_current_idx; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -8675,6 +8856,70 @@ ALTER TABLE ONLY public.tournament_result_outputs
 
 ALTER TABLE ONLY public.tournament_result_outputs
     ADD CONSTRAINT tournament_result_outputs_tournament_id_foreign FOREIGN KEY (tournament_id) REFERENCES public.tournaments(id) ON DELETE CASCADE;
+
+
+--
+-- Name: tournament_result_publication_rows tournament_result_publication_rows_amateur_bowler_id_foreign; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.tournament_result_publication_rows
+    ADD CONSTRAINT tournament_result_publication_rows_amateur_bowler_id_foreign FOREIGN KEY (amateur_bowler_id) REFERENCES public.amateur_bowlers(id) ON DELETE SET NULL;
+
+
+--
+-- Name: tournament_result_publication_rows tournament_result_publication_rows_pro_bowler_id_foreign; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.tournament_result_publication_rows
+    ADD CONSTRAINT tournament_result_publication_rows_pro_bowler_id_foreign FOREIGN KEY (pro_bowler_id) REFERENCES public.pro_bowlers(id) ON DELETE SET NULL;
+
+
+--
+-- Name: tournament_result_publication_rows tournament_result_publication_rows_publication_id_foreign; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.tournament_result_publication_rows
+    ADD CONSTRAINT tournament_result_publication_rows_publication_id_foreign FOREIGN KEY (publication_id) REFERENCES public.tournament_result_publications(id) ON DELETE CASCADE;
+
+
+--
+-- Name: tournament_result_publication_rows tournament_result_publication_rows_source_snapshot_id_foreign; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.tournament_result_publication_rows
+    ADD CONSTRAINT tournament_result_publication_rows_source_snapshot_id_foreign FOREIGN KEY (source_snapshot_id) REFERENCES public.tournament_result_snapshots(id) ON DELETE SET NULL;
+
+
+--
+-- Name: tournament_result_publication_rows tournament_result_publication_rows_source_snapshot_row_id_forei; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.tournament_result_publication_rows
+    ADD CONSTRAINT tournament_result_publication_rows_source_snapshot_row_id_forei FOREIGN KEY (source_snapshot_row_id) REFERENCES public.tournament_result_snapshot_rows(id) ON DELETE SET NULL;
+
+
+--
+-- Name: tournament_result_publications tournament_result_publications_published_by_foreign; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.tournament_result_publications
+    ADD CONSTRAINT tournament_result_publications_published_by_foreign FOREIGN KEY (published_by) REFERENCES public.users(id) ON DELETE SET NULL;
+
+
+--
+-- Name: tournament_result_publications tournament_result_publications_snapshot_id_foreign; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.tournament_result_publications
+    ADD CONSTRAINT tournament_result_publications_snapshot_id_foreign FOREIGN KEY (snapshot_id) REFERENCES public.tournament_result_snapshots(id) ON DELETE SET NULL;
+
+
+--
+-- Name: tournament_result_publications tournament_result_publications_tournament_id_foreign; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.tournament_result_publications
+    ADD CONSTRAINT tournament_result_publications_tournament_id_foreign FOREIGN KEY (tournament_id) REFERENCES public.tournaments(id) ON DELETE CASCADE;
 
 
 --

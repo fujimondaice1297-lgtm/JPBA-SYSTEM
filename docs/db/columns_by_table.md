@@ -1,7 +1,7 @@
 # Columns by table (generated)
 
 - Source: `docs/db/columns_public.csv`
-- Generated: 2026-07-21 23:19:09
+- Generated: 2026-07-22 00:12:12
 
 > ⚠️ このファイルは自動生成です。手で編集しないでください。
 
@@ -1470,6 +1470,62 @@
 | 7 | is_active | boolean | NO |
 | 8 | created_at | timestamp without time zone | YES |
 | 9 | updated_at | timestamp without time zone | YES |
+
+## tournament_result_publication_rows (25 columns)
+
+| # | column | type | nullable |
+|---:|---|---|---|
+| 1 | id | bigint | NO |
+| 2 | publication_id | bigint | NO |
+| 3 | source_snapshot_id | bigint | YES |
+| 4 | source_snapshot_row_id | bigint | YES |
+| 5 | source_result_code | character varying | YES |
+| 6 | ranking | integer | NO |
+| 7 | pro_bowler_id | bigint | YES |
+| 8 | amateur_bowler_id | bigint | YES |
+| 9 | pro_bowler_license_no | character varying | YES |
+| 10 | amateur_name | character varying | YES |
+| 11 | display_name | character varying | NO |
+| 12 | identity_key | character varying | NO |
+| 13 | gender | character varying | YES |
+| 14 | entry_number | character varying | YES |
+| 15 | total_pin | integer | NO |
+| 16 | games | integer | NO |
+| 17 | average | numeric | YES |
+| 18 | points | integer | NO |
+| 19 | award_points | integer | NO |
+| 20 | step_points | integer | NO |
+| 21 | prize_money | bigint | NO |
+| 22 | affiliation_display | text | YES |
+| 23 | breakdown | json | YES |
+| 24 | created_at | timestamp without time zone | YES |
+| 25 | updated_at | timestamp without time zone | YES |
+
+## tournament_result_publications (21 columns)
+
+| # | column | type | nullable |
+|---:|---|---|---|
+| 1 | id | bigint | NO |
+| 2 | tournament_id | bigint | NO |
+| 3 | snapshot_id | bigint | YES |
+| 4 | revision | integer | NO |
+| 5 | status | character varying | NO |
+| 6 | row_count | integer | NO |
+| 7 | pro_count | integer | NO |
+| 8 | amateur_count | integer | NO |
+| 9 | total_points | bigint | NO |
+| 10 | total_prize_money | bigint | NO |
+| 11 | result_checksum | character | NO |
+| 12 | distribution_checksum | character | NO |
+| 13 | source_snapshot_ids | json | NO |
+| 14 | validation_summary | json | YES |
+| 15 | title_sync_summary | json | YES |
+| 16 | published_at | timestamp without time zone | NO |
+| 17 | published_by | bigint | YES |
+| 18 | superseded_at | timestamp without time zone | YES |
+| 19 | notes | text | YES |
+| 20 | created_at | timestamp without time zone | YES |
+| 21 | updated_at | timestamp without time zone | YES |
 
 ## tournament_result_snapshot_rows (27 columns)
 

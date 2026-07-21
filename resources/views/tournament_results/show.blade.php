@@ -109,16 +109,21 @@
 
         <a href="{{ route('tournament_results.index') }}" class="btn btn-outline-secondary">大会一覧へ戻る</a>
 
-        <a href="{{ route('tournament_results.create', $tournament) }}" class="btn btn-success">新規登録</a>
+        @unless($currentPublication)
+            <a href="{{ route('tournament_results.create', $tournament) }}" class="btn btn-success">新規登録</a>
 
-        <a href="{{ route('tournament_results.batchCreate', ['tournament_id' => $tournament->id]) }}"
-           class="btn btn-warning">一括登録</a>
+            <a href="{{ route('tournament_results.batchCreate', ['tournament_id' => $tournament->id]) }}"
+               class="btn btn-warning">一括登録</a>
+        @endunless
 
         <a href="{{ route('tournaments.point_distributions.create', $tournament) }}"
            class="btn btn-outline-primary">ポイント配分</a>
 
         <a href="{{ route('tournaments.prize_distributions.create', $tournament) }}"
            class="btn btn-outline-success">賞金配分</a>
+
+        <a href="{{ route('tournaments.result_publications.index', $tournament) }}"
+           class="btn btn-danger">公式結果の確定・公開</a>
 
         @if($finalScreenUrl)
             <a href="{{ $finalScreenUrl }}" class="btn {{ $finalScreen['class'] }}">
@@ -133,22 +138,18 @@
             PDF出力
         </a>
 
-        <form method="POST" action="{{ route('tournaments.results.apply_awards_points', $tournament) }}"
-              onsubmit="return confirm('この大会の賞金・ポイントを再計算します。よろしいですか？');">
-            @csrf
-            <button type="submit" class="btn btn-outline-primary">賞金・ポイント再計算</button>
-        </form>
-
-        <form method="POST" action="{{ route('tournaments.results.sync', $tournament) }}"
-              onsubmit="return confirm('この大会の優勝者をプロフィールのタイトルへ反映します。続行しますか？');">
-            @csrf
-            <button type="submit" class="btn btn-danger">タイトル反映</button>
-        </form>
     </div>
 
+    @if($currentPublication)
+        <div class="alert alert-success py-2">
+            公式結果を第{{ number_format($currentPublication->revision) }}版として確定済みです。
+            成績を訂正する場合は元の成績表を修正し、「公式結果の確定・公開」から改訂版を公開してください。
+        </div>
+    @endif
+
     <div class="alert alert-info py-2">
-        基本の流れは、<strong>ポイント配分 / 賞金配分</strong> → <strong>成績登録</strong> → 配分変更時のみ<strong>賞金・ポイント再計算</strong> → <strong>タイトル反映</strong> です。<br>
-        成績の<strong>新規登録・一括登録・編集時</strong>に、設定済みの<strong>ポイント配分</strong>と<strong>賞金配分</strong>が自動反映されます。<br>
+        基本の流れは、<strong>ポイント配分 / 賞金配分</strong> → <strong>最終成績スナップショット</strong> → <strong>公式結果の確定・公開</strong>です。<br>
+        管理者が確定するまでは、ポイント・賞金・タイトル・公開PDFへ反映しません。<br>
         シーズントライアルでは、最終順位1〜8位に固定の<strong>入賞ポイント</strong>を自動加算します。<br>
         配分未設定の順位は 0 のままです。<br>
         ライセンス番号のないアマチュア選手は、プロフィールには反映せず、この大会成績上の表示名だけを保持します。
@@ -221,13 +222,13 @@
                     <td>{{ isset($result->average) ? number_format($result->average, 2) : '-' }}</td>
                     <td>{{ isset($result->prize_money) ? '¥' . number_format($result->prize_money) : '-' }}</td>
                     <td>
-                        @if(empty($result->is_snapshot_preview) && !empty($result->id))
+                        @if(!$currentPublication && empty($result->is_snapshot_preview) && !empty($result->id))
                             <a href="{{ route('results.edit', $result) }}" class="btn btn-primary btn-sm">編集</a>
                         @else
-                            <span class="text-muted small">確認用</span>
+                            <span class="text-muted small">{{ $currentPublication ? '確定済み' : '確認用' }}</span>
                         @endif
 
-                        @if(empty($result->is_snapshot_preview) && auth()->user()?->isAdmin())
+                        @if(!$currentPublication && empty($result->is_snapshot_preview) && auth()->user()?->isAdmin())
                             <form action="{{ route('admin.tournaments.results.destroy', [$result->tournament_id, $result->id]) }}"
                                   method="POST"
                                   class="d-inline"

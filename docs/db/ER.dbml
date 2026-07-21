@@ -1,5 +1,5 @@
 // Auto-generated from docs/db/data_dictionary.md
-// Generated at: 2026-07-21T23:21:45+09:00
+// Generated at: 2026-07-22T00:10:44+09:00
 
 Project JPBA_SYSTEM {
   database_type: 'PostgreSQL'
@@ -253,6 +253,14 @@ Table tournament_result_outputs {
   // columns omitted (see docs/db/columns_by_table.md)
 }
 
+Table tournament_result_publication_rows {
+  // columns omitted (see docs/db/columns_by_table.md)
+}
+
+Table tournament_result_publications {
+  // columns omitted (see docs/db/columns_by_table.md)
+}
+
 Table tournament_result_snapshot_rows {
   // columns omitted (see docs/db/columns_by_table.md)
 }
@@ -399,6 +407,14 @@ Ref: tournament_participants.tournament_id > tournaments.id
 Ref: tournament_points.tournament_id > tournaments.id
 Ref: tournament_result_outputs.distribution_pattern_id > distribution_patterns.id
 Ref: tournament_result_outputs.tournament_id > tournaments.id
+Ref: tournament_result_publication_rows.amateur_bowler_id > amateur_bowlers.id
+Ref: tournament_result_publication_rows.pro_bowler_id > pro_bowlers.id
+Ref: tournament_result_publication_rows.publication_id > tournament_result_publications.id
+Ref: tournament_result_publication_rows.source_snapshot_id > tournament_result_snapshots.id
+Ref: tournament_result_publication_rows.source_snapshot_row_id > tournament_result_snapshot_rows.id
+Ref: tournament_result_publications.published_by > users.id
+Ref: tournament_result_publications.snapshot_id > tournament_result_snapshots.id
+Ref: tournament_result_publications.tournament_id > tournaments.id
 Ref: tournament_result_snapshot_rows.amateur_bowler_id > amateur_bowlers.id
 Ref: tournament_result_snapshot_rows.competitor_group_id > tournament_competitor_groups.id
 Ref: tournament_result_snapshot_rows.pro_bowler_id > pro_bowlers.id

@@ -210,6 +210,11 @@ class Tournament extends Model
         return $this->hasMany(TournamentAggregateDefinition::class);
     }
 
+    public function resultPublications()
+    {
+        return $this->hasMany(TournamentResultPublication::class);
+    }
+
     public function organizations()
     {
         return $this->hasMany(TournamentOrganization::class);

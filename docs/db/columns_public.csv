@@ -1005,6 +1005,52 @@ tournament_result_outputs,6,settings,json,YES
 tournament_result_outputs,7,is_active,boolean,NO
 tournament_result_outputs,8,created_at,timestamp without time zone,YES
 tournament_result_outputs,9,updated_at,timestamp without time zone,YES
+tournament_result_publication_rows,1,id,bigint,NO
+tournament_result_publication_rows,2,publication_id,bigint,NO
+tournament_result_publication_rows,3,source_snapshot_id,bigint,YES
+tournament_result_publication_rows,4,source_snapshot_row_id,bigint,YES
+tournament_result_publication_rows,5,source_result_code,character varying,YES
+tournament_result_publication_rows,6,ranking,integer,NO
+tournament_result_publication_rows,7,pro_bowler_id,bigint,YES
+tournament_result_publication_rows,8,amateur_bowler_id,bigint,YES
+tournament_result_publication_rows,9,pro_bowler_license_no,character varying,YES
+tournament_result_publication_rows,10,amateur_name,character varying,YES
+tournament_result_publication_rows,11,display_name,character varying,NO
+tournament_result_publication_rows,12,identity_key,character varying,NO
+tournament_result_publication_rows,13,gender,character varying,YES
+tournament_result_publication_rows,14,entry_number,character varying,YES
+tournament_result_publication_rows,15,total_pin,integer,NO
+tournament_result_publication_rows,16,games,integer,NO
+tournament_result_publication_rows,17,average,numeric,YES
+tournament_result_publication_rows,18,points,integer,NO
+tournament_result_publication_rows,19,award_points,integer,NO
+tournament_result_publication_rows,20,step_points,integer,NO
+tournament_result_publication_rows,21,prize_money,bigint,NO
+tournament_result_publication_rows,22,affiliation_display,text,YES
+tournament_result_publication_rows,23,breakdown,json,YES
+tournament_result_publication_rows,24,created_at,timestamp without time zone,YES
+tournament_result_publication_rows,25,updated_at,timestamp without time zone,YES
+tournament_result_publications,1,id,bigint,NO
+tournament_result_publications,2,tournament_id,bigint,NO
+tournament_result_publications,3,snapshot_id,bigint,YES
+tournament_result_publications,4,revision,integer,NO
+tournament_result_publications,5,status,character varying,NO
+tournament_result_publications,6,row_count,integer,NO
+tournament_result_publications,7,pro_count,integer,NO
+tournament_result_publications,8,amateur_count,integer,NO
+tournament_result_publications,9,total_points,bigint,NO
+tournament_result_publications,10,total_prize_money,bigint,NO
+tournament_result_publications,11,result_checksum,character,NO
+tournament_result_publications,12,distribution_checksum,character,NO
+tournament_result_publications,13,source_snapshot_ids,json,NO
+tournament_result_publications,14,validation_summary,json,YES
+tournament_result_publications,15,title_sync_summary,json,YES
+tournament_result_publications,16,published_at,timestamp without time zone,NO
+tournament_result_publications,17,published_by,bigint,YES
+tournament_result_publications,18,superseded_at,timestamp without time zone,YES
+tournament_result_publications,19,notes,text,YES
+tournament_result_publications,20,created_at,timestamp without time zone,YES
+tournament_result_publications,21,updated_at,timestamp without time zone,YES
 tournament_result_snapshot_rows,1,id,bigint,NO
 tournament_result_snapshot_rows,2,snapshot_id,bigint,NO
 tournament_result_snapshot_rows,3,ranking,integer,NO

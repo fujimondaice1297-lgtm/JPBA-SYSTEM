@@ -22,7 +22,7 @@ use App\Http\Controllers\{
     TournamentProController, TpRegistrationController, RankingController, PerfectRecordController,
     ProGroupController, CertificateController, RegisteredBallController, ComplianceController,
     ProBowlerTrainingController, BulkTrainingController, TrainingReportController,
-    CalendarController, CalendarEventController, ProBowlerTitleController, TitleSyncController,
+    CalendarController, CalendarEventController, ProBowlerTitleController,
     MemberDashboardController, InformationController, TournamentEntryBallController,
     TournamentEntryController, DrawController, ProBowlerImportController, AuthInstructorImportController, HofController, HofManageController,
     AuthController, ScoreController, EligibilityController, PublicHomeController, PublicInstructorController, PublicPageController, PublicPlayerController, PublicProfileController, PublicTournamentController, FlashNewsController,
@@ -301,6 +301,12 @@ Route::middleware(['auth','role:member,editor,admin'])->group(function () {
 ======================================================================= */
 Route::middleware(['auth','role:editor,admin'])->group(function () {
 
+    Route::get('/tournaments/{tournament}/result-publications', [\App\Http\Controllers\TournamentResultPublicationController::class, 'index'])
+        ->name('tournaments.result_publications.index');
+    Route::post('/tournaments/{tournament}/result-publications', [\App\Http\Controllers\TournamentResultPublicationController::class, 'publish'])
+        ->middleware('role:admin')
+        ->name('tournaments.result_publications.publish');
+
     Route::get('/tournaments/{tournament}/aggregate-results', [\App\Http\Controllers\TournamentAggregateController::class, 'index'])
         ->name('tournaments.aggregate_results.index');
     Route::post('/tournaments/{tournament}/aggregate-results/groups', [\App\Http\Controllers\TournamentAggregateController::class, 'storeGroup'])
@@ -454,13 +460,6 @@ Route::middleware(['auth','role:editor,admin'])->group(function () {
     Route::get('/tournaments/{tournament}/results/pdf', [TournamentResultController::class, 'exportTournamentPdf'])
         ->name('tournaments.results.pdf');
 
-    Route::post('/tournaments/{tournament}/results/apply-awards-points',
-        [TournamentResultController::class, 'applyAwardsAndPoints'])
-        ->name('tournaments.results.apply_awards_points');
-    Route::post('/tournaments/{tournament}/results/sync-titles',
-        [TournamentResultController::class, 'syncTitles'])
-        ->name('tournaments.results.sync');
-
     Route::get('/tournaments/{tournament}/result-snapshots', [\App\Http\Controllers\TournamentResultSnapshotController::class, 'index'])
         ->name('tournaments.result_snapshots.index');
     Route::post('/tournaments/{tournament}/result-snapshots/reflect', [\App\Http\Controllers\TournamentResultSnapshotController::class, 'reflect'])
@@ -542,8 +541,6 @@ Route::middleware(['auth','role:editor,admin'])->group(function () {
     Route::resource('record_types', RecordTypeController::class)->except(['destroy']);
 
     Route::post('/pro_bowlers/{bowler}/titles', [ProBowlerTitleController::class, 'store'])->name('pro_bowler_titles.store');
-
-    Route::post('/tournaments/{tournament}/sync-titles', [TitleSyncController::class, 'sync'])->name('tournaments.sync_titles');
 
     Route::get('/pro_bowlers/import', [ProBowlerImportController::class, 'form'])->name('pro_bowlers.import_form');
     Route::post('/pro_bowlers/import', [ProBowlerImportController::class, 'import'])->name('pro_bowlers.import');

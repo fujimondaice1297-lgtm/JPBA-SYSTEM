@@ -85,6 +85,9 @@
         </div>
         <div class="d-flex gap-2">
             <a href="{{ $backUrl }}" class="btn btn-outline-secondary">反映ページへ戻る</a>
+            @if($snapshot->is_final)
+                <a href="{{ route('tournaments.result_publications.index', ['tournament' => $tournament->id, 'snapshot_id' => $snapshot->id]) }}" class="btn btn-danger">公式結果の確定・公開</a>
+            @endif
             <a href="{{ route('tournaments.results.index', $tournament) }}" class="btn btn-outline-secondary">大会成績一覧へ</a>
             @if($snapshot->is_final && $finalResultsCount > 0 && is_null($snapshot->gender) && is_null($snapshot->shift))
                 <a href="{{ route('tournaments.results.index', $tournament) }}" class="btn btn-success">最終成績を見る</a>

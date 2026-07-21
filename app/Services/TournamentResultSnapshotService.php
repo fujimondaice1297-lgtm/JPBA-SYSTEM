@@ -2,9 +2,7 @@
 
 namespace App\Services;
 
-use App\Models\Tournament;
 use App\Models\ProBowler;
-use App\Models\TournamentResult;
 use App\Models\TournamentResultSnapshot;
 use App\Models\TournamentResultSnapshotRow;
 use Carbon\Carbon;
@@ -16,11 +14,6 @@ use InvalidArgumentException;
 class TournamentResultSnapshotService
 {
     private array $proBowlerResolveCache = [];
-
-    public function __construct(
-        private readonly TournamentTitleSyncService $titleSyncService,
-    ) {
-    }
 
     /**
      * トータルピン方式の正式成績スナップショットを作成する。
@@ -109,13 +102,7 @@ class TournamentResultSnapshotService
                 ]);
             }
 
-            $syncedToTournamentResults = false;
-            if ($normalized['is_final'] === true) {
-                $syncedToTournamentResults = $this->syncFinalSnapshotToTournamentResults($snapshot);
-            }
-
             $snapshot = $snapshot->load(['rows', 'tournament', 'reflectedBy']);
-            $snapshot->setAttribute('synced_to_tournament_results', $syncedToTournamentResults);
 
             return $snapshot;
         });
@@ -633,21 +620,6 @@ class TournamentResultSnapshotService
         );
     }
 
-    private function resolveBowlerFromSnapshotRow(object $row): ?ProBowler
-    {
-        if ($row->pro_bowler_id !== null) {
-            $byId = ProBowler::query()->find((int) $row->pro_bowler_id);
-            if ($byId) {
-                return $byId;
-            }
-        }
-
-        return $this->resolveBowlerByLicenseTail(
-            license: $this->nullableTrim($row->pro_bowler_license_no),
-            gender: $this->nullableTrim($row->gender),
-        );
-    }
-
     private function resolveBowlerByLicenseTail(?string $license, ?string $gender): ?ProBowler
     {
         if ($license === null) {
@@ -729,134 +701,6 @@ class TournamentResultSnapshotService
         return array_values(array_unique($names));
     }
 
-
-    private function syncFinalSnapshotToTournamentResults(TournamentResultSnapshot $snapshot): bool
-    {
-        if (trim((string) ($snapshot->shift ?? '')) !== '') {
-            return false;
-        }
-
-        $tournament = Tournament::query()->find($snapshot->tournament_id);
-        if (!$tournament) {
-            return false;
-        }
-
-        $snapshotGender = strtoupper(trim((string) ($snapshot->gender ?? '')));
-        $tournamentGender = strtoupper(trim((string) ($tournament->gender ?? '')));
-        if ($snapshotGender !== '' && $snapshotGender !== $tournamentGender) {
-            return false;
-        }
-
-        $rankingYear = $this->resolveRankingYear($tournament);
-        $pointMap = $this->loadPointMap((int) $snapshot->tournament_id);
-        $prizeMap = $this->loadPrizeMap((int) $snapshot->tournament_id);
-
-        TournamentResult::query()
-            ->where('tournament_id', $snapshot->tournament_id)
-            ->delete();
-
-        $hasProBowlerId = Schema::hasColumn('tournament_results', 'pro_bowler_id');
-        $hasLicenseNo = Schema::hasColumn('tournament_results', 'pro_bowler_license_no');
-        $hasPoints = Schema::hasColumn('tournament_results', 'points');
-        $hasPrizeMoney = Schema::hasColumn('tournament_results', 'prize_money');
-        $hasAmateurName = Schema::hasColumn('tournament_results', 'amateur_name');
-
-        $rows = $snapshot->rows()->orderBy('ranking')->orderBy('id')->get();
-
-        foreach ($rows as $row) {
-            $resolvedBowler = $this->resolveBowlerFromSnapshotRow($row);
-            $resolvedProBowlerId = $resolvedBowler?->id ?? ($row->pro_bowler_id !== null ? (int) $row->pro_bowler_id : null);
-            $resolvedLicenseNo = $resolvedBowler?->license_no ?? $this->nullableTrim($row->pro_bowler_license_no);
-            $resolvedDisplayName = $resolvedBowler?->name_kanji
-                ?? $resolvedBowler?->name_kana
-                ?? $this->nullableTrim($row->display_name)
-                ?? $this->nullableTrim($row->amateur_name);
-
-            $points = $resolvedProBowlerId !== null ? (int) ($pointMap[$row->ranking] ?? 0) : 0;
-            $prizeMoney = $resolvedProBowlerId !== null ? (int) ($prizeMap[$row->ranking] ?? 0) : 0;
-
-            $payload = [
-                'tournament_id' => (int) $snapshot->tournament_id,
-                'ranking_year' => $rankingYear,
-                'ranking' => (int) $row->ranking,
-                'total_pin' => (int) $row->total_pin,
-                'games' => (int) $row->games,
-                'average' => $row->average !== null ? (float) $row->average : null,
-            ];
-
-            if ($hasLicenseNo) {
-                $payload['pro_bowler_license_no'] = $resolvedLicenseNo;
-            }
-            if ($hasProBowlerId) {
-                $payload['pro_bowler_id'] = $resolvedProBowlerId;
-            }
-            if ($hasPoints) {
-                $payload['points'] = $points;
-            }
-            if ($hasPrizeMoney) {
-                $payload['prize_money'] = $prizeMoney;
-            }
-            if ($hasAmateurName) {
-                $payload['amateur_name'] = $resolvedProBowlerId === null ? $resolvedDisplayName : null;
-            }
-
-            TournamentResult::query()->create($payload);
-
-            $row->forceFill([
-                'pro_bowler_id' => $resolvedProBowlerId,
-                'pro_bowler_license_no' => $resolvedLicenseNo,
-                'display_name' => $resolvedDisplayName,
-                'amateur_name' => $resolvedProBowlerId === null ? $resolvedDisplayName : null,
-                'points' => $points,
-                'prize_money' => $prizeMoney,
-            ])->save();
-        }
-
-        $this->titleSyncService->sync($tournament);
-
-        return true;
-    }
-
-    private function resolveRankingYear(Tournament $tournament): int
-    {
-        if (!empty($tournament->year)) {
-            return (int) $tournament->year;
-        }
-
-        if (!empty($tournament->start_date)) {
-            try {
-                return Carbon::parse($tournament->start_date)->year;
-            } catch (\Throwable) {
-                // no-op
-            }
-        }
-
-        return (int) now()->year;
-    }
-
-    /**
-     * @return array<int,int>
-     */
-    private function loadPointMap(int $tournamentId): array
-    {
-        return DB::table('point_distributions')
-            ->where('tournament_id', $tournamentId)
-            ->pluck('points', 'rank')
-            ->mapWithKeys(fn ($points, $rank) => [(int) $rank => (int) $points])
-            ->all();
-    }
-
-    /**
-     * @return array<int,int>
-     */
-    private function loadPrizeMap(int $tournamentId): array
-    {
-        return DB::table('prize_distributions')
-            ->where('tournament_id', $tournamentId)
-            ->pluck('amount', 'rank')
-            ->mapWithKeys(fn ($amount, $rank) => [(int) $rank => (int) $amount])
-            ->all();
-    }
 
     private function nullableTrim(mixed $value): ?string
     {

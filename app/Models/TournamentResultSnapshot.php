@@ -60,4 +60,9 @@ class TournamentResultSnapshot extends Model
     {
         return $this->hasMany(TournamentResultSnapshotRow::class, 'snapshot_id');
     }
+
+    public function publications(): HasMany
+    {
+        return $this->hasMany(TournamentResultPublication::class, 'snapshot_id');
+    }
 }
