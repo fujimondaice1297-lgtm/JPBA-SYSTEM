@@ -1,7 +1,7 @@
 # Columns by table (generated)
 
 - Source: `docs/db/columns_public.csv`
-- Generated: 2026-07-21 22:36:53
+- Generated: 2026-07-21 23:19:09
 
 > ⚠️ このファイルは自動生成です。手で編集しないでください。
 
@@ -1147,6 +1147,41 @@
 | 6 | updated_at | timestamp without time zone | YES |
 | 7 | enabled | boolean | NO |
 
+## tournament_aggregate_definitions (13 columns)
+
+| # | column | type | nullable |
+|---:|---|---|---|
+| 1 | id | bigint | NO |
+| 2 | tournament_id | bigint | NO |
+| 3 | code | character varying | NO |
+| 4 | name | character varying | NO |
+| 5 | subject_type | character varying | NO |
+| 6 | gender | character varying | YES |
+| 7 | require_all_sources | boolean | NO |
+| 8 | is_published | boolean | NO |
+| 9 | is_active | boolean | NO |
+| 10 | notes | text | YES |
+| 11 | created_at | timestamp without time zone | YES |
+| 12 | updated_at | timestamp without time zone | YES |
+| 13 | tie_break_policy | character varying | NO |
+
+## tournament_aggregate_sources (12 columns)
+
+| # | column | type | nullable |
+|---:|---|---|---|
+| 1 | id | bigint | NO |
+| 2 | aggregate_definition_id | bigint | NO |
+| 3 | source_tournament_id | bigint | NO |
+| 4 | label | character varying | NO |
+| 5 | stage | character varying | YES |
+| 6 | game_from | smallint | YES |
+| 7 | game_to | smallint | YES |
+| 8 | expected_games_per_member | smallint | YES |
+| 9 | is_required | boolean | NO |
+| 10 | sort_order | integer | NO |
+| 11 | created_at | timestamp without time zone | YES |
+| 12 | updated_at | timestamp without time zone | YES |
+
 ## tournament_auto_draw_logs (11 columns)
 
 | # | column | type | nullable |
@@ -1173,6 +1208,34 @@
 | 4 | prize_money | integer | NO |
 | 5 | created_at | timestamp without time zone | YES |
 | 6 | updated_at | timestamp without time zone | YES |
+
+## tournament_competitor_group_members (6 columns)
+
+| # | column | type | nullable |
+|---:|---|---|---|
+| 1 | id | bigint | NO |
+| 2 | competitor_group_id | bigint | NO |
+| 3 | tournament_participant_id | bigint | NO |
+| 4 | member_order | smallint | NO |
+| 5 | created_at | timestamp without time zone | YES |
+| 6 | updated_at | timestamp without time zone | YES |
+
+## tournament_competitor_groups (12 columns)
+
+| # | column | type | nullable |
+|---:|---|---|---|
+| 1 | id | bigint | NO |
+| 2 | tournament_id | bigint | NO |
+| 3 | group_type | character varying | NO |
+| 4 | code | character varying | YES |
+| 5 | name | character varying | NO |
+| 6 | division | character varying | YES |
+| 7 | expected_member_count | smallint | NO |
+| 8 | sort_order | integer | NO |
+| 9 | is_active | boolean | NO |
+| 10 | notes | text | YES |
+| 11 | created_at | timestamp without time zone | YES |
+| 12 | updated_at | timestamp without time zone | YES |
 
 ## tournament_draw_reminder_logs (14 columns)
 
@@ -1408,7 +1471,7 @@
 | 8 | created_at | timestamp without time zone | YES |
 | 9 | updated_at | timestamp without time zone | YES |
 
-## tournament_result_snapshot_rows (20 columns)
+## tournament_result_snapshot_rows (27 columns)
 
 | # | column | type | nullable |
 |---:|---|---|---|
@@ -1432,8 +1495,15 @@
 | 18 | prize_money | numeric | YES |
 | 19 | created_at | timestamp without time zone | YES |
 | 20 | updated_at | timestamp without time zone | YES |
+| 21 | subject_type | character varying | NO |
+| 22 | competitor_group_id | bigint | YES |
+| 23 | amateur_bowler_id | bigint | YES |
+| 24 | identity_key | character varying | YES |
+| 25 | source_count | smallint | NO |
+| 26 | is_complete | boolean | NO |
+| 27 | breakdown | json | YES |
 
-## tournament_result_snapshots (20 columns)
+## tournament_result_snapshots (21 columns)
 
 | # | column | type | nullable |
 |---:|---|---|---|
@@ -1457,6 +1527,7 @@
 | 18 | created_at | timestamp without time zone | YES |
 | 19 | updated_at | timestamp without time zone | YES |
 | 20 | calculation_definition | json | YES |
+| 21 | aggregate_definition_id | bigint | YES |
 
 ## tournament_results (17 columns)
 

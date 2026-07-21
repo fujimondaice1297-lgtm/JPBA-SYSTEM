@@ -301,6 +301,27 @@ Route::middleware(['auth','role:member,editor,admin'])->group(function () {
 ======================================================================= */
 Route::middleware(['auth','role:editor,admin'])->group(function () {
 
+    Route::get('/tournaments/{tournament}/aggregate-results', [\App\Http\Controllers\TournamentAggregateController::class, 'index'])
+        ->name('tournaments.aggregate_results.index');
+    Route::post('/tournaments/{tournament}/aggregate-results/groups', [\App\Http\Controllers\TournamentAggregateController::class, 'storeGroup'])
+        ->name('tournaments.aggregate_results.groups.store');
+    Route::delete('/tournaments/{tournament}/aggregate-results/groups/{group}', [\App\Http\Controllers\TournamentAggregateController::class, 'destroyGroup'])
+        ->name('tournaments.aggregate_results.groups.destroy');
+    Route::post('/tournaments/{tournament}/aggregate-results/groups/{group}/members', [\App\Http\Controllers\TournamentAggregateController::class, 'storeGroupMember'])
+        ->name('tournaments.aggregate_results.group_members.store');
+    Route::delete('/tournaments/{tournament}/aggregate-results/groups/{group}/members/{member}', [\App\Http\Controllers\TournamentAggregateController::class, 'destroyGroupMember'])
+        ->name('tournaments.aggregate_results.group_members.destroy');
+    Route::post('/tournaments/{tournament}/aggregate-results/definitions', [\App\Http\Controllers\TournamentAggregateController::class, 'storeDefinition'])
+        ->name('tournaments.aggregate_results.definitions.store');
+    Route::delete('/tournaments/{tournament}/aggregate-results/definitions/{definition}', [\App\Http\Controllers\TournamentAggregateController::class, 'destroyDefinition'])
+        ->name('tournaments.aggregate_results.definitions.destroy');
+    Route::post('/tournaments/{tournament}/aggregate-results/definitions/{definition}/sources', [\App\Http\Controllers\TournamentAggregateController::class, 'storeSource'])
+        ->name('tournaments.aggregate_results.sources.store');
+    Route::delete('/tournaments/{tournament}/aggregate-results/definitions/{definition}/sources/{source}', [\App\Http\Controllers\TournamentAggregateController::class, 'destroySource'])
+        ->name('tournaments.aggregate_results.sources.destroy');
+    Route::post('/tournaments/{tournament}/aggregate-results/definitions/{definition}/calculate', [\App\Http\Controllers\TournamentAggregateController::class, 'calculate'])
+        ->name('tournaments.aggregate_results.calculate');
+
     Route::get('/scores/input', [ScoreController::class, 'input'])->name('scores.input');
     Route::post('/scores/store', [ScoreController::class, 'store']);
     Route::post('/scores/settings/bulk', [ScoreController::class, 'saveSettingBulk']);

@@ -13,6 +13,7 @@ class TournamentResultSnapshot extends Model
 
     protected $fillable = [
         'tournament_id',
+        'aggregate_definition_id',
         'result_code',
         'result_name',
         'result_type',
@@ -43,6 +44,11 @@ class TournamentResultSnapshot extends Model
     public function tournament(): BelongsTo
     {
         return $this->belongsTo(Tournament::class);
+    }
+
+    public function aggregateDefinition(): BelongsTo
+    {
+        return $this->belongsTo(TournamentAggregateDefinition::class, 'aggregate_definition_id');
     }
 
     public function reflectedBy(): BelongsTo

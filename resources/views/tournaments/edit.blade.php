@@ -125,6 +125,15 @@
   <div class="alert alert-success">{{ session('success') }}</div>
 @endif
 
+<div class="d-flex flex-wrap gap-2 mb-3">
+  <a href="{{ route('tournaments.aggregate_results.index', $tournament->id) }}" class="btn btn-outline-primary">
+    編成・合算成績
+  </a>
+  <a href="{{ route('tournaments.results.index', $tournament->id) }}" class="btn btn-outline-secondary">
+    成績一覧
+  </a>
+</div>
+
 <form method="POST" action="{{ route('tournaments.update', $tournament->id) }}" enctype="multipart/form-data" id="tournament-edit-form">
   @csrf
   @method('PUT')

@@ -1,5 +1,5 @@
 // Auto-generated from docs/db/data_dictionary.md
-// Generated at: 2026-07-21T22:36:53+09:00
+// Generated at: 2026-07-21T23:21:45+09:00
 
 Project JPBA_SYSTEM {
   database_type: 'PostgreSQL'
@@ -173,11 +173,27 @@ Table sexes {
   // columns omitted (see docs/db/columns_by_table.md)
 }
 
+Table tournament_aggregate_definitions {
+  // columns omitted (see docs/db/columns_by_table.md)
+}
+
+Table tournament_aggregate_sources {
+  // columns omitted (see docs/db/columns_by_table.md)
+}
+
 Table tournament_auto_draw_logs {
   // columns omitted (see docs/db/columns_by_table.md)
 }
 
 Table tournament_awards {
+  // columns omitted (see docs/db/columns_by_table.md)
+}
+
+Table tournament_competitor_group_members {
+  // columns omitted (see docs/db/columns_by_table.md)
+}
+
+Table tournament_competitor_groups {
   // columns omitted (see docs/db/columns_by_table.md)
 }
 
@@ -349,8 +365,14 @@ Ref: score_import_rows.reviewed_by > users.id
 Ref: score_import_rows.score_import_batch_id > score_import_batches.id
 Ref: score_import_rows.tournament_participant_id > tournament_participants.id
 Ref: sessions.user_id > users.id
+Ref: tournament_aggregate_definitions.tournament_id > tournaments.id
+Ref: tournament_aggregate_sources.aggregate_definition_id > tournament_aggregate_definitions.id
+Ref: tournament_aggregate_sources.source_tournament_id > tournaments.id
 Ref: tournament_auto_draw_logs.tournament_id > tournaments.id
 Ref: tournament_awards.tournament_id > tournaments.id
+Ref: tournament_competitor_group_members.competitor_group_id > tournament_competitor_groups.id
+Ref: tournament_competitor_group_members.tournament_participant_id > tournament_participants.id
+Ref: tournament_competitor_groups.tournament_id > tournaments.id
 Ref: tournament_draw_reminder_logs.tournament_entry_id > tournament_entries.id
 Ref: tournament_draw_reminder_logs.tournament_id > tournaments.id
 Ref: tournament_editions.tournament_series_id > tournament_series.id
@@ -377,8 +399,11 @@ Ref: tournament_participants.tournament_id > tournaments.id
 Ref: tournament_points.tournament_id > tournaments.id
 Ref: tournament_result_outputs.distribution_pattern_id > distribution_patterns.id
 Ref: tournament_result_outputs.tournament_id > tournaments.id
+Ref: tournament_result_snapshot_rows.amateur_bowler_id > amateur_bowlers.id
+Ref: tournament_result_snapshot_rows.competitor_group_id > tournament_competitor_groups.id
 Ref: tournament_result_snapshot_rows.pro_bowler_id > pro_bowlers.id
 Ref: tournament_result_snapshot_rows.snapshot_id > tournament_result_snapshots.id
+Ref: tournament_result_snapshots.aggregate_definition_id > tournament_aggregate_definitions.id
 Ref: tournament_result_snapshots.reflected_by > users.id
 Ref: tournament_result_snapshots.tournament_id > tournaments.id
 Ref: tournament_results.pro_bowler_id > pro_bowlers.id

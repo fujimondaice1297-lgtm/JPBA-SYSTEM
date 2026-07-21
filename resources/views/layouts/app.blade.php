@@ -59,11 +59,17 @@
             .jpba-layout-with-menu {
                 flex-direction: column;
                 gap: 1rem;
+                width: 100%;
             }
 
             .jpba-side-menu {
                 width: 100%;
                 flex-basis: auto;
+            }
+
+            .jpba-main-content {
+                width: 100%;
+                max-width: 100%;
             }
         }
 
