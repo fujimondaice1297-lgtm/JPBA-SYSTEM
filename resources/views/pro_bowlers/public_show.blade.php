@@ -186,29 +186,35 @@
     <div class="card-header fw-bold">タイトル</div>
     <div class="card-body">
       <div class="mb-3">
-        <span class="badge bg-primary me-2">公式タイトル：{{ $view['official_titles_count'] ?? 0 }}</span>
-        <span class="badge bg-secondary">シーズントライアル優勝：{{ $view['season_trial_titles_count'] ?? 0 }}</span>
+        <span class="badge bg-primary me-2" data-title-count="official">公式タイトル：{{ $view['official_titles_count'] ?? 0 }}</span>
+        @unless($view['is_female'] ?? false)
+          <span class="badge bg-secondary" data-title-count="season-trial">シーズントライアル優勝：{{ $view['season_trial_titles_count'] ?? 0 }}</span>
+        @endunless
       </div>
 
       @if(($view['titles'] ?? collect())->count())
         <div class="fw-bold mb-1">公式タイトル</div>
-        <ul class="mb-3">
+        <ul class="mb-3" data-title-list="official">
           @foreach($view['titles'] as $t)
-            <li>{{ $t->year }}年 / {{ $t->title_name }} @if($t->won_date)（{{ \Carbon\Carbon::parse($t->won_date)->format('Y-m-d') }}）@endif</li>
+            <li data-title-item="official">{{ $t->year }}年 / {{ $t->title_name }} @if($t->won_date)（{{ \Carbon\Carbon::parse($t->won_date)->format('Y-m-d') }}）@endif</li>
           @endforeach
         </ul>
       @else
         <div class="text-muted mb-3">公式タイトルは登録されていません。</div>
       @endif
 
-      @if(($view['season_trial_titles'] ?? collect())->count())
-        <div class="fw-bold mb-1">シーズントライアル優勝</div>
-        <ul class="mb-0">
-          @foreach($view['season_trial_titles'] as $t)
-            <li>{{ $t->year }}年 / {{ $t->title_name }} @if($t->won_date)（{{ \Carbon\Carbon::parse($t->won_date)->format('Y-m-d') }}）@endif</li>
-          @endforeach
-        </ul>
-      @endif
+      @unless($view['is_female'] ?? false)
+        <div data-title-section="season-trial">
+          @if(($view['season_trial_titles'] ?? collect())->count())
+            <div class="fw-bold mb-1">シーズントライアル優勝</div>
+            <ul class="mb-0" data-title-list="season-trial">
+              @foreach($view['season_trial_titles'] as $t)
+                <li data-title-item="season-trial">{{ $t->year }}年 / {{ $t->title_name }} @if($t->won_date)（{{ \Carbon\Carbon::parse($t->won_date)->format('Y-m-d') }}）@endif</li>
+              @endforeach
+            </ul>
+          @endif
+        </div>
+      @endunless
     </div>
   </div>
 

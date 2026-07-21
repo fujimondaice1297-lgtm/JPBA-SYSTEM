@@ -219,15 +219,17 @@
   <h2 id="title-heading" class="jpba-section-title">タイトル</h2>
 
   <div class="jpba-profile-badge-row">
-    <span class="jpba-profile-badge">公式タイトル：{{ number_format((int) ($view['official_titles_count'] ?? 0)) }}</span>
-    <span class="jpba-profile-badge">シーズントライアル優勝：{{ number_format((int) ($view['season_trial_titles_count'] ?? 0)) }}</span>
+    <span class="jpba-profile-badge" data-title-count="official">公式タイトル：{{ number_format((int) ($view['official_titles_count'] ?? 0)) }}</span>
+    @unless($view['is_female'] ?? false)
+      <span class="jpba-profile-badge" data-title-count="season-trial">シーズントライアル優勝：{{ number_format((int) ($view['season_trial_titles_count'] ?? 0)) }}</span>
+    @endunless
   </div>
 
   <h3 class="jpba-profile-subtitle">公式タイトル</h3>
   @if(($view['titles'] ?? collect())->count())
-    <ul class="jpba-profile-list">
+    <ul class="jpba-profile-list" data-title-list="official">
       @foreach($view['titles'] as $title)
-        <li>
+        <li data-title-item="official">
           {{ $title->year }}年 / {{ $title->title_name }}
           @if($title->won_date)
             （{{ \Carbon\Carbon::parse($title->won_date)->format('Y/m/d') }}）
@@ -239,21 +241,25 @@
     <p class="mb-0 text-muted">公式タイトルは登録されていません。</p>
   @endif
 
-  <h3 class="jpba-profile-subtitle">シーズントライアル優勝履歴</h3>
-  @if(($view['season_trial_titles'] ?? collect())->count())
-    <ul class="jpba-profile-list">
-      @foreach($view['season_trial_titles'] as $title)
-        <li>
-          {{ $title->year }}年 / {{ $title->title_name }}
-          @if($title->won_date)
-            （{{ \Carbon\Carbon::parse($title->won_date)->format('Y/m/d') }}）
-          @endif
-        </li>
-      @endforeach
-    </ul>
-  @else
-    <p class="mb-0 text-muted">確認済みのシーズントライアル優勝履歴は登録されていません。</p>
-  @endif
+  @unless($view['is_female'] ?? false)
+    <div data-title-section="season-trial">
+      <h3 class="jpba-profile-subtitle">シーズントライアル優勝履歴</h3>
+      @if(($view['season_trial_titles'] ?? collect())->count())
+        <ul class="jpba-profile-list" data-title-list="season-trial">
+          @foreach($view['season_trial_titles'] as $title)
+            <li data-title-item="season-trial">
+              {{ $title->year }}年 / {{ $title->title_name }}
+              @if($title->won_date)
+                （{{ \Carbon\Carbon::parse($title->won_date)->format('Y/m/d') }}）
+              @endif
+            </li>
+          @endforeach
+        </ul>
+      @else
+        <p class="mb-0 text-muted">確認済みのシーズントライアル優勝履歴は登録されていません。</p>
+      @endif
+    </div>
+  @endunless
 </section>
 
 @if(collect($view['sns'] ?? [])->filter()->isNotEmpty() || !empty($view['organization']['url']))

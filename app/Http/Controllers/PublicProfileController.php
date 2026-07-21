@@ -76,6 +76,7 @@ class PublicProfileController extends Controller
         $name    = $p->name_kanji ?? $p->name ?? '';
         $kana    = $p->name_kana ?? '';
         $sex     = $p->sex === 1 ? '男性' : ($p->sex === 2 ? '女性' : '—');
+        $isFemale = (int) $p->sex === 2;
         $licRaw  = $p->license_no ?? '';
         $licNum  = $this->licenseDigits($licRaw);
         $photo   = $this->storageUrl($p->profile_image_public ?: ($p->public_image_path ?: null));
@@ -162,6 +163,7 @@ class PublicProfileController extends Controller
             'name'            => $name,
             'kana'            => $kana,
             'sex'             => $sex,
+            'is_female'       => $isFemale,
             'license_no'      => $licNum,
             'district'        => $district,
             'kibetsu'         => $kibetsu,
