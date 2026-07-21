@@ -1,5 +1,5 @@
 // Auto-generated from docs/db/data_dictionary.md
-// Generated at: 2026-07-01T09:13:15+09:00
+// Generated at: 2026-07-21T22:36:53+09:00
 
 Project JPBA_SYSTEM {
   database_type: 'PostgreSQL'
@@ -185,6 +185,10 @@ Table tournament_draw_reminder_logs {
   // columns omitted (see docs/db/columns_by_table.md)
 }
 
+Table tournament_editions {
+  // columns omitted (see docs/db/columns_by_table.md)
+}
+
 Table tournament_entries {
   // columns omitted (see docs/db/columns_by_table.md)
 }
@@ -194,6 +198,10 @@ Table tournament_entry_balls {
 }
 
 Table tournament_entry_operation_logs {
+  // columns omitted (see docs/db/columns_by_table.md)
+}
+
+Table tournament_entry_rules {
   // columns omitted (see docs/db/columns_by_table.md)
 }
 
@@ -225,6 +233,10 @@ Table tournament_points {
   // columns omitted (see docs/db/columns_by_table.md)
 }
 
+Table tournament_result_outputs {
+  // columns omitted (see docs/db/columns_by_table.md)
+}
+
 Table tournament_result_snapshot_rows {
   // columns omitted (see docs/db/columns_by_table.md)
 }
@@ -242,6 +254,18 @@ Table tournament_round_lane_assignments {
 }
 
 Table tournament_seed_players {
+  // columns omitted (see docs/db/columns_by_table.md)
+}
+
+Table tournament_series {
+  // columns omitted (see docs/db/columns_by_table.md)
+}
+
+Table tournament_template_versions {
+  // columns omitted (see docs/db/columns_by_table.md)
+}
+
+Table tournament_templates {
   // columns omitted (see docs/db/columns_by_table.md)
 }
 
@@ -329,6 +353,7 @@ Ref: tournament_auto_draw_logs.tournament_id > tournaments.id
 Ref: tournament_awards.tournament_id > tournaments.id
 Ref: tournament_draw_reminder_logs.tournament_entry_id > tournament_entries.id
 Ref: tournament_draw_reminder_logs.tournament_id > tournaments.id
+Ref: tournament_editions.tournament_series_id > tournament_series.id
 Ref: tournament_entries.pro_bowler_id > pro_bowlers.id
 Ref: tournament_entries.tournament_id > tournaments.id
 Ref: tournament_entry_balls.tournament_entry_id > tournament_entries.id
@@ -337,6 +362,9 @@ Ref: tournament_entry_operation_logs.actor_user_id > users.id
 Ref: tournament_entry_operation_logs.pro_bowler_id > pro_bowlers.id
 Ref: tournament_entry_operation_logs.tournament_entry_id > tournament_entries.id
 Ref: tournament_entry_operation_logs.tournament_id > tournaments.id
+Ref: tournament_entry_rules.source_series_id > tournament_series.id
+Ref: tournament_entry_rules.source_tournament_id > tournaments.id
+Ref: tournament_entry_rules.tournament_id > tournaments.id
 Ref: tournament_files.tournament_id > tournaments.id
 Ref: tournament_match_score_frames.score_sheet_player_id > tournament_match_score_sheet_players.id
 Ref: tournament_match_score_sheet_players.pro_bowler_id > pro_bowlers.id
@@ -347,6 +375,8 @@ Ref: tournament_participants.amateur_bowler_id > amateur_bowlers.id
 Ref: tournament_participants.pro_bowler_id > pro_bowlers.id
 Ref: tournament_participants.tournament_id > tournaments.id
 Ref: tournament_points.tournament_id > tournaments.id
+Ref: tournament_result_outputs.distribution_pattern_id > distribution_patterns.id
+Ref: tournament_result_outputs.tournament_id > tournaments.id
 Ref: tournament_result_snapshot_rows.pro_bowler_id > pro_bowlers.id
 Ref: tournament_result_snapshot_rows.snapshot_id > tournament_result_snapshots.id
 Ref: tournament_result_snapshots.reflected_by > users.id
@@ -363,6 +393,11 @@ Ref: tournament_seed_players.ranking_snapshot_id > pro_bowler_ranking_snapshots.
 Ref: tournament_seed_players.seed_list_player_id > pro_bowler_seed_list_players.id
 Ref: tournament_seed_players.source_tournament_id > tournaments.id
 Ref: tournament_seed_players.tournament_id > tournaments.id
+Ref: tournament_template_versions.tournament_template_id > tournament_templates.id
+Ref: tournament_templates.tournament_series_id > tournament_series.id
+Ref: tournaments.tournament_edition_id > tournament_editions.id
+Ref: tournaments.tournament_series_id > tournament_series.id
+Ref: tournaments.tournament_template_version_id > tournament_template_versions.id
 Ref: tournaments.venue_id > venues.id
 Ref: used_balls.approved_ball_id > approved_balls.id
 Ref: used_balls.pro_bowler_id > pro_bowlers.id

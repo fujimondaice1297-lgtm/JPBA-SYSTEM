@@ -44,18 +44,55 @@
 @if (!empty($prefill))
   <div class="alert alert-info">
     前回大会の内容を下書きに反映しています。<br>
-    日付は空にしています。アップロード済み画像・PDFは必要に応じて見直してください。
+    日付と前段階大会は空にしています。アップロード済み画像・PDFは必要に応じて見直してください。
   </div>
 @endif
 
 <form method="POST" action="{{ route('tournaments.store') }}" enctype="multipart/form-data" id="tournament-create-form">
   @csrf
+  <input type="hidden" name="tournament_template_version_id" value="{{ old('tournament_template_version_id') }}">
 
   {{-- 基本情報 --}}
   <h4 data-bs-toggle="collapse" href="#t-basic" role="button" aria-expanded="true" aria-controls="t-basic">
     基本情報 <small class="text-muted">（クリックで開閉）</small>
   </h4>
   <div class="form-section row collapse show" id="t-basic">
+    <div class="col-md-5 mb-3">
+      <label class="form-label">大会シリーズ</label>
+      <select name="tournament_series_id" class="form-select">
+        <option value="">単発大会・シリーズ未設定</option>
+        @foreach($seriesList as $series)
+          <option value="{{ $series->id }}" {{ (string) old('tournament_series_id') === (string) $series->id ? 'selected' : '' }}>{{ $series->name }}</option>
+        @endforeach
+      </select>
+    </div>
+    <div class="col-md-3 mb-3">
+      <label class="form-label">開催区分</label>
+      <input type="text" name="season_key" class="form-control" value="{{ old('season_key', 'annual') }}" placeholder="annual / summer / A会場">
+    </div>
+    <div class="col-md-2 mb-3">
+      <label class="form-label">登録状態</label>
+      @php $setupStatus = old('setup_status', 'draft'); @endphp
+      <select name="setup_status" class="form-select">
+        <option value="draft" {{ $setupStatus === 'draft' ? 'selected' : '' }}>下書き</option>
+        <option value="ready" {{ $setupStatus === 'ready' ? 'selected' : '' }}>準備完了</option>
+        <option value="entry_open" {{ $setupStatus === 'entry_open' ? 'selected' : '' }}>申込受付中</option>
+      </select>
+    </div>
+    <div class="col-md-2 mb-3">
+      <label class="form-label">競技単位</label>
+      @php $competitionType = old('competition_type', 'singles'); @endphp
+      <select name="competition_type" class="form-select">
+        <option value="singles" {{ $competitionType === 'singles' ? 'selected' : '' }}>シングルス</option>
+        <option value="doubles" {{ $competitionType === 'doubles' ? 'selected' : '' }}>ダブルス</option>
+        <option value="team" {{ $competitionType === 'team' ? 'selected' : '' }}>チーム</option>
+        <option value="all_events" {{ $competitionType === 'all_events' ? 'selected' : '' }}>オールエベンツ</option>
+        <option value="qualifier" {{ $competitionType === 'qualifier' ? 'selected' : '' }}>予選大会</option>
+        <option value="priority_ranking" {{ $competitionType === 'priority_ranking' ? 'selected' : '' }}>出場順位決定戦</option>
+        <option value="championship" {{ $competitionType === 'championship' ? 'selected' : '' }}>選手権</option>
+      </select>
+    </div>
+
     <div class="col-md-8 mb-3">
       <label class="form-label">大会名 <span class="text-danger">*</span></label>
       <input type="text" name="name" class="form-control @error('name') is-invalid @enderror"
@@ -86,15 +123,14 @@
     </div>
 
     <div class="col-md-3 mb-3">
-      <label class="form-label">タイトル区分</label>
-      @php $tc = old('title_category','normal'); @endphp
-      <select name="title_category" class="form-select @error('title_category') is-invalid @enderror">
-        <option value="normal"        {{ $tc==='normal' ? 'selected' : '' }}>通常</option>
-        <option value="season_trial" {{ $tc==='season_trial' ? 'selected' : '' }}>シーズントライアル</option>
-        <option value="excluded"     {{ $tc==='excluded' ? 'selected' : '' }}>除外</option>
+      <label class="form-label">優勝記録の反映先</label>
+      @php $titleScope = old('title_scope', 'official'); @endphp
+      <select name="title_scope" class="form-select @error('title_scope') is-invalid @enderror">
+        <option value="official" {{ $titleScope === 'official' ? 'selected' : '' }}>公式タイトル</option>
+        <option value="season_trial" {{ $titleScope === 'season_trial' ? 'selected' : '' }}>シーズントライアル優勝</option>
+        <option value="none" {{ $titleScope === 'none' ? 'selected' : '' }}>タイトル対象外</option>
       </select>
-      @error('title_category')<div class="invalid-feedback">{{ $message }}</div>@enderror
-      <small class="text-muted">（タイトル区分：成績反映ボタンの対象分類）</small>
+      @error('title_scope')<div class="invalid-feedback">{{ $message }}</div>@enderror
     </div>
 
     <div class="col-md-3 mb-3">
@@ -143,6 +179,81 @@
       <input type="checkbox" name="inspection_required" value="1" class="form-check-input"
              {{ old('inspection_required') ? 'checked' : '' }}>
       <small class="text-muted d-block">※ チェック時：検量証未入力のボールは仮登録扱い</small>
+    </div>
+  </div>
+
+  <h4 data-bs-toggle="collapse" href="#t-qualification" role="button" aria-expanded="true" aria-controls="t-qualification">
+    集計・優先出場設定 <small class="text-muted">（クリックで開閉）</small>
+  </h4>
+  <div class="form-section row collapse show" id="t-qualification">
+    <div class="col-md-4 mb-3">
+      <label class="form-label d-block">ランキング・実績反映</label>
+      @foreach([
+        'counts_for_official_points' => 'JPBA公式ポイント',
+        'counts_for_season_trial_points' => 'STチャンピオンズ用ポイント',
+        'counts_for_average' => '公式アベレージ',
+        'counts_for_prize' => '獲得賞金',
+        'produces_entry_priority' => '出場優先順位',
+      ] as $field => $label)
+        <input type="hidden" name="{{ $field }}" value="0">
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox" name="{{ $field }}" value="1" id="create_{{ $field }}"
+                 {{ old($field, in_array($field, ['counts_for_official_points', 'counts_for_average', 'counts_for_prize'], true)) ? 'checked' : '' }}>
+          <label class="form-check-label" for="create_{{ $field }}">{{ $label }}</label>
+        </div>
+      @endforeach
+    </div>
+
+    <div class="col-md-4 mb-3">
+      <label class="form-label d-block">年度シード</label>
+      <input type="hidden" name="include_annual_seeds" value="0">
+      <div class="form-check mb-2">
+        <input class="form-check-input" type="checkbox" name="include_annual_seeds" value="1" id="include_annual_seeds"
+               {{ old('include_annual_seeds', 1) ? 'checked' : '' }}>
+        <label class="form-check-label" for="include_annual_seeds">当年度シードを自動反映</label>
+      </div>
+      <label class="form-label">対象順位上限</label>
+      <input type="number" name="annual_seed_rank_limit" min="1" max="999" class="form-control"
+             value="{{ old('annual_seed_rank_limit') }}" placeholder="空欄なら登録済みシード全員">
+      <small class="text-muted">第1シードのみ、第2シードまで、など大会ごとに指定できます。</small>
+    </div>
+
+    <div class="col-md-4 mb-3">
+      @php $priorityTypes = old('priority_rule_types', []); if (!is_array($priorityTypes)) $priorityTypes = []; @endphp
+      <label class="form-label d-block">追加の優先出場権</label>
+      <input type="hidden" name="auto_sync_priority_rules" value="0">
+      <div class="form-check mb-2">
+        <input class="form-check-input" type="checkbox" name="auto_sync_priority_rules" value="1" id="auto_sync_priority_rules"
+               {{ old('auto_sync_priority_rules', 1) ? 'checked' : '' }}>
+        <label class="form-check-label" for="auto_sync_priority_rules">資格者を自動更新</label>
+      </div>
+      @foreach([
+        'past_champions' => 'この大会シリーズの歴代優勝者',
+        'current_year_winners' => '当該年度の公式大会優勝者',
+        'permanent_seeds' => '永久シード保持者',
+      ] as $type => $label)
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox" name="priority_rule_types[]" value="{{ $type }}" id="create_priority_{{ $type }}"
+                 {{ in_array($type, $priorityTypes, true) ? 'checked' : '' }}>
+          <label class="form-check-label" for="create_priority_{{ $type }}">{{ $label }}</label>
+        </div>
+      @endforeach
+    </div>
+
+    <div class="col-md-9 mb-3">
+      <label class="form-label">前段階大会</label>
+      <select name="priority_source_tournament_id" class="form-select">
+        <option value="">使用しない</option>
+        @foreach($sourceTournaments as $sourceTournament)
+          <option value="{{ $sourceTournament->id }}" {{ (string) old('priority_source_tournament_id') === (string) $sourceTournament->id ? 'selected' : '' }}>
+            {{ $sourceTournament->year }} {{ $sourceTournament->name }}
+          </option>
+        @endforeach
+      </select>
+    </div>
+    <div class="col-md-3 mb-3">
+      <label class="form-label">上位通過人数</label>
+      <input type="number" name="priority_source_tournament_top_n" min="1" max="999" class="form-control" value="{{ old('priority_source_tournament_top_n') }}">
     </div>
   </div>
 
@@ -949,6 +1060,18 @@
 
   <div class="form-section row collapse show" id="t-venue">
     <input type="hidden" name="venue_id" id="venue_id" value="{{ old('venue_id') }}">
+    <div class="col-md-8 mb-3">
+      <label class="form-label">登録済み会場一覧</label>
+      <select id="venue_master_select" class="form-select">
+        <option value="">会場を選択してください</option>
+        @foreach($venues as $venue)
+          <option value="{{ $venue->id }}" {{ (string) old('venue_id') === (string) $venue->id ? 'selected' : '' }}>
+            {{ $venue->name }}{{ $venue->address ? ' / '.$venue->address : '' }}
+          </option>
+        @endforeach
+      </select>
+      <small class="text-muted">選択すると会場名・住所・電話・FAX・公式サイトを自動反映します。</small>
+    </div>
     <div class="col-md-8 mb-2">
       <label class="form-label">会場検索</label>
       <div class="input-group">
@@ -1291,6 +1414,19 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   qs('#venue_search_btn')?.addEventListener('click', doSearchVenue);
+  qs('#venue_master_select')?.addEventListener('change', async (event) => {
+    const id = event.target.value;
+    if (!id) return;
+    const res = await fetch(`{{ url('/api/venues') }}/${id}`);
+    const v = await res.json();
+    qs('#venue_id').value = v.id;
+    qs('#venue_name').value = v.name ?? '';
+    qs('#venue_address').value = v.address ?? '';
+    qs('#venue_tel').value = v.tel ?? '';
+    qs('#venue_fax').value = v.fax ?? '';
+    const u = document.getElementById('venue_url_view');
+    if (u) u.value = v.website_url ?? '';
+  });
   qs('#venue_search')?.addEventListener('input', () => {
     clearTimeout(window.__venue_timer);
     window.__venue_timer = setTimeout(doSearchVenue, 250);

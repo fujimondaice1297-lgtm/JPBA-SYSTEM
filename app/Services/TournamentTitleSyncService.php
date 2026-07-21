@@ -152,6 +152,10 @@ class TournamentTitleSyncService
 
     public function isEligibleTitleTournament(Tournament $tournament): bool
     {
+        if ((string) $tournament->title_scope === 'none') {
+            return false;
+        }
+
         if ($this->isSeasonTrial($tournament)) {
             return true;
         }
@@ -265,7 +269,8 @@ class TournamentTitleSyncService
 
     private function isSeasonTrial(Tournament $tournament): bool
     {
-        return (string) $tournament->title_category === 'season_trial'
+        return (string) $tournament->title_scope === 'season_trial'
+            || (string) $tournament->title_category === 'season_trial'
             || str_contains((string) $tournament->name, 'シーズントライアル');
     }
 

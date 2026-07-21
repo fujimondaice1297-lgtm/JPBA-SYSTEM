@@ -57,4 +57,20 @@ class TournamentTitleSyncServiceTest extends TestCase
             'official_type' => 'official',
         ])));
     }
+
+    public function test_new_title_scope_controls_title_eligibility(): void
+    {
+        $service = app(TournamentTitleSyncService::class);
+
+        $this->assertFalse($service->isEligibleTitleTournament(new Tournament([
+            'name' => 'タイトル対象外大会',
+            'official_type' => 'official',
+            'title_scope' => 'none',
+        ])));
+        $this->assertTrue($service->isEligibleTitleTournament(new Tournament([
+            'name' => 'シーズントライアル大会',
+            'official_type' => 'official',
+            'title_scope' => 'season_trial',
+        ])));
+    }
 }

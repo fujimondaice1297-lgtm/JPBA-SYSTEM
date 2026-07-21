@@ -251,6 +251,10 @@ class TournamentSeedPlayerController extends Controller
 
     private function annualSeedRowsForTournament(Tournament $tournament)
     {
+        if (($tournament->include_annual_seeds ?? true) === false) {
+            return collect();
+        }
+
         if (!Schema::hasTable('pro_bowler_seed_lists') || !Schema::hasTable('pro_bowler_seed_list_players')) {
             return collect();
         }
@@ -292,6 +296,16 @@ class TournamentSeedPlayerController extends Controller
             $query->where(function ($q) use ($gender) {
                 $q->where('l.gender', $gender)
                     ->orWhereNull('l.gender');
+            });
+        }
+
+        if ((int) ($tournament->annual_seed_rank_limit ?? 0) > 0) {
+            $limit = (int) $tournament->annual_seed_rank_limit;
+            $query->where(function ($q) use ($limit) {
+                $q->where('p.seed_rank', '<=', $limit)
+                    ->orWhere(function ($q) use ($limit) {
+                        $q->whereNull('p.seed_rank')->where('p.ranking_rank', '<=', $limit);
+                    });
             });
         }
 
@@ -397,6 +411,7 @@ class TournamentSeedPlayerController extends Controller
             ProBowlerSeedService::SOURCE_PRO_TEST_PRACTICAL_EXEMPT => '⑧ プロテスト実技免除合格者',
             ProBowlerSeedService::SOURCE_PRO_TEST_TOP_PASSER => '⑨ プロテストトップ合格者',
             ProBowlerSeedService::SOURCE_SEASON_TRIAL_PARTICIPANT => '⑩ シーズントライアル出場者',
+            ProBowlerSeedService::SOURCE_TOURNAMENT_QUALIFIER => '⑪ 前段階大会通過者',
             ProBowlerSeedService::SOURCE_ORGANIZER_RECOMMENDATION => '⑪ 主催者（スポンサー）推薦',
             ProBowlerSeedService::SOURCE_MANUAL => 'その他：手動追加',
         ];

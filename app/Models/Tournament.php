@@ -10,7 +10,12 @@ class Tournament extends Model
     protected $table = 'tournaments';
 
     protected $fillable = [
+        'tournament_series_id',
+        'tournament_edition_id',
+        'tournament_template_version_id',
         'name',
+        'setup_status',
+        'competition_type',
         'start_date',
         'end_date',
         'venue_name',
@@ -45,6 +50,14 @@ class Tournament extends Model
         'entry_end',
         'inspection_required',
         'title_category',
+        'include_annual_seeds',
+        'annual_seed_rank_limit',
+        'auto_sync_priority_rules',
+        'counts_for_official_points',
+        'counts_for_average',
+        'counts_for_prize',
+        'title_scope',
+        'template_snapshot',
         'venue_id',
         'extra_venues',
 
@@ -108,6 +121,13 @@ class Tournament extends Model
         'lane_draw_open_at' => 'datetime:Y-m-d H:i:s',
         'lane_draw_close_at' => 'datetime:Y-m-d H:i:s',
         'inspection_required' => 'boolean',
+        'include_annual_seeds' => 'boolean',
+        'annual_seed_rank_limit' => 'integer',
+        'auto_sync_priority_rules' => 'boolean',
+        'counts_for_official_points' => 'boolean',
+        'counts_for_average' => 'boolean',
+        'counts_for_prize' => 'boolean',
+        'template_snapshot' => 'array',
         'use_shift_draw' => 'boolean',
         'use_lane_draw' => 'boolean',
         'accept_shift_preference' => 'boolean',
@@ -153,6 +173,31 @@ class Tournament extends Model
     public function venue()
     {
         return $this->belongsTo(Venue::class);
+    }
+
+    public function series()
+    {
+        return $this->belongsTo(TournamentSeries::class, 'tournament_series_id');
+    }
+
+    public function edition()
+    {
+        return $this->belongsTo(TournamentEdition::class, 'tournament_edition_id');
+    }
+
+    public function templateVersion()
+    {
+        return $this->belongsTo(TournamentTemplateVersion::class, 'tournament_template_version_id');
+    }
+
+    public function entryRules()
+    {
+        return $this->hasMany(TournamentEntryRule::class);
+    }
+
+    public function resultOutputs()
+    {
+        return $this->hasMany(TournamentResultOutput::class);
     }
 
     public function organizations()
@@ -208,6 +253,17 @@ class Tournament extends Model
             }
             if (!$tournament->title_category) {
                 $tournament->title_category = 'normal';
+            }
+            if (!$tournament->setup_status) {
+                $tournament->setup_status = 'draft';
+            }
+            if (!$tournament->competition_type) {
+                $tournament->competition_type = 'singles';
+            }
+            if (!$tournament->title_scope) {
+                $tournament->title_scope = $tournament->title_category === 'season_trial'
+                    ? 'season_trial'
+                    : ($tournament->title_category === 'excluded' ? 'none' : 'official');
             }
             if (!$tournament->lane_assignment_mode) {
                 $tournament->lane_assignment_mode = 'single_lane';

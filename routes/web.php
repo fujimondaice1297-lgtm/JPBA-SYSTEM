@@ -337,6 +337,15 @@ Route::middleware(['auth','role:editor,admin'])->group(function () {
 
     Route::get('/tournaments/{tournament}/clone', [\App\Http\Controllers\TournamentController::class,'clone'])
         ->name('tournaments.clone');
+
+    Route::get('/tournament-templates', [\App\Http\Controllers\TournamentTemplateController::class, 'index'])
+        ->name('tournament_templates.index');
+    Route::get('/tournament-templates/create', [\App\Http\Controllers\TournamentTemplateController::class, 'create'])
+        ->name('tournament_templates.create');
+    Route::post('/tournament-templates', [\App\Http\Controllers\TournamentTemplateController::class, 'store'])
+        ->name('tournament_templates.store');
+    Route::get('/tournament-template-versions/{version}/apply', [\App\Http\Controllers\TournamentTemplateController::class, 'apply'])
+        ->name('tournament_templates.apply');
     
     Route::resource('tournaments', TournamentController::class)->except(['destroy']);
     
@@ -442,6 +451,8 @@ Route::middleware(['auth','role:editor,admin'])->group(function () {
         ->name('tournaments.seed_players.pdf');
     Route::post('/tournaments/{tournament}/seed-players', [\App\Http\Controllers\TournamentSeedPlayerController::class, 'store'])
         ->name('tournaments.seed_players.store');
+    Route::post('/tournaments/{tournament}/priority-sync', [\App\Http\Controllers\TournamentPriorityController::class, 'sync'])
+        ->name('tournaments.priority.sync');
     Route::delete('/tournaments/{tournament}/seed-players/{seedPlayer}', [\App\Http\Controllers\TournamentSeedPlayerController::class, 'destroy'])
         ->name('tournaments.seed_players.destroy');
 

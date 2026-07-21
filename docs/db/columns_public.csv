@@ -265,6 +265,27 @@ media_publications,8,updated_at,timestamp without time zone,YES
 migrations,1,id,integer,NO
 migrations,2,migration,character varying,NO
 migrations,3,batch,integer,NO
+official_title_import_candidates,1,id,bigint,NO
+official_title_import_candidates,2,pro_bowler_id,bigint,YES
+official_title_import_candidates,3,license_no,character varying,YES
+official_title_import_candidates,4,license_no_num,integer,YES
+official_title_import_candidates,5,name_kanji,character varying,YES
+official_title_import_candidates,6,title_name,character varying,NO
+official_title_import_candidates,7,title_category,character varying,NO
+official_title_import_candidates,8,year,smallint,YES
+official_title_import_candidates,9,won_date,date,YES
+official_title_import_candidates,10,venue_name,character varying,YES
+official_title_import_candidates,11,source_url,text,NO
+official_title_import_candidates,12,source_result_url,text,YES
+official_title_import_candidates,13,source_label,character varying,YES
+official_title_import_candidates,14,raw_text,text,YES
+official_title_import_candidates,15,confidence,smallint,NO
+official_title_import_candidates,16,status,character varying,NO
+official_title_import_candidates,17,error,text,YES
+official_title_import_candidates,18,candidate_hash,character varying,NO
+official_title_import_candidates,19,promoted_pro_bowler_title_id,bigint,YES
+official_title_import_candidates,20,created_at,timestamp without time zone,YES
+official_title_import_candidates,21,updated_at,timestamp without time zone,YES
 organization_masters,1,id,bigint,NO
 organization_masters,2,name,character varying,NO
 organization_masters,3,url,character varying,YES
@@ -419,6 +440,8 @@ pro_bowler_titles,7,source,character varying,NO
 pro_bowler_titles,8,created_at,timestamp without time zone,YES
 pro_bowler_titles,9,updated_at,timestamp without time zone,YES
 pro_bowler_titles,10,tournament_name,character varying,YES
+pro_bowler_titles,11,source_url,text,YES
+pro_bowler_titles,12,source_label,character varying,YES
 pro_bowler_trainings,1,id,bigint,NO
 pro_bowler_trainings,2,pro_bowler_id,bigint,NO
 pro_bowler_trainings,3,training_id,bigint,NO
@@ -543,6 +566,15 @@ pro_bowlers,114,birthdate_public_hide_year,boolean,NO
 pro_bowlers,115,birthdate_public_is_private,boolean,NO
 pro_bowlers,116,member_class,character varying,NO
 pro_bowlers,117,can_enter_official_tournament,boolean,NO
+pro_bowlers,118,official_win_count,integer,YES
+pro_bowlers,119,official_total_games,integer,YES
+pro_bowlers,120,official_total_pins,bigint,YES
+pro_bowlers,121,official_total_prize_money,bigint,YES
+pro_bowlers,122,official_career_average,numeric,YES
+pro_bowlers,123,official_profile_url,character varying,YES
+pro_bowlers,124,official_profile_imported_at,timestamp without time zone,YES
+pro_bowlers,125,official_profile_import_error,text,YES
+pro_bowlers,126,season_trial_win_count,integer,YES
 pro_dsp,1,id,bigint,NO
 pro_dsp,2,name,character varying,NO
 pro_dsp,3,gender,character varying,YES
@@ -780,6 +812,18 @@ tournament_draw_reminder_logs,11,sent_at,timestamp without time zone,YES
 tournament_draw_reminder_logs,12,error_message,text,YES
 tournament_draw_reminder_logs,13,created_at,timestamp without time zone,YES
 tournament_draw_reminder_logs,14,updated_at,timestamp without time zone,YES
+tournament_editions,1,id,bigint,NO
+tournament_editions,2,tournament_series_id,bigint,YES
+tournament_editions,3,year,smallint,NO
+tournament_editions,4,season_key,character varying,NO
+tournament_editions,5,name,character varying,NO
+tournament_editions,6,edition_no,smallint,YES
+tournament_editions,7,status,character varying,NO
+tournament_editions,8,start_date,date,YES
+tournament_editions,9,end_date,date,YES
+tournament_editions,10,notes,text,YES
+tournament_editions,11,created_at,timestamp without time zone,YES
+tournament_editions,12,updated_at,timestamp without time zone,YES
 tournament_entries,1,id,bigint,NO
 tournament_entries,2,pro_bowler_id,bigint,NO
 tournament_entries,3,tournament_id,bigint,NO
@@ -816,6 +860,18 @@ tournament_entry_operation_logs,11,payload,json,YES
 tournament_entry_operation_logs,12,occurred_at,timestamp without time zone,NO
 tournament_entry_operation_logs,13,created_at,timestamp without time zone,YES
 tournament_entry_operation_logs,14,updated_at,timestamp without time zone,YES
+tournament_entry_rules,1,id,bigint,NO
+tournament_entry_rules,2,tournament_id,bigint,NO
+tournament_entry_rules,3,rule_type,character varying,NO
+tournament_entry_rules,4,priority_order,integer,YES
+tournament_entry_rules,5,max_count,integer,YES
+tournament_entry_rules,6,source_tournament_id,bigint,YES
+tournament_entry_rules,7,source_series_id,bigint,YES
+tournament_entry_rules,8,parameters,json,YES
+tournament_entry_rules,9,auto_sync,boolean,NO
+tournament_entry_rules,10,is_active,boolean,NO
+tournament_entry_rules,11,created_at,timestamp without time zone,YES
+tournament_entry_rules,12,updated_at,timestamp without time zone,YES
 tournament_files,1,id,bigint,NO
 tournament_files,2,tournament_id,bigint,NO
 tournament_files,3,type,character varying,NO
@@ -897,6 +953,15 @@ tournament_points,2,rank,integer,NO
 tournament_points,3,point,integer,NO
 tournament_points,4,created_at,timestamp without time zone,YES
 tournament_points,5,updated_at,timestamp without time zone,YES
+tournament_result_outputs,1,id,bigint,NO
+tournament_result_outputs,2,tournament_id,bigint,NO
+tournament_result_outputs,3,output_type,character varying,NO
+tournament_result_outputs,4,output_scope,character varying,NO
+tournament_result_outputs,5,distribution_pattern_id,bigint,YES
+tournament_result_outputs,6,settings,json,YES
+tournament_result_outputs,7,is_active,boolean,NO
+tournament_result_outputs,8,created_at,timestamp without time zone,YES
+tournament_result_outputs,9,updated_at,timestamp without time zone,YES
 tournament_result_snapshot_rows,1,id,bigint,NO
 tournament_result_snapshot_rows,2,snapshot_id,bigint,NO
 tournament_result_snapshot_rows,3,ranking,integer,NO
@@ -1004,6 +1069,31 @@ tournament_seed_players,13,note,text,YES
 tournament_seed_players,14,is_active,boolean,NO
 tournament_seed_players,15,created_at,timestamp without time zone,YES
 tournament_seed_players,16,updated_at,timestamp without time zone,YES
+tournament_series,1,id,bigint,NO
+tournament_series,2,name,character varying,NO
+tournament_series,3,code,character varying,YES
+tournament_series,4,recurrence_type,character varying,NO
+tournament_series,5,description,text,YES
+tournament_series,6,is_active,boolean,NO
+tournament_series,7,created_at,timestamp without time zone,YES
+tournament_series,8,updated_at,timestamp without time zone,YES
+tournament_template_versions,1,id,bigint,NO
+tournament_template_versions,2,tournament_template_id,bigint,NO
+tournament_template_versions,3,version,integer,NO
+tournament_template_versions,4,status,character varying,NO
+tournament_template_versions,5,settings,json,NO
+tournament_template_versions,6,change_note,text,YES
+tournament_template_versions,7,published_at,timestamp without time zone,YES
+tournament_template_versions,8,created_at,timestamp without time zone,YES
+tournament_template_versions,9,updated_at,timestamp without time zone,YES
+tournament_templates,1,id,bigint,NO
+tournament_templates,2,tournament_series_id,bigint,YES
+tournament_templates,3,name,character varying,NO
+tournament_templates,4,code,character varying,YES
+tournament_templates,5,description,text,YES
+tournament_templates,6,is_active,boolean,NO
+tournament_templates,7,created_at,timestamp without time zone,YES
+tournament_templates,8,updated_at,timestamp without time zone,YES
 tournaments,1,id,bigint,NO
 tournaments,2,name,character varying,NO
 tournaments,3,start_date,date,YES
@@ -1087,6 +1177,19 @@ tournaments,80,shootout_seed_source_result_code,character varying,YES
 tournaments,81,shootout_format,character varying,YES
 tournaments,82,shootout_settings,json,YES
 tournaments,83,lane_movement_settings,json,YES
+tournaments,84,tournament_series_id,bigint,YES
+tournaments,85,tournament_edition_id,bigint,YES
+tournaments,86,tournament_template_version_id,bigint,YES
+tournaments,87,setup_status,character varying,NO
+tournaments,88,competition_type,character varying,NO
+tournaments,89,include_annual_seeds,boolean,NO
+tournaments,90,annual_seed_rank_limit,integer,YES
+tournaments,91,auto_sync_priority_rules,boolean,NO
+tournaments,92,counts_for_official_points,boolean,NO
+tournaments,93,counts_for_average,boolean,NO
+tournaments,94,counts_for_prize,boolean,NO
+tournaments,95,title_scope,character varying,NO
+tournaments,96,template_snapshot,json,YES
 tournamentscore,1,id,bigint,NO
 tournamentscore,2,name,character varying,NO
 tournamentscore,3,created_at,timestamp without time zone,YES

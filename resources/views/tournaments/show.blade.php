@@ -101,6 +101,11 @@
     <a href="{{ route('tournaments.results.index', $tournament->id) }}" class="btn btn-outline-primary">成績一覧</a>
     <a href="{{ route('tournaments.point_distributions.create', $tournament->id) }}" class="btn btn-outline-danger">ポイント配分</a>
     <a href="{{ route('tournaments.prize_distributions.create', $tournament->id) }}" class="btn btn-outline-warning">賞金配分</a>
+    <a href="{{ route('tournament_templates.create', ['source_tournament_id' => $tournament->id]) }}" class="btn btn-outline-secondary">テンプレート化</a>
+    <form method="POST" action="{{ route('tournaments.priority.sync', $tournament->id) }}" class="d-inline">
+      @csrf
+      <button type="submit" class="btn btn-outline-success">優先出場権を再同期</button>
+    </form>
     <a href="{{ route('tournaments.index') }}" class="btn btn-secondary">一覧へ戻る</a>
   </div>
 </div>

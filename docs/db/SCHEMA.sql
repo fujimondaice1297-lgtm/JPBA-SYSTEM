@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict JPBASYSTEMSCHEMADUMP20260701
+\restrict JPBASYSTEMSCHEMADUMP20260721
 
 -- Dumped from database version 18.2
 -- Dumped by pg_dump version 18.2
@@ -1372,6 +1372,58 @@ ALTER SEQUENCE public.migrations_id_seq OWNED BY public.migrations.id;
 
 
 --
+-- Name: official_title_import_candidates; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.official_title_import_candidates (
+    id bigint NOT NULL,
+    pro_bowler_id bigint,
+    license_no character varying(255),
+    license_no_num integer,
+    name_kanji character varying(255),
+    title_name character varying(255) NOT NULL,
+    title_category character varying(255) DEFAULT 'normal'::character varying NOT NULL,
+    year smallint,
+    won_date date,
+    venue_name character varying(255),
+    source_url text NOT NULL,
+    source_result_url text,
+    source_label character varying(255),
+    raw_text text,
+    confidence smallint DEFAULT '0'::smallint NOT NULL,
+    status character varying(255) DEFAULT 'candidate'::character varying NOT NULL,
+    error text,
+    candidate_hash character varying(255) NOT NULL,
+    promoted_pro_bowler_title_id bigint,
+    created_at timestamp(0) without time zone,
+    updated_at timestamp(0) without time zone
+);
+
+
+ALTER TABLE public.official_title_import_candidates OWNER TO postgres;
+
+--
+-- Name: official_title_import_candidates_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.official_title_import_candidates_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.official_title_import_candidates_id_seq OWNER TO postgres;
+
+--
+-- Name: official_title_import_candidates_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.official_title_import_candidates_id_seq OWNED BY public.official_title_import_candidates.id;
+
+
+--
 -- Name: organization_masters; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -2054,7 +2106,9 @@ CREATE TABLE public.pro_bowler_titles (
     source character varying(255) DEFAULT 'manual'::character varying NOT NULL,
     created_at timestamp(0) without time zone,
     updated_at timestamp(0) without time zone,
-    tournament_name character varying(255)
+    tournament_name character varying(255),
+    source_url text,
+    source_label character varying(255)
 );
 
 
@@ -2241,6 +2295,15 @@ CREATE TABLE public.pro_bowlers (
     birthdate_public_is_private boolean DEFAULT false NOT NULL,
     member_class character varying(32) DEFAULT 'player'::character varying NOT NULL,
     can_enter_official_tournament boolean DEFAULT true NOT NULL,
+    official_win_count integer,
+    official_total_games integer,
+    official_total_pins bigint,
+    official_total_prize_money bigint,
+    official_career_average numeric(6,2),
+    official_profile_url character varying(255),
+    official_profile_imported_at timestamp(0) without time zone,
+    official_profile_import_error text,
+    season_trial_win_count integer,
     CONSTRAINT pro_bowlers_member_class_check CHECK (((member_class)::text = ANY ((ARRAY['player'::character varying, 'pro_instructor'::character varying, 'honorary_or_overseas'::character varying, 'other'::character varying])::text[])))
 );
 
@@ -2392,6 +2455,69 @@ COMMENT ON COLUMN public.pro_bowlers.member_class IS 'player / pro_instructor / 
 --
 
 COMMENT ON COLUMN public.pro_bowlers.can_enter_official_tournament IS '公式戦出場可否';
+
+
+--
+-- Name: COLUMN pro_bowlers.official_win_count; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public.pro_bowlers.official_win_count IS 'JPBA公式プロフィールの優勝回数';
+
+
+--
+-- Name: COLUMN pro_bowlers.official_total_games; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public.pro_bowlers.official_total_games IS 'JPBA公式プロフィールの総ゲーム数';
+
+
+--
+-- Name: COLUMN pro_bowlers.official_total_pins; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public.pro_bowlers.official_total_pins IS 'JPBA公式プロフィールのトータルピン';
+
+
+--
+-- Name: COLUMN pro_bowlers.official_total_prize_money; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public.pro_bowlers.official_total_prize_money IS 'JPBA公式プロフィールの総賞金額';
+
+
+--
+-- Name: COLUMN pro_bowlers.official_career_average; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public.pro_bowlers.official_career_average IS 'JPBA公式プロフィールの通算アベレージ';
+
+
+--
+-- Name: COLUMN pro_bowlers.official_profile_url; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public.pro_bowlers.official_profile_url IS 'JPBA公式プロフィールURL';
+
+
+--
+-- Name: COLUMN pro_bowlers.official_profile_imported_at; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public.pro_bowlers.official_profile_imported_at IS 'JPBA公式プロフィール同期日時';
+
+
+--
+-- Name: COLUMN pro_bowlers.official_profile_import_error; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public.pro_bowlers.official_profile_import_error IS 'JPBA公式プロフィール同期エラー';
+
+
+--
+-- Name: COLUMN pro_bowlers.season_trial_win_count; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public.pro_bowlers.season_trial_win_count IS 'Official JPBA profile season trial win count';
 
 
 --
@@ -3576,6 +3702,49 @@ ALTER SEQUENCE public.tournament_draw_reminder_logs_id_seq OWNED BY public.tourn
 
 
 --
+-- Name: tournament_editions; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.tournament_editions (
+    id bigint NOT NULL,
+    tournament_series_id bigint,
+    year smallint NOT NULL,
+    season_key character varying(50) DEFAULT 'annual'::character varying NOT NULL,
+    name character varying(255) NOT NULL,
+    edition_no smallint,
+    status character varying(30) DEFAULT 'draft'::character varying NOT NULL,
+    start_date date,
+    end_date date,
+    notes text,
+    created_at timestamp(0) without time zone,
+    updated_at timestamp(0) without time zone
+);
+
+
+ALTER TABLE public.tournament_editions OWNER TO postgres;
+
+--
+-- Name: tournament_editions_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.tournament_editions_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.tournament_editions_id_seq OWNER TO postgres;
+
+--
+-- Name: tournament_editions_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.tournament_editions_id_seq OWNED BY public.tournament_editions.id;
+
+
+--
 -- Name: tournament_entries; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -3702,6 +3871,49 @@ ALTER SEQUENCE public.tournament_entry_operation_logs_id_seq OWNER TO postgres;
 --
 
 ALTER SEQUENCE public.tournament_entry_operation_logs_id_seq OWNED BY public.tournament_entry_operation_logs.id;
+
+
+--
+-- Name: tournament_entry_rules; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.tournament_entry_rules (
+    id bigint NOT NULL,
+    tournament_id bigint NOT NULL,
+    rule_type character varying(50) NOT NULL,
+    priority_order integer,
+    max_count integer,
+    source_tournament_id bigint,
+    source_series_id bigint,
+    parameters json,
+    auto_sync boolean DEFAULT true NOT NULL,
+    is_active boolean DEFAULT true NOT NULL,
+    created_at timestamp(0) without time zone,
+    updated_at timestamp(0) without time zone
+);
+
+
+ALTER TABLE public.tournament_entry_rules OWNER TO postgres;
+
+--
+-- Name: tournament_entry_rules_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.tournament_entry_rules_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.tournament_entry_rules_id_seq OWNER TO postgres;
+
+--
+-- Name: tournament_entry_rules_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.tournament_entry_rules_id_seq OWNED BY public.tournament_entry_rules.id;
 
 
 --
@@ -3989,6 +4201,46 @@ CREATE TABLE public.tournament_points (
 ALTER TABLE public.tournament_points OWNER TO postgres;
 
 --
+-- Name: tournament_result_outputs; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.tournament_result_outputs (
+    id bigint NOT NULL,
+    tournament_id bigint NOT NULL,
+    output_type character varying(30) NOT NULL,
+    output_scope character varying(50) NOT NULL,
+    distribution_pattern_id bigint,
+    settings json,
+    is_active boolean DEFAULT true NOT NULL,
+    created_at timestamp(0) without time zone,
+    updated_at timestamp(0) without time zone
+);
+
+
+ALTER TABLE public.tournament_result_outputs OWNER TO postgres;
+
+--
+-- Name: tournament_result_outputs_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.tournament_result_outputs_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.tournament_result_outputs_id_seq OWNER TO postgres;
+
+--
+-- Name: tournament_result_outputs_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.tournament_result_outputs_id_seq OWNED BY public.tournament_result_outputs.id;
+
+
+--
 -- Name: tournament_result_snapshot_rows; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -4272,6 +4524,124 @@ ALTER SEQUENCE public.tournament_seed_players_id_seq OWNED BY public.tournament_
 
 
 --
+-- Name: tournament_series; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.tournament_series (
+    id bigint NOT NULL,
+    name character varying(255) NOT NULL,
+    code character varying(80),
+    recurrence_type character varying(30) DEFAULT 'annual'::character varying NOT NULL,
+    description text,
+    is_active boolean DEFAULT true NOT NULL,
+    created_at timestamp(0) without time zone,
+    updated_at timestamp(0) without time zone
+);
+
+
+ALTER TABLE public.tournament_series OWNER TO postgres;
+
+--
+-- Name: tournament_series_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.tournament_series_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.tournament_series_id_seq OWNER TO postgres;
+
+--
+-- Name: tournament_series_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.tournament_series_id_seq OWNED BY public.tournament_series.id;
+
+
+--
+-- Name: tournament_template_versions; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.tournament_template_versions (
+    id bigint NOT NULL,
+    tournament_template_id bigint NOT NULL,
+    version integer NOT NULL,
+    status character varying(30) DEFAULT 'published'::character varying NOT NULL,
+    settings json NOT NULL,
+    change_note text,
+    published_at timestamp(0) without time zone,
+    created_at timestamp(0) without time zone,
+    updated_at timestamp(0) without time zone
+);
+
+
+ALTER TABLE public.tournament_template_versions OWNER TO postgres;
+
+--
+-- Name: tournament_template_versions_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.tournament_template_versions_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.tournament_template_versions_id_seq OWNER TO postgres;
+
+--
+-- Name: tournament_template_versions_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.tournament_template_versions_id_seq OWNED BY public.tournament_template_versions.id;
+
+
+--
+-- Name: tournament_templates; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.tournament_templates (
+    id bigint NOT NULL,
+    tournament_series_id bigint,
+    name character varying(255) NOT NULL,
+    code character varying(100),
+    description text,
+    is_active boolean DEFAULT true NOT NULL,
+    created_at timestamp(0) without time zone,
+    updated_at timestamp(0) without time zone
+);
+
+
+ALTER TABLE public.tournament_templates OWNER TO postgres;
+
+--
+-- Name: tournament_templates_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.tournament_templates_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.tournament_templates_id_seq OWNER TO postgres;
+
+--
+-- Name: tournament_templates_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.tournament_templates_id_seq OWNED BY public.tournament_templates.id;
+
+
+--
 -- Name: tournaments; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -4359,6 +4729,19 @@ CREATE TABLE public.tournaments (
     shootout_format character varying(32),
     shootout_settings json,
     lane_movement_settings json,
+    tournament_series_id bigint,
+    tournament_edition_id bigint,
+    tournament_template_version_id bigint,
+    setup_status character varying(30) DEFAULT 'draft'::character varying NOT NULL,
+    competition_type character varying(30) DEFAULT 'singles'::character varying NOT NULL,
+    include_annual_seeds boolean DEFAULT true NOT NULL,
+    annual_seed_rank_limit integer,
+    auto_sync_priority_rules boolean DEFAULT true NOT NULL,
+    counts_for_official_points boolean DEFAULT true NOT NULL,
+    counts_for_average boolean DEFAULT true NOT NULL,
+    counts_for_prize boolean DEFAULT true NOT NULL,
+    title_scope character varying(30) DEFAULT 'official'::character varying NOT NULL,
+    template_snapshot json,
     CONSTRAINT tournaments_gender_check CHECK (((gender)::text = ANY ((ARRAY['M'::character varying, 'F'::character varying, 'X'::character varying])::text[]))),
     CONSTRAINT tournaments_official_type_check CHECK (((official_type)::text = ANY ((ARRAY['official'::character varying, 'approved'::character varying, 'other'::character varying])::text[])))
 );
@@ -4938,6 +5321,13 @@ ALTER TABLE ONLY public.migrations ALTER COLUMN id SET DEFAULT nextval('public.m
 
 
 --
+-- Name: official_title_import_candidates id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.official_title_import_candidates ALTER COLUMN id SET DEFAULT nextval('public.official_title_import_candidates_id_seq'::regclass);
+
+
+--
 -- Name: organization_masters id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
@@ -5218,6 +5608,13 @@ ALTER TABLE ONLY public.tournament_draw_reminder_logs ALTER COLUMN id SET DEFAUL
 
 
 --
+-- Name: tournament_editions id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.tournament_editions ALTER COLUMN id SET DEFAULT nextval('public.tournament_editions_id_seq'::regclass);
+
+
+--
 -- Name: tournament_entries id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
@@ -5236,6 +5633,13 @@ ALTER TABLE ONLY public.tournament_entry_balls ALTER COLUMN id SET DEFAULT nextv
 --
 
 ALTER TABLE ONLY public.tournament_entry_operation_logs ALTER COLUMN id SET DEFAULT nextval('public.tournament_entry_operation_logs_id_seq'::regclass);
+
+
+--
+-- Name: tournament_entry_rules id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.tournament_entry_rules ALTER COLUMN id SET DEFAULT nextval('public.tournament_entry_rules_id_seq'::regclass);
 
 
 --
@@ -5281,6 +5685,13 @@ ALTER TABLE ONLY public.tournament_participants ALTER COLUMN id SET DEFAULT next
 
 
 --
+-- Name: tournament_result_outputs id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.tournament_result_outputs ALTER COLUMN id SET DEFAULT nextval('public.tournament_result_outputs_id_seq'::regclass);
+
+
+--
 -- Name: tournament_result_snapshot_rows id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
@@ -5313,6 +5724,27 @@ ALTER TABLE ONLY public.tournament_round_lane_assignments ALTER COLUMN id SET DE
 --
 
 ALTER TABLE ONLY public.tournament_seed_players ALTER COLUMN id SET DEFAULT nextval('public.tournament_seed_players_id_seq'::regclass);
+
+
+--
+-- Name: tournament_series id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.tournament_series ALTER COLUMN id SET DEFAULT nextval('public.tournament_series_id_seq'::regclass);
+
+
+--
+-- Name: tournament_template_versions id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.tournament_template_versions ALTER COLUMN id SET DEFAULT nextval('public.tournament_template_versions_id_seq'::regclass);
+
+
+--
+-- Name: tournament_templates id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.tournament_templates ALTER COLUMN id SET DEFAULT nextval('public.tournament_templates_id_seq'::regclass);
 
 
 --
@@ -5675,6 +6107,22 @@ ALTER TABLE ONLY public.media_publications
 
 ALTER TABLE ONLY public.migrations
     ADD CONSTRAINT migrations_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: official_title_import_candidates official_title_import_candidates_candidate_hash_unique; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.official_title_import_candidates
+    ADD CONSTRAINT official_title_import_candidates_candidate_hash_unique UNIQUE (candidate_hash);
+
+
+--
+-- Name: official_title_import_candidates official_title_import_candidates_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.official_title_import_candidates
+    ADD CONSTRAINT official_title_import_candidates_pkey PRIMARY KEY (id);
 
 
 --
@@ -6070,6 +6518,14 @@ ALTER TABLE ONLY public.tournament_entry_balls
 
 
 --
+-- Name: tournament_editions te_series_year_season_unique; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.tournament_editions
+    ADD CONSTRAINT te_series_year_season_unique UNIQUE (tournament_series_id, year, season_key);
+
+
+--
 -- Name: tournament_entry_balls teb_unique; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -6118,6 +6574,14 @@ ALTER TABLE ONLY public.tournament_draw_reminder_logs
 
 
 --
+-- Name: tournament_editions tournament_editions_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.tournament_editions
+    ADD CONSTRAINT tournament_editions_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: tournament_entries tournament_entries_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -6139,6 +6603,14 @@ ALTER TABLE ONLY public.tournament_entry_balls
 
 ALTER TABLE ONLY public.tournament_entry_operation_logs
     ADD CONSTRAINT tournament_entry_operation_logs_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: tournament_entry_rules tournament_entry_rules_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.tournament_entry_rules
+    ADD CONSTRAINT tournament_entry_rules_pkey PRIMARY KEY (id);
 
 
 --
@@ -6198,6 +6670,14 @@ ALTER TABLE ONLY public.tournament_points
 
 
 --
+-- Name: tournament_result_outputs tournament_result_outputs_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.tournament_result_outputs
+    ADD CONSTRAINT tournament_result_outputs_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: tournament_result_snapshot_rows tournament_result_snapshot_rows_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -6235,6 +6715,46 @@ ALTER TABLE ONLY public.tournament_round_lane_assignments
 
 ALTER TABLE ONLY public.tournament_seed_players
     ADD CONSTRAINT tournament_seed_players_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: tournament_series tournament_series_code_unique; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.tournament_series
+    ADD CONSTRAINT tournament_series_code_unique UNIQUE (code);
+
+
+--
+-- Name: tournament_series tournament_series_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.tournament_series
+    ADD CONSTRAINT tournament_series_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: tournament_template_versions tournament_template_versions_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.tournament_template_versions
+    ADD CONSTRAINT tournament_template_versions_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: tournament_templates tournament_templates_code_unique; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.tournament_templates
+    ADD CONSTRAINT tournament_templates_code_unique UNIQUE (code);
+
+
+--
+-- Name: tournament_templates tournament_templates_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.tournament_templates
+    ADD CONSTRAINT tournament_templates_pkey PRIMARY KEY (id);
 
 
 --
@@ -6278,11 +6798,27 @@ ALTER TABLE ONLY public.tournament_round_lane_assignments
 
 
 --
+-- Name: tournament_result_outputs tro_tournament_type_scope_unique; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.tournament_result_outputs
+    ADD CONSTRAINT tro_tournament_type_scope_unique UNIQUE (tournament_id, output_type, output_scope);
+
+
+--
 -- Name: tournament_seed_players tsp_tournament_license_source_unique; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.tournament_seed_players
     ADD CONSTRAINT tsp_tournament_license_source_unique UNIQUE (tournament_id, license_no, seed_source_type);
+
+
+--
+-- Name: tournament_template_versions ttv_template_version_unique; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.tournament_template_versions
+    ADD CONSTRAINT ttv_template_version_unique UNIQUE (tournament_template_id, version);
 
 
 --
@@ -6630,6 +7166,48 @@ CREATE UNIQUE INDEX kaiin_status_name_unique ON public.kaiin_status USING btree 
 
 
 --
+-- Name: official_title_import_candidates_license_no_index; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX official_title_import_candidates_license_no_index ON public.official_title_import_candidates USING btree (license_no);
+
+
+--
+-- Name: official_title_import_candidates_license_no_num_index; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX official_title_import_candidates_license_no_num_index ON public.official_title_import_candidates USING btree (license_no_num);
+
+
+--
+-- Name: official_title_import_candidates_status_index; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX official_title_import_candidates_status_index ON public.official_title_import_candidates USING btree (status);
+
+
+--
+-- Name: official_title_import_candidates_title_category_index; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX official_title_import_candidates_title_category_index ON public.official_title_import_candidates USING btree (title_category);
+
+
+--
+-- Name: official_title_import_candidates_won_date_index; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX official_title_import_candidates_won_date_index ON public.official_title_import_candidates USING btree (won_date);
+
+
+--
+-- Name: official_title_import_candidates_year_index; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX official_title_import_candidates_year_index ON public.official_title_import_candidates USING btree (year);
+
+
+--
 -- Name: pbrr_license_no_idx; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -6973,6 +7551,20 @@ CREATE INDEX teol_tournament_occurred_idx ON public.tournament_entry_operation_l
 
 
 --
+-- Name: ter_tournament_active_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX ter_tournament_active_idx ON public.tournament_entry_rules USING btree (tournament_id, is_active);
+
+
+--
+-- Name: ter_tournament_type_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX ter_tournament_type_idx ON public.tournament_entry_rules USING btree (tournament_id, rule_type);
+
+
+--
 -- Name: tmsf_player_frame_idx; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -7047,6 +7639,20 @@ CREATE INDEX tournament_participants_pro_bowler_id_idx ON public.tournament_part
 --
 
 CREATE INDEX tournament_results_pro_bowler_id_idx ON public.tournament_results USING btree (pro_bowler_id);
+
+
+--
+-- Name: tournaments_edition_comp_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX tournaments_edition_comp_idx ON public.tournaments USING btree (tournament_edition_id, competition_type);
+
+
+--
+-- Name: tournaments_series_year_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX tournaments_series_year_idx ON public.tournaments USING btree (tournament_series_id, year);
 
 
 --
@@ -7281,6 +7887,22 @@ ALTER TABLE ONLY public.instructor_registry
 
 ALTER TABLE ONLY public.instructors
     ADD CONSTRAINT instructors_pro_bowler_id_fk FOREIGN KEY (pro_bowler_id) REFERENCES public.pro_bowlers(id) ON DELETE SET NULL;
+
+
+--
+-- Name: official_title_import_candidates official_title_import_candidates_pro_bowler_id_foreign; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.official_title_import_candidates
+    ADD CONSTRAINT official_title_import_candidates_pro_bowler_id_foreign FOREIGN KEY (pro_bowler_id) REFERENCES public.pro_bowlers(id) ON DELETE SET NULL;
+
+
+--
+-- Name: official_title_import_candidates official_title_import_candidates_promoted_pro_bowler_title_id_f; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.official_title_import_candidates
+    ADD CONSTRAINT official_title_import_candidates_promoted_pro_bowler_title_id_f FOREIGN KEY (promoted_pro_bowler_title_id) REFERENCES public.pro_bowler_titles(id) ON DELETE SET NULL;
 
 
 --
@@ -7524,6 +8146,14 @@ ALTER TABLE ONLY public.tournament_draw_reminder_logs
 
 
 --
+-- Name: tournament_editions tournament_editions_tournament_series_id_foreign; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.tournament_editions
+    ADD CONSTRAINT tournament_editions_tournament_series_id_foreign FOREIGN KEY (tournament_series_id) REFERENCES public.tournament_series(id) ON DELETE SET NULL;
+
+
+--
 -- Name: tournament_entries tournament_entries_pro_bowler_id_foreign; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -7588,6 +8218,30 @@ ALTER TABLE ONLY public.tournament_entry_operation_logs
 
 
 --
+-- Name: tournament_entry_rules tournament_entry_rules_source_series_id_foreign; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.tournament_entry_rules
+    ADD CONSTRAINT tournament_entry_rules_source_series_id_foreign FOREIGN KEY (source_series_id) REFERENCES public.tournament_series(id) ON DELETE SET NULL;
+
+
+--
+-- Name: tournament_entry_rules tournament_entry_rules_source_tournament_id_foreign; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.tournament_entry_rules
+    ADD CONSTRAINT tournament_entry_rules_source_tournament_id_foreign FOREIGN KEY (source_tournament_id) REFERENCES public.tournaments(id) ON DELETE SET NULL;
+
+
+--
+-- Name: tournament_entry_rules tournament_entry_rules_tournament_id_foreign; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.tournament_entry_rules
+    ADD CONSTRAINT tournament_entry_rules_tournament_id_foreign FOREIGN KEY (tournament_id) REFERENCES public.tournaments(id) ON DELETE CASCADE;
+
+
+--
 -- Name: tournament_files tournament_files_tournament_id_foreign; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -7649,6 +8303,22 @@ ALTER TABLE ONLY public.tournament_participants
 
 ALTER TABLE ONLY public.tournament_participants
     ADD CONSTRAINT tournament_participants_pro_bowler_id_foreign FOREIGN KEY (pro_bowler_id) REFERENCES public.pro_bowlers(id) ON DELETE SET NULL;
+
+
+--
+-- Name: tournament_result_outputs tournament_result_outputs_distribution_pattern_id_foreign; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.tournament_result_outputs
+    ADD CONSTRAINT tournament_result_outputs_distribution_pattern_id_foreign FOREIGN KEY (distribution_pattern_id) REFERENCES public.distribution_patterns(id) ON DELETE SET NULL;
+
+
+--
+-- Name: tournament_result_outputs tournament_result_outputs_tournament_id_foreign; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.tournament_result_outputs
+    ADD CONSTRAINT tournament_result_outputs_tournament_id_foreign FOREIGN KEY (tournament_id) REFERENCES public.tournaments(id) ON DELETE CASCADE;
 
 
 --
@@ -7772,6 +8442,46 @@ ALTER TABLE ONLY public.tournament_seed_players
 
 
 --
+-- Name: tournament_template_versions tournament_template_versions_tournament_template_id_foreign; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.tournament_template_versions
+    ADD CONSTRAINT tournament_template_versions_tournament_template_id_foreign FOREIGN KEY (tournament_template_id) REFERENCES public.tournament_templates(id) ON DELETE CASCADE;
+
+
+--
+-- Name: tournament_templates tournament_templates_tournament_series_id_foreign; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.tournament_templates
+    ADD CONSTRAINT tournament_templates_tournament_series_id_foreign FOREIGN KEY (tournament_series_id) REFERENCES public.tournament_series(id) ON DELETE SET NULL;
+
+
+--
+-- Name: tournaments tournaments_tournament_edition_id_foreign; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.tournaments
+    ADD CONSTRAINT tournaments_tournament_edition_id_foreign FOREIGN KEY (tournament_edition_id) REFERENCES public.tournament_editions(id) ON DELETE SET NULL;
+
+
+--
+-- Name: tournaments tournaments_tournament_series_id_foreign; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.tournaments
+    ADD CONSTRAINT tournaments_tournament_series_id_foreign FOREIGN KEY (tournament_series_id) REFERENCES public.tournament_series(id) ON DELETE SET NULL;
+
+
+--
+-- Name: tournaments tournaments_tournament_template_version_id_foreign; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.tournaments
+    ADD CONSTRAINT tournaments_tournament_template_version_id_foreign FOREIGN KEY (tournament_template_version_id) REFERENCES public.tournament_template_versions(id) ON DELETE SET NULL;
+
+
+--
 -- Name: tournaments tournaments_venue_id_foreign; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -7791,5 +8501,5 @@ ALTER TABLE ONLY public.users
 -- PostgreSQL database dump complete
 --
 
-\unrestrict JPBASYSTEMSCHEMADUMP20260701
+\unrestrict JPBASYSTEMSCHEMADUMP20260721
 

@@ -1,7 +1,7 @@
 # Columns by table (generated)
 
 - Source: `docs/db/columns_public.csv`
-- Generated: 2026-07-01 09:13:15
+- Generated: 2026-07-21 22:36:53
 
 > ⚠️ このファイルは自動生成です。手で編集しないでください。
 
@@ -431,6 +431,32 @@
 | 2 | migration | character varying | NO |
 | 3 | batch | integer | NO |
 
+## official_title_import_candidates (21 columns)
+
+| # | column | type | nullable |
+|---:|---|---|---|
+| 1 | id | bigint | NO |
+| 2 | pro_bowler_id | bigint | YES |
+| 3 | license_no | character varying | YES |
+| 4 | license_no_num | integer | YES |
+| 5 | name_kanji | character varying | YES |
+| 6 | title_name | character varying | NO |
+| 7 | title_category | character varying | NO |
+| 8 | year | smallint | YES |
+| 9 | won_date | date | YES |
+| 10 | venue_name | character varying | YES |
+| 11 | source_url | text | NO |
+| 12 | source_result_url | text | YES |
+| 13 | source_label | character varying | YES |
+| 14 | raw_text | text | YES |
+| 15 | confidence | smallint | NO |
+| 16 | status | character varying | NO |
+| 17 | error | text | YES |
+| 18 | candidate_hash | character varying | NO |
+| 19 | promoted_pro_bowler_title_id | bigint | YES |
+| 20 | created_at | timestamp without time zone | YES |
+| 21 | updated_at | timestamp without time zone | YES |
+
 ## organization_masters (5 columns)
 
 | # | column | type | nullable |
@@ -645,7 +671,7 @@
 | 7 | created_at | timestamp without time zone | YES |
 | 8 | updated_at | timestamp without time zone | YES |
 
-## pro_bowler_titles (10 columns)
+## pro_bowler_titles (12 columns)
 
 | # | column | type | nullable |
 |---:|---|---|---|
@@ -659,6 +685,8 @@
 | 8 | created_at | timestamp without time zone | YES |
 | 9 | updated_at | timestamp without time zone | YES |
 | 10 | tournament_name | character varying | YES |
+| 11 | source_url | text | YES |
+| 12 | source_label | character varying | YES |
 
 ## pro_bowler_trainings (9 columns)
 
@@ -674,7 +702,7 @@
 | 8 | created_at | timestamp without time zone | YES |
 | 9 | updated_at | timestamp without time zone | YES |
 
-## pro_bowlers (115 columns)
+## pro_bowlers (124 columns)
 
 | # | column | type | nullable |
 |---:|---|---|---|
@@ -793,6 +821,15 @@
 | 115 | birthdate_public_is_private | boolean | NO |
 | 116 | member_class | character varying | NO |
 | 117 | can_enter_official_tournament | boolean | NO |
+| 118 | official_win_count | integer | YES |
+| 119 | official_total_games | integer | YES |
+| 120 | official_total_pins | bigint | YES |
+| 121 | official_total_prize_money | bigint | YES |
+| 122 | official_career_average | numeric | YES |
+| 123 | official_profile_url | character varying | YES |
+| 124 | official_profile_imported_at | timestamp without time zone | YES |
+| 125 | official_profile_import_error | text | YES |
+| 126 | season_trial_win_count | integer | YES |
 
 ## pro_dsp (7 columns)
 
@@ -1156,6 +1193,23 @@
 | 13 | created_at | timestamp without time zone | YES |
 | 14 | updated_at | timestamp without time zone | YES |
 
+## tournament_editions (12 columns)
+
+| # | column | type | nullable |
+|---:|---|---|---|
+| 1 | id | bigint | NO |
+| 2 | tournament_series_id | bigint | YES |
+| 3 | year | smallint | NO |
+| 4 | season_key | character varying | NO |
+| 5 | name | character varying | NO |
+| 6 | edition_no | smallint | YES |
+| 7 | status | character varying | NO |
+| 8 | start_date | date | YES |
+| 9 | end_date | date | YES |
+| 10 | notes | text | YES |
+| 11 | created_at | timestamp without time zone | YES |
+| 12 | updated_at | timestamp without time zone | YES |
+
 ## tournament_entries (17 columns)
 
 | # | column | type | nullable |
@@ -1206,6 +1260,23 @@
 | 12 | occurred_at | timestamp without time zone | NO |
 | 13 | created_at | timestamp without time zone | YES |
 | 14 | updated_at | timestamp without time zone | YES |
+
+## tournament_entry_rules (12 columns)
+
+| # | column | type | nullable |
+|---:|---|---|---|
+| 1 | id | bigint | NO |
+| 2 | tournament_id | bigint | NO |
+| 3 | rule_type | character varying | NO |
+| 4 | priority_order | integer | YES |
+| 5 | max_count | integer | YES |
+| 6 | source_tournament_id | bigint | YES |
+| 7 | source_series_id | bigint | YES |
+| 8 | parameters | json | YES |
+| 9 | auto_sync | boolean | NO |
+| 10 | is_active | boolean | NO |
+| 11 | created_at | timestamp without time zone | YES |
+| 12 | updated_at | timestamp without time zone | YES |
 
 ## tournament_files (7 columns)
 
@@ -1322,6 +1393,20 @@
 | 3 | point | integer | NO |
 | 4 | created_at | timestamp without time zone | YES |
 | 5 | updated_at | timestamp without time zone | YES |
+
+## tournament_result_outputs (9 columns)
+
+| # | column | type | nullable |
+|---:|---|---|---|
+| 1 | id | bigint | NO |
+| 2 | tournament_id | bigint | NO |
+| 3 | output_type | character varying | NO |
+| 4 | output_scope | character varying | NO |
+| 5 | distribution_pattern_id | bigint | YES |
+| 6 | settings | json | YES |
+| 7 | is_active | boolean | NO |
+| 8 | created_at | timestamp without time zone | YES |
+| 9 | updated_at | timestamp without time zone | YES |
 
 ## tournament_result_snapshot_rows (20 columns)
 
@@ -1455,7 +1540,47 @@
 | 15 | created_at | timestamp without time zone | YES |
 | 16 | updated_at | timestamp without time zone | YES |
 
-## tournaments (83 columns)
+## tournament_series (8 columns)
+
+| # | column | type | nullable |
+|---:|---|---|---|
+| 1 | id | bigint | NO |
+| 2 | name | character varying | NO |
+| 3 | code | character varying | YES |
+| 4 | recurrence_type | character varying | NO |
+| 5 | description | text | YES |
+| 6 | is_active | boolean | NO |
+| 7 | created_at | timestamp without time zone | YES |
+| 8 | updated_at | timestamp without time zone | YES |
+
+## tournament_template_versions (9 columns)
+
+| # | column | type | nullable |
+|---:|---|---|---|
+| 1 | id | bigint | NO |
+| 2 | tournament_template_id | bigint | NO |
+| 3 | version | integer | NO |
+| 4 | status | character varying | NO |
+| 5 | settings | json | NO |
+| 6 | change_note | text | YES |
+| 7 | published_at | timestamp without time zone | YES |
+| 8 | created_at | timestamp without time zone | YES |
+| 9 | updated_at | timestamp without time zone | YES |
+
+## tournament_templates (8 columns)
+
+| # | column | type | nullable |
+|---:|---|---|---|
+| 1 | id | bigint | NO |
+| 2 | tournament_series_id | bigint | YES |
+| 3 | name | character varying | NO |
+| 4 | code | character varying | YES |
+| 5 | description | text | YES |
+| 6 | is_active | boolean | NO |
+| 7 | created_at | timestamp without time zone | YES |
+| 8 | updated_at | timestamp without time zone | YES |
+
+## tournaments (96 columns)
 
 | # | column | type | nullable |
 |---:|---|---|---|
@@ -1542,6 +1667,19 @@
 | 81 | shootout_format | character varying | YES |
 | 82 | shootout_settings | json | YES |
 | 83 | lane_movement_settings | json | YES |
+| 84 | tournament_series_id | bigint | YES |
+| 85 | tournament_edition_id | bigint | YES |
+| 86 | tournament_template_version_id | bigint | YES |
+| 87 | setup_status | character varying | NO |
+| 88 | competition_type | character varying | NO |
+| 89 | include_annual_seeds | boolean | NO |
+| 90 | annual_seed_rank_limit | integer | YES |
+| 91 | auto_sync_priority_rules | boolean | NO |
+| 92 | counts_for_official_points | boolean | NO |
+| 93 | counts_for_average | boolean | NO |
+| 94 | counts_for_prize | boolean | NO |
+| 95 | title_scope | character varying | NO |
+| 96 | template_snapshot | json | YES |
 
 ## tournamentscore (4 columns)
 

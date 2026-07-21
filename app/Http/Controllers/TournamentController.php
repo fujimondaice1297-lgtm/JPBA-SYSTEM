@@ -4,7 +4,14 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Tournament;
+use App\Models\TournamentSeries;
+use App\Models\TournamentTemplateVersion;
+use App\Models\Venue;
+use App\Services\TournamentConfigurationService;
+use App\Services\TournamentEditionService;
+use App\Services\TournamentPrioritySyncService;
 use App\Services\TournamentResultCarryService;
+use App\Services\TournamentTemplateService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -39,12 +46,15 @@ class TournamentController extends Controller
             $request->session()->flashInput($this->buildPrefillOldInput($prefill));
         }
 
-        return view('tournaments.create', ['prefill' => $prefill]);
+        return view('tournaments.create', array_merge(
+            ['prefill' => $prefill],
+            $this->formReferenceData()
+        ));
     }
 
     public function clone($id)
     {
-        $src = Tournament::with(['organizations', 'files'])->findOrFail($id);
+        $src = Tournament::with(['organizations', 'files', 'entryRules', 'resultOutputs'])->findOrFail($id);
 
         $prefill = $src->only([
             'name',
@@ -56,6 +66,15 @@ class TournamentController extends Controller
             'gender',
             'official_type',
             'title_category',
+            'tournament_series_id',
+            'competition_type',
+            'include_annual_seeds',
+            'annual_seed_rank_limit',
+            'auto_sync_priority_rules',
+            'counts_for_official_points',
+            'counts_for_average',
+            'counts_for_prize',
+            'title_scope',
             'result_flow_type',
             'round_robin_qualifier_count',
             'round_robin_win_bonus',
@@ -69,6 +88,8 @@ class TournamentController extends Controller
             'shootout_seed_source_result_code',
             'shootout_format',
             'shootout_settings',
+            'result_carry_preset',
+            'result_carry_settings',
             'spectator_policy',
             'broadcast',
             'streaming',
@@ -122,6 +143,27 @@ class TournamentController extends Controller
             ];
         })->values()->all();
 
+        $prefill['priority_rule_types'] = $src->entryRules
+            ->where('is_active', true)
+            ->pluck('rule_type')
+            ->values()
+            ->all();
+        $sourceRule = $src->entryRules->firstWhere('rule_type', 'source_tournament_top_n');
+        if ($sourceRule) {
+            $prefill['priority_source_tournament_id'] = null;
+            $prefill['priority_source_tournament_top_n'] = $sourceRule->max_count;
+        }
+
+        $activeOutputs = $src->resultOutputs->where('is_active', true);
+        $prefill['counts_for_season_trial_points'] = $activeOutputs->contains(
+            fn ($output): bool => $output->output_type === 'points'
+                && $output->output_scope === 'season_trial_championship'
+        );
+        $prefill['produces_entry_priority'] = $activeOutputs->contains(
+            fn ($output): bool => $output->output_type === 'qualification'
+                && $output->output_scope === 'entry_priority'
+        );
+
         session()->flash('tournament_prefill', $prefill);
 
         return redirect()->route('tournaments.create')
@@ -137,9 +179,21 @@ class TournamentController extends Controller
 
     public function edit($id)
     {
-        $tournament = Tournament::with(['organizations', 'files', 'venue'])->findOrFail($id);
+        $tournament = Tournament::with([
+            'organizations',
+            'files',
+            'venue',
+            'entryRules',
+            'resultOutputs',
+            'edition',
+            'series',
+            'templateVersion.template',
+        ])->findOrFail($id);
 
-        return view('tournaments.edit', compact('tournament'));
+        return view('tournaments.edit', array_merge(
+            compact('tournament'),
+            $this->formReferenceData($tournament)
+        ));
     }
 
     private function buildPrefillOldInput(array $prefill): array
@@ -151,6 +205,11 @@ class TournamentController extends Controller
             'use_shift_draw',
             'accept_shift_preference',
             'use_lane_draw',
+            'include_annual_seeds',
+            'auto_sync_priority_rules',
+            'counts_for_official_points',
+            'counts_for_average',
+            'counts_for_prize',
         ] as $booleanKey) {
             $old[$booleanKey] = !empty($prefill[$booleanKey]) ? 1 : 0;
         }
@@ -184,6 +243,29 @@ class TournamentController extends Controller
         );
 
         return $old;
+    }
+
+    private function formReferenceData(?Tournament $currentTournament = null): array
+    {
+        return [
+            'venues' => Venue::query()->orderBy('name')->get([
+                'id',
+                'name',
+                'address',
+                'tel',
+                'fax',
+                'website_url',
+            ]),
+            'seriesList' => TournamentSeries::query()
+                ->where('is_active', true)
+                ->orderBy('name')
+                ->get(),
+            'sourceTournaments' => Tournament::query()
+                ->when($currentTournament, fn ($query) => $query->where('id', '<>', $currentTournament->id))
+                ->orderByDesc('year')
+                ->orderBy('name')
+                ->get(['id', 'name', 'year']),
+        ];
     }
 
     private function buildPrefillScheduleRows(array $rows): array
@@ -650,6 +732,11 @@ class TournamentController extends Controller
     {
         $validated = $request->validate([
             'name'                 => 'required|string|max:255',
+            'tournament_series_id' => 'nullable|integer|exists:tournament_series,id',
+            'tournament_template_version_id' => 'nullable|integer|exists:tournament_template_versions,id',
+            'season_key'           => 'nullable|string|max:50',
+            'setup_status'         => 'nullable|in:draft,ready,entry_open,in_progress,provisional,final,archived',
+            'competition_type'     => 'nullable|in:singles,doubles,team,all_events,qualifier,priority_ranking,championship',
             'start_date'           => 'nullable|date',
             'end_date'             => 'nullable|date|after_or_equal:start_date',
             'venue_name'           => 'nullable|string',
@@ -659,6 +746,19 @@ class TournamentController extends Controller
             'gender'               => 'required|in:M,F,X',
             'official_type'        => 'required|in:official,approved,other',
             'title_category'       => 'nullable|in:normal,season_trial,excluded',
+            'include_annual_seeds' => 'nullable|boolean',
+            'annual_seed_rank_limit' => 'nullable|integer|min:1|max:999',
+            'auto_sync_priority_rules' => 'nullable|boolean',
+            'counts_for_official_points' => 'nullable|boolean',
+            'counts_for_season_trial_points' => 'nullable|boolean',
+            'produces_entry_priority' => 'nullable|boolean',
+            'counts_for_average' => 'nullable|boolean',
+            'counts_for_prize' => 'nullable|boolean',
+            'title_scope' => 'nullable|in:official,season_trial,none',
+            'priority_rule_types' => 'nullable|array',
+            'priority_rule_types.*' => 'in:past_champions,current_year_winners,permanent_seeds',
+            'priority_source_tournament_id' => 'nullable|integer|exists:tournaments,id',
+            'priority_source_tournament_top_n' => 'nullable|integer|min:1|max:999',
             'result_flow_type'     => 'nullable|in:legacy_standard,prelim_to_rr_to_final,prelim_to_quarterfinal_to_rr_to_final,prelim_to_single_elimination_to_final,prelim_to_quarterfinal_to_single_elimination_to_final,prelim_to_semifinal_to_single_elimination_to_final,prelim_to_shootout_to_final,prelim_to_quarterfinal_to_shootout_to_final,prelim_to_semifinal_to_shootout_to_final',
             'round_robin_qualifier_count' => 'nullable|integer|min:4|max:16',
             'round_robin_win_bonus' => 'nullable|integer|min:0|max:200',
@@ -801,6 +901,23 @@ class TournamentController extends Controller
             : null;
 
         $validated['inspection_required'] = $request->boolean('inspection_required');
+        $validated['setup_status'] = trim((string) ($validated['setup_status'] ?? 'draft')) ?: 'draft';
+        $validated['competition_type'] = trim((string) ($validated['competition_type'] ?? 'singles')) ?: 'singles';
+        $validated['include_annual_seeds'] = $request->boolean('include_annual_seeds', true);
+        $validated['annual_seed_rank_limit'] = $request->filled('annual_seed_rank_limit')
+            ? (int) $request->input('annual_seed_rank_limit')
+            : null;
+        $validated['auto_sync_priority_rules'] = $request->boolean('auto_sync_priority_rules', true);
+        $validated['counts_for_official_points'] = $request->boolean('counts_for_official_points', true);
+        $validated['counts_for_average'] = $request->boolean('counts_for_average', true);
+        $validated['counts_for_prize'] = $request->boolean('counts_for_prize', true);
+        $validated['title_scope'] = trim((string) ($validated['title_scope'] ?? 'official')) ?: 'official';
+
+        $validated['title_category'] = match ($validated['title_scope']) {
+            'season_trial' => 'season_trial',
+            'none' => 'excluded',
+            default => ($validated['title_category'] ?? 'normal') === 'season_trial' ? 'normal' : ($validated['title_category'] ?? 'normal'),
+        };
 
         $flowType = trim((string) ($validated['result_flow_type'] ?? 'legacy_standard')) ?: 'legacy_standard';
 
@@ -937,6 +1054,15 @@ class TournamentController extends Controller
         // レーン移動表ルールは画面入力用配列 lane_movement を
         // tournaments.lane_movement_settings JSON へ正規化して保存する。
         $validated['lane_movement_settings'] = $this->normalizeLaneMovementSettings($request);
+
+        unset(
+            $validated['season_key'],
+            $validated['counts_for_season_trial_points'],
+            $validated['produces_entry_priority'],
+            $validated['priority_rule_types'],
+            $validated['priority_source_tournament_id'],
+            $validated['priority_source_tournament_top_n'],
+        );
 
         $validated['use_shift_draw'] = $useShiftDraw;
         $validated['accept_shift_preference'] = $useShiftDraw && $request->boolean('accept_shift_preference');
@@ -1362,9 +1488,18 @@ class TournamentController extends Controller
         return $out;
     }
 
-    public function store(Request $request)
+    public function store(
+        Request $request,
+        TournamentTemplateService $templateService,
+        TournamentEditionService $editionService,
+        TournamentConfigurationService $configurationService,
+        TournamentPrioritySyncService $prioritySyncService,
+    )
     {
         $validated = $this->validateAndNormalize($request);
+        $templateVersion = $request->filled('tournament_template_version_id')
+            ? TournamentTemplateVersion::query()->findOrFail($request->integer('tournament_template_version_id'))
+            : null;
 
         if ($request->hasFile('hero_image')) {
             $validated['hero_image_path'] = $request->file('hero_image')->store('posters', 'public');
@@ -1460,13 +1595,39 @@ class TournamentController extends Controller
             }
         }
 
+        if ($templateVersion) {
+            $templateService->applyRelatedSettings($t, $templateVersion);
+        }
+
+        $configurationService->syncEntryRules($t, $request->all());
+        $configurationService->syncResultOutputs($t, array_merge($request->all(), [
+            'counts_for_official_points' => $t->counts_for_official_points,
+            'counts_for_average' => $t->counts_for_average,
+            'counts_for_prize' => $t->counts_for_prize,
+            'title_scope' => $t->title_scope,
+        ]));
+        $editionService->attach($t->fresh('series'), $request->input('season_key'));
+        $prioritySummary = $prioritySyncService->sync($t->fresh(['entryRules', 'series']));
+
         return redirect()->route('tournaments.show', $t->id)
-            ->with('success', '大会が登録されました');
+            ->with('success', sprintf(
+                '大会を登録しました。年度シード %d名、追加の優先出場権 %d名を自動確認しました。',
+                $prioritySummary['annual_seed_count'],
+                $prioritySummary['synced_count'],
+            ));
     }
 
-    public function update(Request $request, $id)
+    public function update(
+        Request $request,
+        $id,
+        TournamentTemplateService $templateService,
+        TournamentEditionService $editionService,
+        TournamentConfigurationService $configurationService,
+        TournamentPrioritySyncService $prioritySyncService,
+    )
     {
         $t = Tournament::with(['organizations', 'files'])->findOrFail($id);
+        $originalTemplateVersionId = $t->tournament_template_version_id;
         $validated = $this->validateAndNormalize($request);
 
         if ($request->hasFile('hero_image')) {
@@ -1564,8 +1725,32 @@ class TournamentController extends Controller
             }
         }
 
+        $newTemplateVersionId = $request->filled('tournament_template_version_id')
+            ? $request->integer('tournament_template_version_id')
+            : null;
+        if ($newTemplateVersionId && (int) $newTemplateVersionId !== (int) $originalTemplateVersionId) {
+            $templateService->applyRelatedSettings(
+                $t,
+                TournamentTemplateVersion::query()->findOrFail($newTemplateVersionId),
+            );
+        }
+
+        $configurationService->syncEntryRules($t, $request->all());
+        $configurationService->syncResultOutputs($t, array_merge($request->all(), [
+            'counts_for_official_points' => $t->counts_for_official_points,
+            'counts_for_average' => $t->counts_for_average,
+            'counts_for_prize' => $t->counts_for_prize,
+            'title_scope' => $t->title_scope,
+        ]));
+        $editionService->attach($t->fresh('series'), $request->input('season_key'));
+        $prioritySummary = $prioritySyncService->sync($t->fresh(['entryRules', 'series']));
+
         return redirect()->route('tournaments.show', $t->id)
-            ->with('success', '大会情報を更新しました。');
+            ->with('success', sprintf(
+                '大会情報を更新しました。年度シード %d名、追加の優先出場権 %d名を自動確認しました。',
+                $prioritySummary['annual_seed_count'],
+                $prioritySummary['synced_count'],
+            ));
     }
 
     public function destroy($id)

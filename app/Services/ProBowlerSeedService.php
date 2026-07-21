@@ -37,6 +37,7 @@ class ProBowlerSeedService
     public const SOURCE_PRO_TEST_PRACTICAL_EXEMPT = 'pro_test_practical_exempt';
     public const SOURCE_PRO_TEST_TOP_PASSER = 'pro_test_top_passer';
     public const SOURCE_SEASON_TRIAL_PARTICIPANT = 'season_trial_participant';
+    public const SOURCE_TOURNAMENT_QUALIFIER = 'source_tournament_qualifier';
     public const SOURCE_MANUAL = 'manual';
 
     /**
@@ -445,6 +446,10 @@ class ProBowlerSeedService
             return ProBowlerSeedListPlayer::query()->whereRaw('1 = 0');
         }
 
+        if (($tournament->include_annual_seeds ?? true) === false) {
+            return ProBowlerSeedListPlayer::query()->whereRaw('1 = 0');
+        }
+
         $seedYear = $this->resolveSeedYear($tournament);
         if ($seedYear === null) {
             return ProBowlerSeedListPlayer::query()->whereRaw('1 = 0');
@@ -475,6 +480,16 @@ class ProBowlerSeedService
             ->whereIn('seed_list_id', $seedListIds)
             ->where('is_active', true);
 
+        if ((int) ($tournament->annual_seed_rank_limit ?? 0) > 0) {
+            $limit = (int) $tournament->annual_seed_rank_limit;
+            $query->where(function ($query) use ($limit) {
+                $query->where('seed_rank', '<=', $limit)
+                    ->orWhere(function ($query) use ($limit) {
+                        $query->whereNull('seed_rank')->where('ranking_rank', '<=', $limit);
+                    });
+            });
+        }
+
         if ($proBowlerId !== null && $licenseNo !== null) {
             return $query->where(function ($q) use ($proBowlerId, $licenseNo) {
                 $q->where('pro_bowler_id', $proBowlerId)
@@ -501,6 +516,10 @@ class ProBowlerSeedService
             return collect();
         }
 
+        if (($tournament->include_annual_seeds ?? true) === false) {
+            return collect();
+        }
+
         $seedYear = $this->resolveSeedYear($tournament);
         if ($seedYear === null) {
             return collect();
@@ -519,6 +538,15 @@ class ProBowlerSeedService
         return ProBowlerSeedListPlayer::query()
             ->whereIn('seed_list_id', $seedListIds)
             ->where('is_active', true)
+            ->when((int) ($tournament->annual_seed_rank_limit ?? 0) > 0, function ($query) use ($tournament) {
+                $limit = (int) $tournament->annual_seed_rank_limit;
+                $query->where(function ($query) use ($limit) {
+                    $query->where('seed_rank', '<=', $limit)
+                        ->orWhere(function ($query) use ($limit) {
+                            $query->whereNull('seed_rank')->where('ranking_rank', '<=', $limit);
+                        });
+                });
+            })
             ->orderBy('priority_order')
             ->orderBy('seed_rank')
             ->orderBy('id')
@@ -677,6 +705,7 @@ class ProBowlerSeedService
             self::SOURCE_PRO_TEST_PRACTICAL_EXEMPT => 'プロテスト実技免除合格者',
             self::SOURCE_PRO_TEST_TOP_PASSER => 'プロテストトップ合格者',
             self::SOURCE_SEASON_TRIAL_PARTICIPANT => 'シーズントライアル出場者',
+            self::SOURCE_TOURNAMENT_QUALIFIER => '前段階大会通過者',
             self::SOURCE_MANUAL => '手動',
             default => $seedSourceType,
         };
