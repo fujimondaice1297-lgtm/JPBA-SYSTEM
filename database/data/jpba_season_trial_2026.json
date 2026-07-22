@@ -1,0 +1,111 @@
+{
+  "dataset": "JPBA 2026 season trial official venue catalog",
+  "source_checked_at": "2026-07-22",
+  "year": 2026,
+  "series_code": "jpba-season-trial",
+  "template_code": "season-trial-standard",
+  "editions": [
+    {
+      "season_key": "winter",
+      "name": "JPBAシーズントライアル2026 ウィンターシリーズ",
+      "status": "completed",
+      "start_date": "2026-01-20",
+      "end_date": "2026-01-28",
+      "source_url": "https://www.jpba.or.jp/information/tournament/tournament2026/ST_Winter/StWinter2026.html",
+      "events": [
+        {
+          "venue_code": "A",
+          "date": "2026-01-20",
+          "venue_name": "大学ボウル土浦本店",
+          "final_result_url": "https://www.jpba.or.jp/information/tournament/tournament2026/ST_Winter/Result/A/A_FinalResult.pdf"
+        },
+        {
+          "venue_code": "B",
+          "date": "2026-01-27",
+          "venue_name": "品川プリンスホテルボウリングセンター",
+          "final_result_url": "https://www.jpba.or.jp/information/tournament/tournament2026/ST_Winter/Result/B/B_FinalResult.pdf"
+        },
+        {
+          "venue_code": "C",
+          "date": "2026-01-28",
+          "venue_name": "狐ヶ崎ヤングランドボウル",
+          "final_result_url": "https://www.jpba.or.jp/information/tournament/tournament2026/ST_Winter/Result/C/C_FinalResult.pdf"
+        },
+        {
+          "venue_code": "D",
+          "date": "2026-01-20",
+          "venue_name": "神戸六甲ボウル",
+          "final_result_url": "https://www.jpba.or.jp/information/tournament/tournament2026/ST_Winter/Result/D/D_FinalResult.pdf"
+        }
+      ]
+    },
+    {
+      "season_key": "spring",
+      "name": "JPBAシーズントライアル2026 スプリングシリーズ",
+      "status": "completed",
+      "start_date": "2026-05-18",
+      "end_date": "2026-05-20",
+      "source_url": "https://www.jpba.or.jp/information/tournament/tournament2026/ST_Spring/StSpring2026.html",
+      "events": [
+        {
+          "venue_code": "A",
+          "date": "2026-05-19",
+          "venue_name": "新狭山グランドボウル",
+          "final_result_url": "https://www.jpba.or.jp/information/tournament/tournament2026/ST_Spring/Result/A_FinalResult.pdf"
+        },
+        {
+          "venue_code": "B",
+          "date": "2026-05-18",
+          "venue_name": "伊勢原ボウリングセンター",
+          "final_result_url": "https://www.jpba.or.jp/information/tournament/tournament2026/ST_Spring/Result/B_FinalResult.pdf"
+        },
+        {
+          "venue_code": "C",
+          "date": "2026-05-20",
+          "venue_name": "MKボウル上賀茂",
+          "final_result_url": "https://www.jpba.or.jp/information/tournament/tournament2026/ST_Spring/Result/C_FinalResult.pdf"
+        },
+        {
+          "venue_code": "D",
+          "date": "2026-05-18",
+          "venue_name": "ミスズボウル",
+          "final_result_url": "https://www.jpba.or.jp/information/tournament/tournament2026/ST_Spring/Result/D_FinalResult.pdf"
+        }
+      ]
+    },
+    {
+      "season_key": "summer",
+      "name": "JPBAシーズントライアル2026 サマーシリーズ",
+      "status": "in_progress",
+      "start_date": "2026-07-01",
+      "end_date": "2026-07-28",
+      "source_url": "https://www.jpba.or.jp/information/tournament/tournament2026/ST_Summer/ST_Summer2026.html",
+      "events": [
+        {
+          "venue_code": "A",
+          "date": "2026-07-02",
+          "venue_name": "ドリームスタジアム太田",
+          "final_result_url": "https://www.jpba.or.jp/information/tournament/tournament2026/ST_Summer/Result/A_FinalResult.pdf"
+        },
+        {
+          "venue_code": "B",
+          "date": "2026-07-01",
+          "venue_name": "サンスクエアボウル",
+          "final_result_url": "https://www.jpba.or.jp/information/tournament/tournament2026/ST_Summer/Result/B_FinalResult.pdf"
+        },
+        {
+          "venue_code": "C",
+          "date": "2026-07-07",
+          "venue_name": "アソビックスびさい",
+          "final_result_url": "https://www.jpba.or.jp/information/tournament/tournament2026/ST_Summer/Result/C_FinalResult.pdf"
+        },
+        {
+          "venue_code": "D",
+          "date": "2026-07-28",
+          "venue_name": "賀茂ボール",
+          "final_result_url": null
+        }
+      ]
+    }
+  ]
+}
