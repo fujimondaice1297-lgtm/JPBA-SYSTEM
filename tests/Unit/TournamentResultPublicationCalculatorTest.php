@@ -63,6 +63,55 @@ class TournamentResultPublicationCalculatorTest extends TestCase
         self::assertSame(1, $result[23]['points']);
     }
 
+    public function test_season_trial_uses_official_snapshot_points_when_present(): void
+    {
+        $calculator = new TournamentResultPublicationCalculator;
+
+        $result = $calculator->build([
+            $this->group(30, 'shootout_final', [
+                array_replace($this->row(1, 101, 'Winner', 2900, 12), ['points' => 77]),
+            ]),
+            $this->group(20, 'semifinal_total', [
+                array_replace($this->row(4, 102, 'Semifinalist', 2700, 12), ['points' => 21]),
+            ]),
+        ], [], [], [
+            'is_season_trial' => true,
+            'counts_for_points' => true,
+            'counts_for_prize' => false,
+            'semifinal_qualifier_count' => 24,
+        ]);
+
+        self::assertSame(50, $result[0]['award_points']);
+        self::assertSame(27, $result[0]['step_points']);
+        self::assertSame(77, $result[0]['points']);
+        self::assertSame(0, $result[1]['award_points']);
+        self::assertSame(21, $result[1]['step_points']);
+        self::assertSame(21, $result[1]['points']);
+    }
+
+    public function test_official_eligibility_and_special_prize_metadata_are_applied(): void
+    {
+        $calculator = new TournamentResultPublicationCalculator;
+        $ineligible = $this->row(2, 102, 'Incomplete', 4209, 21);
+        $ineligible['breakdown'] = [
+            'official_points_eligible' => false,
+            'official_special_prize_money' => 50000,
+        ];
+
+        $result = $calculator->build([
+            $this->group(10, 'final', [
+                $this->row(1, 101, 'Winner', 5000, 24),
+                $ineligible,
+            ]),
+        ], [1 => 1000, 2 => 800], [1 => 500000, 2 => 300000], [
+            'counts_for_points' => true,
+            'counts_for_prize' => true,
+        ]);
+
+        self::assertSame(0, $result[1]['points']);
+        self::assertSame(350000, $result[1]['prize_money']);
+    }
+
     public function test_distributions_apply_only_to_professional_rows(): void
     {
         $calculator = new TournamentResultPublicationCalculator;

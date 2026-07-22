@@ -708,7 +708,7 @@ class TournamentResultController extends Controller
         $pointRanks = $this->applyRankingGenderFilter(
             TournamentResult::query()
                 ->where('ranking_year', $year)
-                ->whereHas('tournament', fn ($query) => $query->where('counts_for_official_points', true)),
+                ->whereHas('tournament', fn ($query) => $query->includedInAnnualPointRanking()),
             $gender
         )
             ->whereNotNull('pro_bowler_license_no')

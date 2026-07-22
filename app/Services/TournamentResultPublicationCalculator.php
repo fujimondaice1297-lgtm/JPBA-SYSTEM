@@ -73,17 +73,29 @@ final class TournamentResultPublicationCalculator
         foreach ($merged as &$row) {
             $rank = (int) $row['ranking'];
             $isPro = (int) ($row['pro_bowler_id'] ?? 0) > 0;
+            $breakdown = is_array($row['breakdown'] ?? null) ? $row['breakdown'] : [];
+            $pointsEligible = (bool) ($breakdown['official_points_eligible'] ?? true);
             $awardPoints = 0;
             $stepPoints = 0;
             $points = 0;
 
-            if ($isPro && $countsForPoints) {
+            if ($isPro && $countsForPoints && $pointsEligible) {
                 if ($isSeasonTrial) {
-                    $awardPoints = self::SEASON_TRIAL_AWARD_POINTS[$rank] ?? 0;
-                    $stepPoints = $semifinalQualifierCount > 0 && $rank <= $semifinalQualifierCount
-                        ? $semifinalQualifierCount - $rank + 1
-                        : 0;
-                    $points = $awardPoints + $stepPoints;
+                    $snapshotPoints = max(0, (int) ($row['points'] ?? 0));
+                    if ($snapshotPoints > 0) {
+                        $sourceResultCode = (string) ($row['source_result_code'] ?? '');
+                        $isFinalSource = str_contains($sourceResultCode, 'final')
+                            && ! str_contains($sourceResultCode, 'semifinal');
+                        $awardPoints = $isFinalSource ? (self::SEASON_TRIAL_AWARD_POINTS[$rank] ?? 0) : 0;
+                        $stepPoints = max(0, $snapshotPoints - $awardPoints);
+                        $points = $snapshotPoints;
+                    } else {
+                        $awardPoints = self::SEASON_TRIAL_AWARD_POINTS[$rank] ?? 0;
+                        $stepPoints = $semifinalQualifierCount > 0 && $rank <= $semifinalQualifierCount
+                            ? $semifinalQualifierCount - $rank + 1
+                            : 0;
+                        $points = $awardPoints + $stepPoints;
+                    }
                 } elseif (array_key_exists($rank, $pointMap)) {
                     $points = (int) $pointMap[$rank];
                 } elseif ($useSnapshotPoints) {
@@ -98,6 +110,7 @@ final class TournamentResultPublicationCalculator
                 } elseif ($useSnapshotPrize) {
                     $prizeMoney = (int) ($row['prize_money'] ?? 0);
                 }
+                $prizeMoney += max(0, (int) ($breakdown['official_special_prize_money'] ?? 0));
             }
 
             $row['points'] = $points;

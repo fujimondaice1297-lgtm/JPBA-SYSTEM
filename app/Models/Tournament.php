@@ -215,6 +215,15 @@ class Tournament extends Model
         return $this->hasMany(TournamentResultPublication::class);
     }
 
+    public function scopeIncludedInAnnualPointRanking($query)
+    {
+        return $query->where(function ($query): void {
+            $query->where('counts_for_official_points', true)
+                ->orWhere('title_scope', 'season_trial')
+                ->orWhere('title_category', 'season_trial');
+        });
+    }
+
     public function organizations()
     {
         return $this->hasMany(TournamentOrganization::class);

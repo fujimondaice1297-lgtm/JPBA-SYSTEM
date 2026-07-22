@@ -391,7 +391,7 @@ class ProBowlerSeedListController extends Controller
             ->where('ranking_year', $rankingYear)
             ->whereNotNull('points')
             ->where('points', '>', 0)
-            ->whereHas('tournament', fn ($query) => $query->where('counts_for_official_points', true))
+            ->whereHas('tournament', fn ($query) => $query->includedInAnnualPointRanking())
             ->get($columns);
 
         $rankings = [];
