@@ -18,6 +18,7 @@ final class TournamentResultPublicationService
     public function __construct(
         private readonly TournamentResultPublicationCalculator $calculator,
         private readonly TournamentTitleSyncService $titleSyncService,
+        private readonly TournamentResultCompletenessService $completenessService,
     ) {}
 
     /** @return array<string,mixed> */
@@ -122,6 +123,11 @@ final class TournamentResultPublicationService
             $errors[] = '同じ選手が同一成績内に重複しています: '.implode('、', array_slice(array_unique($duplicateIdentities), 0, 5));
         }
 
+        $completeness = $this->completenessService->audit($tournament, $sourceSnapshots, false);
+        foreach ($completeness['errors'] as $completenessError) {
+            $errors[] = '完全性検査: '.$completenessError;
+        }
+
         $pointMap = $this->pointMap((int) $tournament->id);
         $prizeMap = $this->prizeMap((int) $tournament->id);
         $isSeasonTrial = $this->isSeasonTrial($tournament);
@@ -163,6 +169,7 @@ final class TournamentResultPublicationService
                 'use_snapshot_prize' => $prizeMap === [] && $hasSnapshotPrize,
             ],
         );
+        $rows = $this->completenessService->applyActualTotals($tournament, $rows);
 
         foreach ($rows as &$row) {
             $bowler = (int) ($row['pro_bowler_id'] ?? 0) > 0

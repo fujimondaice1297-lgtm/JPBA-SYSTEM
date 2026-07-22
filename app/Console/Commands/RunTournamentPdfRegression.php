@@ -8,19 +8,54 @@ use App\Models\Tournament;
 use App\Models\TournamentResult;
 use App\Models\TournamentResultSnapshot;
 use App\Models\TournamentResultSnapshotRow;
+use App\Services\TournamentResultCompletenessService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Throwable;
 
 class RunTournamentPdfRegression extends Command
 {
-    protected $signature = 'tournament:pdf-regression {--json : Output the regression result as JSON}';
+    protected $signature = 'tournament:pdf-regression
+        {--year=2026 : Published tournament year to verify completely}
+        {--json : Output the regression result as JSON}';
 
     protected $description = 'Run tournament result PDF regression checks for each PDF mode.';
 
     public function handle(): int
     {
         $results = [];
+
+        $publishedTournaments = Tournament::query()
+            ->where('year', (int) $this->option('year'))
+            ->whereHas('resultPublications', fn ($query) => $query->where('status', 'current'))
+            ->orderBy('id')
+            ->get();
+        /** @var TournamentResultCompletenessService $completenessService */
+        $completenessService = app(TournamentResultCompletenessService::class);
+
+        foreach ($publishedTournaments as $publishedTournament) {
+            $audit = $completenessService->audit($publishedTournament);
+            if (! $audit['is_complete']) {
+                $results[] = [
+                    'case' => 'published_completeness_'.$publishedTournament->id,
+                    'mode' => 'published',
+                    'tournament_id' => $publishedTournament->id,
+                    'fixture' => false,
+                    'status' => 'FAIL',
+                    'bytes' => 0,
+                    'message' => implode(' / ', array_slice($audit['errors'], 0, 3)),
+                ];
+
+                continue;
+            }
+
+            $results[] = $this->checkPdf(
+                'published_pdf_'.$publishedTournament->id,
+                'published',
+                $publishedTournament,
+                false,
+            );
+        }
 
         $existingCases = [
             [
@@ -59,8 +94,9 @@ class RunTournamentPdfRegression extends Command
         ];
 
         foreach ($existingCases as $case) {
-            if (!$case['tournament']) {
+            if (! $case['tournament']) {
                 $results[] = $this->missingResult($case['case'], $case['mode'], '対象大会がDBにありません。');
+
                 continue;
             }
 
@@ -119,7 +155,7 @@ class RunTournamentPdfRegression extends Command
                     $result['case'] ?? '',
                     $result['mode'] ?? '',
                     $result['tournament_id'] ?? '-',
-                    !empty($result['fixture']) ? 'yes' : 'no',
+                    ! empty($result['fixture']) ? 'yes' : 'no',
                     $result['status'] ?? '',
                     $result['bytes'] ?? '-',
                     $result['message'] ?? '',
@@ -134,11 +170,11 @@ class RunTournamentPdfRegression extends Command
     {
         $warnings = [];
         set_error_handler(function (int $severity, string $message, string $file, int $line) use (&$warnings): bool {
-            if (!(error_reporting() & $severity)) {
+            if (! (error_reporting() & $severity)) {
                 return false;
             }
 
-            $warnings[] = $message . ' (' . $file . ':' . $line . ')';
+            $warnings[] = $message.' ('.$file.':'.$line.')';
 
             return true;
         });
@@ -162,7 +198,7 @@ class RunTournamentPdfRegression extends Command
         }
 
         $bytes = strlen($content);
-        if (!str_starts_with($content, '%PDF')) {
+        if (! str_starts_with($content, '%PDF')) {
             return [
                 'case' => $caseName,
                 'mode' => $expectedMode,
@@ -174,7 +210,7 @@ class RunTournamentPdfRegression extends Command
             ];
         }
 
-        if (!empty($warnings)) {
+        if (! empty($warnings)) {
             return [
                 'case' => $caseName,
                 'mode' => $expectedMode,
@@ -213,7 +249,7 @@ class RunTournamentPdfRegression extends Command
     private function validateShootoutPdfPayload(TournamentResultController $controller, Tournament $tournament): ?string
     {
         $flowType = trim((string) ($tournament->result_flow_type ?? ''));
-        if (!str_contains($flowType, 'shootout')) {
+        if (! str_contains($flowType, 'shootout')) {
             return null;
         }
 
@@ -222,10 +258,10 @@ class RunTournamentPdfRegression extends Command
             $method->setAccessible(true);
             $payload = $method->invoke($controller, $tournament);
         } catch (Throwable $e) {
-            return 'Shootout PDF payload failed: ' . $e->getMessage();
+            return 'Shootout PDF payload failed: '.$e->getMessage();
         }
 
-        if (!is_array($payload)) {
+        if (! is_array($payload)) {
             return 'Shootout PDF payload is missing.';
         }
 
@@ -233,6 +269,13 @@ class RunTournamentPdfRegression extends Command
         $matchCount = count((array) ($payload['matches'] ?? []));
         if ($seedCount < 8 || $matchCount < 3) {
             return "Shootout PDF payload is incomplete. seeds={$seedCount}, matches={$matchCount}";
+        }
+
+        $completedMatchCount = (int) ($payload['summary']['completed_match_count'] ?? 0);
+        $winnerName = trim((string) ($payload['summary']['winner_name'] ?? ''));
+        $finalRankCount = count((array) ($payload['final_rank_by_seed'] ?? []));
+        if ($completedMatchCount !== 3 || $winnerName === '' || $finalRankCount !== 8) {
+            return "Shootout result is incomplete. completed={$completedMatchCount}, winner={$winnerName}, ranks={$finalRankCount}";
         }
 
         return null;
@@ -364,7 +407,7 @@ class RunTournamentPdfRegression extends Command
                 'seed' => $i,
                 'pro_bowler_id' => $bowler?->id,
                 'license_no' => $bowler?->license_no ?: sprintf('PDFREG%04d', $i),
-                'name' => $bowler?->name_kanji ?: ('PDF回帰 選手' . $i),
+                'name' => $bowler?->name_kanji ?: ('PDF回帰 選手'.$i),
                 'gender' => ((int) ($bowler?->sex ?? 1)) === 2 ? 'F' : 'M',
                 'total_pin' => 2200 - ($i * 10),
                 'games' => 8,
@@ -375,8 +418,8 @@ class RunTournamentPdfRegression extends Command
     }
 
     /**
-     * @param array<int,array<string,mixed>> $participants
-     * @param array<int,int> $seedOrder
+     * @param  array<int,array<string,mixed>>  $participants
+     * @param  array<int,int>  $seedOrder
      * @return array<int,array<string,mixed>>
      */
     private function participantsBySeed(array $participants, array $seedOrder): array
@@ -391,8 +434,8 @@ class RunTournamentPdfRegression extends Command
     }
 
     /**
-     * @param array<int,array<string,mixed>> $participants
-     * @param array<int,int>|null $rankings
+     * @param  array<int,array<string,mixed>>  $participants
+     * @param  array<int,int>|null  $rankings
      */
     private function createTournamentResults(Tournament $tournament, array $participants, ?array $rankings = null): void
     {
@@ -421,8 +464,8 @@ class RunTournamentPdfRegression extends Command
     }
 
     /**
-     * @param array<int,array<string,mixed>> $participants
-     * @param array<int,int>|null $rankings
+     * @param  array<int,array<string,mixed>>  $participants
+     * @param  array<int,int>|null  $rankings
      */
     private function createSnapshot(Tournament $tournament, string $code, string $name, array $participants, bool $isFinal, ?array $rankings = null): TournamentResultSnapshot
     {
@@ -457,10 +500,10 @@ class RunTournamentPdfRegression extends Command
                 'pro_bowler_id' => $participant['pro_bowler_id'] ?? null,
                 'pro_bowler_license_no' => $participant['license_no'] ?? null,
                 'amateur_name' => empty($participant['pro_bowler_id']) ? ($participant['name'] ?? null) : null,
-                'display_name' => $participant['name'] ?? ('PDF回帰 選手' . ($index + 1)),
+                'display_name' => $participant['name'] ?? ('PDF回帰 選手'.($index + 1)),
                 'gender' => $participant['gender'] ?? null,
                 'shift' => null,
-                'entry_number' => 'PDF-' . ($index + 1),
+                'entry_number' => 'PDF-'.($index + 1),
                 'scratch_pin' => $totalPin,
                 'carry_pin' => 0,
                 'total_pin' => $totalPin,
@@ -476,7 +519,7 @@ class RunTournamentPdfRegression extends Command
     }
 
     /**
-     * @param array<int,array<string,mixed>> $participants
+     * @param  array<int,array<string,mixed>>  $participants
      */
     private function insertShootoutScores(Tournament $tournament, array $participants): void
     {
@@ -490,7 +533,7 @@ class RunTournamentPdfRegression extends Command
     }
 
     /**
-     * @param array<int,array<string,mixed>> $participants
+     * @param  array<int,array<string,mixed>>  $participants
      */
     private function insertSingleEliminationScores(Tournament $tournament, array $participants): void
     {
@@ -504,8 +547,8 @@ class RunTournamentPdfRegression extends Command
     }
 
     /**
-     * @param array<int,array<string,mixed>> $participants
-     * @param array<int,array{0:string,1:int,2:array<string,array{0:int,1:int}>}> $matches
+     * @param  array<int,array<string,mixed>>  $participants
+     * @param  array<int,array{0:string,1:int,2:array<string,array{0:int,1:int}>}>  $matches
      */
     private function insertMatchScores(Tournament $tournament, array $participants, string $stage, string $prefix, array $matches): void
     {
@@ -521,7 +564,7 @@ class RunTournamentPdfRegression extends Command
                     'stage' => $stage,
                     'license_number' => $participant['license_no'] ?? null,
                     'name' => $participant['name'] ?? null,
-                    'entry_number' => $prefix . ':' . $matchKey . ':' . $slot,
+                    'entry_number' => $prefix.':'.$matchKey.':'.$slot,
                     'game_number' => $gameNumber,
                     'score' => $score,
                     'shift' => $prefix === 'SE' ? 'single_elimination' : 'shootout',
