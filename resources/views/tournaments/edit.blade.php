@@ -727,7 +727,7 @@
       </div>
     </div>
 
-    <div class="col-md-4 mb-3">
+    <div class="col-md-6 mb-3">
       <label class="form-label">持ち込みプリセット</label>
       @php $carryPreset = old('result_carry_preset', $tournament->result_carry_preset ?? 'default'); @endphp
       <select name="result_carry_preset" id="result_carry_preset" class="form-select @error('result_carry_preset') is-invalid @enderror">
@@ -737,12 +737,13 @@
         <option value="reset_from_quarterfinal" {{ $carryPreset === 'reset_from_quarterfinal' ? 'selected' : '' }}>予選から準々決勝へは持ち込まない</option>
         <option value="carry_to_semifinal_reset_rr" {{ $carryPreset === 'carry_to_semifinal_reset_rr' ? 'selected' : '' }}>予選→準々決勝→準決勝までは持ち込み、ラウンドロビンからリセット</option>
         <option value="carry_prelim_to_semifinal_for_tournament" {{ $carryPreset === 'carry_prelim_to_semifinal_for_tournament' ? 'selected' : '' }}>予選＋準決勝の通算でトーナメント進出者を決定</option>
+        <option value="carry_prelim_semifinal_to_shootout_seed" {{ $carryPreset === 'carry_prelim_semifinal_to_shootout_seed' ? 'selected' : '' }}>予選＋準決勝の通算でシュートアウト進出順位を決定</option>
         <option value="custom" {{ $carryPreset === 'custom' ? 'selected' : '' }}>カスタムJSON</option>
       </select>
       @error('result_carry_preset')<div class="invalid-feedback">{{ $message }}</div>@enderror
     </div>
 
-    <div class="col-md-8 mb-3">
+    <div class="col-md-6 mb-3">
       <label class="form-label">持ち込み詳細設定（JSON / 上級者向け）</label>
       @php
         $carrySettings = old('result_carry_settings', $tournament->result_carry_settings ?? '');
@@ -798,6 +799,9 @@
             round_robin_total: { source_stages: ['ラウンドロビン'] }
           },
           carry_prelim_to_semifinal_for_tournament: {
+            semifinal_total: { source_stages: ['予選', '準決勝'] }
+          },
+          carry_prelim_semifinal_to_shootout_seed: {
             semifinal_total: { source_stages: ['予選', '準決勝'] }
           }
         };

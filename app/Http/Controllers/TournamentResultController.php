@@ -688,7 +688,9 @@ class TournamentResultController extends Controller
             ->pluck('ranking_year');
 
         $moneyRanks = $this->applyRankingGenderFilter(
-            TournamentResult::query()->where('ranking_year', $year),
+            TournamentResult::query()
+                ->where('ranking_year', $year)
+                ->whereHas('tournament', fn ($query) => $query->where('counts_for_prize', true)),
             $gender
         )
             ->whereNotNull('pro_bowler_license_no')
@@ -704,7 +706,9 @@ class TournamentResultController extends Controller
             });
 
         $pointRanks = $this->applyRankingGenderFilter(
-            TournamentResult::query()->where('ranking_year', $year),
+            TournamentResult::query()
+                ->where('ranking_year', $year)
+                ->whereHas('tournament', fn ($query) => $query->where('counts_for_official_points', true)),
             $gender
         )
             ->whereNotNull('pro_bowler_license_no')
@@ -720,7 +724,9 @@ class TournamentResultController extends Controller
             });
 
         $averageRanks = $this->applyRankingGenderFilter(
-            TournamentResult::query()->where('ranking_year', $year),
+            TournamentResult::query()
+                ->where('ranking_year', $year)
+                ->whereHas('tournament', fn ($query) => $query->where('counts_for_average', true)),
             $gender
         )
             ->whereNotNull('pro_bowler_license_no')

@@ -200,6 +200,15 @@ class TournamentController extends Controller
     {
         $old = $prefill;
 
+        $shootoutSettings = $prefill['shootout_settings'] ?? null;
+        if (is_array($shootoutSettings)) {
+            $old['shootout_stage_progress'] = (array) ($shootoutSettings['stage_progress'] ?? []);
+            unset($shootoutSettings['stage_progress']);
+            $old['shootout_settings'] = $shootoutSettings === []
+                ? ''
+                : json_encode($shootoutSettings, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT);
+        }
+
         foreach ([
             'inspection_required',
             'use_shift_draw',
@@ -867,6 +876,15 @@ class TournamentController extends Controller
             'result_cards'                 => 'sometimes|array',
             'org'                          => 'sometimes|array',
         ]);
+
+        $selectedSeries = ! empty($validated['tournament_series_id'])
+            ? TournamentSeries::query()->find((int) $validated['tournament_series_id'])
+            : null;
+        if ($selectedSeries?->recurrence_type === 'seasonal' && ! $request->filled('season_key')) {
+            throw ValidationException::withMessages([
+                'season_key' => '季節開催シリーズでは、開催区分（spring / summer / autumn / winter など）を入力してください。',
+            ]);
+        }
 
         if ($request->filled('audience') && empty($validated['spectator_policy'])) {
             $map = [
