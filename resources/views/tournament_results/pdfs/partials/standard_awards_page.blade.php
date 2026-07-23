@@ -50,6 +50,21 @@
     $standardSplitHighlights = $standardAwardHighlights
         ->where('type', 'split710')
         ->values();
+    $standardChampionImageSrc = null;
+    $standardChampionPublicPath = trim((string) data_get(
+        $tournament->template_snapshot ?? [],
+        'pdf_assets.champion_public_path',
+        ''
+    ));
+    if ($standardChampionPublicPath !== '') {
+        $standardChampionAbsolutePath = public_path(ltrim($standardChampionPublicPath, '/\\'));
+        if (is_file($standardChampionAbsolutePath) && is_readable($standardChampionAbsolutePath)) {
+            $standardChampionMime = mime_content_type($standardChampionAbsolutePath) ?: 'image/jpeg';
+            $standardChampionImageSrc = 'data:' . $standardChampionMime . ';base64,' . base64_encode(
+                (string) file_get_contents($standardChampionAbsolutePath)
+            );
+        }
+    }
 
     $standardRrByLicense = [];
     foreach ((array) ($roundRobinPdf['players'] ?? []) as $standardRrPlayer) {
@@ -130,18 +145,25 @@
             </td>
             <td class="standard-awards-notes-cell">
                 <div class="standard-champion-box">
-                    <div class="standard-champion-label">優勝</div>
-                    <div class="standard-champion-name">{{ $standardChampionName }}</div>
-                    <div class="standard-champion-meta">
-                        {{ $standardChampion ? $resolvePeriod($standardChampion) . '期生' : '' }}
-                        @if ($standardChampionTitles > 0)
-                            ／ 通算{{ number_format($standardChampionTitles) }}勝
+                    @if ($standardChampionImageSrc)
+                        <img class="standard-champion-image" src="{!! $standardChampionImageSrc !!}" alt="">
+                    @endif
+                    <div class="standard-champion-copy">
+                        <div>
+                            <span class="standard-champion-label">優勝</span>
+                            <span class="standard-champion-name">{{ $standardChampionName }}</span>
+                        </div>
+                        <div class="standard-champion-meta">
+                            {{ $standardChampion ? $resolvePeriod($standardChampion) . '期生' : '' }}
+                            @if ($standardChampionTitles > 0)
+                                ／ 通算{{ number_format($standardChampionTitles) }}勝
+                            @endif
+                        </div>
+                        <div class="standard-champion-message">大会優勝者</div>
+                        @if ($standardChampionSpecialPrize > 0)
+                            <div class="standard-champion-message">副賞 ￥{{ number_format($standardChampionSpecialPrize) }}</div>
                         @endif
                     </div>
-                    <div class="standard-champion-message">大会優勝者</div>
-                    @if ($standardChampionSpecialPrize > 0)
-                        <div class="standard-champion-message">副賞 ￥{{ number_format($standardChampionSpecialPrize) }}</div>
-                    @endif
                 </div>
 
                 <div class="standard-note-section">

@@ -21,6 +21,17 @@
     $standardSemiWinner = (array) ($standardStepSemi['winner'] ?? []);
     $standardFinalWinner = (array) ($standardStepFinal['winner'] ?? []);
     $standardScoreImages = array_values((array) ($matchScoreSheetImages ?? []));
+    usort($standardScoreImages, function (array $left, array $right): int {
+        $priority = static function (array $scoreImage): int {
+            $label = trim((string) ($scoreImage['match_label'] ?? ''));
+            if (str_contains($label, '優勝') || str_contains($label, 'FINAL')) return 0;
+            if (str_contains($label, '3位') || str_contains($label, 'R1')) return 1;
+            return 2;
+        };
+
+        return ($priority($left) <=> $priority($right))
+            ?: ((int) ($left['game_number'] ?? 0) <=> (int) ($right['game_number'] ?? 0));
+    });
     $standardStepTitleParts = preg_split('/プレゼンツ/u', $officialMainTitle, 2);
 @endphp
 
@@ -72,7 +83,15 @@
     <div class="standard-step-score-area">
         @foreach ($standardScoreImages as $scoreImage)
             <div class="standard-step-score-block">
-                <h3>{{ trim((string) ($scoreImage['match_label'] ?? '決勝スコア')) }}</h3>
+                @php
+                    $standardScoreLabel = trim((string) ($scoreImage['match_label'] ?? '決勝スコア'));
+                    if (str_contains($standardScoreLabel, 'FINAL')) {
+                        $standardScoreLabel = '優勝決定戦';
+                    } elseif (str_contains($standardScoreLabel, 'R1')) {
+                        $standardScoreLabel = '3位決定戦';
+                    }
+                @endphp
+                <h3>{{ $standardScoreLabel }}</h3>
                 <img src="{!! $scoreImage['image'] ?? '' !!}" alt="">
             </div>
         @endforeach

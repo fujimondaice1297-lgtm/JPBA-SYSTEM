@@ -12,6 +12,7 @@
         h3,
         div,
         span,
+        strong,
         p {
             font-family: ipaexg, sans-serif;
             font-weight: normal !important;
@@ -1296,38 +1297,412 @@
             height: auto;
         }
 
-        .official-standard-snapshot-page.official-snapshot-page-prelim .official-snapshot-title {
-            margin-top: 4px;
+        .standard-overview-title,
+        .standard-step-title {
+            margin: 28px 0 30px;
+            font-size: 39px;
+            line-height: 1.32;
+        }
+
+        .standard-overview-title.official-title-long,
+        .standard-step-title.official-title-long {
+            font-size: 35px;
+        }
+
+        .standard-overview-title.official-title-extra-long,
+        .standard-step-title.official-title-extra-long {
+            font-size: 31px;
+        }
+
+        .standard-overview-layout {
+            width: 90%;
+        }
+
+        .standard-overview-content {
+            width: 83%;
+        }
+
+        .standard-overview-poster {
+            width: 17%;
+            padding: 130px 0 0 14px;
+        }
+
+        .standard-overview-poster img {
+            width: 100%;
+            max-height: 285px;
+        }
+
+        .standard-overview-detail {
+            font-size: 15px;
+            line-height: 1.58;
+        }
+
+        .standard-overview-detail th,
+        .standard-overview-detail td {
+            padding: 3px 1px;
+        }
+
+        .standard-overview-detail th {
+            width: 14%;
+        }
+
+        .standard-overview-detail td {
+            width: 86%;
+            word-break: break-all;
+        }
+
+        .standard-overview-day-row {
+            margin-bottom: 2px;
+            white-space: nowrap;
+        }
+
+        .standard-overview-day-row span {
+            display: inline-block;
+            width: 150px;
+        }
+
+        .standard-overview-day-row strong {
+            font-size: 15px;
+        }
+
+        .standard-overview-day-row-second {
+            margin-top: 5px;
+        }
+
+        .standard-overview-schedule-detail {
+            margin: 1px 0 0 150px;
+            font-size: 11.6px;
+            line-height: 1.5;
+        }
+
+        .standard-page-title {
+            margin: 24px 0 14px;
+            font-size: 23px;
+        }
+
+        .standard-page-title.official-title-long {
+            font-size: 21px;
+        }
+
+        .standard-page-title.official-title-extra-long {
+            font-size: 19px;
+        }
+
+        .standard-awards-subtitle,
+        .standard-awards-layout {
+            width: 90%;
+        }
+
+        .standard-awards-subtitle {
+            margin-bottom: 7px;
+            font-size: 18px;
+        }
+
+        .standard-awards-subtitle span {
+            margin-left: 55px;
+            font-size: 13px;
+        }
+
+        .standard-awards-list-cell {
+            width: 50%;
+            padding-right: 9px;
+        }
+
+        .standard-awards-notes-cell {
+            width: 50%;
+            padding-left: 14px;
+        }
+
+        .standard-awards-table {
+            font-size: 8px;
+            line-height: 1.05;
+        }
+
+        .standard-awards-table th,
+        .standard-awards-table td {
+            height: 16.5px;
+            padding: 1.4px 1px;
+        }
+
+        .standard-awards-table th {
+            height: 28px;
+            font-size: 7.6px;
+        }
+
+        .standard-award-belong-cell span {
+            font-size: 6.7px;
+        }
+
+        .standard-champion-box {
+            min-height: 185px;
+            padding: 16px 8px 12px;
+            text-align: left;
+        }
+
+        .standard-champion-image {
+            float: right;
+            width: 82px;
+            height: auto;
+            margin: 0 5px 8px 15px;
+        }
+
+        .standard-champion-copy {
+            padding-top: 8px;
+        }
+
+        .standard-champion-label {
+            font-size: 17px;
+        }
+
+        .standard-champion-name {
+            font-size: 22px;
+        }
+
+        .standard-champion-meta,
+        .standard-champion-message {
+            margin-top: 10px;
+            font-size: 11px;
+        }
+
+        .standard-note-section {
+            padding: 14px 6px;
+            font-size: 10.2px;
+            line-height: 1.55;
+        }
+
+        .standard-note-section h3 {
+            margin-bottom: 7px;
+            font-size: 14px;
+        }
+
+        .standard-step-page h2 {
+            margin: 0 0 24px;
+            font-size: 20px;
+        }
+
+        .standard-step-layout {
+            width: 88%;
+        }
+
+        .standard-step-bracket-table {
+            border-spacing: 0 14px;
+            font-size: 11px;
+        }
+
+        .standard-step-player,
+        .standard-step-score {
+            padding: 7px;
+            font-size: 14px;
+        }
+
+        .standard-step-champion,
+        .standard-step-advance {
+            padding: 8px;
             font-size: 12px;
         }
 
-        .official-standard-snapshot-page.official-snapshot-page-prelim .official-snapshot-subtitle {
-            margin-bottom: 2px;
+        .standard-step-summary-cell {
+            padding-top: 42px;
+        }
+
+        .standard-step-score-area {
+            width: 86%;
+            margin-top: 34px;
+        }
+
+        .standard-step-score-block {
+            margin-bottom: 24px;
+            padding-top: 8px;
+        }
+
+        .standard-step-score-block h3 {
+            margin-bottom: 6px;
+            font-size: 17px;
+        }
+
+        .standard-step-score-block img {
+            width: 100%;
+            height: 250px;
+        }
+
+        .official-round-robin-page {
+            padding-top: 18px;
+        }
+
+        .official-round-robin-page .official-snapshot-title {
+            margin-top: 18px;
+            margin-bottom: 8px;
+            font-size: 29px;
+        }
+
+        .official-round-robin-page .official-snapshot-subtitle {
+            margin-bottom: 24px;
+            font-size: 23px;
+        }
+
+        .official-round-robin-ranking-table {
+            width: 96%;
+            font-size: 9.2px;
+            line-height: 1.1;
+        }
+
+        .official-round-robin-ranking-table th {
+            height: 25px;
+            font-size: 8.5px;
+            padding: 4px 1px;
+        }
+
+        .official-round-robin-ranking-table tbody tr {
+            height: 64px;
+        }
+
+        .official-round-robin-ranking-table td {
+            padding: 14px 1px;
+        }
+
+        .official-round-robin-match-title {
+            margin: 35px 0 30px;
+            text-align: center;
+            font-size: 18px;
+        }
+
+        .official-round-robin-match-table {
+            width: 94%;
+            font-size: 8.7px;
+            line-height: 1.06;
+        }
+
+        .official-round-robin-match-table th {
+            height: 60px;
+            padding: 3px 1px;
+            font-size: 7.8px;
+            background: #fff;
+        }
+
+        .official-round-robin-match-table tbody tr {
+            height: 86px;
+        }
+
+        .official-round-robin-match-table td {
+            padding: 12px 1px;
+        }
+
+        .official-round-robin-match-table .rr-match-cell {
+            position: relative;
+            padding: 12px 1px;
+        }
+
+        .rr-matrix-self {
+            background: #bdbdbd !important;
+        }
+
+        .rr-matrix-game {
+            display: block;
+            text-align: left;
             font-size: 7px;
         }
 
+        .rr-matrix-score {
+            display: block;
+            text-align: right;
+            font-size: 10px;
+        }
+
+        .official-round-robin-match-table .rr-match-bonus {
+            display: block;
+            margin-top: 4px;
+            text-align: right;
+            font-size: 8px;
+        }
+
+        .official-round-robin-footer {
+            width: 92%;
+            margin: 18px auto 0;
+            text-align: right;
+            font-size: 9px;
+        }
+
+        .official-standard-snapshot-page .official-snapshot-title {
+            width: 92%;
+            margin: 18px auto 6px;
+            font-size: 23px;
+        }
+
+        .official-standard-snapshot-page .official-snapshot-subtitle {
+            margin-bottom: 8px;
+            font-size: 17px;
+        }
+
+        .official-standard-snapshot-page .official-snapshot-date {
+            width: 92%;
+            margin: 0 auto 8px;
+            font-size: 8.5px;
+        }
+
+        .official-standard-snapshot-page .official-snapshot-table {
+            width: 88%;
+            margin-bottom: 0;
+            font-size: 9.1px;
+            line-height: 1.02;
+        }
+
+        .official-standard-snapshot-page .official-snapshot-table th {
+            height: 27px;
+            padding: 2px 1px;
+            font-size: 8.3px;
+        }
+
+        .official-standard-snapshot-page .official-snapshot-table td {
+            padding: 4px 1px;
+        }
+
+        .official-standard-snapshot-page.official-snapshot-page-semifinal tbody tr {
+            height: 32px;
+        }
+
+        .snapshot-total-highlight {
+            background: #fff7a8 !important;
+        }
+
+        .official-standard-snapshot-page .official-snapshot-note {
+            display: none;
+        }
+
+        .official-standard-snapshot-page.official-snapshot-page-prelim .official-snapshot-title {
+            width: 92%;
+            margin-top: 17px;
+            font-size: 16px;
+        }
+
+        .official-standard-snapshot-page.official-snapshot-page-prelim .official-snapshot-subtitle {
+            margin-bottom: 5px;
+            font-size: 17px;
+        }
+
         .official-standard-snapshot-page.official-snapshot-page-prelim .official-snapshot-table {
-            width: 100%;
-            margin-bottom: 2px;
-            font-size: 4.25px;
-            line-height: 0.95;
+            width: 96%;
+            margin-bottom: 0;
+            font-size: 5.9px;
+            line-height: 1;
         }
 
         .official-standard-snapshot-page.official-snapshot-page-prelim .official-snapshot-table th {
-            font-size: 4px;
-            padding: 0.5px;
+            height: 16px;
+            padding: 1px 0.4px;
+            font-size: 5.5px;
         }
 
         .official-standard-snapshot-page.official-snapshot-page-prelim .official-snapshot-table td {
-            padding: 0.25px 0.4px;
+            height: 13px;
+            padding: 0.8px 0.35px;
         }
 
         .official-standard-snapshot-page.official-snapshot-page-prelim tbody tr {
-            height: 10px;
+            height: 15px;
         }
 
         .official-standard-snapshot-page.official-snapshot-page-prelim .snapshot-belong-cell {
-            font-size: 3.6px;
+            font-size: 4.6px;
         }
 
 </style>

@@ -63,7 +63,10 @@
                 return $total;
             };
 
-            $rankMapForGames = function (array $games) use ($snapshotRows, $sumScores, $snapshotValue): array {
+            $rankMapForGames = function (
+                array $games,
+                bool $usePublishedOrderAsTieBreak = false
+            ) use ($snapshotRows, $sumScores, $snapshotValue): array {
                 $items = [];
                 foreach ($snapshotRows as $rowForRank) {
                     $total = $sumScores($rowForRank, $games);
@@ -80,7 +83,7 @@
                 $rank = 0;
                 $previous = null;
                 foreach ($items as $index => $item) {
-                    if ($previous === null || $item['total'] !== $previous) {
+                    if ($usePublishedOrderAsTieBreak || $previous === null || $item['total'] !== $previous) {
                         $rank = $index + 1;
                         $previous = $item['total'];
                     }
@@ -116,11 +119,22 @@
         <div class="official-snapshot-page {{ !($isSeasonTrialPdf ?? false) ? 'official-standard-snapshot-page' : '' }} {{ $isPrelimSnapshot ? 'official-snapshot-page-prelim' : ($isRoundRobinSnapshot ? 'official-snapshot-page-round-robin' : 'official-snapshot-page-semifinal') }} jpba-heavy">
             <h2 class="official-snapshot-title {{ $resolvedOfficialTitleClass }} jpba-heavy">{{ $officialMainTitle }}</h2>
             <h3 class="official-snapshot-subtitle jpba-heavy">
-                {{ $title }} ／ {{ $officialVenueTitle }}
+                @if (!($isSeasonTrialPdf ?? false) && $isSemifinalSnapshot)
+                    準決勝{{ $gameCount }}G・通算{{ $semifinalTotalGameCount }}Gトータルピン成績
+                    （※上位{{ $semifinalAdvanceCountForPdf }}名決勝ラウンドロビンへ進出）
+                @elseif (!($isSeasonTrialPdf ?? false) && $isPrelimSnapshot)
+                    予選{{ (int) ($snapshot->games_count ?? $prelimGameCount ?? 0) }}Gトータルピン成績
+                    （※上位{{ (int) ($prelimQualifierCount ?: 0) }}名準決勝へ進出）
+                @else
+                    {{ $title }} ／ {{ $officialVenueTitle }}
+                @endif
                 @if ($snapshotPageChunks->count() > 1)
                     （{{ $snapshotPageIndex + 1 }}／{{ $snapshotPageChunks->count() }}）
                 @endif
             </h3>
+            @if (!($isSeasonTrialPdf ?? false) && $isPrelimSnapshot)
+                <div class="official-snapshot-date">{{ $dateText !== '' ? $dateText : '-' }}　会場：{{ $officialVenueTitle }}</div>
+            @endif
 
             @if ($isRoundRobinSnapshot)
                 <table class="official-snapshot-table jpba-heavy">
@@ -188,6 +202,12 @@
                     </tbody>
                 </table>
             @elseif ($isSemifinalSnapshot)
+                @php
+                    $semifinalHalfCount = max(1, (int) floor($gameCount / 2));
+                    $semifinalFirstGames = range(1, $semifinalHalfCount);
+                    $semifinalSecondGames = range($semifinalHalfCount + 1, $gameCount);
+                    $semifinalOnlyRankMap = $rankMapForGames(range(1, $gameCount), true);
+                @endphp
                 <table class="official-snapshot-table jpba-heavy">
                     <thead>
                         <tr>
@@ -200,19 +220,42 @@
                             <th rowspan="2" class="snap-period-col">期</th>
                             <th rowspan="2" class="snap-arm-col">投</th>
                             <th rowspan="2" class="snap-belong-col">所　属<br>/ 用品契約</th>
-                            <th rowspan="2" class="snap-wide-total-col">予選{{ $prelimGameCount }}G</th>
-                            <th rowspan="2" class="snap-avg-col">AVG</th>
-                            <th rowspan="2" class="snap-rank-col">順位</th>
-                            <th colspan="{{ $gameCount + 2 }}">準　決　勝</th>
-                            <th rowspan="2" class="snap-wide-total-col">通算{{ $semifinalTotalGameCount }}G<br>T/PIN</th>
-                            <th rowspan="2" class="snap-avg-col">AVG</th>
+                            @if ($isSeasonTrialPdf ?? false)
+                                <th rowspan="2" class="snap-wide-total-col">予選{{ $prelimGameCount }}G</th>
+                                <th rowspan="2" class="snap-avg-col">AVG</th>
+                                <th rowspan="2" class="snap-rank-col">順位</th>
+                                <th colspan="{{ $gameCount + 2 }}">準　決　勝</th>
+                                <th rowspan="2" class="snap-wide-total-col">通算{{ $semifinalTotalGameCount }}G<br>T/PIN</th>
+                                <th rowspan="2" class="snap-avg-col">AVG</th>
+                            @else
+                                <th rowspan="2" class="snap-wide-total-col snapshot-total-highlight">通算{{ $semifinalTotalGameCount }}G<br>T/PIN</th>
+                                <th rowspan="2" class="snap-avg-col snapshot-total-highlight">AVG</th>
+                                <th rowspan="2" class="snap-wide-total-col">予選{{ $prelimGameCount }}G</th>
+                                <th rowspan="2" class="snap-avg-col">AVG</th>
+                                <th rowspan="2" class="snap-rank-col">順位</th>
+                                <th colspan="{{ $gameCount + 5 }}">準　決　勝</th>
+                            @endif
                         </tr>
                         <tr>
-                            @for ($game = 1; $game <= $gameCount; $game++)
-                                <th class="snap-game-col">{{ $game }}G</th>
-                            @endfor
-                            <th class="snap-half-col">準決勝<br>{{ $gameCount }}G</th>
-                            <th class="snap-avg-col">AVG</th>
+                            @if ($isSeasonTrialPdf ?? false)
+                                @for ($game = 1; $game <= $gameCount; $game++)
+                                    <th class="snap-game-col">{{ $game }}G</th>
+                                @endfor
+                                <th class="snap-half-col">準決勝<br>{{ $gameCount }}G</th>
+                                <th class="snap-avg-col">AVG</th>
+                            @else
+                                @foreach ($semifinalFirstGames as $game)
+                                    <th class="snap-game-col">{{ $game }}G</th>
+                                @endforeach
+                                <th class="snap-half-col">前半</th>
+                                @foreach ($semifinalSecondGames as $game)
+                                    <th class="snap-game-col">{{ $game }}G</th>
+                                @endforeach
+                                <th class="snap-half-col">後半</th>
+                                <th class="snap-half-col">準決勝<br>{{ $gameCount }}G/T/PIN</th>
+                                <th class="snap-avg-col">AVG</th>
+                                <th class="snap-rank-col">順位</th>
+                            @endif
                         </tr>
                     </thead>
                     <tbody>
@@ -228,6 +271,9 @@
                                 $prelimRank = $snapshotPrelimRank($row);
                                 $belong = $snapshotBelong($row);
                                 $rankInt = is_numeric($rank) ? (int) $rank : 0;
+                                $rowId = (int) ($row->id ?? 0);
+                                $semifinalFirstTotal = $sumScores($row, $semifinalFirstGames);
+                                $semifinalSecondTotal = $sumScores($row, $semifinalSecondGames);
                                 $stepPointLabel = ($isSeasonTrialPdf ?? false) ? $stepPointLabelForSemifinalRank($rank, $snapshotValue($row, ['points'], null)) : null;
                                 $semifinalRowClasses = [];
                                 if ($rankInt > 0 && $rankInt <= $semifinalAdvanceCountForPdf) {
@@ -251,17 +297,38 @@
                                 <td>{{ $snapshotPeriod($row) }}</td>
                                 <td>{{ $snapshotArm($row) }}</td>
                                 <td class="snapshot-belong-td"><span class="{{ $snapshotBelongClass($belong) }}">{{ $belong }}</span></td>
-                                <td>{{ $formatNumber($carryPin) }}</td>
-                                <td>{{ $prelimAverage === null ? '-' : number_format($prelimAverage, 2) }}</td>
-                                <td>{{ $prelimRank ?? '-' }}</td>
-                                @for ($game = 1; $game <= $gameCount; $game++)
-                                    @php $score = $snapshotScoreFor($targetStage, $row, $game); @endphp
-                                    <td class="{{ $scoreTextClass($score) }}">{{ $score === null ? '-' : $formatNumber($score) }}</td>
-                                @endfor
-                                <td>{{ $formatNumber($scratchPin) }}</td>
-                                <td>{{ $semiAverage === null ? '-' : number_format($semiAverage, 2) }}</td>
-                                <td>{{ $formatNumber($totalPin) }}</td>
-                                <td>{{ $average === '' ? '-' : number_format((float) $average, 2) }}</td>
+                                @if ($isSeasonTrialPdf ?? false)
+                                    <td>{{ $formatNumber($carryPin) }}</td>
+                                    <td>{{ $prelimAverage === null ? '-' : number_format($prelimAverage, 2) }}</td>
+                                    <td>{{ $prelimRank ?? '-' }}</td>
+                                    @for ($game = 1; $game <= $gameCount; $game++)
+                                        @php $score = $snapshotScoreFor($targetStage, $row, $game); @endphp
+                                        <td class="{{ $scoreTextClass($score) }}">{{ $score === null ? '-' : $formatNumber($score) }}</td>
+                                    @endfor
+                                    <td>{{ $formatNumber($scratchPin) }}</td>
+                                    <td>{{ $semiAverage === null ? '-' : number_format($semiAverage, 2) }}</td>
+                                    <td>{{ $formatNumber($totalPin) }}</td>
+                                    <td>{{ $average === '' ? '-' : number_format((float) $average, 2) }}</td>
+                                @else
+                                    <td class="snapshot-total-highlight">{{ $formatNumber($totalPin) }}</td>
+                                    <td class="snapshot-total-highlight">{{ $average === '' ? '-' : number_format((float) $average, 2) }}</td>
+                                    <td>{{ $formatNumber($carryPin) }}</td>
+                                    <td>{{ $prelimAverage === null ? '-' : number_format($prelimAverage, 2) }}</td>
+                                    <td>{{ $prelimRank ?? '-' }}</td>
+                                    @foreach ($semifinalFirstGames as $game)
+                                        @php $score = $snapshotScoreFor($targetStage, $row, $game); @endphp
+                                        <td class="{{ $scoreTextClass($score) }}">{{ $score === null ? '-' : $formatNumber($score) }}</td>
+                                    @endforeach
+                                    <td>{{ $formatNumber($semifinalFirstTotal) }}</td>
+                                    @foreach ($semifinalSecondGames as $game)
+                                        @php $score = $snapshotScoreFor($targetStage, $row, $game); @endphp
+                                        <td class="{{ $scoreTextClass($score) }}">{{ $score === null ? '-' : $formatNumber($score) }}</td>
+                                    @endforeach
+                                    <td>{{ $formatNumber($semifinalSecondTotal) }}</td>
+                                    <td>{{ $formatNumber($scratchPin) }}</td>
+                                    <td>{{ $semiAverage === null ? '-' : number_format($semiAverage, 2) }}</td>
+                                    <td>{{ $semifinalOnlyRankMap[$rowId] ?? '-' }}</td>
+                                @endif
                             </tr>
                         @endforeach
                     </tbody>
@@ -274,7 +341,101 @@
                     $prelimDetailGames = range($prelimDetailStart, $prelimTotalGames);
                     $prelimFirstRankMap = $rankMapForGames($prelimFirstGames);
                     $prelimDetailRankMap = $rankMapForGames($prelimDetailGames);
+                    $standardPrelimHalf = max(1, (int) floor($prelimTotalGames / 2));
+                    $standardPrelimFirstGames = range(1, $standardPrelimHalf);
+                    $standardPrelimSecondGames = range($standardPrelimHalf + 1, $prelimTotalGames);
+                    $standardPrelimFirstSeries = array_chunk($standardPrelimFirstGames, 3);
+                    $standardPrelimSecondSeries = array_chunk($standardPrelimSecondGames, 3);
+                    $standardPrelimFirstRankMap = $rankMapForGames($standardPrelimFirstGames, true);
                 @endphp
+                @if (!($isSeasonTrialPdf ?? false) && $prelimTotalGames > 8)
+                <table class="official-snapshot-table standard-prelim-detail-table jpba-heavy">
+                    <thead>
+                        <tr>
+                            <th rowspan="2" class="snap-rank-col">順位</th>
+                            <th rowspan="2" class="snap-license-col">ﾗｲｾﾝｽ<br>No.</th>
+                            <th rowspan="2" class="snap-name-col">氏　名</th>
+                            <th rowspan="2" class="snap-period-col">期</th>
+                            <th rowspan="2" class="snap-arm-col">投</th>
+                            <th rowspan="2" class="snap-belong-col">所　属 / 用品契約</th>
+                            <th colspan="2" class="snapshot-total-highlight">予選{{ $prelimTotalGames }}G成績</th>
+                            <th colspan="{{ count($standardPrelimFirstGames) + count($standardPrelimFirstSeries) + 2 }}">予選前半{{ count($standardPrelimFirstGames) }}G</th>
+                            <th rowspan="2" class="snap-rank-col">前半<br>順位</th>
+                            <th colspan="{{ count($standardPrelimSecondGames) + count($standardPrelimSecondSeries) + 2 }}">予選後半{{ count($standardPrelimSecondGames) }}G</th>
+                        </tr>
+                        <tr>
+                            <th class="snap-wide-total-col snapshot-total-highlight">総T/PIN</th>
+                            <th class="snap-avg-col snapshot-total-highlight">AVG</th>
+                            @foreach ($standardPrelimFirstSeries as $seriesIndex => $seriesGames)
+                                @foreach ($seriesGames as $game)
+                                    <th class="snap-game-col">{{ $game }}G</th>
+                                @endforeach
+                                <th class="snap-half-col">{{ $seriesIndex + 1 }}S</th>
+                            @endforeach
+                            <th class="snap-half-col">前半{{ count($standardPrelimFirstGames) }}G</th>
+                            <th class="snap-avg-col">AVG</th>
+                            @foreach ($standardPrelimSecondSeries as $seriesIndex => $seriesGames)
+                                @foreach ($seriesGames as $game)
+                                    <th class="snap-game-col">{{ $game }}G</th>
+                                @endforeach
+                                <th class="snap-half-col">{{ $seriesIndex + count($standardPrelimFirstSeries) + 1 }}S</th>
+                            @endforeach
+                            <th class="snap-half-col">後半{{ count($standardPrelimSecondGames) }}G</th>
+                            <th class="snap-avg-col">AVG</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach ($snapshotRows as $row)
+                            @php
+                                $rank = $snapshotValue($row, ['ranking'], '-');
+                                $totalPin = $snapshotValue($row, ['total_pin'], '');
+                                $average = $snapshotValue($row, ['average'], '');
+                                $belong = $snapshotBelong($row);
+                                $rankInt = is_numeric($rank) ? (int) $rank : 0;
+                                $isQualified = $rankInt > 0 && $rankInt <= (int) ($prelimQualifierCount ?: 0);
+                                $rowId = (int) ($row->id ?? 0);
+                                $standardFirstTotal = $sumScores($row, $standardPrelimFirstGames);
+                                $standardSecondTotal = $sumScores($row, $standardPrelimSecondGames);
+                                $standardFirstAvg = count($standardPrelimFirstGames) > 0
+                                    ? $standardFirstTotal / count($standardPrelimFirstGames)
+                                    : null;
+                                $standardSecondAvg = count($standardPrelimSecondGames) > 0
+                                    ? $standardSecondTotal / count($standardPrelimSecondGames)
+                                    : null;
+                            @endphp
+                            <tr class="{{ $rankInt === (int) ($prelimQualifierCount ?: 0) ? 'prelim-qualified-border' : '' }}">
+                                <td class="{{ $isQualified ? 'qualified-cell' : '' }}">{{ $rank }}</td>
+                                <td class="pdf-license-cell">{{ $snapshotLicense($row) }}</td>
+                                <td class="text-left" style="{{ $snapshotNameCellStyle($snapshotName($row)) }}">{{ $snapshotName($row) }}</td>
+                                <td>{{ $snapshotPeriod($row) }}</td>
+                                <td>{{ $snapshotArm($row) }}</td>
+                                <td class="snapshot-belong-td"><span class="{{ $snapshotBelongClass($belong) }}">{{ $belong }}</span></td>
+                                <td class="snapshot-total-highlight">{{ $formatNumber($totalPin) }}</td>
+                                <td class="snapshot-total-highlight">{{ $average === '' ? '-' : number_format((float) $average, 2) }}</td>
+                                @foreach ($standardPrelimFirstSeries as $seriesGames)
+                                    @foreach ($seriesGames as $game)
+                                        @php $score = $snapshotScoreFor($targetStage, $row, $game); @endphp
+                                        <td class="{{ $scoreTextClass($score) }}">{{ $score === null ? '-' : $formatNumber($score) }}</td>
+                                    @endforeach
+                                    <td>{{ $formatNumber($sumScores($row, $seriesGames)) }}</td>
+                                @endforeach
+                                <td>{{ $formatNumber($standardFirstTotal) }}</td>
+                                <td>{{ $standardFirstAvg === null ? '-' : number_format($standardFirstAvg, 2) }}</td>
+                                <td>{{ $standardPrelimFirstRankMap[$rowId] ?? '-' }}</td>
+                                @foreach ($standardPrelimSecondSeries as $seriesGames)
+                                    @foreach ($seriesGames as $game)
+                                        @php $score = $snapshotScoreFor($targetStage, $row, $game); @endphp
+                                        <td class="{{ $scoreTextClass($score) }}">{{ $score === null ? '-' : $formatNumber($score) }}</td>
+                                    @endforeach
+                                    <td>{{ $formatNumber($sumScores($row, $seriesGames)) }}</td>
+                                @endforeach
+                                <td>{{ $formatNumber($standardSecondTotal) }}</td>
+                                <td>{{ $standardSecondAvg === null ? '-' : number_format($standardSecondAvg, 2) }}</td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+                @else
                 <table class="official-snapshot-table jpba-heavy">
                     <thead>
                         <tr>
@@ -354,6 +515,7 @@
                         @endforeach
                     </tbody>
                 </table>
+                @endif
             @endif
 
             <div class="official-snapshot-note jpba-heavy">

@@ -522,6 +522,9 @@ final class Official2026TournamentResultsImportService
         if (array_key_exists('pdf_prize_breakdowns', $source)) {
             $templateSnapshot['pdf_prize_breakdowns'] = array_values($source['pdf_prize_breakdowns']);
         }
+        if (array_key_exists('pdf_assets', $source)) {
+            $templateSnapshot['pdf_assets'] = $source['pdf_assets'];
+        }
 
         $attributes = [
             'name' => $source['name'],

@@ -8489,6 +8489,10 @@
         "supervisor": "𠮷川高広税理士事務所プレゼンツ男子プロボウリングトーナメント実行委員会",
         "authorized_by": "JPBA B公認",
         "prize": "賞金総額3,200,000円（優勝賞金800,000円・副賞200,000円）",
+        "pdf_assets": {
+          "poster_public_path": "assets/img/tournament/2026/yoshikawa/poster.jpg",
+          "champion_public_path": "assets/img/tournament/2026/yoshikawa/champion.jpg"
+        },
         "pdf_prize_breakdowns": [
           {
             "ranking": 1,
