@@ -213,7 +213,7 @@
                 <tr>
                     <td>{{ $rank }}</td>
                     <td>{{ $name }}</td>
-                    <td>{{ $licenseDisplay }}</td>
+                    <td class="text-end text-nowrap font-monospace">{{ $licenseDisplay }}</td>
                     <td>{{ number_format($result->points ?? 0) }}</td>
                     <td>{{ number_format($result->award_points ?? 0) }}</td>
                     <td>{{ number_format($result->step_points ?? 0) }}</td>

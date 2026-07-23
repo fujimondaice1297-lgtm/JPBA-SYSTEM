@@ -476,6 +476,37 @@
         }
     }
 
+    // 公開スナップショットがある大会は、テンプレート既定値ではなく実投球ゲーム数を使う。
+    if (isset($latestByResultCode['prelim_total'])) {
+        $prelimSnapshotForPdf = $latestByResultCode['prelim_total']['snapshot'];
+        $prelimRowsForPdf = collect($latestByResultCode['prelim_total']['rows'] ?? []);
+        $actualPrelimGames = (int) ($prelimSnapshotForPdf->games_count ?? 0);
+        if ($actualPrelimGames > 0) $prelimGameCount = $actualPrelimGames;
+        if ($prelimRowsForPdf->isNotEmpty()) $prelimPlayerCount = $prelimRowsForPdf->count();
+    }
+
+    if (isset($latestByResultCode['semifinal_total'])) {
+        $semifinalSnapshotForPdf = $latestByResultCode['semifinal_total']['snapshot'];
+        $semifinalRowsForPdf = collect($latestByResultCode['semifinal_total']['rows'] ?? []);
+        $actualCarryGames = (int) ($semifinalSnapshotForPdf->carry_game_count ?? 0);
+        $actualSemifinalTotalGames = (int) ($semifinalSnapshotForPdf->games_count ?? 0);
+        if ($actualCarryGames > 0) $prelimGameCount = $actualCarryGames;
+        if ($actualSemifinalTotalGames > $actualCarryGames) {
+            $semifinalGameCount = $actualSemifinalTotalGames - $actualCarryGames;
+            $semifinalTotalGameCount = $actualSemifinalTotalGames;
+        }
+        if ($semifinalRowsForPdf->isNotEmpty()) $prelimQualifierCount = $semifinalRowsForPdf->count();
+    }
+
+    if (isset($latestByResultCode['round_robin_total'])) {
+        $roundRobinSnapshotForPdf = $latestByResultCode['round_robin_total']['snapshot'];
+        $roundRobinRowsForPdf = collect($latestByResultCode['round_robin_total']['rows'] ?? []);
+        $actualRoundRobinGames = (int) ($roundRobinSnapshotForPdf->games_count ?? 0)
+            - (int) ($roundRobinSnapshotForPdf->carry_game_count ?? 0);
+        if ($actualRoundRobinGames > 0) $roundRobinGameCount = $actualRoundRobinGames;
+        if ($roundRobinRowsForPdf->isNotEmpty()) $semifinalQualifierCount = $roundRobinRowsForPdf->count();
+    }
+
     if ((!is_numeric($prelimQualifierCount) || (int) $prelimQualifierCount <= 0) && isset($latestByResultCode['semifinal_total'])) {
         $semifinalRowsForQualifier = collect($latestByResultCode['semifinal_total']['rows'] ?? []);
         $inferredQualifierCount = $semifinalRowsForQualifier
@@ -860,6 +891,8 @@
         'roundRobinGameCount' => $roundRobinGameCount,
         'semifinalQualifierCount' => $semifinalQualifierCount,
         'snapshotValue' => $snapshotValue,
+        'snapshotInfo' => $snapshotInfo,
+        'infoValue' => $infoValue,
         'snapshotLicense' => $snapshotLicense,
         'snapshotName' => $snapshotName,
         'snapshotPeriod' => $snapshotPeriod,

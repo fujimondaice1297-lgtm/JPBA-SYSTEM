@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
-    <title>{{ $tournament->name }} {{ $snapshot->result_name }}</title>
+    <title>{{ str_replace('𠮷', '吉', (string) $tournament->name) }} {{ $snapshot->result_name }}</title>
     <style>
         @page {
             margin: {{ $orientation === 'landscape' ? '5mm 5mm 6mm 5mm' : '8mm 7mm 8mm 7mm' }};
@@ -84,6 +84,12 @@
 
         .rank-col { width: {{ $orientation === 'landscape' ? '3.2%' : '4.2%' }}; }
         .license-col { width: {{ $orientation === 'landscape' ? '4.4%' : '6.0%' }}; }
+        .score-table td.license-cell {
+            text-align: right;
+            white-space: nowrap;
+            padding-right: 3px;
+            font-variant-numeric: tabular-nums;
+        }
         .name-col { width: {{ $orientation === 'landscape' ? '7.2%' : '10.0%' }}; }
         .period-col { width: {{ $orientation === 'landscape' ? '2.9%' : '3.7%' }}; }
         .throw-col { width: {{ $orientation === 'landscape' ? '2.7%' : '3.2%' }}; }
@@ -229,7 +235,7 @@
     };
 @endphp
 
-<h1 class="pdf-title">{{ $tournament->name }}</h1>
+<h1 class="pdf-title">{{ str_replace('𠮷', '吉', (string) $tournament->name) }}</h1>
 <h2 class="pdf-subtitle">
     @if($isPreliminary)
         {{ $snapshot->result_name }} ／ {{ $tournament->venue_name ?? $tournament->venue ?? '' }}
@@ -290,7 +296,7 @@
                 @php($affiliationDisplay = $compactAffiliation($profile['affiliation'] ?? '-'))
                 <tr>
                     <td>{{ $row->ranking }}</td>
-                    <td>{{ $profile['license_display'] ?? ($row->pro_bowler_license_no ?? '-') }}</td>
+                    <td class="license-cell">{{ $profile['license_display'] ?? ($row->pro_bowler_license_no ?? '-') }}</td>
                     <td class="text-left fw-bold">{{ $row->display_name }}</td>
                     <td>{{ $profile['period'] ?? '' }}</td>
                     <td>{{ $profile['throw'] ?? '' }}</td>
@@ -348,7 +354,7 @@
                 <tr>
                     <td class="highlight">{{ $row->points !== null ? (int) $row->points . 'P' : '' }}</td>
                     <td>{{ $row->ranking }}</td>
-                    <td>{{ $profile['license_display'] ?? ($row->pro_bowler_license_no ?? '-') }}</td>
+                    <td class="license-cell">{{ $profile['license_display'] ?? ($row->pro_bowler_license_no ?? '-') }}</td>
                     <td class="text-left fw-bold">{{ $row->display_name }}</td>
                     <td>{{ $profile['period'] ?? '' }}</td>
                     <td>{{ $profile['throw'] ?? '' }}</td>

@@ -205,6 +205,8 @@ final class RoundRobinService
 
     private function findCarrySnapshot(int $tournamentId, string $resultCode, string $gender, string $shift): ?object
     {
+        $anyGender = trim($gender) === '';
+        $anyShift = trim($shift) === '';
         $gender = trim($gender) !== '' ? trim($gender) : null;
         $shift = trim($shift) !== '' ? trim($shift) : null;
 
@@ -235,22 +237,33 @@ final class RoundRobinService
             $query = DB::table('tournament_result_snapshots')
                 ->where('tournament_id', $tournamentId)
                 ->where('result_code', $resultCode)
-                ->where('is_current', true);
+                ->where(function ($query): void {
+                    $query->where('is_current', true)
+                        ->orWhere('is_published', true);
+                });
 
-            if ($candidate['gender'] === null) {
-                $query->whereNull('gender');
-            } else {
-                $query->where('gender', $candidate['gender']);
+            // 性別・シフト未指定の共通処理では、区分付きsnapshotも対象にする。
+            if (! $anyGender) {
+                if ($candidate['gender'] === null) {
+                    $query->whereNull('gender');
+                } else {
+                    $query->where('gender', $candidate['gender']);
+                }
             }
 
-            if ($candidate['shift'] === null) {
-                $query->whereNull('shift');
-            } else {
-                $query->where('shift', $candidate['shift']);
+            if (! $anyShift) {
+                if ($candidate['shift'] === null) {
+                    $query->whereNull('shift');
+                } else {
+                    $query->where('shift', $candidate['shift']);
+                }
             }
 
             $snapshot = $query
+                ->orderByDesc('is_current')
+                ->orderByDesc('is_published')
                 ->orderByDesc('reflected_at')
+                ->orderByDesc('id')
                 ->first();
 
             if ($snapshot) {
@@ -415,14 +428,16 @@ final class RoundRobinService
 
         $lanePairs = ['9L-10L', '15L-16L', '21L-22L', '27L-28L'];
 
+        // 2026年JPBA公式ラウンドロビン対戦表の通過順位別ゲーム番号に準拠。
+        // 7G終了後の8G目は、その時点の順位によるポジションマッチとして別途組み立てる。
         $template = [
-            1 => [[8, 5], [6, 2], [7, 3], [1, 4]],
-            2 => [[3, 4], [7, 1], [5, 2], [8, 6]],
-            3 => [[7, 2], [8, 4], [1, 6], [5, 3]],
-            4 => [[6, 3], [1, 5], [8, 7], [4, 2]],
-            5 => [[1, 8], [2, 3], [6, 4], [7, 5]],
-            6 => [[5, 6], [4, 7], [2, 8], [3, 1]],
-            7 => [[2, 1], [3, 8], [4, 5], [6, 7]],
+            1 => [[2, 3], [8, 7], [6, 5], [4, 1]],
+            2 => [[2, 8], [3, 7], [6, 4], [5, 1]],
+            3 => [[2, 1], [3, 5], [8, 4], [7, 6]],
+            4 => [[2, 6], [3, 4], [8, 5], [7, 1]],
+            5 => [[2, 4], [3, 6], [8, 1], [7, 5]],
+            6 => [[2, 7], [3, 8], [6, 1], [5, 4]],
+            7 => [[2, 5], [3, 1], [8, 6], [7, 4]],
         ];
 
         $rounds = [];
@@ -661,14 +676,15 @@ final class RoundRobinService
         if ($a['overall_total_points'] !== $b['overall_total_points']) {
             return $b['overall_total_points'] <=> $a['overall_total_points'];
         }
+        // Total Point同点時は、JPBA公式順位表と同じく持込成績の上位者を優先する。
+        if ($a['carry_pin'] !== $b['carry_pin']) {
+            return $b['carry_pin'] <=> $a['carry_pin'];
+        }
         if ($a['rr_total_points'] !== $b['rr_total_points']) {
             return $b['rr_total_points'] <=> $a['rr_total_points'];
         }
         if ($a['rr_total_pin'] !== $b['rr_total_pin']) {
             return $b['rr_total_pin'] <=> $a['rr_total_pin'];
-        }
-        if ($a['carry_pin'] !== $b['carry_pin']) {
-            return $b['carry_pin'] <=> $a['carry_pin'];
         }
 
         return $a['seed'] <=> $b['seed'];

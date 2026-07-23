@@ -284,6 +284,65 @@
             line-height: 1.35;
         }
 
+        .pdf-license-cell {
+            text-align: right !important;
+            white-space: nowrap;
+            padding-right: 4px !important;
+            letter-spacing: 0;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .official-standard-overview-page {
+            min-height: 95%;
+            padding: 24px 34px 0;
+            page-break-after: always;
+        }
+
+        .official-standard-overview-title {
+            width: 96%;
+            margin: 16px auto 7px;
+            text-align: center;
+            font-size: 23px;
+            line-height: 1.22;
+        }
+
+        .official-standard-overview-title.official-title-long { font-size: 19px; }
+        .official-standard-overview-title.official-title-extra-long { font-size: 17px; }
+
+        .official-standard-overview-subtitle {
+            margin: 0 0 20px;
+            text-align: center;
+            font-size: 18px;
+        }
+
+        .official-standard-overview-table {
+            width: 88%;
+            margin: 0 auto;
+            border-collapse: collapse;
+            table-layout: fixed;
+            font-size: 11px;
+            line-height: 1.45;
+        }
+
+        .official-standard-overview-table th,
+        .official-standard-overview-table td {
+            border: 1px solid #222;
+            padding: 7px 9px;
+            vertical-align: top;
+        }
+
+        .official-standard-overview-table th {
+            width: 18%;
+            background: #f0f0f0;
+            text-align: center;
+        }
+
+        .official-standard-overview-note {
+            width: 88%;
+            margin: 12px auto 0;
+            font-size: 9px;
+        }
+
         .official-shootout-page {
             page-break-before: always;
             page-break-after: auto;
@@ -615,6 +674,84 @@
             line-height: 1.25;
         }
 
+        .official-standard-snapshot-page.official-snapshot-page-prelim tbody tr {
+            height: 16px;
+            page-break-inside: avoid;
+        }
+
+        .official-round-robin-page {
+            page-break-before: always;
+            page-break-after: auto;
+            padding-top: 4px;
+        }
+
+        .official-round-robin-ranking-table,
+        .official-round-robin-match-table {
+            width: 99%;
+            margin: 0 auto 8px;
+            border-collapse: collapse;
+            table-layout: fixed;
+            font-size: 6.4px;
+            line-height: 1.05;
+        }
+
+        .official-round-robin-ranking-table th,
+        .official-round-robin-ranking-table td,
+        .official-round-robin-match-table th,
+        .official-round-robin-match-table td {
+            border: 1px solid #111;
+            padding: 2px 1px;
+            text-align: center;
+            vertical-align: middle;
+        }
+
+        .official-round-robin-ranking-table th,
+        .official-round-robin-match-table th {
+            background: #f0f0f0;
+            font-size: 6px;
+        }
+
+        .official-round-robin-ranking-table .rr-license-col { width: 5.2%; }
+        .official-round-robin-ranking-table .rr-name-col { width: 7.8%; }
+        .official-round-robin-ranking-table .rr-belong-col { width: 10.5%; }
+
+        .official-round-robin-ranking-table .rr-belong-cell {
+            overflow: hidden;
+            white-space: nowrap;
+        }
+
+        .official-round-robin-ranking-table .rr-belong-cell .snapshot-belong-cell {
+            display: block;
+            width: 100%;
+            overflow: hidden;
+            white-space: nowrap;
+            line-height: 1;
+        }
+
+        .official-round-robin-match-table {
+            font-size: 7px;
+        }
+
+        .official-round-robin-match-table tbody tr {
+            height: 38px;
+        }
+
+        .official-round-robin-match-table .rr-match-cell {
+            padding: 2px 1px;
+            line-height: 1.25;
+        }
+
+        .official-round-robin-match-table .rr-opponent-name {
+            display: block;
+            height: 9px;
+            overflow: hidden;
+            white-space: nowrap;
+            font-size: 5.8px;
+        }
+
+        .official-round-robin-match-table .rr-match-bonus {
+            font-size: 5.8px;
+        }
 
         .official-prize-table.non-season-prize-table .rank-col { width: 11%; }
         .official-prize-table.non-season-prize-table .license-col { width: 10%; }
@@ -622,6 +759,80 @@
         .official-prize-table.non-season-prize-table .period-col { width: 5%; }
         .official-prize-table.non-season-prize-table .belong-col { width: 42%; }
         .official-prize-table.non-season-prize-table .prize-col { width: 15%; }
+
+        .official-prize-table.non-season-prize-table {
+            width: 96%;
+            font-size: 5.9px;
+            margin-bottom: 2px;
+        }
+
+        .official-prize-table.non-season-prize-table th,
+        .official-prize-table.non-season-prize-table td {
+            border-width: 1px;
+            padding: 0.3px 1px;
+            line-height: 1;
+        }
+
+        .official-prize-table.non-season-prize-table th {
+            font-size: 5.8px;
+        }
+
+        .official-standard-result-page .official-prize-title {
+            margin-top: 5px;
+            margin-bottom: 3px;
+            font-size: 18px;
+        }
+
+        .official-standard-result-page .official-top-title {
+            margin-top: 4px;
+            margin-bottom: 4px;
+        }
+
+        .official-standard-result-page .official-logo-wrap {
+            height: 31px;
+            margin-bottom: 1px;
+        }
+
+        .official-standard-result-page .official-logo-image {
+            width: 38px;
+            max-height: 30px;
+        }
+
+        .official-standard-result-page .official-title-line-4 {
+            margin-top: 4px;
+            font-size: 20px;
+        }
+
+        .official-standard-result-page .official-title-line-5 {
+            margin-top: 2px;
+            font-size: 23px;
+        }
+
+        .official-standard-result-page .official-info {
+            margin-top: 5px;
+            margin-bottom: 5px;
+            font-size: 8.5px;
+            line-height: 1.15;
+        }
+
+        .official-standard-result-page .official-info th,
+        .official-standard-result-page .official-info td {
+            padding-top: 1px;
+            padding-bottom: 1px;
+        }
+
+        .official-standard-result-page .official-competition-note {
+            margin-bottom: 4px;
+            font-size: 8.3px;
+            line-height: 1.2;
+        }
+
+        .official-standard-result-page .official-record-box,
+        .official-standard-result-page .official-borderless-note {
+            margin-top: 3px;
+            font-size: 7px;
+            line-height: 1.15;
+        }
 
     
 

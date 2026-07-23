@@ -107,7 +107,7 @@ class RunTournamentResultFlowRegression extends Command
             $rr = $service->build([
                 'tournament_id' => (int) $tournament->id,
                 'upto_game' => 8,
-                'gender' => 'F',
+                'gender' => $this->normalizeTournamentGender($tournament),
             ]);
         } catch (Throwable $e) {
             return $this->exceptionResult('round_robin_existing', 'round_robin', (int) $tournament->id, false, $e);
@@ -161,7 +161,7 @@ class RunTournamentResultFlowRegression extends Command
             $stepLadder = $service->build([
                 'tournament_id' => (int) $tournament->id,
                 'upto_game' => 2,
-                'gender' => 'F',
+                'gender' => $this->normalizeTournamentGender($tournament),
             ]);
         } catch (Throwable $e) {
             return $this->exceptionResult('step_ladder_existing', 'step_ladder', (int) $tournament->id, false, $e);

@@ -11,6 +11,7 @@ use App\Models\TournamentResult;
 use App\Models\TournamentResultPublication;
 use App\Models\TournamentResultSnapshot;
 use App\Services\MatchScoreSheetImageService;
+use App\Services\RoundRobinService;
 use App\Services\ShootoutBracketImageService;
 use App\Services\ShootoutService;
 use App\Services\SingleEliminationBracketImageService;
@@ -802,6 +803,7 @@ class TournamentResultController extends Controller
         $this->attachResultPdfDisplayFields($results);
 
         $scoreSnapshots = $this->loadPdfScoreSnapshots($tournament);
+        $roundRobinPdf = $this->buildRoundRobinPdfData($tournament);
 
         $singleEliminationPdf = $this->buildSingleEliminationPdfData($tournament);
         $singleEliminationBracketImage = null;
@@ -864,11 +866,15 @@ class TournamentResultController extends Controller
             }
         }
         $officialTitleClass = $this->resolvePdfTitleClass((string) $tournament->name);
+        $isSeasonTrialPdf = str_contains((string) $tournament->name, 'シーズントライアル')
+            || (string) ($tournament->title_category ?? '') === 'season_trial';
+        $pdfOrientation = $isSeasonTrialPdf ? 'portrait' : 'landscape';
 
         return $this->makePdfWithJapaneseFont(
             'tournament_results.pdf',
-            compact('tournament', 'results', 'scoreSnapshots', 'singleEliminationPdf', 'singleEliminationBracketImage', 'shootoutPdf', 'shootoutBracketImage', 'stepLadderPdf', 'stepLadderBracketImage', 'matchScoreSheets', 'matchScoreSheetImages', 'selectionScoreSections', 'singleEliminationMatchSummary', 'officialTitleClass'),
-            "{$tournament->year}_{$tournament->name}_results.pdf"
+            compact('tournament', 'results', 'scoreSnapshots', 'roundRobinPdf', 'singleEliminationPdf', 'singleEliminationBracketImage', 'shootoutPdf', 'shootoutBracketImage', 'stepLadderPdf', 'stepLadderBracketImage', 'matchScoreSheets', 'matchScoreSheetImages', 'selectionScoreSections', 'singleEliminationMatchSummary', 'officialTitleClass'),
+            "{$tournament->year}_{$tournament->name}_results.pdf",
+            $pdfOrientation
         );
     }
 
@@ -984,8 +990,50 @@ class TournamentResultController extends Controller
                 'tournament_id' => (int) $tournament->id,
                 'upto_game' => 2,
                 'shift' => '',
-                'gender' => '',
+                'gender' => in_array($tournament->gender, ['M', 'F'], true) ? $tournament->gender : '',
             ]);
+        } catch (\Throwable $e) {
+            report($e);
+
+            return null;
+        }
+    }
+
+    private function buildRoundRobinPdfData(Tournament $tournament): ?array
+    {
+        $hasRoundRobinSnapshot = DB::table('tournament_result_snapshots')
+            ->where('tournament_id', $tournament->id)
+            ->where('result_code', 'round_robin_total')
+            ->where(function ($query): void {
+                $query->where('is_current', true)
+                    ->orWhere('is_published', true);
+            })
+            ->exists();
+
+        if (! $hasRoundRobinSnapshot) {
+            return null;
+        }
+
+        $maxGame = (int) DB::table('game_scores')
+            ->where('tournament_id', $tournament->id)
+            ->where('stage', 'ラウンドロビン')
+            ->max('game_number');
+
+        if ($maxGame <= 0) {
+            return null;
+        }
+
+        try {
+            /** @var RoundRobinService $roundRobinService */
+            $roundRobinService = app(RoundRobinService::class);
+            $payload = $roundRobinService->build([
+                'tournament_id' => (int) $tournament->id,
+                'upto_game' => $maxGame,
+                'shift' => '',
+                'gender' => in_array($tournament->gender, ['M', 'F'], true) ? $tournament->gender : '',
+            ]);
+
+            return ! empty($payload['players'] ?? []) ? $payload : null;
         } catch (\Throwable $e) {
             report($e);
 

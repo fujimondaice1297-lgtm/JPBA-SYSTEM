@@ -239,7 +239,7 @@ final class TournamentResultCompletenessService
                     'tournament_id' => (int) $tournament->id,
                     'upto_game' => 2,
                     'shift' => '',
-                    'gender' => '',
+                    'gender' => in_array($tournament->gender, ['M', 'F'], true) ? $tournament->gender : '',
                 ]);
                 if (($stepLadder['semifinal']['status'] ?? '') !== 'done'
                     || ($stepLadder['final']['status'] ?? '') !== 'done'

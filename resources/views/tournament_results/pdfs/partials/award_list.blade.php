@@ -17,7 +17,7 @@
         </tr>
     </thead>
     <tbody>
-        @foreach ($resultRows->take(8) as $result)
+        @foreach ($resultRows->take(($isSeasonTrialPdf ?? false) ? 8 : 30) as $result)
             @php
                 $rankLabel = $resolveRank($result);
                 $licenseNo = $resolveLicense($result);

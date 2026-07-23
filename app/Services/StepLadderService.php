@@ -161,6 +161,8 @@ final class StepLadderService
 
     private function findRoundRobinSnapshot(int $tournamentId, string $gender, string $shift): ?object
     {
+        $anyGender = $gender === '';
+        $anyShift = $shift === '';
         $gender = $gender !== '' ? $gender : null;
         $shift = $shift !== '' ? $shift : null;
 
@@ -185,21 +187,34 @@ final class StepLadderService
             $query = DB::table('tournament_result_snapshots')
                 ->where('tournament_id', $tournamentId)
                 ->where('result_code', 'round_robin_total')
-                ->where('is_current', true);
+                ->where(function ($query): void {
+                    $query->where('is_current', true)
+                        ->orWhere('is_published', true);
+                });
 
-            if ($candidate['gender'] === null) {
-                $query->whereNull('gender');
-            } else {
-                $query->where('gender', $candidate['gender']);
+            // 性別・シフト未指定の共通処理では、区分付きsnapshotも対象にする。
+            if (! $anyGender) {
+                if ($candidate['gender'] === null) {
+                    $query->whereNull('gender');
+                } else {
+                    $query->where('gender', $candidate['gender']);
+                }
             }
 
-            if ($candidate['shift'] === null) {
-                $query->whereNull('shift');
-            } else {
-                $query->where('shift', $candidate['shift']);
+            if (! $anyShift) {
+                if ($candidate['shift'] === null) {
+                    $query->whereNull('shift');
+                } else {
+                    $query->where('shift', $candidate['shift']);
+                }
             }
 
-            $snapshot = $query->orderByDesc('reflected_at')->first();
+            $snapshot = $query
+                ->orderByDesc('is_current')
+                ->orderByDesc('is_published')
+                ->orderByDesc('reflected_at')
+                ->orderByDesc('id')
+                ->first();
             if ($snapshot) {
                 return $snapshot;
             }
@@ -221,7 +236,7 @@ final class StepLadderService
 
         $rows = DB::table('game_scores')
             ->where('tournament_id', $tournamentId)
-            ->where('stage', '決勝')
+            ->whereIn('stage', ['決勝', 'ステップラダー'])
             ->where('game_number', '<=', $uptoGame)
             ->when($gender !== '', fn ($q) => $q->where(function ($w) use ($gender) {
                 $w->where('gender', $gender)
@@ -234,6 +249,7 @@ final class StepLadderService
                 'pro_bowler_id',
                 'license_number',
                 'name',
+                'entry_number',
                 'game_number',
                 'score',
             ]);
@@ -256,7 +272,15 @@ final class StepLadderService
                 continue;
             }
 
-            $scores[$playerKey][(int) $row->game_number] = (int) $row->score;
+            $entryNumber = strtoupper(trim((string) ($row->entry_number ?? '')));
+            $gameNumber = match (true) {
+                str_starts_with($entryNumber, 'SL:R1:') => 1,
+                str_starts_with($entryNumber, 'SL:FINAL:') => 2,
+                default => (int) $row->game_number,
+            };
+            if ($gameNumber <= $uptoGame) {
+                $scores[$playerKey][$gameNumber] = (int) $row->score;
+            }
         }
 
         return $scores;

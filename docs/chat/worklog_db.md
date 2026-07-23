@@ -8814,3 +8814,35 @@ User::where('email','domaine-d@i.softbank.jp')->exists(); // true
 
 ### 次に行う作業
 - 2026-07-28開催予定のサマーD会場は、公式結果公開後に同じ詳細取込、年間差分0、PDF全ページ確認を行う。
+
+## 2026-07-23 標準大会PDFとラウンドロビンの公式形式修復
+
+### 原因
+- 吉川税理士大会ID128は詳細スコアと公開snapshotを保持していたが、`result_flow_type=legacy_standard` のためステップラダー作図が無効だった。
+- `RoundRobinService` と `StepLadderService` が `is_current=true` のsnapshotだけを参照し、確定公開後の `is_published=true` を参照できなかった。
+- 8名RRの対戦順がJPBA公式表と異なり、同じゲームスコアでも勝敗Bonusと途中順位が変わっていた。
+- ステップラダー取込行は `stage=ステップラダー`、`SL:R1` / `SL:FINAL` を持つが、旧サービスは `stage=決勝` とゲーム番号だけを見ていた。
+- PDF側はテンプレート既定の8G・4Gを使い、snapshotにある実際の12G・6Gを見出しと平均計算へ反映していなかった。
+
+### 修復
+- 公開済みsnapshotをRR・ステップラダー・完全性検査から参照できるようにし、性別・シフト未指定時も区分付きsnapshotを対象にした。
+- 公式PDF `04_YoshikawaPresents/Result/FinalResult.pdf` の対戦セルから7Gの組合せを復元し、8G目を7G終了順位によるポジションマッチとして生成した。
+- Total Point同点時は持込成績を優先する公式順位規定へ合わせた。
+- `SL:R1` を1回戦、`SL:FINAL` を優勝決定戦へ割り当て、フレーム表と作図が同じ対戦を参照するようにした。
+- 通常大会の統合PDFへ概要、入賞者30名、ステップラダー、RR順位・対戦、準決勝、予選を追加し、A4横向き、予選36名×2ページとした。シーズントライアルは従来の出力を維持した。
+- ライセンス番号は統合PDF、単独snapshot PDF、選抜・SE一覧、通常成績画面ですべて右詰めに統一した。
+- snapshotの `games_count` / `carry_game_count` から予選、準決勝、通算、RRゲーム数を自動決定するようにした。
+- DBのID128・130・134を `prelim_to_rr_to_final`、8名、勝30P、引分15P、ポジションマッチありへ訂正し、公式2026取込サービスにも同じ自動判定を追加した。
+
+### 公式照合
+- 吉川大会RRは山本勲 `5-3-0 / 150P / +740`、川添奨太 `6-2-0 / 180P / +694` など8名全員の最終値が公式と一致した。
+- 1～8G終了時順位も8名全員一致した。
+- ステップラダーは森本健太214－川添奨太188、山本勲236－森本健太174、優勝山本勲で一致した。
+- 準決勝は予選12G、準決勝6G、通算18G、予選は72名・12Gを表示した。
+
+### 検証
+- `php artisan view:cache` 成功。
+- `php artisan tournament:pdf-regression --tournament-id=118 --tournament-id=128 --tournament-id=130 --tournament-id=134` は4件すべてOK。
+- `php artisan tournament:result-flow-regression --json` はRR、ステップラダー、シュートアウト、SEの全件OK。
+- ID128統合PDFは9ページ。大会概要、入賞者30名、ステップラダー作図、2試合のフレーム表、RR順位表、RR対戦表、準決勝30名、予選36名×2ページを画像化して目視確認した。
+- 準決勝単独PDFも画像化し、ライセンス番号の右端揃えと「𠮷」表示用置換を確認した。DBの正式大会名は変更していない。

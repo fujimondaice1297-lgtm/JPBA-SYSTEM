@@ -23,7 +23,7 @@
                 @foreach (($section['rows'] ?? []) as $row)
                     <tr>
                         <td>{{ $row['ranking'] }}</td>
-                        <td>{{ $row['license'] !== '' ? $row['license'] : '-' }}</td>
+                        <td class="pdf-license-cell">{{ $row['license'] !== '' ? $row['license'] : '-' }}</td>
                         <td class="text-left">{{ $row['name'] }}</td>
                         @for ($game = 1; $game <= 3; $game++)
                             @php $score = $row['scores'][$game] ?? null; @endphp

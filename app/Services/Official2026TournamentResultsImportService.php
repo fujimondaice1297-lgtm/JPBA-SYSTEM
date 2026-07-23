@@ -509,6 +509,10 @@ final class Official2026TournamentResultsImportService
 
         $source = $event['tournament'];
         $venue = $venueMap[$source['venue_name']];
+        $roundRobinSnapshot = collect($event['snapshots'] ?? [])
+            ->firstWhere('result_code', 'round_robin_total');
+        $hasRoundRobin = is_array($roundRobinSnapshot);
+        $roundRobinRows = $hasRoundRobin ? (array) ($roundRobinSnapshot['rows'] ?? []) : [];
         $attributes = [
             'name' => $source['name'],
             'setup_status' => 'completed',
@@ -532,7 +536,11 @@ final class Official2026TournamentResultsImportService
             'authorized_by' => 'JPBA',
             'materials' => $source['source_url'],
             'prize' => $source['counts_for_prize'] ? 'See official result publication.' : null,
-            'result_flow_type' => 'legacy_standard',
+            'result_flow_type' => $hasRoundRobin ? 'prelim_to_rr_to_final' : 'legacy_standard',
+            'round_robin_qualifier_count' => $hasRoundRobin ? max(4, count($roundRobinRows)) : null,
+            'round_robin_win_bonus' => $hasRoundRobin ? 30 : null,
+            'round_robin_tie_bonus' => $hasRoundRobin ? 15 : null,
+            'round_robin_position_round_enabled' => $hasRoundRobin,
             'template_snapshot' => [
                 '_official_import' => self::IMPORT_MARKER,
                 'event_key' => $event['key'],

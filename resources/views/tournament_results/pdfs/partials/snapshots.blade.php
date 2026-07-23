@@ -10,6 +10,7 @@
             $isPrelimSnapshot = $resultCode === 'prelim_total';
             $isSemifinalSnapshot = $resultCode === 'semifinal_total';
             $isRoundRobinSnapshot = $resultCode === 'round_robin_total' || trim((string) ($snapshot->result_type ?? '')) === 'round_robin';
+            $hasDedicatedRoundRobinPages = !empty($roundRobinPdf['players'] ?? []);
             $targetStage = $isRoundRobinSnapshot ? 'ラウンドロビン' : ($isSemifinalSnapshot ? '準決勝' : '予選');
             if ($isRoundRobinSnapshot) {
                 $gameCount = (int) (($snapshot->games_count ?? 0) - ($snapshot->carry_game_count ?? 0));
@@ -88,10 +89,25 @@
 
             $semifinalAdvanceCountForPdf = (int) ($semifinalQualifierCount ?: 8);
         @endphp
+        @continue($isRoundRobinSnapshot && $hasDedicatedRoundRobinPages)
 
-        <div class="official-snapshot-page {{ $isPrelimSnapshot ? 'official-snapshot-page-prelim' : ($isRoundRobinSnapshot ? 'official-snapshot-page-round-robin' : 'official-snapshot-page-semifinal') }} jpba-heavy">
+        @php
+            $snapshotPageChunks = $isPrelimSnapshot
+                && !($isSeasonTrialPdf ?? false)
+                && $snapshotRows->count() > 36
+                    ? $snapshotRows->chunk(36)->values()
+                    : collect([$snapshotRows]);
+        @endphp
+        @foreach ($snapshotPageChunks as $snapshotPageIndex => $snapshotPageRows)
+        @php $snapshotRows = collect($snapshotPageRows)->values(); @endphp
+        <div class="official-snapshot-page {{ !($isSeasonTrialPdf ?? false) ? 'official-standard-snapshot-page' : '' }} {{ $isPrelimSnapshot ? 'official-snapshot-page-prelim' : ($isRoundRobinSnapshot ? 'official-snapshot-page-round-robin' : 'official-snapshot-page-semifinal') }} jpba-heavy">
             <h2 class="official-snapshot-title {{ $resolvedOfficialTitleClass }} jpba-heavy">{{ $officialMainTitle }}</h2>
-            <h3 class="official-snapshot-subtitle jpba-heavy">{{ $title }} ／ {{ $officialVenueTitle }}</h3>
+            <h3 class="official-snapshot-subtitle jpba-heavy">
+                {{ $title }} ／ {{ $officialVenueTitle }}
+                @if ($snapshotPageChunks->count() > 1)
+                    （{{ $snapshotPageIndex + 1 }}／{{ $snapshotPageChunks->count() }}）
+                @endif
+            </h3>
 
             @if ($isRoundRobinSnapshot)
                 <table class="official-snapshot-table jpba-heavy">
@@ -139,7 +155,7 @@
                             @endphp
                             <tr class="{{ implode(' ', $roundRobinRowClasses) }}">
                                 <td class="{{ $rankInt > 0 && $rankInt <= (int) ($finalQualifierCount ?: 3) ? 'qualified-cell' : '' }}">{{ $rank }}</td>
-                                <td>{{ $snapshotLicense($row) }}</td>
+                                <td class="pdf-license-cell">{{ $snapshotLicense($row) }}</td>
                                 <td class="text-left" style="{{ $snapshotNameCellStyle($snapshotName($row)) }}">{{ $snapshotName($row) }}</td>
                                 <td>{{ $snapshotPeriod($row) }}</td>
                                 <td>{{ $snapshotArm($row) }}</td>
@@ -217,7 +233,7 @@
                                     @endif
                                 @endif
                                 <td class="{{ $rankInt > 0 && $rankInt <= $semifinalAdvanceCountForPdf ? 'qualified-cell' : '' }}">{{ $rank }}</td>
-                                <td>{{ $snapshotLicense($row) }}</td>
+                                <td class="pdf-license-cell">{{ $snapshotLicense($row) }}</td>
                                 <td class="text-left" style="{{ $snapshotNameCellStyle($snapshotName($row)) }}">{{ $snapshotName($row) }}</td>
                                 <td>{{ $snapshotPeriod($row) }}</td>
                                 <td>{{ $snapshotArm($row) }}</td>
@@ -302,7 +318,7 @@
                             @endphp
                             <tr class="{{ implode(' ', $prelimRowClasses) }}">
                                 <td class="{{ $isQualified ? 'qualified-cell' : '' }}">{{ $rank }}</td>
-                                <td>{{ $snapshotLicense($row) }}</td>
+                                <td class="pdf-license-cell">{{ $snapshotLicense($row) }}</td>
                                 <td class="text-left" style="{{ $snapshotNameCellStyle($snapshotName($row)) }}">{{ $snapshotName($row) }}</td>
                                 <td>{{ $snapshotPeriod($row) }}</td>
                                 <td>{{ $snapshotArm($row) }}</td>
@@ -331,5 +347,6 @@
                 ※このページは正式反映済みスナップショットとゲーム別スコアをもとに出力しています。
             </div>
         </div>
+        @endforeach
     @endforeach
 @endif

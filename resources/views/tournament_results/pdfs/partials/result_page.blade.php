@@ -1,4 +1,4 @@
-<div class="official-result-page">
+<div class="official-result-page {{ !($isSeasonTrialPdf ?? false) ? 'official-standard-result-page' : '' }}">
     @include('tournament_results.pdfs.partials.header')
     @include('tournament_results.pdfs.partials.award_list')
 

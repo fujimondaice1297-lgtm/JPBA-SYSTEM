@@ -24,7 +24,7 @@
                             @if ($playerIndex === 0)
                                 <td rowspan="{{ count($match['players'] ?? []) }}">{{ $match['label'] ?? $match['code'] }}</td>
                             @endif
-                            <td>{{ $player['license'] !== '' ? $player['license'] : '-' }}</td>
+                            <td class="pdf-license-cell">{{ $player['license'] !== '' ? $player['license'] : '-' }}</td>
                             <td class="text-left">{{ $player['name'] }}</td>
                             <td>{{ implode(' / ', array_map(fn ($score) => number_format((int) $score), $player['scores'] ?? [])) }}</td>
                             <td>{{ number_format((int) ($player['total_pin'] ?? 0)) }}</td>

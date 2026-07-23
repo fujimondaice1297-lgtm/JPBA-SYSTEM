@@ -1,6 +1,8 @@
+@include('tournament_results.pdfs.partials.standard_overview')
 @include('tournament_results.pdfs.partials.result_page')
 @include('tournament_results.pdfs.partials.step_ladder_pages')
 @include('tournament_results.pdfs.partials.score_sheets')
+@include('tournament_results.pdfs.partials.round_robin_pages')
 @include('tournament_results.pdfs.partials.single_elimination_match_summary')
 @include('tournament_results.pdfs.partials.selection_scores')
 @include('tournament_results.pdfs.partials.snapshots')
