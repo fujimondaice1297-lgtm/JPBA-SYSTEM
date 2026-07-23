@@ -8482,6 +8482,50 @@
         "counts_for_prize": true,
         "title_scope": "official",
         "title_category": "official",
+        "host": "公益社団法人日本プロボウリング協会",
+        "special_sponsor": "𠮷川高広税理士事務所",
+        "support": "公益社団法人日本ボウリング場協会／関東ボウリング場協会／ボウリングマガジン／ボウリングジャーナル／他各社",
+        "sponsor": "株式会社グランドボウル／株式会社サンブリッジ／株式会社ハイ・スポーツ社／株式会社アメリカンボウリングサービス",
+        "supervisor": "𠮷川高広税理士事務所プレゼンツ男子プロボウリングトーナメント実行委員会",
+        "authorized_by": "JPBA B公認",
+        "prize": "賞金総額3,200,000円（優勝賞金800,000円・副賞200,000円）",
+        "pdf_prize_breakdowns": [
+          {
+            "ranking": 1,
+            "base_prize_money": 800000,
+            "special_prize_money": 200000,
+            "special_prize_label": "副賞"
+          }
+        ],
+        "award_highlights": [
+          {
+            "type": "perfect",
+            "player": "木村 晃",
+            "game": "予選2G目",
+            "lane": "5・6L",
+            "note": "JPBA公認 第1788号／自身5回目",
+            "title": "大会1号",
+            "photo": null
+          },
+          {
+            "type": "perfect",
+            "player": "福丸 哲平",
+            "game": "予選2G目",
+            "lane": "3・4L",
+            "note": "JPBA公認 第1789号／自身4回目",
+            "title": "大会2号",
+            "photo": null
+          },
+          {
+            "type": "split710",
+            "player": "安里 秀策",
+            "game": "予選6G目3フレ",
+            "lane": "23L",
+            "note": "JPBA公認 第214号／自身2回目",
+            "title": "大会1号",
+            "photo": null
+          }
+        ],
         "source_url": "https://www.jpba.or.jp/information/tournament/tournament2026/04_YoshikawaPresents/YoshikawaPresents_2026.html"
       },
       "point_distributions": [

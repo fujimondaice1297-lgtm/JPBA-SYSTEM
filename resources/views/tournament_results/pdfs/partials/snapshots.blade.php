@@ -1,12 +1,19 @@
 @if (count($pdfScoreSnapshots) > 0)
     @php
         $resolvedOfficialTitleClass = (string) ($officialTitleClass ?? view()->shared('officialTitleClass', ''));
+        $standardSnapshotResultCode = trim((string) ($standardSnapshotResultCode ?? ''));
+        $standardSnapshotChunkIndex = isset($standardSnapshotChunkIndex)
+            ? (int) $standardSnapshotChunkIndex
+            : null;
     @endphp
     @foreach ($pdfScoreSnapshots as $snapshotSet)
         @php
             $snapshot = $snapshotSet['snapshot'] ?? null;
             $snapshotRows = collect($snapshotSet['rows'] ?? [])->values();
             $resultCode = trim((string) ($snapshot->result_code ?? ''));
+            if ($standardSnapshotResultCode !== '' && $resultCode !== $standardSnapshotResultCode) {
+                continue;
+            }
             $isPrelimSnapshot = $resultCode === 'prelim_total';
             $isSemifinalSnapshot = $resultCode === 'semifinal_total';
             $isRoundRobinSnapshot = $resultCode === 'round_robin_total' || trim((string) ($snapshot->result_type ?? '')) === 'round_robin';
@@ -94,9 +101,15 @@
         @php
             $snapshotPageChunks = $isPrelimSnapshot
                 && !($isSeasonTrialPdf ?? false)
-                && $snapshotRows->count() > 36
-                    ? $snapshotRows->chunk(36)->values()
+                && $snapshotRows->count() > 57
+                    ? $snapshotRows->chunk(57)->values()
                     : collect([$snapshotRows]);
+            if ($standardSnapshotChunkIndex !== null) {
+                $requestedChunk = $snapshotPageChunks->get($standardSnapshotChunkIndex);
+                $snapshotPageChunks = $requestedChunk === null
+                    ? collect()
+                    : collect([$requestedChunk]);
+            }
         @endphp
         @foreach ($snapshotPageChunks as $snapshotPageIndex => $snapshotPageRows)
         @php $snapshotRows = collect($snapshotPageRows)->values(); @endphp

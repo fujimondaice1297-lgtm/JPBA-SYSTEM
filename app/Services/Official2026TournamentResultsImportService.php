@@ -513,6 +513,16 @@ final class Official2026TournamentResultsImportService
             ->firstWhere('result_code', 'round_robin_total');
         $hasRoundRobin = is_array($roundRobinSnapshot);
         $roundRobinRows = $hasRoundRobin ? (array) ($roundRobinSnapshot['rows'] ?? []) : [];
+        $templateSnapshot = [
+            '_official_import' => self::IMPORT_MARKER,
+            'event_key' => $event['key'],
+            'source_url' => $source['source_url'],
+            'source_checked_at' => '2026-07-22',
+        ];
+        if (array_key_exists('pdf_prize_breakdowns', $source)) {
+            $templateSnapshot['pdf_prize_breakdowns'] = array_values($source['pdf_prize_breakdowns']);
+        }
+
         $attributes = [
             'name' => $source['name'],
             'setup_status' => 'completed',
@@ -532,22 +542,28 @@ final class Official2026TournamentResultsImportService
             'venue_address' => $venue->address,
             'venue_tel' => $venue->tel,
             'venue_fax' => $venue->fax,
-            'host' => 'JPBA',
-            'authorized_by' => 'JPBA',
+            'host' => $source['host'] ?? 'JPBA',
+            'authorized_by' => $source['authorized_by'] ?? 'JPBA',
             'materials' => $source['source_url'],
-            'prize' => $source['counts_for_prize'] ? 'See official result publication.' : null,
+            'prize' => $source['counts_for_prize']
+                ? ($source['prize'] ?? 'See official result publication.')
+                : null,
             'result_flow_type' => $hasRoundRobin ? 'prelim_to_rr_to_final' : 'legacy_standard',
             'round_robin_qualifier_count' => $hasRoundRobin ? max(4, count($roundRobinRows)) : null,
             'round_robin_win_bonus' => $hasRoundRobin ? 30 : null,
             'round_robin_tie_bonus' => $hasRoundRobin ? 15 : null,
             'round_robin_position_round_enabled' => $hasRoundRobin,
-            'template_snapshot' => [
-                '_official_import' => self::IMPORT_MARKER,
-                'event_key' => $event['key'],
-                'source_url' => $source['source_url'],
-                'source_checked_at' => '2026-07-22',
-            ],
+            'template_snapshot' => $templateSnapshot,
         ];
+
+        foreach (['special_sponsor', 'support', 'sponsor', 'supervisor'] as $optionalField) {
+            if (array_key_exists($optionalField, $source)) {
+                $attributes[$optionalField] = $source[$optionalField];
+            }
+        }
+        if (array_key_exists('award_highlights', $source)) {
+            $attributes['award_highlights'] = array_values($source['award_highlights']);
+        }
 
         $tournament = $existing ?? new Tournament;
         $tournament->fill($attributes)->save();

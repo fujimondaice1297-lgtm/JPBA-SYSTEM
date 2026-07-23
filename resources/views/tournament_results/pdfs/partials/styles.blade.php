@@ -969,4 +969,365 @@
         .official-selection-score-table .total-col { width: 12%; }
         .official-selection-score-table .avg-col { width: 10%; }
 
+        .standard-overview-page,
+        .standard-awards-page,
+        .standard-step-page {
+            page-break-after: avoid;
+            color: #000;
+        }
+
+        .standard-overview-title,
+        .standard-page-title,
+        .standard-step-title {
+            margin: 8px 0 10px;
+            text-align: center;
+            font-size: 21px;
+            line-height: 1.25;
+        }
+
+        .standard-overview-title.official-title-long,
+        .standard-page-title.official-title-long,
+        .standard-step-title.official-title-long {
+            font-size: 18px;
+        }
+
+        .standard-overview-title.official-title-extra-long,
+        .standard-page-title.official-title-extra-long,
+        .standard-step-title.official-title-extra-long {
+            font-size: 16px;
+        }
+
+        .standard-overview-layout,
+        .standard-awards-layout,
+        .standard-step-layout {
+            width: 96%;
+            margin: 0 auto;
+            border-collapse: collapse;
+            table-layout: fixed;
+        }
+
+        .standard-overview-layout td,
+        .standard-awards-layout td,
+        .standard-step-layout td {
+            border: none;
+            vertical-align: top;
+        }
+
+        .standard-overview-content {
+            width: 78%;
+        }
+
+        .standard-overview-poster {
+            width: 22%;
+            padding: 30px 0 0 12px;
+            text-align: center;
+        }
+
+        .standard-overview-poster img {
+            max-width: 100%;
+            max-height: 230px;
+        }
+
+        .standard-overview-detail {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+            font-size: 9.2px;
+            line-height: 1.42;
+        }
+
+        .standard-overview-detail th,
+        .standard-overview-detail td {
+            border: none;
+            padding: 2px 1px;
+            vertical-align: top;
+        }
+
+        .standard-overview-detail th {
+            width: 15%;
+            text-align: left;
+            white-space: nowrap;
+        }
+
+        .standard-overview-detail td {
+            width: 85%;
+            text-align: left;
+        }
+
+        .standard-overview-indent {
+            display: inline-block;
+            padding-left: 10px;
+        }
+
+        .standard-overview-schedule {
+            margin: 3px 0 0 12px;
+            font-size: 8.5px;
+            line-height: 1.45;
+        }
+
+        .standard-awards-subtitle {
+            width: 96%;
+            margin: 0 auto 4px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .standard-awards-subtitle span {
+            margin-left: 30px;
+            font-size: 9px;
+        }
+
+        .standard-awards-list-cell {
+            width: 61%;
+            padding-right: 8px;
+        }
+
+        .standard-awards-notes-cell {
+            width: 39%;
+            padding-left: 8px;
+        }
+
+        .standard-awards-table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+            font-size: 5.3px;
+            line-height: 1;
+        }
+
+        .standard-awards-table th,
+        .standard-awards-table td {
+            border: 1px solid #111;
+            padding: 1px;
+            text-align: center;
+            vertical-align: middle;
+            height: 11px;
+            overflow: hidden;
+            white-space: nowrap;
+        }
+
+        .standard-awards-table th {
+            font-size: 5.1px;
+            height: 19px;
+            background: #f4f1dc;
+        }
+
+        .standard-awards-table tr.standard-award-stage-end td {
+            border-bottom-width: 2px;
+        }
+
+        .standard-awards-table .std-award-rank { width: 7%; }
+        .standard-awards-table .std-award-license { width: 8%; }
+        .standard-awards-table .std-award-name { width: 12%; }
+        .standard-awards-table .std-award-period { width: 4%; }
+        .standard-awards-table .std-award-belong { width: 30%; }
+        .standard-awards-table .std-award-score { width: 10%; }
+        .standard-awards-table .std-award-point { width: 9%; }
+        .standard-awards-table .std-award-prize { width: 20%; }
+
+        .standard-award-belong-cell span {
+            display: block;
+            width: 100%;
+            overflow: hidden;
+            white-space: nowrap;
+            font-size: 4.8px;
+        }
+
+        .standard-champion-box {
+            min-height: 105px;
+            border-bottom: 1px solid #777;
+            padding: 6px 4px 8px;
+            text-align: center;
+        }
+
+        .standard-champion-label {
+            display: inline-block;
+            margin-right: 12px;
+            font-size: 15px;
+            font-weight: bold;
+        }
+
+        .standard-champion-name {
+            display: inline-block;
+            font-size: 19px;
+            font-weight: bold;
+        }
+
+        .standard-champion-meta,
+        .standard-champion-message {
+            margin-top: 6px;
+            font-size: 8px;
+        }
+
+        .standard-note-section {
+            border-bottom: 1px solid #777;
+            padding: 7px 3px;
+            font-size: 7.2px;
+            line-height: 1.45;
+        }
+
+        .standard-note-section h3 {
+            margin: 0 0 4px;
+            font-size: 9px;
+        }
+
+        .standard-note-section p {
+            margin: 1px 0;
+        }
+
+        .standard-note-footer {
+            border-bottom: none;
+        }
+
+        .standard-step-page h2 {
+            margin: 0 0 8px;
+            text-align: center;
+            font-size: 14px;
+        }
+
+        .standard-step-bracket-cell {
+            width: 69%;
+            padding-right: 9px;
+        }
+
+        .standard-step-summary-cell {
+            width: 31%;
+            padding: 28px 0 0 9px;
+            text-align: center;
+        }
+
+        .standard-step-final-rank {
+            margin: 0 0 4px;
+            font-size: 10px;
+            font-weight: bold;
+        }
+
+        .standard-step-bracket-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0 7px;
+            table-layout: fixed;
+            font-size: 8px;
+        }
+
+        .standard-step-bracket-table td {
+            vertical-align: middle;
+        }
+
+        .standard-step-seed-label {
+            width: 17%;
+            text-align: right;
+            padding-right: 6px;
+        }
+
+        .standard-step-player {
+            width: 35%;
+            border: 1px solid #111 !important;
+            padding: 4px;
+            text-align: center;
+            font-size: 11px;
+        }
+
+        .standard-step-score {
+            width: 10%;
+            border-bottom: 1px solid #111 !important;
+            padding: 4px;
+            text-align: center;
+            font-size: 11px;
+        }
+
+        .standard-step-champion,
+        .standard-step-advance {
+            width: 38%;
+            border: 1px solid #111 !important;
+            padding: 5px;
+            text-align: center;
+        }
+
+        .standard-step-champion span,
+        .standard-step-champion strong,
+        .standard-step-advance strong {
+            display: block;
+        }
+
+        .standard-step-champion strong {
+            margin-top: 4px;
+            font-size: 13px;
+            font-weight: normal !important;
+        }
+
+        .standard-step-winner-title {
+            font-size: 13px;
+            font-weight: bold;
+        }
+
+        .standard-step-winner-name {
+            margin-top: 8px;
+            border: 1px solid #111;
+            padding: 8px 4px;
+            font-size: 16px;
+            font-weight: bold;
+        }
+
+        .standard-step-winner-note {
+            margin-top: 8px;
+            font-size: 8px;
+        }
+
+        .standard-step-score-area {
+            width: 94%;
+            margin: 8px auto 0;
+        }
+
+        .standard-step-score-block {
+            margin: 0 0 5px;
+            border-top: 1px solid #aaa;
+            padding-top: 3px;
+        }
+
+        .standard-step-score-block h3 {
+            margin: 0 0 1px;
+            font-size: 8px;
+        }
+
+        .standard-step-score-block img {
+            display: block;
+            width: 100%;
+            height: auto;
+        }
+
+        .official-standard-snapshot-page.official-snapshot-page-prelim .official-snapshot-title {
+            margin-top: 4px;
+            font-size: 12px;
+        }
+
+        .official-standard-snapshot-page.official-snapshot-page-prelim .official-snapshot-subtitle {
+            margin-bottom: 2px;
+            font-size: 7px;
+        }
+
+        .official-standard-snapshot-page.official-snapshot-page-prelim .official-snapshot-table {
+            width: 100%;
+            margin-bottom: 2px;
+            font-size: 4.25px;
+            line-height: 0.95;
+        }
+
+        .official-standard-snapshot-page.official-snapshot-page-prelim .official-snapshot-table th {
+            font-size: 4px;
+            padding: 0.5px;
+        }
+
+        .official-standard-snapshot-page.official-snapshot-page-prelim .official-snapshot-table td {
+            padding: 0.25px 0.4px;
+        }
+
+        .official-standard-snapshot-page.official-snapshot-page-prelim tbody tr {
+            height: 10px;
+        }
+
+        .official-standard-snapshot-page.official-snapshot-page-prelim .snapshot-belong-cell {
+            font-size: 3.6px;
+        }
+
 </style>

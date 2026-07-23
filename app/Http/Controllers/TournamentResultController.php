@@ -11,6 +11,7 @@ use App\Models\TournamentResult;
 use App\Models\TournamentResultPublication;
 use App\Models\TournamentResultSnapshot;
 use App\Services\MatchScoreSheetImageService;
+use App\Services\MixedOrientationPdfService;
 use App\Services\RoundRobinService;
 use App\Services\ShootoutBracketImageService;
 use App\Services\ShootoutService;
@@ -801,6 +802,12 @@ class TournamentResultController extends Controller
         $results = $query->get();
         $this->attachBowlerPeriodLabels($results);
         $this->attachResultPdfDisplayFields($results);
+        $prizeDistributionMap = PrizeDistribution::query()
+            ->where('tournament_id', $tournament->id)
+            ->orderBy('rank')
+            ->pluck('amount', 'rank')
+            ->map(fn ($amount): int => max(0, (int) $amount))
+            ->all();
 
         $scoreSnapshots = $this->loadPdfScoreSnapshots($tournament);
         $roundRobinPdf = $this->buildRoundRobinPdfData($tournament);
@@ -868,13 +875,35 @@ class TournamentResultController extends Controller
         $officialTitleClass = $this->resolvePdfTitleClass((string) $tournament->name);
         $isSeasonTrialPdf = str_contains((string) $tournament->name, 'シーズントライアル')
             || (string) ($tournament->title_category ?? '') === 'season_trial';
-        $pdfOrientation = $isSeasonTrialPdf ? 'portrait' : 'landscape';
+        $pdfData = compact(
+            'tournament',
+            'results',
+            'scoreSnapshots',
+            'roundRobinPdf',
+            'singleEliminationPdf',
+            'singleEliminationBracketImage',
+            'shootoutPdf',
+            'shootoutBracketImage',
+            'stepLadderPdf',
+            'stepLadderBracketImage',
+            'matchScoreSheets',
+            'matchScoreSheetImages',
+            'selectionScoreSections',
+            'singleEliminationMatchSummary',
+            'officialTitleClass',
+            'prizeDistributionMap'
+        );
+        $downloadName = "{$tournament->year}_{$tournament->name}_results.pdf";
+
+        if (! $isSeasonTrialPdf && ! empty($roundRobinPdf['players'] ?? [])) {
+            return $this->makeOfficialStandardTournamentPdf($pdfData, $downloadName);
+        }
 
         return $this->makePdfWithJapaneseFont(
             'tournament_results.pdf',
-            compact('tournament', 'results', 'scoreSnapshots', 'roundRobinPdf', 'singleEliminationPdf', 'singleEliminationBracketImage', 'shootoutPdf', 'shootoutBracketImage', 'stepLadderPdf', 'stepLadderBracketImage', 'matchScoreSheets', 'matchScoreSheetImages', 'selectionScoreSections', 'singleEliminationMatchSummary', 'officialTitleClass'),
-            "{$tournament->year}_{$tournament->name}_results.pdf",
-            $pdfOrientation
+            $pdfData,
+            $downloadName,
+            $isSeasonTrialPdf ? 'portrait' : 'landscape'
         );
     }
 
@@ -3017,7 +3046,84 @@ class TournamentResultController extends Controller
         return $display === '' ? $license : $display;
     }
 
+    private function makeOfficialStandardTournamentPdf(array $data, string $downloadName)
+    {
+        $snapshots = collect($data['scoreSnapshots'] ?? []);
+        $snapshotRowCount = function (string $resultCode) use ($snapshots): int {
+            $set = $snapshots->first(
+                fn ($item): bool => trim((string) (($item['snapshot']->result_code ?? ''))) === $resultCode
+            );
+
+            return count($set['rows'] ?? []);
+        };
+
+        $sections = [
+            ['name' => 'overview', 'orientation' => 'landscape', 'enabled' => true],
+            ['name' => 'awards', 'orientation' => 'landscape', 'enabled' => true],
+            [
+                'name' => 'step_ladder',
+                'orientation' => 'portrait',
+                'enabled' => ! empty($data['stepLadderPdf']['seeds'] ?? [])
+                    || ! empty($data['matchScoreSheetImages'] ?? []),
+            ],
+            [
+                'name' => 'round_robin_ranking',
+                'orientation' => 'landscape',
+                'enabled' => ! empty($data['roundRobinPdf']['players'] ?? []),
+            ],
+            [
+                'name' => 'round_robin_matches',
+                'orientation' => 'landscape',
+                'enabled' => ! empty($data['roundRobinPdf']['players'] ?? []),
+            ],
+            [
+                'name' => 'semifinal',
+                'orientation' => 'landscape',
+                'enabled' => $snapshotRowCount('semifinal_total') > 0,
+            ],
+            [
+                'name' => 'prelim_1',
+                'orientation' => 'portrait',
+                'enabled' => $snapshotRowCount('prelim_total') > 0,
+            ],
+            [
+                'name' => 'prelim_2',
+                'orientation' => 'portrait',
+                'enabled' => $snapshotRowCount('prelim_total') > 57,
+            ],
+        ];
+
+        $parts = [];
+        foreach ($sections as $section) {
+            if (! $section['enabled']) {
+                continue;
+            }
+
+            $sectionData = array_merge($data, ['standardPdfSection' => $section['name']]);
+            $parts[] = $this->buildPdfWithJapaneseFont(
+                'tournament_results.pdf',
+                $sectionData,
+                $section['orientation']
+            )->output();
+        }
+
+        /** @var MixedOrientationPdfService $merger */
+        $merger = app(MixedOrientationPdfService::class);
+        $binary = $merger->merge($parts);
+
+        return response($binary, 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Length' => (string) strlen($binary),
+            'Content-Disposition' => 'attachment; filename="tournament_results.pdf"; filename*=UTF-8\'\''.rawurlencode($downloadName),
+        ]);
+    }
+
     private function makePdfWithJapaneseFont(string $view, array $data, string $downloadName, string $orientation = 'portrait')
+    {
+        return $this->buildPdfWithJapaneseFont($view, $data, $orientation)->download($downloadName);
+    }
+
+    private function buildPdfWithJapaneseFont(string $view, array $data, string $orientation = 'portrait')
     {
         /*
          * THE OPENのように、入賞者リスト・ステップラダー画像・スコアシート画像を
@@ -3064,7 +3170,7 @@ class TournamentResultController extends Controller
             );
         }
 
-        return $pdf->download($downloadName);
+        return $pdf;
     }
 
     private function forgetTournamentResultPdfSharedViewData(): void

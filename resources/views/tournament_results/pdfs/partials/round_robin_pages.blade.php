@@ -9,9 +9,11 @@
     }
     $rrGameCountForPdf = max(1, (int) ($rrMeta['round_robin_games'] ?? count($rrRounds)));
     $rrCarryGamesForPdf = count($rrPlayers) > 0 ? (int) ($rrPlayers[0]['carry_games'] ?? 0) : 0;
+    $roundRobinPageMode = trim((string) ($roundRobinPageMode ?? 'all'));
 @endphp
 
 @if (count($rrPlayers) > 0)
+    @if ($roundRobinPageMode !== 'matches')
     <div class="official-round-robin-page jpba-heavy">
         <h2 class="official-snapshot-title {{ $resolvedOfficialTitleClass ?? '' }}">{{ $officialMainTitle }}</h2>
         <h3 class="official-snapshot-subtitle">決勝ラウンドロビン 順位表 ／ {{ $officialVenueTitle }}</h3>
@@ -79,7 +81,9 @@
         </table>
         <div class="official-snapshot-note">※勝者30ポイント、引分15ポイントを加算。最終ゲームはポジションマッチです。</div>
     </div>
+    @endif
 
+    @if ($roundRobinPageMode !== 'ranking')
     <div class="official-round-robin-page jpba-heavy">
         <h2 class="official-snapshot-title {{ $resolvedOfficialTitleClass ?? '' }}">{{ $officialMainTitle }}</h2>
         <h3 class="official-snapshot-subtitle">ラウンドロビン対戦表 ／ {{ $officialVenueTitle }}</h3>
@@ -148,4 +152,5 @@
         </table>
         <div class="official-snapshot-note">※各欄は「対戦者／スコア／獲得ボーナス」を表示しています。</div>
     </div>
+    @endif
 @endif
