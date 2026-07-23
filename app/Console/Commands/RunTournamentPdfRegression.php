@@ -11,12 +11,16 @@ use App\Models\TournamentResultSnapshotRow;
 use App\Services\TournamentResultCompletenessService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
+use Illuminate\View\Factory as ViewFactory;
+use ReflectionProperty;
 use Throwable;
 
 class RunTournamentPdfRegression extends Command
 {
     protected $signature = 'tournament:pdf-regression
         {--year=2026 : Published tournament year to verify completely}
+        {--tournament-id=* : Verify only the specified published tournament IDs}
+        {--output-dir= : Save published PDFs to this directory for visual inspection}
         {--json : Output the regression result as JSON}';
 
     protected $description = 'Run tournament result PDF regression checks for each PDF mode.';
@@ -25,11 +29,21 @@ class RunTournamentPdfRegression extends Command
     {
         $results = [];
 
-        $publishedTournaments = Tournament::query()
+        $requestedTournamentIds = collect($this->option('tournament-id'))
+            ->filter(fn ($id) => is_numeric($id) && (int) $id > 0)
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values();
+
+        $publishedTournamentQuery = Tournament::query()
             ->where('year', (int) $this->option('year'))
             ->whereHas('resultPublications', fn ($query) => $query->where('status', 'current'))
-            ->orderBy('id')
-            ->get();
+            ->when(
+                $requestedTournamentIds->isNotEmpty(),
+                fn ($query) => $query->whereIn('id', $requestedTournamentIds->all())
+            )
+            ->orderBy('id');
+        $publishedTournaments = $publishedTournamentQuery->get();
         /** @var TournamentResultCompletenessService $completenessService */
         $completenessService = app(TournamentResultCompletenessService::class);
 
@@ -45,7 +59,6 @@ class RunTournamentPdfRegression extends Command
                     'bytes' => 0,
                     'message' => implode(' / ', array_slice($audit['errors'], 0, 3)),
                 ];
-
                 continue;
             }
 
@@ -55,6 +68,24 @@ class RunTournamentPdfRegression extends Command
                 $publishedTournament,
                 false,
             );
+        }
+
+        if ($requestedTournamentIds->isNotEmpty()) {
+            $missingTournamentIds = $requestedTournamentIds
+                ->diff($publishedTournaments->pluck('id')->map(fn ($id) => (int) $id));
+            foreach ($missingTournamentIds as $missingTournamentId) {
+                $results[] = [
+                    'case' => 'published_pdf_'.$missingTournamentId,
+                    'mode' => 'published',
+                    'tournament_id' => $missingTournamentId,
+                    'fixture' => false,
+                    'status' => 'FAIL',
+                    'bytes' => 0,
+                    'message' => '指定された年度の公開済み大会が見つかりません。',
+                ];
+            }
+
+            return $this->finish($results);
         }
 
         $existingCases = [
@@ -94,9 +125,8 @@ class RunTournamentPdfRegression extends Command
         ];
 
         foreach ($existingCases as $case) {
-            if (! $case['tournament']) {
+            if (!$case['tournament']) {
                 $results[] = $this->missingResult($case['case'], $case['mode'], '対象大会がDBにありません。');
-
                 continue;
             }
 
@@ -144,6 +174,11 @@ class RunTournamentPdfRegression extends Command
             DB::rollBack();
         }
 
+        return $this->finish($results);
+    }
+
+    private function finish(array $results): int
+    {
         $failed = collect($results)->contains(fn (array $result) => ($result['status'] ?? '') === 'FAIL');
 
         if ($this->option('json')) {
@@ -155,7 +190,7 @@ class RunTournamentPdfRegression extends Command
                     $result['case'] ?? '',
                     $result['mode'] ?? '',
                     $result['tournament_id'] ?? '-',
-                    ! empty($result['fixture']) ? 'yes' : 'no',
+                    !empty($result['fixture']) ? 'yes' : 'no',
                     $result['status'] ?? '',
                     $result['bytes'] ?? '-',
                     $result['message'] ?? '',
@@ -169,12 +204,15 @@ class RunTournamentPdfRegression extends Command
     private function checkPdf(string $caseName, string $expectedMode, Tournament $tournament, bool $isFixture): array
     {
         $warnings = [];
+        /** @var ViewFactory $viewFactory */
+        $viewFactory = app('view');
+        $sharedViewData = $viewFactory->getShared();
         set_error_handler(function (int $severity, string $message, string $file, int $line) use (&$warnings): bool {
-            if (! (error_reporting() & $severity)) {
+            if (!(error_reporting() & $severity)) {
                 return false;
             }
 
-            $warnings[] = $message.' ('.$file.':'.$line.')';
+            $warnings[] = $message . ' (' . $file . ':' . $line . ')';
 
             return true;
         });
@@ -195,10 +233,11 @@ class RunTournamentPdfRegression extends Command
             ];
         } finally {
             restore_error_handler();
+            $this->restoreSharedViewData($viewFactory, $sharedViewData);
         }
 
         $bytes = strlen($content);
-        if (! str_starts_with($content, '%PDF')) {
+        if (!str_starts_with($content, '%PDF')) {
             return [
                 'case' => $caseName,
                 'mode' => $expectedMode,
@@ -210,7 +249,7 @@ class RunTournamentPdfRegression extends Command
             ];
         }
 
-        if (! empty($warnings)) {
+        if (!empty($warnings)) {
             return [
                 'case' => $caseName,
                 'mode' => $expectedMode,
@@ -220,6 +259,36 @@ class RunTournamentPdfRegression extends Command
                 'bytes' => $bytes,
                 'message' => implode(' / ', array_slice($warnings, 0, 3)),
             ];
+        }
+
+        $outputPath = null;
+        $outputDir = trim((string) $this->option('output-dir'));
+        if ($outputDir !== '' && !$isFixture) {
+            if (!is_dir($outputDir) && !mkdir($outputDir, 0777, true) && !is_dir($outputDir)) {
+                return [
+                    'case' => $caseName,
+                    'mode' => $expectedMode,
+                    'tournament_id' => $tournament->id,
+                    'fixture' => $isFixture,
+                    'status' => 'FAIL',
+                    'bytes' => $bytes,
+                    'message' => "Output directory could not be created: {$outputDir}",
+                ];
+            }
+            $outputPath = rtrim($outputDir, '\\/')
+                .DIRECTORY_SEPARATOR
+                .sprintf('tournament_%d.pdf', $tournament->id);
+            if (file_put_contents($outputPath, $content) === false) {
+                return [
+                    'case' => $caseName,
+                    'mode' => $expectedMode,
+                    'tournament_id' => $tournament->id,
+                    'fixture' => $isFixture,
+                    'status' => 'FAIL',
+                    'bytes' => $bytes,
+                    'message' => "PDF could not be written: {$outputPath}",
+                ];
+            }
         }
 
         $shootoutPayloadMessage = $this->validateShootoutPdfPayload($controller, $tournament);
@@ -242,14 +311,21 @@ class RunTournamentPdfRegression extends Command
             'fixture' => $isFixture,
             'status' => 'OK',
             'bytes' => $bytes,
-            'message' => 'PDF generated.',
+            'message' => $outputPath === null ? 'PDF generated.' : "PDF generated: {$outputPath}",
+            'output_path' => $outputPath,
         ];
+    }
+
+    private function restoreSharedViewData(ViewFactory $viewFactory, array $sharedViewData): void
+    {
+        $property = new ReflectionProperty(ViewFactory::class, 'shared');
+        $property->setValue($viewFactory, $sharedViewData);
     }
 
     private function validateShootoutPdfPayload(TournamentResultController $controller, Tournament $tournament): ?string
     {
         $flowType = trim((string) ($tournament->result_flow_type ?? ''));
-        if (! str_contains($flowType, 'shootout')) {
+        if (!str_contains($flowType, 'shootout')) {
             return null;
         }
 
@@ -258,10 +334,10 @@ class RunTournamentPdfRegression extends Command
             $method->setAccessible(true);
             $payload = $method->invoke($controller, $tournament);
         } catch (Throwable $e) {
-            return 'Shootout PDF payload failed: '.$e->getMessage();
+            return 'Shootout PDF payload failed: ' . $e->getMessage();
         }
 
-        if (! is_array($payload)) {
+        if (!is_array($payload)) {
             return 'Shootout PDF payload is missing.';
         }
 
@@ -407,7 +483,7 @@ class RunTournamentPdfRegression extends Command
                 'seed' => $i,
                 'pro_bowler_id' => $bowler?->id,
                 'license_no' => $bowler?->license_no ?: sprintf('PDFREG%04d', $i),
-                'name' => $bowler?->name_kanji ?: ('PDF回帰 選手'.$i),
+                'name' => $bowler?->name_kanji ?: ('PDF回帰 選手' . $i),
                 'gender' => ((int) ($bowler?->sex ?? 1)) === 2 ? 'F' : 'M',
                 'total_pin' => 2200 - ($i * 10),
                 'games' => 8,
@@ -418,8 +494,8 @@ class RunTournamentPdfRegression extends Command
     }
 
     /**
-     * @param  array<int,array<string,mixed>>  $participants
-     * @param  array<int,int>  $seedOrder
+     * @param array<int,array<string,mixed>> $participants
+     * @param array<int,int> $seedOrder
      * @return array<int,array<string,mixed>>
      */
     private function participantsBySeed(array $participants, array $seedOrder): array
@@ -434,8 +510,8 @@ class RunTournamentPdfRegression extends Command
     }
 
     /**
-     * @param  array<int,array<string,mixed>>  $participants
-     * @param  array<int,int>|null  $rankings
+     * @param array<int,array<string,mixed>> $participants
+     * @param array<int,int>|null $rankings
      */
     private function createTournamentResults(Tournament $tournament, array $participants, ?array $rankings = null): void
     {
@@ -464,8 +540,8 @@ class RunTournamentPdfRegression extends Command
     }
 
     /**
-     * @param  array<int,array<string,mixed>>  $participants
-     * @param  array<int,int>|null  $rankings
+     * @param array<int,array<string,mixed>> $participants
+     * @param array<int,int>|null $rankings
      */
     private function createSnapshot(Tournament $tournament, string $code, string $name, array $participants, bool $isFinal, ?array $rankings = null): TournamentResultSnapshot
     {
@@ -500,10 +576,10 @@ class RunTournamentPdfRegression extends Command
                 'pro_bowler_id' => $participant['pro_bowler_id'] ?? null,
                 'pro_bowler_license_no' => $participant['license_no'] ?? null,
                 'amateur_name' => empty($participant['pro_bowler_id']) ? ($participant['name'] ?? null) : null,
-                'display_name' => $participant['name'] ?? ('PDF回帰 選手'.($index + 1)),
+                'display_name' => $participant['name'] ?? ('PDF回帰 選手' . ($index + 1)),
                 'gender' => $participant['gender'] ?? null,
                 'shift' => null,
-                'entry_number' => 'PDF-'.($index + 1),
+                'entry_number' => 'PDF-' . ($index + 1),
                 'scratch_pin' => $totalPin,
                 'carry_pin' => 0,
                 'total_pin' => $totalPin,
@@ -519,7 +595,7 @@ class RunTournamentPdfRegression extends Command
     }
 
     /**
-     * @param  array<int,array<string,mixed>>  $participants
+     * @param array<int,array<string,mixed>> $participants
      */
     private function insertShootoutScores(Tournament $tournament, array $participants): void
     {
@@ -533,7 +609,7 @@ class RunTournamentPdfRegression extends Command
     }
 
     /**
-     * @param  array<int,array<string,mixed>>  $participants
+     * @param array<int,array<string,mixed>> $participants
      */
     private function insertSingleEliminationScores(Tournament $tournament, array $participants): void
     {
@@ -547,8 +623,8 @@ class RunTournamentPdfRegression extends Command
     }
 
     /**
-     * @param  array<int,array<string,mixed>>  $participants
-     * @param  array<int,array{0:string,1:int,2:array<string,array{0:int,1:int}>}>  $matches
+     * @param array<int,array<string,mixed>> $participants
+     * @param array<int,array{0:string,1:int,2:array<string,array{0:int,1:int}>}> $matches
      */
     private function insertMatchScores(Tournament $tournament, array $participants, string $stage, string $prefix, array $matches): void
     {
@@ -564,7 +640,7 @@ class RunTournamentPdfRegression extends Command
                     'stage' => $stage,
                     'license_number' => $participant['license_no'] ?? null,
                     'name' => $participant['name'] ?? null,
-                    'entry_number' => $prefix.':'.$matchKey.':'.$slot,
+                    'entry_number' => $prefix . ':' . $matchKey . ':' . $slot,
                     'game_number' => $gameNumber,
                     'score' => $score,
                     'shift' => $prefix === 'SE' ? 'single_elimination' : 'shootout',

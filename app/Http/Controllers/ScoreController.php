@@ -2578,6 +2578,7 @@ final class ScoreController extends Controller
                     'license_number' => $player->pro_bowler_license_no ?? null,
                     'name' => $player->display_name ?? null,
                     'pro_bowler_id' => $player->pro_bowler_id ?? null,
+                    'is_winner' => (bool) $player->is_winner,
                     'source' => 'score_sheet',
                 ];
             }

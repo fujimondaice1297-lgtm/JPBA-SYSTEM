@@ -256,6 +256,21 @@
                             </div>
                         </div>
 
+                        <div class="form-check mb-3">
+                            <input type="hidden" name="players[{{ $playerIndex }}][is_winner]" value="0">
+                            <input
+                                class="form-check-input"
+                                type="checkbox"
+                                name="players[{{ $playerIndex }}][is_winner]"
+                                id="player-winner-{{ $playerIndex }}"
+                                value="1"
+                                @checked((bool) old("players.$playerIndex.is_winner", $player['is_winner']))
+                            >
+                            <label class="form-check-label" for="player-winner-{{ $playerIndex }}">
+                                タイブレーク後の勝者
+                            </label>
+                        </div>
+
                         <div class="table-responsive">
                             <table class="table table-sm table-bordered align-middle text-center score-table">
                                 <thead class="table-light">

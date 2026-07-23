@@ -120,7 +120,9 @@ class MatchScoreSheetImageService
                     $this->drawMarkCell($image, $marks[2] ?? '', $x + ($third * 2), $markTop, $w - ($third * 2), $markH, $black);
                 }
 
-                $total = $calculatedCumulativeScores[$frameNo] ?? $storedCumulativeScores[$frameNo] ?? null;
+                // Confirmed source sheets may preserve an official cumulative value even
+                // when a legacy PDF glyph cannot be converted back into an individual roll.
+                $total = $storedCumulativeScores[$frameNo] ?? $calculatedCumulativeScores[$frameNo] ?? null;
                 $this->drawCenteredText(
                     $image,
                     $total !== null ? (string) $total : '',

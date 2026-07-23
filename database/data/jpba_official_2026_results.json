@@ -10624,7 +10624,7 @@
         "competition_type": "singles",
         "official_type": "official",
         "counts_for_official_points": false,
-        "counts_for_average": false,
+        "counts_for_average": true,
         "counts_for_prize": false,
         "title_scope": "none",
         "title_category": "non_title",

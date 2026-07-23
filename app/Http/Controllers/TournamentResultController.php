@@ -728,20 +728,38 @@ class TournamentResultController extends Controller
                 ->where('ranking_year', $year)
                 ->whereHas('tournament', fn ($query) => $query->where('counts_for_average', true)),
             $gender
-        )
+            )
             ->whereNotNull('pro_bowler_license_no')
             ->where('pro_bowler_license_no', '<>', '')
-            ->select('pro_bowler_license_no', DB::raw('AVG(average) as avg_average'))
+            ->select(
+                'pro_bowler_license_no',
+                DB::raw('SUM(COALESCE(total_pin, 0)) as total_pin'),
+                DB::raw('SUM(COALESCE(games, 0)) as total_games'),
+            )
             ->groupBy('pro_bowler_license_no')
-            ->orderByDesc('avg_average')
             ->get()
             ->map(function ($item) {
                 $item->name_kanji = optional(ProBowler::where('license_no', $item->pro_bowler_license_no)->first())->name_kanji;
+                $item->avg_average = $this->officialAverage(
+                    (int) $item->total_pin,
+                    (int) $item->total_games,
+                );
 
                 return $item;
-            });
+            })
+            ->sortByDesc('avg_average')
+            ->values();
 
         return view('tournament_results.rankings', compact('year', 'years', 'gender', 'genderLabel', 'moneyRanks', 'pointRanks', 'averageRanks'));
+    }
+
+    private function officialAverage(int $totalPin, int $games): float
+    {
+        if ($games <= 0) {
+            return 0.0;
+        }
+
+        return floor((($totalPin / $games) * 100) + 0.0000001) / 100;
     }
 
     private function normalizeRankingGender(?string $gender): ?string
@@ -832,6 +850,8 @@ class TournamentResultController extends Controller
 
         $matchScoreSheets = $this->loadPublishedMatchScoreSheets($tournament);
         $matchScoreSheetImages = [];
+        $selectionScoreSections = $this->buildSelectionPdfScoreSections($tournament);
+        $singleEliminationMatchSummary = $this->buildSingleEliminationMatchSummary($tournament);
 
         if ($matchScoreSheets->isNotEmpty()) {
             try {
@@ -843,12 +863,27 @@ class TournamentResultController extends Controller
                 $matchScoreSheetImages = [];
             }
         }
+        $officialTitleClass = $this->resolvePdfTitleClass((string) $tournament->name);
 
         return $this->makePdfWithJapaneseFont(
             'tournament_results.pdf',
-            compact('tournament', 'results', 'scoreSnapshots', 'singleEliminationPdf', 'singleEliminationBracketImage', 'shootoutPdf', 'shootoutBracketImage', 'stepLadderPdf', 'stepLadderBracketImage', 'matchScoreSheets', 'matchScoreSheetImages'),
+            compact('tournament', 'results', 'scoreSnapshots', 'singleEliminationPdf', 'singleEliminationBracketImage', 'shootoutPdf', 'shootoutBracketImage', 'stepLadderPdf', 'stepLadderBracketImage', 'matchScoreSheets', 'matchScoreSheetImages', 'selectionScoreSections', 'singleEliminationMatchSummary', 'officialTitleClass'),
             "{$tournament->year}_{$tournament->name}_results.pdf"
         );
+    }
+
+    private function resolvePdfTitleClass(string $tournamentName): string
+    {
+        $displayName = str_replace('𠮷', '吉', trim($tournamentName));
+        $width = function_exists('mb_strwidth')
+            ? mb_strwidth($displayName, 'UTF-8')
+            : strlen($displayName);
+
+        if ($width >= 68) {
+            return 'official-title-extra-long';
+        }
+
+        return $width >= 58 ? 'official-title-long' : '';
     }
 
     public function exportPdf(Request $request)
@@ -1434,6 +1469,7 @@ class TournamentResultController extends Controller
                     'license_number' => $player->pro_bowler_license_no ?? null,
                     'name' => $player->display_name ?? null,
                     'pro_bowler_id' => $player->pro_bowler_id ?? null,
+                    'is_winner' => (bool) $player->is_winner,
                     'source' => 'score_sheet',
                 ];
             }
@@ -1553,6 +1589,170 @@ class TournamentResultController extends Controller
         };
     }
 
+    /**
+     * @return array<int,array{stage:string,rows:array<int,array<string,mixed>>}>
+     */
+    private function buildSelectionPdfScoreSections(Tournament $tournament): array
+    {
+        $hasPublishedSelection = DB::table('tournament_result_snapshots')
+            ->where('tournament_id', $tournament->id)
+            ->where('result_code', 'selection_final')
+            ->where('is_published', true)
+            ->exists();
+
+        if (! $hasPublishedSelection) {
+            return [];
+        }
+
+        $scoreRows = DB::table('game_scores')
+            ->where('tournament_id', $tournament->id)
+            ->where('stage', 'like', '選抜%')
+            ->orderBy('stage')
+            ->orderBy('id')
+            ->get();
+
+        if ($scoreRows->isEmpty()) {
+            return [];
+        }
+
+        $sections = [];
+        foreach ($scoreRows->groupBy('stage') as $stage => $stageRows) {
+            $participants = [];
+            foreach ($stageRows as $scoreRow) {
+                $identity = (int) ($scoreRow->pro_bowler_id ?? 0) > 0
+                    ? 'pro:'.(int) $scoreRow->pro_bowler_id
+                    : 'license:'.strtoupper(trim((string) ($scoreRow->license_number ?? '')));
+                if ($identity === 'license:') {
+                    $identity = 'name:'.trim((string) ($scoreRow->name ?? ''));
+                }
+
+                $participants[$identity] ??= [
+                    'first_id' => (int) $scoreRow->id,
+                    'license' => $this->licenseLastDigits((string) ($scoreRow->license_number ?? '')),
+                    'name' => trim((string) ($scoreRow->name ?? '')) ?: '-',
+                    'scores' => [],
+                    'total_pin' => 0,
+                ];
+
+                $gameNumber = (int) ($scoreRow->game_number ?? 0);
+                if ($gameNumber > 0) {
+                    $participants[$identity]['scores'][$gameNumber] = (int) $scoreRow->score;
+                }
+            }
+
+            foreach ($participants as &$participant) {
+                ksort($participant['scores']);
+                $participant['total_pin'] = array_sum($participant['scores']);
+                $participant['average'] = count($participant['scores']) > 0
+                    ? $participant['total_pin'] / count($participant['scores'])
+                    : 0.0;
+            }
+            unset($participant);
+
+            usort($participants, fn (array $left, array $right): int => $right['total_pin'] <=> $left['total_pin']
+                ?: $left['first_id'] <=> $right['first_id']);
+
+            foreach ($participants as $index => &$participant) {
+                $participant['ranking'] = $index + 1;
+            }
+            unset($participant);
+
+            $sections[] = [
+                'stage' => (string) $stage,
+                'rows' => array_values($participants),
+            ];
+        }
+
+        return $sections;
+    }
+
+    /**
+     * @return array<int,array{code:string,label:string,players:array<int,array<string,mixed>>}>
+     */
+    private function buildSingleEliminationMatchSummary(Tournament $tournament): array
+    {
+        $scoreRows = DB::table('game_scores')
+            ->where('tournament_id', $tournament->id)
+            ->where('stage', 'トーナメント')
+            ->where('entry_number', 'like', 'SE:%')
+            ->orderBy('id')
+            ->get();
+
+        if ($scoreRows->isEmpty()) {
+            return [];
+        }
+
+        $matches = [];
+        foreach ($scoreRows as $scoreRow) {
+            $entryNumber = trim((string) ($scoreRow->entry_number ?? ''));
+            $matchCode = preg_replace('/:[AB]$/', '', $entryNumber) ?: $entryNumber;
+            $playerCode = preg_match('/:(A|B)$/', $entryNumber, $match) === 1
+                ? $match[1]
+                : $entryNumber;
+
+            $matches[$matchCode] ??= [
+                'code' => $matchCode,
+                'first_id' => (int) $scoreRow->id,
+                'players' => [],
+            ];
+            $matches[$matchCode]['players'][$playerCode] ??= [
+                'license' => $this->licenseLastDigits((string) ($scoreRow->license_number ?? '')),
+                'name' => trim((string) ($scoreRow->name ?? '')) ?: '-',
+                'scores' => [],
+            ];
+            $matches[$matchCode]['players'][$playerCode]['scores'][] = [
+                'game_number' => (int) ($scoreRow->game_number ?? 0),
+                'score' => (int) $scoreRow->score,
+            ];
+        }
+
+        uasort($matches, fn (array $left, array $right): int => $left['first_id'] <=> $right['first_id']);
+
+        $result = [];
+        foreach ($matches as $match) {
+            $players = [];
+            $winningTotal = null;
+            foreach ($match['players'] as $player) {
+                usort($player['scores'], fn (array $left, array $right): int => $left['game_number'] <=> $right['game_number']);
+                $player['scores'] = array_column($player['scores'], 'score');
+                $player['total_pin'] = array_sum($player['scores']);
+                $winningTotal = $winningTotal === null ? $player['total_pin'] : max($winningTotal, $player['total_pin']);
+                $players[] = $player;
+            }
+            foreach ($players as &$player) {
+                $player['is_winner'] = $player['total_pin'] === $winningTotal;
+            }
+            unset($player);
+
+            $result[] = [
+                'code' => $match['code'],
+                'label' => $this->singleEliminationMatchLabel($match['code']),
+                'players' => $players,
+            ];
+        }
+
+        return $result;
+    }
+
+    private function singleEliminationMatchLabel(string $matchCode): string
+    {
+        $code = preg_replace('/^SE:/', '', $matchCode) ?: $matchCode;
+        if ($code === 'FINAL') {
+            return '優勝決定戦';
+        }
+        if (preg_match('/^SF-M(\d+)$/', $code, $match) === 1) {
+            return '準決勝 第'.$match[1].'試合';
+        }
+        if (preg_match('/^QF-M(\d+)$/', $code, $match) === 1) {
+            return '準々決勝 第'.$match[1].'試合';
+        }
+        if (preg_match('/^R(\d+)-M(\d+)$/', $code, $match) === 1) {
+            return '第'.$match[1].'回戦 第'.$match[2].'試合';
+        }
+
+        return $code;
+    }
+
     private function loadPdfScoreSnapshots(Tournament $tournament): array
     {
         $hasCurrentPublication = Schema::hasTable('tournament_result_publications')
@@ -1573,6 +1773,19 @@ class TournamentResultController extends Controller
             ->map(fn ($rows) => $rows->first());
 
         $orderedCodes = ['round_robin_total', 'semifinal_total', 'prelim_total'];
+        if ($snapshotRows->isEmpty()) {
+            $finalSnapshot = DB::table('tournament_result_snapshots')
+                ->where('tournament_id', $tournament->id)
+                ->where($hasCurrentPublication ? 'is_published' : 'is_current', true)
+                ->where('result_code', 'final')
+                ->orderByDesc('id')
+                ->first();
+
+            if ($finalSnapshot !== null) {
+                $snapshotRows = collect(['final' => $finalSnapshot]);
+                $orderedCodes = ['final'];
+            }
+        }
         $snapshots = [];
 
         foreach ($orderedCodes as $code) {

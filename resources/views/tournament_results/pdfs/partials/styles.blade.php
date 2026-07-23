@@ -84,10 +84,36 @@
             line-height: 1.1;
         }
 
+        .official-title-table {
+            width: 100%;
+            margin: 4px 0 0 0;
+            border-collapse: collapse;
+            table-layout: fixed;
+        }
+
+        .official-title-table td {
+            border: none;
+            padding: 0;
+            text-align: center;
+            vertical-align: middle;
+        }
+
         .official-title-line-1 {
             font-size: 26px;
             letter-spacing: 1px;
-            margin-top: 4px;
+            line-height: 1.16;
+        }
+
+        .official-title-line-1.official-title-long {
+            font-size: 17px;
+            letter-spacing: 0;
+            line-height: 1.22;
+        }
+
+        .official-title-line-1.official-title-extra-long {
+            font-size: 15px;
+            letter-spacing: 0;
+            line-height: 1.22;
         }
 
         .official-title-line-2 {
@@ -452,6 +478,24 @@
             line-height: 1.05;
         }
 
+        .official-snapshot-title.official-title-long {
+            width: 96%;
+            margin-left: auto;
+            margin-right: auto;
+            font-size: 17px;
+            letter-spacing: 0;
+            line-height: 1.18;
+        }
+
+        .official-snapshot-title.official-title-extra-long {
+            width: 96%;
+            margin-left: auto;
+            margin-right: auto;
+            font-size: 15px;
+            letter-spacing: 0;
+            line-height: 1.18;
+        }
+
         .official-snapshot-main {
             margin: 0;
             text-align: center;
@@ -641,5 +685,77 @@
             display: block;
             margin: 0 auto;
         }
+
+        .official-match-summary-page,
+        .official-selection-score-page {
+            page-break-before: always;
+            page-break-after: auto;
+        }
+
+        .official-detail-page-title {
+            width: 96%;
+            margin: 8px auto 3px auto;
+            text-align: center;
+            font-size: 18px;
+            line-height: 1.18;
+            letter-spacing: 0;
+        }
+
+        .official-detail-page-title.official-title-long {
+            font-size: 16px;
+        }
+
+        .official-detail-page-title.official-title-extra-long {
+            font-size: 14px;
+        }
+
+        .official-detail-page-subtitle {
+            margin: 0 0 7px 0;
+            text-align: center;
+            font-size: 13px;
+            line-height: 1.15;
+            letter-spacing: 0;
+        }
+
+        .official-match-summary-table,
+        .official-selection-score-table {
+            width: 96%;
+            margin: 0 auto 7px auto;
+            border-collapse: collapse;
+            table-layout: fixed;
+            font-size: 8px;
+            line-height: 1.05;
+        }
+
+        .official-match-summary-table th,
+        .official-match-summary-table td,
+        .official-selection-score-table th,
+        .official-selection-score-table td {
+            border: 1px solid #111;
+            padding: 2px 2px;
+            text-align: center;
+            vertical-align: middle;
+        }
+
+        .official-match-summary-table th,
+        .official-selection-score-table th {
+            font-size: 7.5px;
+        }
+
+        .official-match-summary-table .match-col { width: 21%; }
+        .official-match-summary-table .license-col { width: 10%; }
+        .official-match-summary-table .name-col { width: 23%; }
+        .official-match-summary-table .games-col { width: 30%; }
+        .official-match-summary-table .total-col { width: 10%; }
+        .official-match-summary-table .winner-col { width: 6%; }
+        .official-match-summary-table .winner-row td { background: #fff7a8; }
+        .official-match-summary-table .match-start td { border-top-width: 2px; }
+
+        .official-selection-score-table .rank-col { width: 8%; }
+        .official-selection-score-table .license-col { width: 12%; }
+        .official-selection-score-table .name-col { width: 28%; }
+        .official-selection-score-table .game-col { width: 10%; }
+        .official-selection-score-table .total-col { width: 12%; }
+        .official-selection-score-table .avg-col { width: 10%; }
 
 </style>

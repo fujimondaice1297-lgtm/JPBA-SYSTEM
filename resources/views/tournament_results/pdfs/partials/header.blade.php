@@ -1,3 +1,7 @@
+@php
+    $resolvedOfficialTitleClass = (string) ($officialTitleClass ?? view()->shared('officialTitleClass', ''));
+@endphp
+
 <div class="official-top-title">
     <div class="official-logo-wrap">
         @if ($jpbaLogoSrc)
@@ -7,7 +11,11 @@
         @endif
     </div>
 
-    <div class="official-title-line-1 jpba-extra-heavy">{{ $officialMainTitle }}</div>
+    <table class="official-title-table">
+        <tr>
+            <td class="official-title-line-1 {{ $resolvedOfficialTitleClass }} jpba-extra-heavy">{{ $officialMainTitle }}</td>
+        </tr>
+    </table>
     @if (($isSeasonTrialPdf ?? false) && $officialSeriesTitle !== '')
         <div class="official-title-line-2 jpba-extra-heavy">{{ $officialSeriesTitle }}</div>
     @endif

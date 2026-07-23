@@ -367,6 +367,9 @@ class ScoreImportCsvStageService
             $proMatches = $lookups['pros_by_name'][$nameKey] ?? [];
         }
 
+        $participantMatches = $this->uniqueMatchesById($participantMatches);
+        $proMatches = $this->uniqueMatchesById($proMatches);
+
         $candidates = [];
         foreach ($participantMatches as $index => $participant) {
             $candidates[] = [
@@ -412,6 +415,19 @@ class ScoreImportCsvStageService
             'ambiguous' => $ambiguous,
             'candidates' => $candidates,
         ];
+    }
+
+    private function uniqueMatchesById(array $matches): array
+    {
+        $unique = [];
+
+        foreach ($matches as $match) {
+            $id = $match->id ?? null;
+            $key = $id === null ? 'object:' . spl_object_id($match) : 'id:' . $id;
+            $unique[$key] = $match;
+        }
+
+        return array_values($unique);
     }
 
     private function buildLookups(int $tournamentId): array

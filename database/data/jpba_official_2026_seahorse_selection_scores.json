@@ -1,0 +1,4856 @@
+{
+  "dataset": "jpba_official_2026_seahorse_selection_scores",
+  "source_checked_at": "2026-07-23",
+  "events": [
+    {
+      "key": "seahorse_2026_selection",
+      "tournament": {
+        "name": "大安興業プレゼンツシーホースカップ JPBAプレイヤーズトーナメント2026 選抜大会",
+        "start_date": "2026-06-18",
+        "end_date": "2026-06-18",
+        "year": 2026,
+        "gender": "M",
+        "venue_name": "伊勢原ボウリングセンター",
+        "competition_type": "qualifier",
+        "official_type": "official",
+        "counts_for_official_points": false,
+        "counts_for_average": true,
+        "counts_for_prize": false,
+        "title_scope": "none",
+        "title_category": "non_title",
+        "source_url": "https://www.jpba.or.jp/information/tournament/tournament2026/06_SeaHorse/Result/Selections_ABCD_3G.pdf"
+      },
+      "source": {
+        "filename": "seahorse__Selections_ABCD_3G.pdf",
+        "url": "https://www.jpba.or.jp/information/tournament/tournament2026/06_SeaHorse/Result/Selections_ABCD_3G.pdf",
+        "sha256": "bdb78ea0184ef4cb72f0d704e4afbee69e50f13af96e759ccba2a3752a3d56d0"
+      },
+      "stages": [
+        {
+          "stage": "選抜Aシフト",
+          "rows": [
+            {
+              "license_no": "M00001444",
+              "display_name": "内藤慎之介",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 279
+                },
+                {
+                  "game_number": 2,
+                  "score": 237
+                },
+                {
+                  "game_number": 3,
+                  "score": 205
+                }
+              ],
+              "stage_total_pin": 721
+            },
+            {
+              "license_no": "M00001431",
+              "display_name": "木村 晃",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 206
+                },
+                {
+                  "game_number": 2,
+                  "score": 265
+                },
+                {
+                  "game_number": 3,
+                  "score": 240
+                }
+              ],
+              "stage_total_pin": 711
+            },
+            {
+              "license_no": "M00001214",
+              "display_name": "福丸 哲平",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 240
+                },
+                {
+                  "game_number": 2,
+                  "score": 245
+                },
+                {
+                  "game_number": 3,
+                  "score": 221
+                }
+              ],
+              "stage_total_pin": 706
+            },
+            {
+              "license_no": "M00001477",
+              "display_name": "西山 翔悟",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 278
+                },
+                {
+                  "game_number": 2,
+                  "score": 195
+                },
+                {
+                  "game_number": 3,
+                  "score": 223
+                }
+              ],
+              "stage_total_pin": 696
+            },
+            {
+              "license_no": "M00001077",
+              "display_name": "堀江 真一",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 215
+                },
+                {
+                  "game_number": 2,
+                  "score": 247
+                },
+                {
+                  "game_number": 3,
+                  "score": 226
+                }
+              ],
+              "stage_total_pin": 688
+            },
+            {
+              "license_no": "M00001467",
+              "display_name": "菊田 樹",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 216
+                },
+                {
+                  "game_number": 2,
+                  "score": 213
+                },
+                {
+                  "game_number": 3,
+                  "score": 251
+                }
+              ],
+              "stage_total_pin": 680
+            },
+            {
+              "license_no": "M00001370",
+              "display_name": "新城 一也",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 226
+                },
+                {
+                  "game_number": 2,
+                  "score": 208
+                },
+                {
+                  "game_number": 3,
+                  "score": 245
+                }
+              ],
+              "stage_total_pin": 679
+            },
+            {
+              "license_no": "M00001384",
+              "display_name": "水野 耕佑",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 224
+                },
+                {
+                  "game_number": 2,
+                  "score": 196
+                },
+                {
+                  "game_number": 3,
+                  "score": 258
+                }
+              ],
+              "stage_total_pin": 678
+            },
+            {
+              "license_no": "M00001361",
+              "display_name": "堀ノ内智大",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 235
+                },
+                {
+                  "game_number": 2,
+                  "score": 236
+                },
+                {
+                  "game_number": 3,
+                  "score": 203
+                }
+              ],
+              "stage_total_pin": 674
+            },
+            {
+              "license_no": "M00001343",
+              "display_name": "平岡 勇人",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 233
+                },
+                {
+                  "game_number": 2,
+                  "score": 245
+                },
+                {
+                  "game_number": 3,
+                  "score": 194
+                }
+              ],
+              "stage_total_pin": 672
+            },
+            {
+              "license_no": "M00001354",
+              "display_name": "竹永 竜星",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 225
+                },
+                {
+                  "game_number": 2,
+                  "score": 222
+                },
+                {
+                  "game_number": 3,
+                  "score": 223
+                }
+              ],
+              "stage_total_pin": 670
+            },
+            {
+              "license_no": "M00001229",
+              "display_name": "上田 晋也",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 224
+                },
+                {
+                  "game_number": 2,
+                  "score": 209
+                },
+                {
+                  "game_number": 3,
+                  "score": 236
+                }
+              ],
+              "stage_total_pin": 669
+            },
+            {
+              "license_no": "M00001427",
+              "display_name": "田中 椋也",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 263
+                },
+                {
+                  "game_number": 2,
+                  "score": 196
+                },
+                {
+                  "game_number": 3,
+                  "score": 198
+                }
+              ],
+              "stage_total_pin": 657
+            },
+            {
+              "license_no": "M00001432",
+              "display_name": "羽ヶ﨑匠海",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 215
+                },
+                {
+                  "game_number": 2,
+                  "score": 199
+                },
+                {
+                  "game_number": 3,
+                  "score": 236
+                }
+              ],
+              "stage_total_pin": 650
+            },
+            {
+              "license_no": "M00001291",
+              "display_name": "渡邊 雄也",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 237
+                },
+                {
+                  "game_number": 2,
+                  "score": 166
+                },
+                {
+                  "game_number": 3,
+                  "score": 247
+                }
+              ],
+              "stage_total_pin": 650
+            },
+            {
+              "license_no": "M00001066",
+              "display_name": "加藤 祐哉",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 184
+                },
+                {
+                  "game_number": 2,
+                  "score": 227
+                },
+                {
+                  "game_number": 3,
+                  "score": 238
+                }
+              ],
+              "stage_total_pin": 649
+            },
+            {
+              "license_no": "M00001297",
+              "display_name": "藤川 大輔",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 196
+                },
+                {
+                  "game_number": 2,
+                  "score": 182
+                },
+                {
+                  "game_number": 3,
+                  "score": 269
+                }
+              ],
+              "stage_total_pin": 647
+            },
+            {
+              "license_no": "M00000885",
+              "display_name": "平山 陽一",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 205
+                },
+                {
+                  "game_number": 2,
+                  "score": 227
+                },
+                {
+                  "game_number": 3,
+                  "score": 213
+                }
+              ],
+              "stage_total_pin": 645
+            },
+            {
+              "license_no": "M00001153",
+              "display_name": "江村 学",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 182
+                },
+                {
+                  "game_number": 2,
+                  "score": 215
+                },
+                {
+                  "game_number": 3,
+                  "score": 247
+                }
+              ],
+              "stage_total_pin": 644
+            },
+            {
+              "license_no": "M00001406",
+              "display_name": "原田 裕史",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 212
+                },
+                {
+                  "game_number": 2,
+                  "score": 166
+                },
+                {
+                  "game_number": 3,
+                  "score": 265
+                }
+              ],
+              "stage_total_pin": 643
+            },
+            {
+              "license_no": "M00001451",
+              "display_name": "小野 在由",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 193
+                },
+                {
+                  "game_number": 2,
+                  "score": 246
+                },
+                {
+                  "game_number": 3,
+                  "score": 198
+                }
+              ],
+              "stage_total_pin": 637
+            },
+            {
+              "license_no": "M00001349",
+              "display_name": "入口 光司",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 170
+                },
+                {
+                  "game_number": 2,
+                  "score": 256
+                },
+                {
+                  "game_number": 3,
+                  "score": 211
+                }
+              ],
+              "stage_total_pin": 637
+            },
+            {
+              "license_no": "M00001461",
+              "display_name": "鶴見 亮剛",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 202
+                },
+                {
+                  "game_number": 2,
+                  "score": 217
+                },
+                {
+                  "game_number": 3,
+                  "score": 216
+                }
+              ],
+              "stage_total_pin": 635
+            },
+            {
+              "license_no": "M00001160",
+              "display_name": "遠藤 誠",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 214
+                },
+                {
+                  "game_number": 2,
+                  "score": 236
+                },
+                {
+                  "game_number": 3,
+                  "score": 181
+                }
+              ],
+              "stage_total_pin": 631
+            },
+            {
+              "license_no": "M00001455",
+              "display_name": "村上 裕一",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 200
+                },
+                {
+                  "game_number": 2,
+                  "score": 229
+                },
+                {
+                  "game_number": 3,
+                  "score": 199
+                }
+              ],
+              "stage_total_pin": 628
+            },
+            {
+              "license_no": "M00001032",
+              "display_name": "工藤 貴志",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 218
+                },
+                {
+                  "game_number": 2,
+                  "score": 208
+                },
+                {
+                  "game_number": 3,
+                  "score": 201
+                }
+              ],
+              "stage_total_pin": 627
+            },
+            {
+              "license_no": "M00001482",
+              "display_name": "井之上准己",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 192
+                },
+                {
+                  "game_number": 2,
+                  "score": 190
+                },
+                {
+                  "game_number": 3,
+                  "score": 242
+                }
+              ],
+              "stage_total_pin": 624
+            },
+            {
+              "license_no": "M00001292",
+              "display_name": "三浦 啓寛",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 202
+                },
+                {
+                  "game_number": 2,
+                  "score": 191
+                },
+                {
+                  "game_number": 3,
+                  "score": 227
+                }
+              ],
+              "stage_total_pin": 620
+            },
+            {
+              "license_no": "M00001456",
+              "display_name": "太田 貴久",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 210
+                },
+                {
+                  "game_number": 2,
+                  "score": 235
+                },
+                {
+                  "game_number": 3,
+                  "score": 175
+                }
+              ],
+              "stage_total_pin": 620
+            },
+            {
+              "license_no": "M00001376",
+              "display_name": "松田 力也",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 247
+                },
+                {
+                  "game_number": 2,
+                  "score": 177
+                },
+                {
+                  "game_number": 3,
+                  "score": 193
+                }
+              ],
+              "stage_total_pin": 617
+            },
+            {
+              "license_no": "M00001227",
+              "display_name": "鈴木 崇徳",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 259
+                },
+                {
+                  "game_number": 2,
+                  "score": 178
+                },
+                {
+                  "game_number": 3,
+                  "score": 180
+                }
+              ],
+              "stage_total_pin": 617
+            },
+            {
+              "license_no": "M00001350",
+              "display_name": "山中 悟",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 175
+                },
+                {
+                  "game_number": 2,
+                  "score": 225
+                },
+                {
+                  "game_number": 3,
+                  "score": 215
+                }
+              ],
+              "stage_total_pin": 615
+            },
+            {
+              "license_no": "M00001473",
+              "display_name": "米澤 佑哉",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 235
+                },
+                {
+                  "game_number": 2,
+                  "score": 179
+                },
+                {
+                  "game_number": 3,
+                  "score": 200
+                }
+              ],
+              "stage_total_pin": 614
+            },
+            {
+              "license_no": "M00001492",
+              "display_name": "横地 優輝",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 202
+                },
+                {
+                  "game_number": 2,
+                  "score": 179
+                },
+                {
+                  "game_number": 3,
+                  "score": 225
+                }
+              ],
+              "stage_total_pin": 606
+            },
+            {
+              "license_no": "M00001092",
+              "display_name": "正田 晃也",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 236
+                },
+                {
+                  "game_number": 2,
+                  "score": 169
+                },
+                {
+                  "game_number": 3,
+                  "score": 199
+                }
+              ],
+              "stage_total_pin": 604
+            },
+            {
+              "license_no": "M00001085",
+              "display_name": "山下 昌吾",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 211
+                },
+                {
+                  "game_number": 2,
+                  "score": 177
+                },
+                {
+                  "game_number": 3,
+                  "score": 215
+                }
+              ],
+              "stage_total_pin": 603
+            },
+            {
+              "license_no": "M00001362",
+              "display_name": "髙井裕滋郎",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 215
+                },
+                {
+                  "game_number": 2,
+                  "score": 184
+                },
+                {
+                  "game_number": 3,
+                  "score": 203
+                }
+              ],
+              "stage_total_pin": 602
+            },
+            {
+              "license_no": "M00000848",
+              "display_name": "吉田 文啓",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 169
+                },
+                {
+                  "game_number": 2,
+                  "score": 223
+                },
+                {
+                  "game_number": 3,
+                  "score": 209
+                }
+              ],
+              "stage_total_pin": 601
+            },
+            {
+              "license_no": "M00001494",
+              "display_name": "山﨑雄太郎",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 213
+                },
+                {
+                  "game_number": 2,
+                  "score": 191
+                },
+                {
+                  "game_number": 3,
+                  "score": 193
+                }
+              ],
+              "stage_total_pin": 597
+            },
+            {
+              "license_no": "M00001021",
+              "display_name": "大胡 一平",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 193
+                },
+                {
+                  "game_number": 2,
+                  "score": 198
+                },
+                {
+                  "game_number": 3,
+                  "score": 205
+                }
+              ],
+              "stage_total_pin": 596
+            },
+            {
+              "license_no": "M00001435",
+              "display_name": "徳久 恵大",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 215
+                },
+                {
+                  "game_number": 2,
+                  "score": 167
+                },
+                {
+                  "game_number": 3,
+                  "score": 213
+                }
+              ],
+              "stage_total_pin": 595
+            },
+            {
+              "license_no": "M00001469",
+              "display_name": "田野岡大夢",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 219
+                },
+                {
+                  "game_number": 2,
+                  "score": 218
+                },
+                {
+                  "game_number": 3,
+                  "score": 158
+                }
+              ],
+              "stage_total_pin": 595
+            },
+            {
+              "license_no": "M00001425",
+              "display_name": "伊吹 太陽",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 208
+                },
+                {
+                  "game_number": 2,
+                  "score": 150
+                },
+                {
+                  "game_number": 3,
+                  "score": 236
+                }
+              ],
+              "stage_total_pin": 594
+            },
+            {
+              "license_no": "M00001509",
+              "display_name": "上江洲琉心",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 140
+                },
+                {
+                  "game_number": 2,
+                  "score": 223
+                },
+                {
+                  "game_number": 3,
+                  "score": 229
+                }
+              ],
+              "stage_total_pin": 592
+            },
+            {
+              "license_no": "M00001368",
+              "display_name": "志摩竜太郎",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 223
+                },
+                {
+                  "game_number": 2,
+                  "score": 198
+                },
+                {
+                  "game_number": 3,
+                  "score": 165
+                }
+              ],
+              "stage_total_pin": 586
+            },
+            {
+              "license_no": "M00001394",
+              "display_name": "藤村 隆史",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 194
+                },
+                {
+                  "game_number": 2,
+                  "score": 209
+                },
+                {
+                  "game_number": 3,
+                  "score": 180
+                }
+              ],
+              "stage_total_pin": 583
+            },
+            {
+              "license_no": "M00000934",
+              "display_name": "西川 徹",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 213
+                },
+                {
+                  "game_number": 2,
+                  "score": 176
+                },
+                {
+                  "game_number": 3,
+                  "score": 194
+                }
+              ],
+              "stage_total_pin": 583
+            },
+            {
+              "license_no": "M00001448",
+              "display_name": "木村 謙太",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 169
+                },
+                {
+                  "game_number": 2,
+                  "score": 200
+                },
+                {
+                  "game_number": 3,
+                  "score": 213
+                }
+              ],
+              "stage_total_pin": 582
+            },
+            {
+              "license_no": "M00000761",
+              "display_name": "小原 照之",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 182
+                },
+                {
+                  "game_number": 2,
+                  "score": 193
+                },
+                {
+                  "game_number": 3,
+                  "score": 206
+                }
+              ],
+              "stage_total_pin": 581
+            },
+            {
+              "license_no": "M00001314",
+              "display_name": "児玉 侑樹",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 201
+                },
+                {
+                  "game_number": 2,
+                  "score": 141
+                },
+                {
+                  "game_number": 3,
+                  "score": 235
+                }
+              ],
+              "stage_total_pin": 577
+            },
+            {
+              "license_no": "M00001458",
+              "display_name": "増田 優希",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 177
+                },
+                {
+                  "game_number": 2,
+                  "score": 203
+                },
+                {
+                  "game_number": 3,
+                  "score": 196
+                }
+              ],
+              "stage_total_pin": 576
+            },
+            {
+              "license_no": "M00001472",
+              "display_name": "笹島新太郎",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 194
+                },
+                {
+                  "game_number": 2,
+                  "score": 213
+                },
+                {
+                  "game_number": 3,
+                  "score": 165
+                }
+              ],
+              "stage_total_pin": 572
+            },
+            {
+              "license_no": "M00000843",
+              "display_name": "辻 賢司",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 166
+                },
+                {
+                  "game_number": 2,
+                  "score": 205
+                },
+                {
+                  "game_number": 3,
+                  "score": 190
+                }
+              ],
+              "stage_total_pin": 561
+            },
+            {
+              "license_no": "M00001430",
+              "display_name": "田中 義一",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 178
+                },
+                {
+                  "game_number": 2,
+                  "score": 181
+                },
+                {
+                  "game_number": 3,
+                  "score": 201
+                }
+              ],
+              "stage_total_pin": 560
+            },
+            {
+              "license_no": "M00001121",
+              "display_name": "鈴木 勇太",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 172
+                },
+                {
+                  "game_number": 2,
+                  "score": 185
+                },
+                {
+                  "game_number": 3,
+                  "score": 199
+                }
+              ],
+              "stage_total_pin": 556
+            },
+            {
+              "license_no": "M00000979",
+              "display_name": "須田 毅",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 148
+                },
+                {
+                  "game_number": 2,
+                  "score": 228
+                },
+                {
+                  "game_number": 3,
+                  "score": 179
+                }
+              ],
+              "stage_total_pin": 555
+            },
+            {
+              "license_no": "M00001475",
+              "display_name": "積田 蒼生",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 173
+                },
+                {
+                  "game_number": 2,
+                  "score": 213
+                },
+                {
+                  "game_number": 3,
+                  "score": 168
+                }
+              ],
+              "stage_total_pin": 554
+            },
+            {
+              "license_no": "M00001470",
+              "display_name": "安谷屋綱大",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 173
+                },
+                {
+                  "game_number": 2,
+                  "score": 197
+                },
+                {
+                  "game_number": 3,
+                  "score": 179
+                }
+              ],
+              "stage_total_pin": 549
+            },
+            {
+              "license_no": "M00001267",
+              "display_name": "森本 健太",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 171
+                },
+                {
+                  "game_number": 2,
+                  "score": 181
+                },
+                {
+                  "game_number": 3,
+                  "score": 192
+                }
+              ],
+              "stage_total_pin": 544
+            },
+            {
+              "license_no": "M00001182",
+              "display_name": "門奈 大介",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 168
+                },
+                {
+                  "game_number": 2,
+                  "score": 158
+                },
+                {
+                  "game_number": 3,
+                  "score": 214
+                }
+              ],
+              "stage_total_pin": 540
+            }
+          ]
+        },
+        {
+          "stage": "選抜Bシフト",
+          "rows": [
+            {
+              "license_no": "M00001267",
+              "display_name": "森本 健太",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 256
+                },
+                {
+                  "game_number": 2,
+                  "score": 258
+                },
+                {
+                  "game_number": 3,
+                  "score": 269
+                }
+              ],
+              "stage_total_pin": 783
+            },
+            {
+              "license_no": "M00001153",
+              "display_name": "江村 学",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 279
+                },
+                {
+                  "game_number": 2,
+                  "score": 269
+                },
+                {
+                  "game_number": 3,
+                  "score": 235
+                }
+              ],
+              "stage_total_pin": 783
+            },
+            {
+              "license_no": "M00001292",
+              "display_name": "三浦 啓寛",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 246
+                },
+                {
+                  "game_number": 2,
+                  "score": 235
+                },
+                {
+                  "game_number": 3,
+                  "score": 267
+                }
+              ],
+              "stage_total_pin": 748
+            },
+            {
+              "license_no": "M00001435",
+              "display_name": "徳久 恵大",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 257
+                },
+                {
+                  "game_number": 2,
+                  "score": 213
+                },
+                {
+                  "game_number": 3,
+                  "score": 268
+                }
+              ],
+              "stage_total_pin": 738
+            },
+            {
+              "license_no": "M00001354",
+              "display_name": "竹永 竜星",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 269
+                },
+                {
+                  "game_number": 2,
+                  "score": 239
+                },
+                {
+                  "game_number": 3,
+                  "score": 228
+                }
+              ],
+              "stage_total_pin": 736
+            },
+            {
+              "license_no": "M00001461",
+              "display_name": "鶴見 亮剛",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 246
+                },
+                {
+                  "game_number": 2,
+                  "score": 245
+                },
+                {
+                  "game_number": 3,
+                  "score": 238
+                }
+              ],
+              "stage_total_pin": 729
+            },
+            {
+              "license_no": "M00001066",
+              "display_name": "加藤 祐哉",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 299
+                },
+                {
+                  "game_number": 2,
+                  "score": 227
+                },
+                {
+                  "game_number": 3,
+                  "score": 195
+                }
+              ],
+              "stage_total_pin": 721
+            },
+            {
+              "license_no": "M00001314",
+              "display_name": "児玉 侑樹",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 212
+                },
+                {
+                  "game_number": 2,
+                  "score": 243
+                },
+                {
+                  "game_number": 3,
+                  "score": 258
+                }
+              ],
+              "stage_total_pin": 713
+            },
+            {
+              "license_no": "M00001085",
+              "display_name": "山下 昌吾",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 245
+                },
+                {
+                  "game_number": 2,
+                  "score": 237
+                },
+                {
+                  "game_number": 3,
+                  "score": 227
+                }
+              ],
+              "stage_total_pin": 709
+            },
+            {
+              "license_no": "M00001487",
+              "display_name": "御手洗彰彦",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 236
+                },
+                {
+                  "game_number": 2,
+                  "score": 220
+                },
+                {
+                  "game_number": 3,
+                  "score": 231
+                }
+              ],
+              "stage_total_pin": 687
+            },
+            {
+              "license_no": "M00000761",
+              "display_name": "小原 照之",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 223
+                },
+                {
+                  "game_number": 2,
+                  "score": 246
+                },
+                {
+                  "game_number": 3,
+                  "score": 218
+                }
+              ],
+              "stage_total_pin": 687
+            },
+            {
+              "license_no": "M00001361",
+              "display_name": "堀ノ内智大",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 216
+                },
+                {
+                  "game_number": 2,
+                  "score": 242
+                },
+                {
+                  "game_number": 3,
+                  "score": 226
+                }
+              ],
+              "stage_total_pin": 684
+            },
+            {
+              "license_no": "M00001456",
+              "display_name": "太田 貴久",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 226
+                },
+                {
+                  "game_number": 2,
+                  "score": 207
+                },
+                {
+                  "game_number": 3,
+                  "score": 242
+                }
+              ],
+              "stage_total_pin": 675
+            },
+            {
+              "license_no": "M00001451",
+              "display_name": "小野 在由",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 225
+                },
+                {
+                  "game_number": 2,
+                  "score": 230
+                },
+                {
+                  "game_number": 3,
+                  "score": 211
+                }
+              ],
+              "stage_total_pin": 666
+            },
+            {
+              "license_no": "M00001372",
+              "display_name": "戸辺 誠",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 212
+                },
+                {
+                  "game_number": 2,
+                  "score": 236
+                },
+                {
+                  "game_number": 3,
+                  "score": 215
+                }
+              ],
+              "stage_total_pin": 663
+            },
+            {
+              "license_no": "M00001343",
+              "display_name": "平岡 勇人",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 256
+                },
+                {
+                  "game_number": 2,
+                  "score": 203
+                },
+                {
+                  "game_number": 3,
+                  "score": 202
+                }
+              ],
+              "stage_total_pin": 661
+            },
+            {
+              "license_no": "M00001467",
+              "display_name": "菊田 樹",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 202
+                },
+                {
+                  "game_number": 2,
+                  "score": 267
+                },
+                {
+                  "game_number": 3,
+                  "score": 192
+                }
+              ],
+              "stage_total_pin": 661
+            },
+            {
+              "license_no": "M00001227",
+              "display_name": "鈴木 崇徳",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 208
+                },
+                {
+                  "game_number": 2,
+                  "score": 164
+                },
+                {
+                  "game_number": 3,
+                  "score": 274
+                }
+              ],
+              "stage_total_pin": 646
+            },
+            {
+              "license_no": "M00001350",
+              "display_name": "山中 悟",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 204
+                },
+                {
+                  "game_number": 2,
+                  "score": 216
+                },
+                {
+                  "game_number": 3,
+                  "score": 221
+                }
+              ],
+              "stage_total_pin": 641
+            },
+            {
+              "license_no": "M00001475",
+              "display_name": "積田 蒼生",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 223
+                },
+                {
+                  "game_number": 2,
+                  "score": 216
+                },
+                {
+                  "game_number": 3,
+                  "score": 201
+                }
+              ],
+              "stage_total_pin": 640
+            },
+            {
+              "license_no": "M00001297",
+              "display_name": "藤川 大輔",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 235
+                },
+                {
+                  "game_number": 2,
+                  "score": 191
+                },
+                {
+                  "game_number": 3,
+                  "score": 209
+                }
+              ],
+              "stage_total_pin": 635
+            },
+            {
+              "license_no": "M00001349",
+              "display_name": "入口 光司",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 243
+                },
+                {
+                  "game_number": 2,
+                  "score": 195
+                },
+                {
+                  "game_number": 3,
+                  "score": 195
+                }
+              ],
+              "stage_total_pin": 633
+            },
+            {
+              "license_no": "M00001458",
+              "display_name": "増田 優希",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 190
+                },
+                {
+                  "game_number": 2,
+                  "score": 214
+                },
+                {
+                  "game_number": 3,
+                  "score": 228
+                }
+              ],
+              "stage_total_pin": 632
+            },
+            {
+              "license_no": "M00001425",
+              "display_name": "伊吹 太陽",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 208
+                },
+                {
+                  "game_number": 2,
+                  "score": 202
+                },
+                {
+                  "game_number": 3,
+                  "score": 217
+                }
+              ],
+              "stage_total_pin": 627
+            },
+            {
+              "license_no": "M00001509",
+              "display_name": "上江洲琉心",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 225
+                },
+                {
+                  "game_number": 2,
+                  "score": 168
+                },
+                {
+                  "game_number": 3,
+                  "score": 234
+                }
+              ],
+              "stage_total_pin": 627
+            },
+            {
+              "license_no": "M00001368",
+              "display_name": "志摩竜太郎",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 267
+                },
+                {
+                  "game_number": 2,
+                  "score": 187
+                },
+                {
+                  "game_number": 3,
+                  "score": 173
+                }
+              ],
+              "stage_total_pin": 627
+            },
+            {
+              "license_no": "M00001483",
+              "display_name": "山中 麗",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 211
+                },
+                {
+                  "game_number": 2,
+                  "score": 257
+                },
+                {
+                  "game_number": 3,
+                  "score": 158
+                }
+              ],
+              "stage_total_pin": 626
+            },
+            {
+              "license_no": "M00000885",
+              "display_name": "平山 陽一",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 214
+                },
+                {
+                  "game_number": 2,
+                  "score": 192
+                },
+                {
+                  "game_number": 3,
+                  "score": 219
+                }
+              ],
+              "stage_total_pin": 625
+            },
+            {
+              "license_no": "M00001494",
+              "display_name": "山﨑雄太郎",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 199
+                },
+                {
+                  "game_number": 2,
+                  "score": 226
+                },
+                {
+                  "game_number": 3,
+                  "score": 198
+                }
+              ],
+              "stage_total_pin": 623
+            },
+            {
+              "license_no": "M00001427",
+              "display_name": "田中 椋也",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 203
+                },
+                {
+                  "game_number": 2,
+                  "score": 191
+                },
+                {
+                  "game_number": 3,
+                  "score": 227
+                }
+              ],
+              "stage_total_pin": 621
+            },
+            {
+              "license_no": "M00001455",
+              "display_name": "村上 裕一",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 224
+                },
+                {
+                  "game_number": 2,
+                  "score": 202
+                },
+                {
+                  "game_number": 3,
+                  "score": 193
+                }
+              ],
+              "stage_total_pin": 619
+            },
+            {
+              "license_no": "M00001432",
+              "display_name": "羽ヶ﨑匠海",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 189
+                },
+                {
+                  "game_number": 2,
+                  "score": 236
+                },
+                {
+                  "game_number": 3,
+                  "score": 193
+                }
+              ],
+              "stage_total_pin": 618
+            },
+            {
+              "license_no": "M00001470",
+              "display_name": "安谷屋綱大",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 225
+                },
+                {
+                  "game_number": 2,
+                  "score": 193
+                },
+                {
+                  "game_number": 3,
+                  "score": 199
+                }
+              ],
+              "stage_total_pin": 617
+            },
+            {
+              "license_no": "M00001384",
+              "display_name": "水野 耕佑",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 201
+                },
+                {
+                  "game_number": 2,
+                  "score": 190
+                },
+                {
+                  "game_number": 3,
+                  "score": 224
+                }
+              ],
+              "stage_total_pin": 615
+            },
+            {
+              "license_no": "M00001473",
+              "display_name": "米澤 佑哉",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 206
+                },
+                {
+                  "game_number": 2,
+                  "score": 204
+                },
+                {
+                  "game_number": 3,
+                  "score": 203
+                }
+              ],
+              "stage_total_pin": 613
+            },
+            {
+              "license_no": "M00001482",
+              "display_name": "井之上准己",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 195
+                },
+                {
+                  "game_number": 2,
+                  "score": 214
+                },
+                {
+                  "game_number": 3,
+                  "score": 204
+                }
+              ],
+              "stage_total_pin": 613
+            },
+            {
+              "license_no": "M00001032",
+              "display_name": "工藤 貴志",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 196
+                },
+                {
+                  "game_number": 2,
+                  "score": 212
+                },
+                {
+                  "game_number": 3,
+                  "score": 204
+                }
+              ],
+              "stage_total_pin": 612
+            },
+            {
+              "license_no": "M00001406",
+              "display_name": "原田 裕史",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 217
+                },
+                {
+                  "game_number": 2,
+                  "score": 215
+                },
+                {
+                  "game_number": 3,
+                  "score": 180
+                }
+              ],
+              "stage_total_pin": 612
+            },
+            {
+              "license_no": "M00001182",
+              "display_name": "門奈 大介",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 238
+                },
+                {
+                  "game_number": 2,
+                  "score": 173
+                },
+                {
+                  "game_number": 3,
+                  "score": 201
+                }
+              ],
+              "stage_total_pin": 612
+            },
+            {
+              "license_no": "M00000979",
+              "display_name": "須田 毅",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 206
+                },
+                {
+                  "game_number": 2,
+                  "score": 202
+                },
+                {
+                  "game_number": 3,
+                  "score": 202
+                }
+              ],
+              "stage_total_pin": 610
+            },
+            {
+              "license_no": "M00001448",
+              "display_name": "木村 謙太",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 215
+                },
+                {
+                  "game_number": 2,
+                  "score": 207
+                },
+                {
+                  "game_number": 3,
+                  "score": 181
+                }
+              ],
+              "stage_total_pin": 603
+            },
+            {
+              "license_no": "M00001092",
+              "display_name": "正田 晃也",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 167
+                },
+                {
+                  "game_number": 2,
+                  "score": 258
+                },
+                {
+                  "game_number": 3,
+                  "score": 178
+                }
+              ],
+              "stage_total_pin": 603
+            },
+            {
+              "license_no": "M00001376",
+              "display_name": "松田 力也",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 179
+                },
+                {
+                  "game_number": 2,
+                  "score": 187
+                },
+                {
+                  "game_number": 3,
+                  "score": 231
+                }
+              ],
+              "stage_total_pin": 597
+            },
+            {
+              "license_no": "M00000843",
+              "display_name": "辻 賢司",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 193
+                },
+                {
+                  "game_number": 2,
+                  "score": 178
+                },
+                {
+                  "game_number": 3,
+                  "score": 225
+                }
+              ],
+              "stage_total_pin": 596
+            },
+            {
+              "license_no": "M00001428",
+              "display_name": "鮫島 蓮",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 169
+                },
+                {
+                  "game_number": 2,
+                  "score": 228
+                },
+                {
+                  "game_number": 3,
+                  "score": 192
+                }
+              ],
+              "stage_total_pin": 589
+            },
+            {
+              "license_no": "M00001469",
+              "display_name": "田野岡大夢",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 203
+                },
+                {
+                  "game_number": 2,
+                  "score": 167
+                },
+                {
+                  "game_number": 3,
+                  "score": 216
+                }
+              ],
+              "stage_total_pin": 586
+            },
+            {
+              "license_no": "M00001229",
+              "display_name": "上田 晋也",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 203
+                },
+                {
+                  "game_number": 2,
+                  "score": 213
+                },
+                {
+                  "game_number": 3,
+                  "score": 169
+                }
+              ],
+              "stage_total_pin": 585
+            },
+            {
+              "license_no": "M00001394",
+              "display_name": "藤村 隆史",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 191
+                },
+                {
+                  "game_number": 2,
+                  "score": 166
+                },
+                {
+                  "game_number": 3,
+                  "score": 221
+                }
+              ],
+              "stage_total_pin": 578
+            },
+            {
+              "license_no": "M00001492",
+              "display_name": "横地 優輝",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 220
+                },
+                {
+                  "game_number": 2,
+                  "score": 164
+                },
+                {
+                  "game_number": 3,
+                  "score": 194
+                }
+              ],
+              "stage_total_pin": 578
+            },
+            {
+              "license_no": "M00001121",
+              "display_name": "鈴木 勇太",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 198
+                },
+                {
+                  "game_number": 2,
+                  "score": 222
+                },
+                {
+                  "game_number": 3,
+                  "score": 156
+                }
+              ],
+              "stage_total_pin": 576
+            },
+            {
+              "license_no": "M00001430",
+              "display_name": "田中 義一",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 208
+                },
+                {
+                  "game_number": 2,
+                  "score": 188
+                },
+                {
+                  "game_number": 3,
+                  "score": 174
+                }
+              ],
+              "stage_total_pin": 570
+            },
+            {
+              "license_no": "M00001362",
+              "display_name": "髙井裕滋郎",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 209
+                },
+                {
+                  "game_number": 2,
+                  "score": 192
+                },
+                {
+                  "game_number": 3,
+                  "score": 160
+                }
+              ],
+              "stage_total_pin": 561
+            },
+            {
+              "license_no": "M00000848",
+              "display_name": "吉田 文啓",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 194
+                },
+                {
+                  "game_number": 2,
+                  "score": 186
+                },
+                {
+                  "game_number": 3,
+                  "score": 176
+                }
+              ],
+              "stage_total_pin": 556
+            },
+            {
+              "license_no": "M00001441",
+              "display_name": "金子 猛",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 188
+                },
+                {
+                  "game_number": 2,
+                  "score": 197
+                },
+                {
+                  "game_number": 3,
+                  "score": 164
+                }
+              ],
+              "stage_total_pin": 549
+            },
+            {
+              "license_no": "M00001291",
+              "display_name": "渡邊 雄也",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 203
+                },
+                {
+                  "game_number": 2,
+                  "score": 174
+                },
+                {
+                  "game_number": 3,
+                  "score": 171
+                }
+              ],
+              "stage_total_pin": 548
+            },
+            {
+              "license_no": "M00001021",
+              "display_name": "大胡 一平",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 200
+                },
+                {
+                  "game_number": 2,
+                  "score": 156
+                },
+                {
+                  "game_number": 3,
+                  "score": 192
+                }
+              ],
+              "stage_total_pin": 548
+            },
+            {
+              "license_no": "M00001472",
+              "display_name": "笹島新太郎",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 153
+                },
+                {
+                  "game_number": 2,
+                  "score": 202
+                },
+                {
+                  "game_number": 3,
+                  "score": 189
+                }
+              ],
+              "stage_total_pin": 544
+            },
+            {
+              "license_no": "M00001370",
+              "display_name": "新城 一也",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 168
+                },
+                {
+                  "game_number": 2,
+                  "score": 193
+                },
+                {
+                  "game_number": 3,
+                  "score": 181
+                }
+              ],
+              "stage_total_pin": 542
+            },
+            {
+              "license_no": "M00000934",
+              "display_name": "西川 徹",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 163
+                },
+                {
+                  "game_number": 2,
+                  "score": 201
+                },
+                {
+                  "game_number": 3,
+                  "score": 144
+                }
+              ],
+              "stage_total_pin": 508
+            },
+            {
+              "license_no": "M00001160",
+              "display_name": "遠藤 誠",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 193
+                },
+                {
+                  "game_number": 2,
+                  "score": 158
+                },
+                {
+                  "game_number": 3,
+                  "score": 155
+                }
+              ],
+              "stage_total_pin": 506
+            }
+          ]
+        },
+        {
+          "stage": "選抜Cシフト",
+          "rows": [
+            {
+              "license_no": "M00001465",
+              "display_name": "田村 翼",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 248
+                },
+                {
+                  "game_number": 2,
+                  "score": 248
+                },
+                {
+                  "game_number": 3,
+                  "score": 254
+                }
+              ],
+              "stage_total_pin": 750
+            },
+            {
+              "license_no": "M00001456",
+              "display_name": "太田 貴久",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 257
+                },
+                {
+                  "game_number": 2,
+                  "score": 217
+                },
+                {
+                  "game_number": 3,
+                  "score": 255
+                }
+              ],
+              "stage_total_pin": 729
+            },
+            {
+              "license_no": "M00001458",
+              "display_name": "増田 優希",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 247
+                },
+                {
+                  "game_number": 2,
+                  "score": 258
+                },
+                {
+                  "game_number": 3,
+                  "score": 211
+                }
+              ],
+              "stage_total_pin": 716
+            },
+            {
+              "license_no": "M00001463",
+              "display_name": "藤 博文",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 297
+                },
+                {
+                  "game_number": 2,
+                  "score": 173
+                },
+                {
+                  "game_number": 3,
+                  "score": 244
+                }
+              ],
+              "stage_total_pin": 714
+            },
+            {
+              "license_no": "M00001384",
+              "display_name": "水野 耕佑",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 215
+                },
+                {
+                  "game_number": 2,
+                  "score": 225
+                },
+                {
+                  "game_number": 3,
+                  "score": 258
+                }
+              ],
+              "stage_total_pin": 698
+            },
+            {
+              "license_no": "M00001500",
+              "display_name": "畑 秀明",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 248
+                },
+                {
+                  "game_number": 2,
+                  "score": 256
+                },
+                {
+                  "game_number": 3,
+                  "score": 192
+                }
+              ],
+              "stage_total_pin": 696
+            },
+            {
+              "license_no": "M00001432",
+              "display_name": "羽ヶ﨑匠海",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 245
+                },
+                {
+                  "game_number": 2,
+                  "score": 234
+                },
+                {
+                  "game_number": 3,
+                  "score": 215
+                }
+              ],
+              "stage_total_pin": 694
+            },
+            {
+              "license_no": "M00001343",
+              "display_name": "平岡 勇人",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 279
+                },
+                {
+                  "game_number": 2,
+                  "score": 218
+                },
+                {
+                  "game_number": 3,
+                  "score": 194
+                }
+              ],
+              "stage_total_pin": 691
+            },
+            {
+              "license_no": "M00001427",
+              "display_name": "田中 椋也",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 226
+                },
+                {
+                  "game_number": 2,
+                  "score": 242
+                },
+                {
+                  "game_number": 3,
+                  "score": 219
+                }
+              ],
+              "stage_total_pin": 687
+            },
+            {
+              "license_no": "M00001370",
+              "display_name": "新城 一也",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 247
+                },
+                {
+                  "game_number": 2,
+                  "score": 247
+                },
+                {
+                  "game_number": 3,
+                  "score": 188
+                }
+              ],
+              "stage_total_pin": 682
+            },
+            {
+              "license_no": "M00001468",
+              "display_name": "佐藤 亜優",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 247
+                },
+                {
+                  "game_number": 2,
+                  "score": 220
+                },
+                {
+                  "game_number": 3,
+                  "score": 207
+                }
+              ],
+              "stage_total_pin": 674
+            },
+            {
+              "license_no": "M00001441",
+              "display_name": "金子 猛",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 185
+                },
+                {
+                  "game_number": 2,
+                  "score": 252
+                },
+                {
+                  "game_number": 3,
+                  "score": 236
+                }
+              ],
+              "stage_total_pin": 673
+            },
+            {
+              "license_no": "M00001349",
+              "display_name": "入口 光司",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 213
+                },
+                {
+                  "game_number": 2,
+                  "score": 248
+                },
+                {
+                  "game_number": 3,
+                  "score": 203
+                }
+              ],
+              "stage_total_pin": 664
+            },
+            {
+              "license_no": "M00001390",
+              "display_name": "吉野 浩章",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 236
+                },
+                {
+                  "game_number": 2,
+                  "score": 236
+                },
+                {
+                  "game_number": 3,
+                  "score": 188
+                }
+              ],
+              "stage_total_pin": 660
+            },
+            {
+              "license_no": "M00001389",
+              "display_name": "川口 健太",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 212
+                },
+                {
+                  "game_number": 2,
+                  "score": 207
+                },
+                {
+                  "game_number": 3,
+                  "score": 234
+                }
+              ],
+              "stage_total_pin": 653
+            },
+            {
+              "license_no": "M00001451",
+              "display_name": "小野 在由",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 247
+                },
+                {
+                  "game_number": 2,
+                  "score": 184
+                },
+                {
+                  "game_number": 3,
+                  "score": 213
+                }
+              ],
+              "stage_total_pin": 644
+            },
+            {
+              "license_no": "M00001501",
+              "display_name": "菅野 直人",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 225
+                },
+                {
+                  "game_number": 2,
+                  "score": 196
+                },
+                {
+                  "game_number": 3,
+                  "score": 219
+                }
+              ],
+              "stage_total_pin": 640
+            },
+            {
+              "license_no": "M00001291",
+              "display_name": "渡邊 雄也",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 183
+                },
+                {
+                  "game_number": 2,
+                  "score": 202
+                },
+                {
+                  "game_number": 3,
+                  "score": 255
+                }
+              ],
+              "stage_total_pin": 640
+            },
+            {
+              "license_no": "M00001394",
+              "display_name": "藤村 隆史",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 236
+                },
+                {
+                  "game_number": 2,
+                  "score": 201
+                },
+                {
+                  "game_number": 3,
+                  "score": 198
+                }
+              ],
+              "stage_total_pin": 635
+            },
+            {
+              "license_no": "M00001487",
+              "display_name": "御手洗彰彦",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 202
+                },
+                {
+                  "game_number": 2,
+                  "score": 253
+                },
+                {
+                  "game_number": 3,
+                  "score": 178
+                }
+              ],
+              "stage_total_pin": 633
+            },
+            {
+              "license_no": "M00001372",
+              "display_name": "戸辺 誠",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 220
+                },
+                {
+                  "game_number": 2,
+                  "score": 172
+                },
+                {
+                  "game_number": 3,
+                  "score": 238
+                }
+              ],
+              "stage_total_pin": 630
+            },
+            {
+              "license_no": "M00001408",
+              "display_name": "髙安 真司",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 187
+                },
+                {
+                  "game_number": 2,
+                  "score": 221
+                },
+                {
+                  "game_number": 3,
+                  "score": 220
+                }
+              ],
+              "stage_total_pin": 628
+            },
+            {
+              "license_no": "M00001448",
+              "display_name": "木村 謙太",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 226
+                },
+                {
+                  "game_number": 2,
+                  "score": 161
+                },
+                {
+                  "game_number": 3,
+                  "score": 236
+                }
+              ],
+              "stage_total_pin": 623
+            },
+            {
+              "license_no": "M00001032",
+              "display_name": "工藤 貴志",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 177
+                },
+                {
+                  "game_number": 2,
+                  "score": 213
+                },
+                {
+                  "game_number": 3,
+                  "score": 227
+                }
+              ],
+              "stage_total_pin": 617
+            },
+            {
+              "license_no": "M00001428",
+              "display_name": "鮫島 蓮",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 178
+                },
+                {
+                  "game_number": 2,
+                  "score": 227
+                },
+                {
+                  "game_number": 3,
+                  "score": 208
+                }
+              ],
+              "stage_total_pin": 613
+            },
+            {
+              "license_no": "M00001101",
+              "display_name": "村上 拓也",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 166
+                },
+                {
+                  "game_number": 2,
+                  "score": 213
+                },
+                {
+                  "game_number": 3,
+                  "score": 234
+                }
+              ],
+              "stage_total_pin": 613
+            },
+            {
+              "license_no": "M00001483",
+              "display_name": "山中 麗",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 206
+                },
+                {
+                  "game_number": 2,
+                  "score": 173
+                },
+                {
+                  "game_number": 3,
+                  "score": 223
+                }
+              ],
+              "stage_total_pin": 602
+            },
+            {
+              "license_no": "M00001386",
+              "display_name": "加藤翔太郎",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 183
+                },
+                {
+                  "game_number": 2,
+                  "score": 235
+                },
+                {
+                  "game_number": 3,
+                  "score": 183
+                }
+              ],
+              "stage_total_pin": 601
+            },
+            {
+              "license_no": "M00000885",
+              "display_name": "平山 陽一",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 186
+                },
+                {
+                  "game_number": 2,
+                  "score": 236
+                },
+                {
+                  "game_number": 3,
+                  "score": 179
+                }
+              ],
+              "stage_total_pin": 601
+            },
+            {
+              "license_no": "M00001212",
+              "display_name": "市村 和則",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 172
+                },
+                {
+                  "game_number": 2,
+                  "score": 186
+                },
+                {
+                  "game_number": 3,
+                  "score": 236
+                }
+              ],
+              "stage_total_pin": 594
+            },
+            {
+              "license_no": "M00001507",
+              "display_name": "須田 光翼",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 207
+                },
+                {
+                  "game_number": 2,
+                  "score": 200
+                },
+                {
+                  "game_number": 3,
+                  "score": 182
+                }
+              ],
+              "stage_total_pin": 589
+            },
+            {
+              "license_no": "M00001160",
+              "display_name": "遠藤 誠",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 249
+                },
+                {
+                  "game_number": 2,
+                  "score": 170
+                },
+                {
+                  "game_number": 3,
+                  "score": 170
+                }
+              ],
+              "stage_total_pin": 589
+            },
+            {
+              "license_no": "M00001225",
+              "display_name": "小森 清人",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 172
+                },
+                {
+                  "game_number": 2,
+                  "score": 188
+                },
+                {
+                  "game_number": 3,
+                  "score": 227
+                }
+              ],
+              "stage_total_pin": 587
+            },
+            {
+              "license_no": "M00001430",
+              "display_name": "田中 義一",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 190
+                },
+                {
+                  "game_number": 2,
+                  "score": 231
+                },
+                {
+                  "game_number": 3,
+                  "score": 165
+                }
+              ],
+              "stage_total_pin": 586
+            },
+            {
+              "license_no": "M00001352",
+              "display_name": "ﾌﾞﾗｲｱﾝ･ｸﾞﾘｰﾝｳｯﾄﾞ",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 149
+                },
+                {
+                  "game_number": 2,
+                  "score": 225
+                },
+                {
+                  "game_number": 3,
+                  "score": 211
+                }
+              ],
+              "stage_total_pin": 585
+            },
+            {
+              "license_no": "M00001312",
+              "display_name": "太田 誠",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 192
+                },
+                {
+                  "game_number": 2,
+                  "score": 169
+                },
+                {
+                  "game_number": 3,
+                  "score": 223
+                }
+              ],
+              "stage_total_pin": 584
+            },
+            {
+              "license_no": "M00001150",
+              "display_name": "落合 進治",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 213
+                },
+                {
+                  "game_number": 2,
+                  "score": 191
+                },
+                {
+                  "game_number": 3,
+                  "score": 174
+                }
+              ],
+              "stage_total_pin": 578
+            },
+            {
+              "license_no": "M00001392",
+              "display_name": "松浦 和彦",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 214
+                },
+                {
+                  "game_number": 2,
+                  "score": 172
+                },
+                {
+                  "game_number": 3,
+                  "score": 191
+                }
+              ],
+              "stage_total_pin": 577
+            },
+            {
+              "license_no": "M00001099",
+              "display_name": "津島 健次",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 184
+                },
+                {
+                  "game_number": 2,
+                  "score": 221
+                },
+                {
+                  "game_number": 3,
+                  "score": 171
+                }
+              ],
+              "stage_total_pin": 576
+            },
+            {
+              "license_no": "M00000478",
+              "display_name": "蒲生 敬",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 139
+                },
+                {
+                  "game_number": 2,
+                  "score": 213
+                },
+                {
+                  "game_number": 3,
+                  "score": 224
+                }
+              ],
+              "stage_total_pin": 576
+            },
+            {
+              "license_no": "M00001496",
+              "display_name": "濵名 晃司",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 182
+                },
+                {
+                  "game_number": 2,
+                  "score": 201
+                },
+                {
+                  "game_number": 3,
+                  "score": 192
+                }
+              ],
+              "stage_total_pin": 575
+            },
+            {
+              "license_no": "M00001296",
+              "display_name": "荒井慎太朗",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 159
+                },
+                {
+                  "game_number": 2,
+                  "score": 194
+                },
+                {
+                  "game_number": 3,
+                  "score": 213
+                }
+              ],
+              "stage_total_pin": 566
+            },
+            {
+              "license_no": "M00001178",
+              "display_name": "平井 翔",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 200
+                },
+                {
+                  "game_number": 2,
+                  "score": 162
+                },
+                {
+                  "game_number": 3,
+                  "score": 203
+                }
+              ],
+              "stage_total_pin": 565
+            },
+            {
+              "license_no": "M00001491",
+              "display_name": "吉江奈津希",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 157
+                },
+                {
+                  "game_number": 2,
+                  "score": 205
+                },
+                {
+                  "game_number": 3,
+                  "score": 202
+                }
+              ],
+              "stage_total_pin": 564
+            },
+            {
+              "license_no": "M00001450",
+              "display_name": "森岡 昌嵩",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 148
+                },
+                {
+                  "game_number": 2,
+                  "score": 184
+                },
+                {
+                  "game_number": 3,
+                  "score": 225
+                }
+              ],
+              "stage_total_pin": 557
+            },
+            {
+              "license_no": "M00001198",
+              "display_name": "小林 哲也",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 188
+                },
+                {
+                  "game_number": 2,
+                  "score": 204
+                },
+                {
+                  "game_number": 3,
+                  "score": 162
+                }
+              ],
+              "stage_total_pin": 554
+            },
+            {
+              "license_no": "M00001466",
+              "display_name": "犬飼 健志",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 222
+                },
+                {
+                  "game_number": 2,
+                  "score": 151
+                },
+                {
+                  "game_number": 3,
+                  "score": 181
+                }
+              ],
+              "stage_total_pin": 554
+            },
+            {
+              "license_no": "M00000548",
+              "display_name": "工藤 博充",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 149
+                },
+                {
+                  "game_number": 2,
+                  "score": 238
+                },
+                {
+                  "game_number": 3,
+                  "score": 165
+                }
+              ],
+              "stage_total_pin": 552
+            },
+            {
+              "license_no": "M00001490",
+              "display_name": "栗原 翔",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 170
+                },
+                {
+                  "game_number": 2,
+                  "score": 192
+                },
+                {
+                  "game_number": 3,
+                  "score": 188
+                }
+              ],
+              "stage_total_pin": 550
+            },
+            {
+              "license_no": "M00001337",
+              "display_name": "今瀧 賢",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 179
+                },
+                {
+                  "game_number": 2,
+                  "score": 172
+                },
+                {
+                  "game_number": 3,
+                  "score": 199
+                }
+              ],
+              "stage_total_pin": 550
+            },
+            {
+              "license_no": "M00001348",
+              "display_name": "佐藤 昌徳",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 169
+                },
+                {
+                  "game_number": 2,
+                  "score": 176
+                },
+                {
+                  "game_number": 3,
+                  "score": 202
+                }
+              ],
+              "stage_total_pin": 547
+            },
+            {
+              "license_no": "M00001485",
+              "display_name": "山﨑 陸斗",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 177
+                },
+                {
+                  "game_number": 2,
+                  "score": 143
+                },
+                {
+                  "game_number": 3,
+                  "score": 214
+                }
+              ],
+              "stage_total_pin": 534
+            },
+            {
+              "license_no": "M00001467",
+              "display_name": "菊田 樹",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 180
+                },
+                {
+                  "game_number": 2,
+                  "score": 198
+                },
+                {
+                  "game_number": 3,
+                  "score": 154
+                }
+              ],
+              "stage_total_pin": 532
+            },
+            {
+              "license_no": "M00000644",
+              "display_name": "玉置幸一郎",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 197
+                },
+                {
+                  "game_number": 2,
+                  "score": 163
+                },
+                {
+                  "game_number": 3,
+                  "score": 171
+                }
+              ],
+              "stage_total_pin": 531
+            },
+            {
+              "license_no": "M00001031",
+              "display_name": "井上 純平",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 169
+                },
+                {
+                  "game_number": 2,
+                  "score": 173
+                },
+                {
+                  "game_number": 3,
+                  "score": 180
+                }
+              ],
+              "stage_total_pin": 522
+            },
+            {
+              "license_no": "M00001092",
+              "display_name": "正田 晃也",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 205
+                },
+                {
+                  "game_number": 2,
+                  "score": 177
+                },
+                {
+                  "game_number": 3,
+                  "score": 139
+                }
+              ],
+              "stage_total_pin": 521
+            },
+            {
+              "license_no": "M00001376",
+              "display_name": "松田 力也",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 178
+                },
+                {
+                  "game_number": 2,
+                  "score": 179
+                },
+                {
+                  "game_number": 3,
+                  "score": 159
+                }
+              ],
+              "stage_total_pin": 516
+            },
+            {
+              "license_no": "M00001274",
+              "display_name": "福地 信之",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 170
+                },
+                {
+                  "game_number": 2,
+                  "score": 156
+                },
+                {
+                  "game_number": 3,
+                  "score": 180
+                }
+              ],
+              "stage_total_pin": 506
+            },
+            {
+              "license_no": "M00000949",
+              "display_name": "砂子 明廣",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 140
+                },
+                {
+                  "game_number": 2,
+                  "score": 162
+                },
+                {
+                  "game_number": 3,
+                  "score": 202
+                }
+              ],
+              "stage_total_pin": 504
+            },
+            {
+              "license_no": "M00001506",
+              "display_name": "諏訪間皆丞",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 189
+                },
+                {
+                  "game_number": 2,
+                  "score": 146
+                },
+                {
+                  "game_number": 3,
+                  "score": 137
+                }
+              ],
+              "stage_total_pin": 472
+            }
+          ]
+        },
+        {
+          "stage": "選抜Dシフト",
+          "rows": [
+            {
+              "license_no": "M00001501",
+              "display_name": "菅野 直人",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 215
+                },
+                {
+                  "game_number": 2,
+                  "score": 267
+                },
+                {
+                  "game_number": 3,
+                  "score": 235
+                }
+              ],
+              "stage_total_pin": 717
+            },
+            {
+              "license_no": "M00001394",
+              "display_name": "藤村 隆史",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 195
+                },
+                {
+                  "game_number": 2,
+                  "score": 279
+                },
+                {
+                  "game_number": 3,
+                  "score": 225
+                }
+              ],
+              "stage_total_pin": 699
+            },
+            {
+              "license_no": "M00001430",
+              "display_name": "田中 義一",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 246
+                },
+                {
+                  "game_number": 2,
+                  "score": 246
+                },
+                {
+                  "game_number": 3,
+                  "score": 194
+                }
+              ],
+              "stage_total_pin": 686
+            },
+            {
+              "license_no": "M00001101",
+              "display_name": "村上 拓也",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 256
+                },
+                {
+                  "game_number": 2,
+                  "score": 235
+                },
+                {
+                  "game_number": 3,
+                  "score": 192
+                }
+              ],
+              "stage_total_pin": 683
+            },
+            {
+              "license_no": "M00001198",
+              "display_name": "小林 哲也",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 236
+                },
+                {
+                  "game_number": 2,
+                  "score": 203
+                },
+                {
+                  "game_number": 3,
+                  "score": 239
+                }
+              ],
+              "stage_total_pin": 678
+            },
+            {
+              "license_no": "M00001408",
+              "display_name": "髙安 真司",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 226
+                },
+                {
+                  "game_number": 2,
+                  "score": 258
+                },
+                {
+                  "game_number": 3,
+                  "score": 194
+                }
+              ],
+              "stage_total_pin": 678
+            },
+            {
+              "license_no": "M00001483",
+              "display_name": "山中 麗",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 223
+                },
+                {
+                  "game_number": 2,
+                  "score": 226
+                },
+                {
+                  "game_number": 3,
+                  "score": 227
+                }
+              ],
+              "stage_total_pin": 676
+            },
+            {
+              "license_no": "M00001487",
+              "display_name": "御手洗彰彦",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 235
+                },
+                {
+                  "game_number": 2,
+                  "score": 228
+                },
+                {
+                  "game_number": 3,
+                  "score": 209
+                }
+              ],
+              "stage_total_pin": 672
+            },
+            {
+              "license_no": "M00001372",
+              "display_name": "戸辺 誠",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 236
+                },
+                {
+                  "game_number": 2,
+                  "score": 238
+                },
+                {
+                  "game_number": 3,
+                  "score": 191
+                }
+              ],
+              "stage_total_pin": 665
+            },
+            {
+              "license_no": "M00001506",
+              "display_name": "諏訪間皆丞",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 224
+                },
+                {
+                  "game_number": 2,
+                  "score": 205
+                },
+                {
+                  "game_number": 3,
+                  "score": 228
+                }
+              ],
+              "stage_total_pin": 657
+            },
+            {
+              "license_no": "M00001160",
+              "display_name": "遠藤 誠",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 273
+                },
+                {
+                  "game_number": 2,
+                  "score": 203
+                },
+                {
+                  "game_number": 3,
+                  "score": 181
+                }
+              ],
+              "stage_total_pin": 657
+            },
+            {
+              "license_no": "M00001469",
+              "display_name": "田野岡大夢",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 209
+                },
+                {
+                  "game_number": 2,
+                  "score": 215
+                },
+                {
+                  "game_number": 3,
+                  "score": 225
+                }
+              ],
+              "stage_total_pin": 649
+            },
+            {
+              "license_no": "M00001507",
+              "display_name": "須田 光翼",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 204
+                },
+                {
+                  "game_number": 2,
+                  "score": 231
+                },
+                {
+                  "game_number": 3,
+                  "score": 214
+                }
+              ],
+              "stage_total_pin": 649
+            },
+            {
+              "license_no": "M00001450",
+              "display_name": "森岡 昌嵩",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 231
+                },
+                {
+                  "game_number": 2,
+                  "score": 203
+                },
+                {
+                  "game_number": 3,
+                  "score": 214
+                }
+              ],
+              "stage_total_pin": 648
+            },
+            {
+              "license_no": "M00001227",
+              "display_name": "鈴木 崇徳",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 200
+                },
+                {
+                  "game_number": 2,
+                  "score": 220
+                },
+                {
+                  "game_number": 3,
+                  "score": 227
+                }
+              ],
+              "stage_total_pin": 647
+            },
+            {
+              "license_no": "M00001225",
+              "display_name": "小森 清人",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 241
+                },
+                {
+                  "game_number": 2,
+                  "score": 191
+                },
+                {
+                  "game_number": 3,
+                  "score": 212
+                }
+              ],
+              "stage_total_pin": 644
+            },
+            {
+              "license_no": "M00001349",
+              "display_name": "入口 光司",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 247
+                },
+                {
+                  "game_number": 2,
+                  "score": 220
+                },
+                {
+                  "game_number": 3,
+                  "score": 177
+                }
+              ],
+              "stage_total_pin": 644
+            },
+            {
+              "license_no": "M00001473",
+              "display_name": "米澤 佑哉",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 244
+                },
+                {
+                  "game_number": 2,
+                  "score": 196
+                },
+                {
+                  "game_number": 3,
+                  "score": 203
+                }
+              ],
+              "stage_total_pin": 643
+            },
+            {
+              "license_no": "M00001348",
+              "display_name": "佐藤 昌徳",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 244
+                },
+                {
+                  "game_number": 2,
+                  "score": 233
+                },
+                {
+                  "game_number": 3,
+                  "score": 157
+                }
+              ],
+              "stage_total_pin": 634
+            },
+            {
+              "license_no": "M00001467",
+              "display_name": "菊田 樹",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 181
+                },
+                {
+                  "game_number": 2,
+                  "score": 184
+                },
+                {
+                  "game_number": 3,
+                  "score": 268
+                }
+              ],
+              "stage_total_pin": 633
+            },
+            {
+              "license_no": "M00000885",
+              "display_name": "平山 陽一",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 239
+                },
+                {
+                  "game_number": 2,
+                  "score": 206
+                },
+                {
+                  "game_number": 3,
+                  "score": 185
+                }
+              ],
+              "stage_total_pin": 630
+            },
+            {
+              "license_no": "M00000843",
+              "display_name": "辻 賢司",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 199
+                },
+                {
+                  "game_number": 2,
+                  "score": 229
+                },
+                {
+                  "game_number": 3,
+                  "score": 198
+                }
+              ],
+              "stage_total_pin": 626
+            },
+            {
+              "license_no": "M00001451",
+              "display_name": "小野 在由",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 188
+                },
+                {
+                  "game_number": 2,
+                  "score": 223
+                },
+                {
+                  "game_number": 3,
+                  "score": 213
+                }
+              ],
+              "stage_total_pin": 624
+            },
+            {
+              "license_no": "M00001386",
+              "display_name": "加藤翔太郎",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 204
+                },
+                {
+                  "game_number": 2,
+                  "score": 215
+                },
+                {
+                  "game_number": 3,
+                  "score": 204
+                }
+              ],
+              "stage_total_pin": 623
+            },
+            {
+              "license_no": "M00001291",
+              "display_name": "渡邊 雄也",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 238
+                },
+                {
+                  "game_number": 2,
+                  "score": 194
+                },
+                {
+                  "game_number": 3,
+                  "score": 190
+                }
+              ],
+              "stage_total_pin": 622
+            },
+            {
+              "license_no": "M00001466",
+              "display_name": "犬飼 健志",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 232
+                },
+                {
+                  "game_number": 2,
+                  "score": 186
+                },
+                {
+                  "game_number": 3,
+                  "score": 203
+                }
+              ],
+              "stage_total_pin": 621
+            },
+            {
+              "license_no": "M00001178",
+              "display_name": "平井 翔",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 210
+                },
+                {
+                  "game_number": 2,
+                  "score": 196
+                },
+                {
+                  "game_number": 3,
+                  "score": 213
+                }
+              ],
+              "stage_total_pin": 619
+            },
+            {
+              "license_no": "M00001448",
+              "display_name": "木村 謙太",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 218
+                },
+                {
+                  "game_number": 2,
+                  "score": 227
+                },
+                {
+                  "game_number": 3,
+                  "score": 174
+                }
+              ],
+              "stage_total_pin": 619
+            },
+            {
+              "license_no": "M00001500",
+              "display_name": "畑 秀明",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 197
+                },
+                {
+                  "game_number": 2,
+                  "score": 213
+                },
+                {
+                  "game_number": 3,
+                  "score": 199
+                }
+              ],
+              "stage_total_pin": 609
+            },
+            {
+              "license_no": "M00001032",
+              "display_name": "工藤 貴志",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 223
+                },
+                {
+                  "game_number": 2,
+                  "score": 182
+                },
+                {
+                  "game_number": 3,
+                  "score": 201
+                }
+              ],
+              "stage_total_pin": 606
+            },
+            {
+              "license_no": "M00001370",
+              "display_name": "新城 一也",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 221
+                },
+                {
+                  "game_number": 2,
+                  "score": 192
+                },
+                {
+                  "game_number": 3,
+                  "score": 191
+                }
+              ],
+              "stage_total_pin": 604
+            },
+            {
+              "license_no": "M00001352",
+              "display_name": "ﾌﾞﾗｲｱﾝ･ｸﾞﾘｰﾝｳｯﾄﾞ",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 209
+                },
+                {
+                  "game_number": 2,
+                  "score": 202
+                },
+                {
+                  "game_number": 3,
+                  "score": 192
+                }
+              ],
+              "stage_total_pin": 603
+            },
+            {
+              "license_no": "M00001092",
+              "display_name": "正田 晃也",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 197
+                },
+                {
+                  "game_number": 2,
+                  "score": 223
+                },
+                {
+                  "game_number": 3,
+                  "score": 182
+                }
+              ],
+              "stage_total_pin": 602
+            },
+            {
+              "license_no": "M00001312",
+              "display_name": "太田 誠",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 208
+                },
+                {
+                  "game_number": 2,
+                  "score": 195
+                },
+                {
+                  "game_number": 3,
+                  "score": 192
+                }
+              ],
+              "stage_total_pin": 595
+            },
+            {
+              "license_no": "M00001376",
+              "display_name": "松田 力也",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 213
+                },
+                {
+                  "game_number": 2,
+                  "score": 179
+                },
+                {
+                  "game_number": 3,
+                  "score": 200
+                }
+              ],
+              "stage_total_pin": 592
+            },
+            {
+              "license_no": "M00001099",
+              "display_name": "津島 健次",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 199
+                },
+                {
+                  "game_number": 2,
+                  "score": 215
+                },
+                {
+                  "game_number": 3,
+                  "score": 175
+                }
+              ],
+              "stage_total_pin": 589
+            },
+            {
+              "license_no": "M00001427",
+              "display_name": "田中 椋也",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 202
+                },
+                {
+                  "game_number": 2,
+                  "score": 214
+                },
+                {
+                  "game_number": 3,
+                  "score": 171
+                }
+              ],
+              "stage_total_pin": 587
+            },
+            {
+              "license_no": "M00001490",
+              "display_name": "栗原 翔",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 218
+                },
+                {
+                  "game_number": 2,
+                  "score": 191
+                },
+                {
+                  "game_number": 3,
+                  "score": 170
+                }
+              ],
+              "stage_total_pin": 579
+            },
+            {
+              "license_no": "M00001274",
+              "display_name": "福地 信之",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 198
+                },
+                {
+                  "game_number": 2,
+                  "score": 215
+                },
+                {
+                  "game_number": 3,
+                  "score": 166
+                }
+              ],
+              "stage_total_pin": 579
+            },
+            {
+              "license_no": "M00001031",
+              "display_name": "井上 純平",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 207
+                },
+                {
+                  "game_number": 2,
+                  "score": 193
+                },
+                {
+                  "game_number": 3,
+                  "score": 178
+                }
+              ],
+              "stage_total_pin": 578
+            },
+            {
+              "license_no": "M00000979",
+              "display_name": "須田 毅",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 179
+                },
+                {
+                  "game_number": 2,
+                  "score": 187
+                },
+                {
+                  "game_number": 3,
+                  "score": 211
+                }
+              ],
+              "stage_total_pin": 577
+            },
+            {
+              "license_no": "M00001428",
+              "display_name": "鮫島 蓮",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 217
+                },
+                {
+                  "game_number": 2,
+                  "score": 170
+                },
+                {
+                  "game_number": 3,
+                  "score": 190
+                }
+              ],
+              "stage_total_pin": 577
+            },
+            {
+              "license_no": "M00000848",
+              "display_name": "吉田 文啓",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 214
+                },
+                {
+                  "game_number": 2,
+                  "score": 183
+                },
+                {
+                  "game_number": 3,
+                  "score": 178
+                }
+              ],
+              "stage_total_pin": 575
+            },
+            {
+              "license_no": "M00001150",
+              "display_name": "落合 進治",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 194
+                },
+                {
+                  "game_number": 2,
+                  "score": 179
+                },
+                {
+                  "game_number": 3,
+                  "score": 200
+                }
+              ],
+              "stage_total_pin": 573
+            },
+            {
+              "license_no": "M00001390",
+              "display_name": "吉野 浩章",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 205
+                },
+                {
+                  "game_number": 2,
+                  "score": 167
+                },
+                {
+                  "game_number": 3,
+                  "score": 199
+                }
+              ],
+              "stage_total_pin": 571
+            },
+            {
+              "license_no": "M00000548",
+              "display_name": "工藤 博充",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 184
+                },
+                {
+                  "game_number": 2,
+                  "score": 170
+                },
+                {
+                  "game_number": 3,
+                  "score": 214
+                }
+              ],
+              "stage_total_pin": 568
+            },
+            {
+              "license_no": "M00001392",
+              "display_name": "松浦 和彦",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 247
+                },
+                {
+                  "game_number": 2,
+                  "score": 176
+                },
+                {
+                  "game_number": 3,
+                  "score": 144
+                }
+              ],
+              "stage_total_pin": 567
+            },
+            {
+              "license_no": "M00001212",
+              "display_name": "市村 和則",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 199
+                },
+                {
+                  "game_number": 2,
+                  "score": 173
+                },
+                {
+                  "game_number": 3,
+                  "score": 191
+                }
+              ],
+              "stage_total_pin": 563
+            },
+            {
+              "license_no": "M00001441",
+              "display_name": "金子 猛",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 166
+                },
+                {
+                  "game_number": 2,
+                  "score": 174
+                },
+                {
+                  "game_number": 3,
+                  "score": 220
+                }
+              ],
+              "stage_total_pin": 560
+            },
+            {
+              "license_no": "M00001337",
+              "display_name": "今瀧 賢",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 177
+                },
+                {
+                  "game_number": 2,
+                  "score": 166
+                },
+                {
+                  "game_number": 3,
+                  "score": 214
+                }
+              ],
+              "stage_total_pin": 557
+            },
+            {
+              "license_no": "M00001485",
+              "display_name": "山﨑 陸斗",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 161
+                },
+                {
+                  "game_number": 2,
+                  "score": 193
+                },
+                {
+                  "game_number": 3,
+                  "score": 202
+                }
+              ],
+              "stage_total_pin": 556
+            },
+            {
+              "license_no": "M00001468",
+              "display_name": "佐藤 亜優",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 181
+                },
+                {
+                  "game_number": 2,
+                  "score": 178
+                },
+                {
+                  "game_number": 3,
+                  "score": 185
+                }
+              ],
+              "stage_total_pin": 544
+            },
+            {
+              "license_no": "M00001389",
+              "display_name": "川口 健太",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 159
+                },
+                {
+                  "game_number": 2,
+                  "score": 214
+                },
+                {
+                  "game_number": 3,
+                  "score": 166
+                }
+              ],
+              "stage_total_pin": 539
+            },
+            {
+              "license_no": "M00001470",
+              "display_name": "安谷屋綱大",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 182
+                },
+                {
+                  "game_number": 2,
+                  "score": 167
+                },
+                {
+                  "game_number": 3,
+                  "score": 185
+                }
+              ],
+              "stage_total_pin": 534
+            },
+            {
+              "license_no": "M00000949",
+              "display_name": "砂子 明廣",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 192
+                },
+                {
+                  "game_number": 2,
+                  "score": 182
+                },
+                {
+                  "game_number": 3,
+                  "score": 156
+                }
+              ],
+              "stage_total_pin": 530
+            },
+            {
+              "license_no": "M00000644",
+              "display_name": "玉置幸一郎",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 191
+                },
+                {
+                  "game_number": 2,
+                  "score": 190
+                },
+                {
+                  "game_number": 3,
+                  "score": 142
+                }
+              ],
+              "stage_total_pin": 523
+            },
+            {
+              "license_no": "M00001496",
+              "display_name": "濵名 晃司",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 135
+                },
+                {
+                  "game_number": 2,
+                  "score": 181
+                },
+                {
+                  "game_number": 3,
+                  "score": 198
+                }
+              ],
+              "stage_total_pin": 514
+            },
+            {
+              "license_no": "M00000478",
+              "display_name": "蒲生 敬",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 151
+                },
+                {
+                  "game_number": 2,
+                  "score": 178
+                },
+                {
+                  "game_number": 3,
+                  "score": 182
+                }
+              ],
+              "stage_total_pin": 511
+            },
+            {
+              "license_no": "M00001491",
+              "display_name": "吉江奈津希",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 166
+                },
+                {
+                  "game_number": 2,
+                  "score": 142
+                },
+                {
+                  "game_number": 3,
+                  "score": 169
+                }
+              ],
+              "stage_total_pin": 477
+            },
+            {
+              "license_no": "M00001296",
+              "display_name": "荒井慎太朗",
+              "gender": "M",
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 170
+                },
+                {
+                  "game_number": 2,
+                  "score": 177
+                },
+                {
+                  "game_number": 3,
+                  "score": 130
+                }
+              ],
+              "stage_total_pin": 477
+            }
+          ]
+        }
+      ],
+      "attempt_count": 240,
+      "participant_count": 101,
+      "expected_score_count": 720,
+      "expected_total_pin": 147459
+    }
+  ]
+}

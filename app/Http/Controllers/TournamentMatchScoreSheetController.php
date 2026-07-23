@@ -8,6 +8,7 @@ use App\Models\TournamentMatchScoreSheet;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class TournamentMatchScoreSheetController extends Controller
@@ -88,6 +89,7 @@ class TournamentMatchScoreSheetController extends Controller
             'players.*.name_kana' => ['nullable', 'string', 'max:255'],
             'players.*.dominant_arm' => ['nullable', 'string', 'max:20'],
             'players.*.lane_label' => ['nullable', 'string', 'max:50'],
+            'players.*.is_winner' => ['nullable', 'boolean'],
             'players.*.frames' => ['nullable', 'array'],
             'players.*.frames.*.throw1' => ['nullable', 'string', 'max:2'],
             'players.*.frames.*.throw2' => ['nullable', 'string', 'max:2'],
@@ -147,7 +149,7 @@ class TournamentMatchScoreSheetController extends Controller
                     'dominant_arm' => $bowler?->dominant_arm ?? ($playerInput['dominant_arm'] ?? null),
                     'lane_label' => $playerInput['lane_label'] ?? null,
                     'final_score' => (int) $calculated['total'],
-                    'is_winner' => false,
+                    'is_winner' => (bool) ($playerInput['is_winner'] ?? false),
                     'score_summary' => [
                         'rolls' => $calculated['rolls'],
                     ],
@@ -174,13 +176,42 @@ class TournamentMatchScoreSheetController extends Controller
 
             $maxScore = collect($createdPlayers)->max('final_score');
             $winnerCount = collect($createdPlayers)->where('final_score', $maxScore)->count();
+            $declaredWinners = collect($createdPlayers)->filter(
+                fn ($player): bool => (bool) $player->is_winner,
+            )->values();
 
+            if ($declaredWinners->count() > 1) {
+                throw ValidationException::withMessages([
+                    'players' => '同点決着の勝者は1名だけ指定してください。',
+                ]);
+            }
+
+            $resolvedWinner = null;
             if ($maxScore !== null && $winnerCount === 1) {
-                foreach ($createdPlayers as $player) {
-                    $player->forceFill([
-                        'is_winner' => (int) $player->final_score === (int) $maxScore,
-                    ])->save();
+                $resolvedWinner = collect($createdPlayers)->first(
+                    fn ($player): bool => (int) $player->final_score === (int) $maxScore,
+                );
+                if ($declaredWinners->isNotEmpty()
+                    && (int) $declaredWinners->first()->id !== (int) $resolvedWinner->id) {
+                    throw ValidationException::withMessages([
+                        'players' => '最高得点ではない選手を勝者には指定できません。',
+                    ]);
                 }
+            } elseif ($maxScore !== null && $winnerCount > 1) {
+                if ($declaredWinners->count() !== 1
+                    || (int) $declaredWinners->first()->final_score !== (int) $maxScore) {
+                    throw ValidationException::withMessages([
+                        'players' => '最高得点が同点です。タイブレーク後の勝者を1名指定してください。',
+                    ]);
+                }
+                $resolvedWinner = $declaredWinners->first();
+            }
+
+            foreach ($createdPlayers as $player) {
+                $player->forceFill([
+                    'is_winner' => $resolvedWinner !== null
+                        && (int) $player->id === (int) $resolvedWinner->id,
+                ])->save();
             }
 
             return $sheet->fresh(['players.frames']);

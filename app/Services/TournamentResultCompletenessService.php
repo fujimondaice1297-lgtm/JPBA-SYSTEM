@@ -36,7 +36,11 @@ final class TournamentResultCompletenessService
             ->where($publication === null ? 'is_current' : 'is_published', true)
             ->orderBy('id')
             ->get();
-        $snapshots->loadMissing('rows');
+        $snapshots->each(function ($snapshot): void {
+            if ($snapshot instanceof TournamentResultSnapshot) {
+                $snapshot->loadMissing('rows');
+            }
+        });
 
         $scoreRows = DB::table('game_scores')
             ->where('tournament_id', $tournament->id)
@@ -184,14 +188,17 @@ final class TournamentResultCompletenessService
             $missing = [];
 
             foreach ($snapshot->rows as $row) {
+                $rowGames = max(0, (int) $row->games);
+                $rowStageGames = max(0, $rowGames - (int) $snapshot->carry_game_count);
+                $rowExpectedStageGames = min($expectedStageGames, $rowStageGames);
                 $actualGames = 0;
                 foreach ($this->rowAliases($row->toArray()) as $alias) {
                     $actualGames = max($actualGames, (int) ($counts[$alias] ?? 0));
                 }
-                if ($actualGames < $expectedStageGames) {
+                if ($actualGames < $rowExpectedStageGames) {
                     $missing[] = [
                         'display_name' => (string) $row->display_name,
-                        'expected_games' => $expectedStageGames,
+                        'expected_games' => $rowExpectedStageGames,
                         'actual_games' => $actualGames,
                     ];
                 }
@@ -300,6 +307,14 @@ final class TournamentResultCompletenessService
             $matchScores[$matches[1]][$matches[2]] = ['score' => (int) $scoreRow->score];
         }
 
+        foreach ($this->scoreSheetWinnerOverrides((int) $tournament->id) as $matchKey => $slots) {
+            foreach ($slots as $slotCode => $isWinner) {
+                if (isset($matchScores[$matchKey][$slotCode])) {
+                    $matchScores[$matchKey][$slotCode]['is_winner'] = $isWinner;
+                }
+            }
+        }
+
         $shootout = $this->shootoutService->buildStandard8($seedEntries, $matchScores);
         if ((int) ($shootout['summary']['completed_match_count'] ?? 0) !== 3
             || trim((string) ($shootout['summary']['winner_name'] ?? '')) === '') {
@@ -325,6 +340,65 @@ final class TournamentResultCompletenessService
         }
 
         return [];
+    }
+
+    /** @return array<string,array<string,bool>> */
+    private function scoreSheetWinnerOverrides(int $tournamentId): array
+    {
+        $rows = DB::table('tournament_match_score_sheets as sheets')
+            ->join('tournament_match_score_sheet_players as players', 'players.score_sheet_id', '=', 'sheets.id')
+            ->where('sheets.tournament_id', $tournamentId)
+            ->where('sheets.sheet_type', 'shootout')
+            ->where('sheets.is_published', true)
+            ->select([
+                'sheets.match_code',
+                'sheets.match_label',
+                'sheets.stage_code',
+                'players.player_slot',
+                'players.is_winner',
+            ])
+            ->get();
+
+        $overrides = [];
+        foreach ($rows as $row) {
+            $matchKey = $this->shootoutMatchKey(implode(' ', array_filter([
+                (string) ($row->match_code ?? ''),
+                (string) ($row->match_label ?? ''),
+                (string) ($row->stage_code ?? ''),
+            ])));
+            $slotCode = strtoupper(trim((string) ($row->player_slot ?? '')));
+            if ($matchKey === null || preg_match('/^[ABCD]$/', $slotCode) !== 1) {
+                continue;
+            }
+
+            $overrides[$matchKey][$slotCode] = (bool) $row->is_winner;
+        }
+
+        return $overrides;
+    }
+
+    private function shootoutMatchKey(string $value): ?string
+    {
+        $normalized = function_exists('mb_convert_kana')
+            ? mb_convert_kana($value, 'as', 'UTF-8')
+            : $value;
+        $upper = strtoupper($normalized);
+
+        if (preg_match('/SO\s*:?\s*SO?\s*([123])/', $upper, $matches)
+            || preg_match('/\bSO\s*([123])\b/', $upper, $matches)) {
+            return 'SO'.$matches[1];
+        }
+        if (str_contains($upper, 'FINAL') || str_contains($value, '優勝')) {
+            return 'SO3';
+        }
+        if (str_contains($upper, '2ND') || str_contains($upper, 'SECOND') || str_contains($value, '２')) {
+            return 'SO2';
+        }
+        if (str_contains($upper, '1ST') || str_contains($upper, 'FIRST') || str_contains($value, '１')) {
+            return 'SO1';
+        }
+
+        return null;
     }
 
     /**

@@ -132,6 +132,8 @@ class ShootoutService
         $winnerNode = null;
         $isComplete = false;
         $isTied = false;
+        $decidedByTiebreak = false;
+        $winnerResolutionError = null;
 
         if (!$missingPlayableSlot && count($playableSlotCodes) >= 2 && !$missingScore) {
             $maxScore = null;
@@ -148,10 +150,24 @@ class ShootoutService
                 }
             }
 
-            if (count($maxSlots) === 1) {
+            $declaredWinnerSlots = array_values(array_filter(
+                $playableSlotCodes,
+                fn (string $slotCode): bool => !empty($matchScores[$slotCode]['is_winner']),
+            ));
+
+            if (count($declaredWinnerSlots) > 1) {
+                $winnerResolutionError = '勝者が複数指定されています。';
+            } elseif (count($declaredWinnerSlots) === 1 && !in_array($declaredWinnerSlots[0], $maxSlots, true)) {
+                $winnerResolutionError = '最高得点ではない選手が勝者に指定されています。';
+            } elseif (count($maxSlots) === 1) {
                 $winnerSlot = $maxSlots[0];
                 $winnerNode = $normalizedSlots[$winnerSlot];
                 $isComplete = true;
+            } elseif (count($declaredWinnerSlots) === 1) {
+                $winnerSlot = $declaredWinnerSlots[0];
+                $winnerNode = $normalizedSlots[$winnerSlot];
+                $isComplete = true;
+                $decidedByTiebreak = true;
             } else {
                 $isTied = true;
             }
@@ -172,6 +188,8 @@ class ShootoutService
             'loser_rank_range' => $loserRankRange,
             'is_complete' => $isComplete,
             'is_tied' => $isTied,
+            'decided_by_tiebreak' => $decidedByTiebreak,
+            'winner_resolution_error' => $winnerResolutionError,
             'can_input' => !$missingPlayableSlot && count($playableSlotCodes) >= 2,
         ];
     }

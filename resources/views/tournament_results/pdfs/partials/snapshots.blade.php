@@ -1,4 +1,7 @@
 @if (count($pdfScoreSnapshots) > 0)
+    @php
+        $resolvedOfficialTitleClass = (string) ($officialTitleClass ?? view()->shared('officialTitleClass', ''));
+    @endphp
     @foreach ($pdfScoreSnapshots as $snapshotSet)
         @php
             $snapshot = $snapshotSet['snapshot'] ?? null;
@@ -87,7 +90,7 @@
         @endphp
 
         <div class="official-snapshot-page {{ $isPrelimSnapshot ? 'official-snapshot-page-prelim' : ($isRoundRobinSnapshot ? 'official-snapshot-page-round-robin' : 'official-snapshot-page-semifinal') }} jpba-heavy">
-            <h2 class="official-snapshot-title jpba-heavy">{{ $officialMainTitle }}</h2>
+            <h2 class="official-snapshot-title {{ $resolvedOfficialTitleClass }} jpba-heavy">{{ $officialMainTitle }}</h2>
             <h3 class="official-snapshot-subtitle jpba-heavy">{{ $title }} ／ {{ $officialVenueTitle }}</h3>
 
             @if ($isRoundRobinSnapshot)

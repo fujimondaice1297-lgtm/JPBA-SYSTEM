@@ -84,7 +84,19 @@
         return $text;
     };
 
-    $tournamentName = isset($tournament) ? trim((string) ($tournament->name ?? '')) : '';
+    $pdfDisplayText = function ($text): string {
+        // IPAex Gothic does not contain every CJK extension glyph used in names.
+        // Keep the canonical database value and substitute only in the rendered PDF.
+        return str_replace('𠮷', '吉', trim((string) $text));
+    };
+
+    $tournamentName = isset($tournament) ? $pdfDisplayText($tournament->name ?? '') : '';
+    $tournamentNameWidth = function_exists('mb_strwidth')
+        ? mb_strwidth($tournamentName, 'UTF-8')
+        : strlen($tournamentName);
+    $officialTitleClass = $tournamentNameWidth >= 68
+        ? 'official-title-extra-long'
+        : ($tournamentNameWidth >= 58 ? 'official-title-long' : '');
     $flowType = isset($tournament) ? trim((string) ($tournament->result_flow_type ?? '')) : '';
     $venueText = '';
 
@@ -487,6 +499,9 @@
     }
 
     $orderedCodes = ['round_robin_total', 'semifinal_total', 'prelim_total'];
+    if (!array_intersect($orderedCodes, array_keys($latestByResultCode)) && isset($latestByResultCode['final'])) {
+        $orderedCodes = ['final'];
+    }
     $pdfScoreSnapshots = [];
     foreach ($orderedCodes as $code) {
         if (isset($latestByResultCode[$code])) {
@@ -820,6 +835,7 @@
         'isStepLadderFlow' => $isStepLadderFlow,
         'stageNumber' => $stageNumber,
         'officialMainTitle' => $officialMainTitle,
+        'officialTitleClass' => $officialTitleClass,
         'officialSeriesTitle' => $officialSeriesTitle,
         'officialSeasonTitle' => $officialSeasonTitle,
         'officialVenueTitle' => $officialVenueTitle,
