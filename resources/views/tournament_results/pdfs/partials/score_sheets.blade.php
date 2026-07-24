@@ -7,7 +7,7 @@
 
 @if (!isset($shootoutBracketImage) && count($allScoreImages) > 0)
     @foreach ($scoreSheetPages as $pageIndex => $scoreSheetPage)
-        <div class="official-plain-score-page">
+        <div class="official-plain-score-page" @if (!empty($suppressInitialScorePageBreak) && $pageIndex === 0) style="page-break-before: auto;" @endif>
             <div class="official-next-score-main-title">
                 @if ($scorePageMainTitle !== '')
                     {{ $scorePageMainTitle }}<br>

@@ -16,7 +16,7 @@
 @endphp
 
 @if ($hasStepLadderBracketImage)
-    <div style="page-break-before: always; padding: 18px 18px 0 18px; font-family: ipaexg, sans-serif;">
+    <div style="page-break-before: {{ !empty($suppressInitialDiagramPageBreak) ? 'auto' : 'always' }}; padding: 18px 18px 0 18px; font-family: ipaexg, sans-serif;">
         <div style="text-align: center; margin-bottom: 8px;">
             <div style="font-size: 26px; font-weight: bold; line-height: 1.35;">
                 {{ $officialMainTitleSafe }}

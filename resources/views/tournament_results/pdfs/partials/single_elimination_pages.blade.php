@@ -32,7 +32,7 @@
 @endphp
 
 @if ($hasSingleEliminationBracketImage)
-    <div class="official-single-elimination-page">
+    <div class="official-single-elimination-page" @if (!empty($suppressInitialDiagramPageBreak)) style="page-break-before: auto;" @endif>
         <div class="official-single-elimination-title">
             <div class="official-single-elimination-title-line-1 jpba-extra-heavy">{{ $officialMainTitleSafe }}</div>
 

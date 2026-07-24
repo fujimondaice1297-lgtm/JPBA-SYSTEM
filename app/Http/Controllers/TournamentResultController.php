@@ -3062,9 +3062,20 @@ class TournamentResultController extends Controller
             ['name' => 'awards', 'orientation' => 'landscape', 'enabled' => true],
             [
                 'name' => 'step_ladder',
-                'orientation' => 'portrait',
-                'enabled' => ! empty($data['stepLadderPdf']['seeds'] ?? [])
-                    || ! empty($data['matchScoreSheetImages'] ?? []),
+                'orientation' => 'landscape',
+                'enabled' => is_string($data['stepLadderBracketImage'] ?? null)
+                    && trim((string) $data['stepLadderBracketImage']) !== '',
+            ],
+            [
+                'name' => 'single_elimination',
+                'orientation' => 'landscape',
+                'enabled' => is_string($data['singleEliminationBracketImage'] ?? null)
+                    && trim((string) $data['singleEliminationBracketImage']) !== '',
+            ],
+            [
+                'name' => 'score_sheets',
+                'orientation' => 'landscape',
+                'enabled' => ! empty($data['matchScoreSheetImages'] ?? []),
             ],
             [
                 'name' => 'round_robin_ranking',

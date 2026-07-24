@@ -513,6 +513,30 @@ final class Official2026TournamentResultsImportService
             ->firstWhere('result_code', 'round_robin_total');
         $hasRoundRobin = is_array($roundRobinSnapshot);
         $roundRobinRows = $hasRoundRobin ? (array) ($roundRobinSnapshot['rows'] ?? []) : [];
+        $singleEliminationMatches = collect($event['bracket_matches'] ?? [])
+            ->filter(fn ($match): bool => ($match['sheet_type'] ?? null) === 'single_elimination');
+        $singleEliminationQualifierCount = $singleEliminationMatches
+            ->flatMap(fn ($match): array => (array) ($match['players'] ?? []))
+            ->map(function ($player): string {
+                return trim((string) (
+                    $player['identity']
+                    ?? $player['license_no']
+                    ?? $player['display_name']
+                    ?? ''
+                ));
+            })
+            ->filter()
+            ->unique()
+            ->count();
+        $hasSingleElimination = $singleEliminationQualifierCount >= 2;
+        $hasSemifinalSnapshot = collect($event['snapshots'] ?? [])
+            ->contains(fn ($snapshot): bool => ($snapshot['result_code'] ?? null) === 'semifinal_total');
+        $singleEliminationSeedSource = $hasSemifinalSnapshot ? 'semifinal_total' : 'prelim_total';
+        $resultFlowType = $hasSingleElimination
+            ? ($hasSemifinalSnapshot
+                ? 'prelim_to_semifinal_to_single_elimination_to_final'
+                : 'prelim_to_single_elimination_to_final')
+            : ($hasRoundRobin ? 'prelim_to_rr_to_final' : 'legacy_standard');
         $templateSnapshot = [
             '_official_import' => self::IMPORT_MARKER,
             'event_key' => $event['key'],
@@ -551,11 +575,18 @@ final class Official2026TournamentResultsImportService
             'prize' => $source['counts_for_prize']
                 ? ($source['prize'] ?? 'See official result publication.')
                 : null,
-            'result_flow_type' => $hasRoundRobin ? 'prelim_to_rr_to_final' : 'legacy_standard',
+            'result_flow_type' => $resultFlowType,
             'round_robin_qualifier_count' => $hasRoundRobin ? max(4, count($roundRobinRows)) : null,
             'round_robin_win_bonus' => $hasRoundRobin ? 30 : null,
             'round_robin_tie_bonus' => $hasRoundRobin ? 15 : null,
             'round_robin_position_round_enabled' => $hasRoundRobin,
+            'single_elimination_qualifier_count' => $hasSingleElimination
+                ? $singleEliminationQualifierCount
+                : null,
+            'single_elimination_seed_source_result_code' => $hasSingleElimination
+                ? $singleEliminationSeedSource
+                : null,
+            'single_elimination_seed_policy' => $hasSingleElimination ? 'standard' : null,
             'template_snapshot' => $templateSnapshot,
         ];
 

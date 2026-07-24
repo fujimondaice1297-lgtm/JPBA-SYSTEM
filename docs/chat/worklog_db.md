@@ -8898,3 +8898,20 @@ User::where('email','domaine-d@i.softbank.jp')->exists(); // true
 - `tournament:result-flow-regression --json` はRR、ステップラダー、シュートアウト、SEがすべてOK。
 - `jpba:audit-official-2026-rankings --json` は24公開単位、539ライセンス、差分0。
 - `jpba:import-official-2026-results --json` のドライランは23大会、70snapshot、3,142行、未解決選手0、未解決会場0、競合0、ランキング差分0。
+
+## 2026-07-24 ステップラダー・トーナメント旧作図の復旧
+
+### 原因
+- 既存の `StepLadderBracketImageService` と `SingleEliminationBracketImageService` は残っていたが、標準大会PDFの新しい分岐が画像を使わず、ステップラダーをHTML表で再描画していた。
+- 宮崎・アントールは取込時の方式が `legacy_standard` になり、シングルエリミネーション画像を作るための入力が生成されていなかった。
+
+### 修正
+- 標準大会PDFでも、以前から使用していた画像作図用partialを呼び出すように戻した。作図Service本体は変更していない。
+- シングルエリミネーションの試合データから進出人数とシード元を判定し、再取込後も大会方式を保持するようにした。
+- 分割PDFの先頭だけ重複改ページを抑止し、作図ページ直前の空白ページを除去した。
+- 吉川・六甲で復旧済みのフレーム別スコア表は、作図ページとは別に維持した。
+
+### 確認
+- 吉川ID128・六甲ID134で旧ステップラダー図、宮崎ID125・アントールID135で旧トーナメント図がPDFへ出力されることをPoppler画像で目視確認した。
+- 吉川・六甲は作図ページ後のフレーム別スコア表も残っていることを確認した。
+- `TournamentPdfDiagramRoutingTest` は2件・8 assertion成功、`php artisan view:cache` 成功。

@@ -16,7 +16,17 @@
 @elseif ($standardSection === 'awards')
     @include('tournament_results.pdfs.partials.standard_awards_page')
 @elseif ($standardSection === 'step_ladder')
-    @include('tournament_results.pdfs.partials.standard_step_ladder_page')
+    @include('tournament_results.pdfs.partials.step_ladder_pages', [
+        'suppressInitialDiagramPageBreak' => true,
+    ])
+@elseif ($standardSection === 'single_elimination')
+    @include('tournament_results.pdfs.partials.single_elimination_pages', [
+        'suppressInitialDiagramPageBreak' => true,
+    ])
+@elseif ($standardSection === 'score_sheets')
+    @include('tournament_results.pdfs.partials.score_sheets', [
+        'suppressInitialScorePageBreak' => true,
+    ])
 @elseif ($standardSection === 'round_robin_ranking')
     @include('tournament_results.pdfs.partials.round_robin_pages', ['roundRobinPageMode' => 'ranking'])
 @elseif ($standardSection === 'round_robin_matches')
@@ -39,7 +49,9 @@
 @else
     @include('tournament_results.pdfs.partials.standard_overview')
     @include('tournament_results.pdfs.partials.standard_awards_page')
-    @include('tournament_results.pdfs.partials.standard_step_ladder_page')
+    @include('tournament_results.pdfs.partials.step_ladder_pages')
+    @include('tournament_results.pdfs.partials.single_elimination_pages')
+    @include('tournament_results.pdfs.partials.score_sheets')
     @include('tournament_results.pdfs.partials.round_robin_pages')
     @include('tournament_results.pdfs.partials.single_elimination_match_summary')
     @include('tournament_results.pdfs.partials.selection_scores')
