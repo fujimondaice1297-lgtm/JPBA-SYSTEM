@@ -27,6 +27,10 @@ class TournamentEntryController extends Controller
             ->orderBy('id')
             ->get();
 
+        $tournamentEligibility = $tournaments->mapWithKeys(fn (Tournament $tournament) => [
+            $tournament->id => $this->resolveEntryEligibility($bowler, $tournament),
+        ]);
+
         $entries = collect();
         if ($proBowlerId) {
             $entries = TournamentEntry::withCount('balls')
@@ -35,7 +39,7 @@ class TournamentEntryController extends Controller
                 ->keyBy('tournament_id');
         }
 
-        return view('member.entry_select', compact('tournaments', 'entries', 'bowler', 'eligibility'));
+        return view('member.entry_select', compact('tournaments', 'entries', 'bowler', 'eligibility', 'tournamentEligibility'));
     }
 
     public function storeSelection(Request $request)
@@ -72,6 +76,11 @@ class TournamentEntryController extends Controller
             }
 
             $tournament = $openTournaments->get($tournamentId);
+            $tournamentEligibility = $this->resolveEntryEligibility($bowler, $tournament);
+            if ($choice === 'entry' && !$tournamentEligibility['allowed']) {
+                return redirect()->route('tournament.entry.select')
+                    ->with('error', $tournament->name.'：'.$tournamentEligibility['message']);
+            }
             $preferredShift = $this->normalizePreferredShift(
                 (string) $request->input("preferred_shifts.{$tournamentId}", ''),
                 $tournament
@@ -122,7 +131,8 @@ class TournamentEntryController extends Controller
         }
 
         $bowler = ProBowler::query()->find($entry->pro_bowler_id);
-        $eligibility = $this->resolveEntryEligibility($bowler);
+        $tournament = $entry->tournament()->first();
+        $eligibility = $this->resolveEntryEligibility($bowler, $tournament);
 
         if (!$eligibility['allowed']) {
             return redirect()
@@ -135,8 +145,6 @@ class TournamentEntryController extends Controller
                 ->route('tournament.entry.select')
                 ->with('error', 'エントリー有効時のみチェックインできます。');
         }
-
-        $tournament = $entry->tournament()->first();
 
         $requiresShift = (bool) ($tournament?->use_shift_draw ?? false);
         $requiresLane = (bool) ($tournament?->use_lane_draw ?? false);
@@ -224,60 +232,9 @@ class TournamentEntryController extends Controller
         return in_array($preferredShift, $available, true) ? $preferredShift : null;
     }
 
-    private function resolveEntryEligibility(?ProBowler $bowler): array
+    private function resolveEntryEligibility(?ProBowler $bowler, ?Tournament $tournament = null): array
     {
-        if (!$bowler) {
-            return [
-                'allowed' => false,
-                'message' => '選手情報が未結線のため、大会エントリーを利用できません。管理者に確認してください。',
-                'member_class_label' => '-',
-                'official_entry_label' => '不可',
-                'active_label' => '未結線',
-            ];
-        }
-
-        $memberClass = (string) ($bowler->member_class ?? '');
-        $memberClassLabel = $this->memberClassLabel($memberClass);
-        $officialEntryAllowed = (bool) ($bowler->can_enter_official_tournament ?? false);
-        $isActive = (bool) ($bowler->is_active ?? false);
-
-        if (!$isActive) {
-            return [
-                'allowed' => false,
-                'message' => '現在の会員状態が無効のため、大会エントリー対象外です。',
-                'member_class_label' => $memberClassLabel,
-                'official_entry_label' => $officialEntryAllowed ? '可' : '不可',
-                'active_label' => '無効',
-            ];
-        }
-
-        if ($memberClass !== 'player') {
-            return [
-                'allowed' => false,
-                'message' => $memberClassLabel . 'のため、大会エントリー対象外です。',
-                'member_class_label' => $memberClassLabel,
-                'official_entry_label' => $officialEntryAllowed ? '可' : '不可',
-                'active_label' => '有効',
-            ];
-        }
-
-        if (!$officialEntryAllowed) {
-            return [
-                'allowed' => false,
-                'message' => '現在の会員区分では公式戦出場対象外として登録されています。',
-                'member_class_label' => $memberClassLabel,
-                'official_entry_label' => '不可',
-                'active_label' => '有効',
-            ];
-        }
-
-        return [
-            'allowed' => true,
-            'message' => '大会エントリー可能です。',
-            'member_class_label' => $memberClassLabel,
-            'official_entry_label' => '可',
-            'active_label' => '有効',
-        ];
+        return app(\App\Services\TournamentEntryEligibilityService::class)->evaluate($bowler, $tournament);
     }
 
     private function memberClassLabel(?string $memberClass): string

@@ -13,6 +13,7 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\Factory as ViewFactory;
 use ReflectionProperty;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Throwable;
 
 class RunTournamentPdfRegression extends Command
@@ -220,7 +221,17 @@ class RunTournamentPdfRegression extends Command
         try {
             $controller = app(TournamentResultController::class);
             $response = $controller->exportTournamentPdf($tournament);
-            $content = (string) $response->getContent();
+            if ($response instanceof BinaryFileResponse) {
+                $binaryPath = $response->getFile()->getPathname();
+                $content = file_get_contents($binaryPath);
+                @unlink($binaryPath);
+
+                if ($content === false) {
+                    throw new \RuntimeException('Generated PDF could not be read.');
+                }
+            } else {
+                $content = (string) $response->getContent();
+            }
         } catch (Throwable $e) {
             return [
                 'case' => $caseName,

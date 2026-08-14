@@ -19,7 +19,8 @@ return [
     'featured_pdf_links' => [
         [
             'label' => '2026 JPBAトーナメント予定表',
-            'url' => 'https://www.jpba.or.jp/information/tournament/tournament2026/PDF/2026_TournamentSchedule_260622.pdf',
+            'route' => 'annual_schedules.pdf',
+            'params' => ['year' => 2026],
         ],
         [
             'label' => 'JPBAツアー ご観戦時のご案内',
@@ -70,8 +71,8 @@ return [
         ],
         'documents' => [
             ['label' => '定款(PDF)', 'url' => 'https://www.jpba1.jp/assets/pdf/Association/Articles_202007.pdf'],
-            ['label' => '会長挨拶', 'url' => 'https://www.jpba1.jp/association/president.html'],
-            ['label' => '運営機構図', 'url' => 'https://www.jpba1.jp/association/map.html'],
+            ['label' => '会長挨拶', 'route' => 'public.managed_pages.show', 'params' => ['managedPublicPage' => 'president']],
+            ['label' => '運営機構図', 'route' => 'public.managed_pages.show', 'params' => ['managedPublicPage' => 'organization-chart']],
             ['label' => '役員・代議員名簿(PDF)', 'url' => 'https://www.jpba1.jp/assets/pdf/Association/2025/2025_2026_Directors.pdf'],
             ['label' => '2026年度事業計画(PDF)', 'url' => 'https://www.jpba1.jp/assets/pdf/Association/2026/Plan_2026.pdf'],
             ['label' => '2026年度収支予算(PDF)', 'url' => 'https://www.jpba1.jp/assets/pdf/Association/2026/Budget_2026.pdf'],
@@ -89,31 +90,34 @@ return [
             [
                 'label' => 'インストラクター講習情報',
                 'description' => '講習会・研修会など、インストラクター向けのお知らせを確認できます。',
-                'url' => 'https://www.jpba1.jp/instructor/instructor_guide.html',
+                'route' => 'informations.index',
+                'params' => ['category' => 'ｲﾝｽﾄﾗｸﾀｰ'],
             ],
             [
                 'label' => 'ボウリングスクール開講のご案内',
                 'description' => 'スクール開講に関する案内、要件、関連資料を確認できます。',
-                'url' => 'https://www.jpba1.jp/instructor/school_guide.html',
+                'route' => 'public.managed_pages.show',
+                'params' => ['managedPublicPage' => 'instructor-school'],
             ],
             [
                 'label' => 'インストラクターテキスト販売',
                 'description' => '指導者向けテキストや教材の販売案内です。',
-                'url' => 'https://www.jpba1.jp/instructor/textbook.html',
+                'route' => 'public.managed_pages.show',
+                'params' => ['managedPublicPage' => 'instructor-textbook'],
             ],
             [
                 'label' => 'インストラクター制度概要',
                 'description' => 'JPBAインストラクター制度の概要を確認できます。',
-                'url' => 'https://www.jpba1.jp/instructor/overview.html',
+                'route' => 'public.managed_pages.show',
+                'params' => ['managedPublicPage' => 'instructor-overview'],
             ],
         ],
         'license_links' => [
-            ['label' => 'A級インストラクター', 'url' => 'https://www.jpba1.jp/instructor/ins_a.html'],
-            ['label' => 'B級インストラクター', 'url' => 'https://www.jpba1.jp/instructor/ins_b.html'],
-            ['label' => 'C級インストラクター', 'url' => 'https://www.jpba1.jp/instructor/ins_c.html'],
-            ['label' => 'プロ・インストラクター', 'url' => 'https://www.jpba1.jp/instructor/ins_pro.html'],
-            ['label' => '1級・2級インストラクター', 'url' => 'https://www.jpba1.jp/instructor/ins_12.html'],
-            ['label' => '健康ボウリング指導員', 'url' => 'https://www.jpba1.jp/instructor/ins_shidoin.html'],
+            ['label' => 'A級インストラクター', 'route' => 'public.instructors.index', 'params' => ['grade' => 'A級']],
+            ['label' => 'B級インストラクター', 'route' => 'public.instructors.index', 'params' => ['grade' => 'B級']],
+            ['label' => 'C級インストラクター', 'route' => 'public.instructors.index', 'params' => ['grade' => 'C級']],
+            ['label' => 'プロ・インストラクター', 'route' => 'public.instructors.index', 'params' => ['category' => 'pro_instructor']],
+            ['label' => '1級・2級インストラクター', 'route' => 'public.instructors.index', 'params' => ['category' => 'certified']],
         ],
     ],
 
@@ -145,9 +149,8 @@ return [
             ],
         ],
         'links' => [
-            ['label' => '現行プロテストページ', 'url' => 'https://www.jpba1.jp/protest/index.html'],
-            ['label' => '実施概要', 'url' => 'https://www.jpba1.jp/protest/guide.html'],
-            ['label' => '認定1級・2級インストラクター', 'url' => 'https://www.jpba1.jp/instructor/ins_12.html'],
+            ['label' => '実施概要', 'route' => 'public.managed_pages.show', 'params' => ['managedPublicPage' => 'pro-test-guide']],
+            ['label' => '認定1級・2級インストラクター', 'route' => 'public.instructors.index', 'params' => ['category' => 'certified']],
         ],
     ],
 
@@ -166,8 +169,8 @@ return [
             'title' => 'お問い合わせ',
             'breadcrumb' => 'お問い合わせ',
             'summary' => [
-                '公益社団法人日本プロボウリング協会へのお問い合わせ・ご要望は、現行サイトの問い合わせフォームで受け付けています。',
-                '新システム側では、将来的に問い合わせ種別、対応状況、添付、返信履歴を管理できるようにする前提で公開導線を整理します。',
+                '公益社団法人日本プロボウリング協会へのお問い合わせ・ご要望は、協会事務局までご連絡ください。',
+                'お問い合わせ時は、氏名、連絡先、ご用件、お問い合わせ内容をお知らせください。',
             ],
             'sections' => [
                 [
@@ -179,9 +182,7 @@ return [
                     'items' => ['TEL: 03-6436-0310', 'FAX: 03-3454-6140', '受付時間: 平日10時から17時'],
                 ],
             ],
-            'links' => [
-                ['label' => '現行お問い合わせフォーム', 'url' => 'https://www.jpba1.jp/inquiry/index.html'],
-            ],
+            'links' => [],
         ],
         'media' => [
             'title' => '取材のお申込み',
@@ -200,7 +201,6 @@ return [
                 ['label' => '取材時遵守事項 PDF', 'url' => 'https://www.jpba1.jp/media/PDF/ComplianceRules_forMedia_230508.pdf'],
                 ['label' => '取材申請書 PDF', 'url' => 'https://www.jpba1.jp/media/PDF/ApplicationSheet_forMedia_2024.pdf'],
                 ['label' => '取材申請書フォーム', 'url' => 'https://ws.formzu.net/fgen/S86209866/'],
-                ['label' => '現行ページ', 'url' => 'https://www.jpba1.jp/media/index.html'],
             ],
         ],
         'commerce' => [
@@ -230,9 +230,7 @@ return [
                     ],
                 ],
             ],
-            'links' => [
-                ['label' => '現行ページ', 'url' => 'https://www.jpba1.jp/ovservance/index.html'],
-            ],
+            'links' => [],
         ],
         'privacy' => [
             'title' => 'プライバシーポリシー',
@@ -250,9 +248,7 @@ return [
                 ['heading' => '7. 問い合わせへの対応', 'items' => ['電話番号 03-6436-0310', '受付時間 平日10時から17時']],
                 ['heading' => '8. 継続的改善', 'items' => ['情報技術の発展や社会的要請の変化を踏まえ、管理体制および取組みを継続的に見直します。']],
             ],
-            'links' => [
-                ['label' => '現行ページ', 'url' => 'https://www.jpba1.jp/policy/index.html'],
-            ],
+            'links' => [],
         ],
     ],
 

@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\ProBowler;
+use App\Services\AwardCounter;
+use App\Services\PublicPlayerOfficialHistoryService;
 use Illuminate\Support\Str;
 
 class PublicProfileController extends Controller
@@ -60,13 +62,16 @@ class PublicProfileController extends Controller
         return $value;
     }
 
-    public function show(int $id)
+    public function show(int $id, PublicPlayerOfficialHistoryService $officialHistory)
     {
         /** @var ProBowler $p */
         $p = ProBowler::with([
             'district',
             'titles' => function ($q) {
                 $q->with('tournament')->orderBy('year', 'desc');
+            },
+            'confirmedRecords' => function ($q) {
+                $q->orderByDesc('awarded_on')->orderByDesc('id');
             },
         ])
             ->where('is_visible', true)
@@ -79,7 +84,7 @@ class PublicProfileController extends Controller
         $isFemale = (int) $p->sex === 2;
         $licRaw  = $p->license_no ?? '';
         $licNum  = $this->licenseDigits($licRaw);
-        $photo   = $this->storageUrl($p->profile_image_public ?: ($p->public_image_path ?: null));
+        $photo   = $p->public_photo_url;
         $district= $p->district->label ?? '—';
         $kibetsu = $p->kibetsu ? ($p->kibetsu.'期') : '—';
 
@@ -150,11 +155,29 @@ class PublicProfileController extends Controller
             '通算アベレージ' => $p->official_career_average,
         ];
 
+        $achievementSummary = AwardCounter::summaryForBowlerId((int) $p->id);
         $awardCounts = [
-            '公認パーフェクト' => (int) ($p->perfect_count ?? 0),
-            '800シリーズ' => (int) ($p->eight_hundred_count ?? 0),
-            '7-10スプリットメイド' => (int) ($p->seven_ten_count ?? 0),
+            '公認パーフェクト' => $achievementSummary['total']['perfect'],
+            '800シリーズ' => $achievementSummary['total']['eight_hundred'],
+            '7-10スプリットメイド' => $achievementSummary['total']['seven_ten'],
         ];
+        $achievementSections = collect([
+            'perfect' => '公認パーフェクト',
+            'eight_hundred' => '公認800シリーズ',
+            'seven_ten' => '公認7－10メイド',
+        ])->map(function (string $label, string $type) use ($p, $achievementSummary): array {
+            return [
+                'type' => $type,
+                'label' => $label,
+                'total_count' => (int) $achievementSummary['total'][$type],
+                'confirmed_count' => (int) $achievementSummary['confirmed'][$type],
+                'other_count' => (int) $achievementSummary['other'][$type],
+                'records' => $p->confirmedRecords
+                    ->where('record_type', $type)
+                    ->values(),
+            ];
+        })->values();
+        $officialHistoryData = $officialHistory->build($p);
 
         // その他公開項目
         $view = [
@@ -207,6 +230,10 @@ class PublicProfileController extends Controller
             'season_trial_titles_count' => $seasonTrialTitleCount,
             'official_stats' => $officialStats,
             'award_counts' => $awardCounts,
+            'achievement_sections' => $achievementSections,
+            'achievement_summary' => $achievementSummary,
+            'annual_records' => $officialHistoryData['annual_records'],
+            'tournament_history_by_year' => $officialHistoryData['tournament_history_by_year'],
             'official_profile_url' => $p->official_profile_url,
             'official_profile_imported_at' => $p->official_profile_imported_at,
         ];

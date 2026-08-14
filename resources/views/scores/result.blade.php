@@ -226,7 +226,7 @@
 
     if (!empty($tokens)) {
         $query = \App\Models\ProBowler::query()
-            ->select(['license_no', 'name_kanji', 'public_image_path'])
+            ->select(['id', 'license_no', 'name_kanji', 'public_image_path', 'updated_at'])
             ->where(function ($q) use ($tokens) {
                 foreach ($tokens as $tok) {
                     $q->orWhere('license_no', 'like', '%' . $tok);
@@ -257,17 +257,9 @@
                 $raw4 = '0';
             }
 
-            $img = trim((string)($bowler->public_image_path ?? ''));
-            $imgUrl = null;
-            if ($img !== '') {
-                $imgUrl = (preg_match('#^https?://#i', $img) || str_starts_with($img, '/'))
-                    ? $img
-                    : asset('storage/' . ltrim($img, '/'));
-            }
-
             $payload = [
                 'name' => (string)($bowler->name_kanji ?: $licenseNo),
-                'portrait_url' => $imgUrl,
+                'portrait_url' => $bowler->public_photo_url,
             ];
 
             if ($sex !== '') {
@@ -395,6 +387,10 @@
     <div class="subtitle">
         同点時は、対象ゲームのスコア差が少ない選手を上位表示
     </div>
+
+    @if(!empty($scoreEntryBallLookup))
+        <div class="subtitle">選手名をクリックすると、その選手がこの大会に登録したボールを確認できます。</div>
+    @endif
 
     @unless($isPublic)
     <div class="toolbar">
@@ -593,7 +589,14 @@
 
             <div class="body">
                 <div>
-                    <div class="name">{{ $name }}</div>
+                    <div class="name">
+                        @include('scores.partials.player_ball_link', [
+                            'displayName' => $name,
+                            'proBowlerId' => $proBowlerIdForSeed,
+                            'licenseNo' => $info['full'] ?? ($digits4 ?? null),
+                            'scoreEntryBallLookup' => $scoreEntryBallLookup ?? [],
+                        ])
+                    </div>
                     <div class="lic">Lic: {{ $licenseDisplay }}</div>
                 </div>
                 @if($stagesInline)

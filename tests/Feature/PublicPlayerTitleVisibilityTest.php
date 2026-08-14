@@ -12,6 +12,8 @@ class PublicPlayerTitleVisibilityTest extends TestCase
 
         $this->assertStringContainsString('data-title-count="official"', $html);
         $this->assertStringContainsString('data-title-item="official"', $html);
+        $this->assertStringContainsString('data-profile-detail-toggle="titles"', $html);
+        $this->assertTitleDetailsAreInitiallyCollapsed($html);
         $this->assertStringNotContainsString('data-title-count="season-trial"', $html);
         $this->assertStringNotContainsString('data-title-section="season-trial"', $html);
         $this->assertStringNotContainsString('シーズントライアル優勝', $html);
@@ -23,6 +25,8 @@ class PublicPlayerTitleVisibilityTest extends TestCase
 
         $this->assertStringContainsString('data-title-count="official"', $html);
         $this->assertStringContainsString('data-title-item="official"', $html);
+        $this->assertStringContainsString('data-profile-detail-toggle="titles"', $html);
+        $this->assertTitleDetailsAreInitiallyCollapsed($html);
         $this->assertStringContainsString('data-title-count="season-trial"', $html);
         $this->assertStringContainsString('data-title-section="season-trial"', $html);
         $this->assertStringContainsString('data-title-item="season-trial"', $html);
@@ -57,5 +61,19 @@ class PublicPlayerTitleVisibilityTest extends TestCase
         ];
 
         return view('public.players.show', compact('view'))->render();
+    }
+
+    private function assertTitleDetailsAreInitiallyCollapsed(string $html): void
+    {
+        $dom = new \DOMDocument();
+        $previous = libxml_use_internal_errors(true);
+        $dom->loadHTML('<?xml encoding="UTF-8">' . $html);
+        libxml_clear_errors();
+        libxml_use_internal_errors($previous);
+        $xpath = new \DOMXPath($dom);
+        $panel = $xpath->query('//*[@data-profile-detail-panel="titles"]')->item(0);
+
+        $this->assertNotNull($panel);
+        $this->assertTrue($panel->hasAttribute('hidden'));
     }
 }

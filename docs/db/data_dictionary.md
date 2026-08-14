@@ -14,6 +14,8 @@ JPBA SYSTEM Database Data Dictionary
 
 - [1. テーブル一覧](#1-テーブル一覧)
 - [2. テーブル定義](#2-テーブル定義)
+  - [annual_schedules](#annual_schedules)
+  - [annual_schedule_rows](#annual_schedule_rows)
   - [annual_dues](#annual_dues)
   - [approved_ball_pro_bowler](#approved_ball_pro_bowler)
   - [approved_balls](#approved_balls)
@@ -75,8 +77,11 @@ JPBA SYSTEM Database Data Dictionary
   - [pro_test_score_summary](#pro_test_score_summary)
   - [pro_test_status_log](#pro_test_status_log)
   - [pro_test_venue](#pro_test_venue)
+  - [official_profile_stat_snapshots](#official_profile_stat_snapshots)
+  - [record_certification_sequences](#record_certification_sequences)
   - [record_types](#record_types)
   - [registered_balls](#registered_balls)
+  - [score_series_definitions](#score_series_definitions)
   - [sessions](#sessions)
   - [sexes](#sexes)
   - [stage_settings](#stage_settings)
@@ -109,6 +114,55 @@ JPBA SYSTEM Database Data Dictionary
 ---
 
 # 2. テーブル定義
+
+## annual_schedules
+
+### 役割
+年度ごとのJPBAトーナメント年間予定表の表題、公式資料更新日、公開状態を保持する。
+
+### 主キー
+- id (bigint)
+
+### 主要カラム
+- year（年度、unique）
+- title（表題）
+- source_updated_on / source_url（公式資料の更新日と参照元）
+- notice（注意書き）
+- status（draft / published）
+- published_at（一般公開日時）
+- created_by_user_id / updated_by_user_id（作成・更新担当者）
+
+### 外部キー（FK）
+- created_by_user_id -> users.id（ON DELETE SET NULL）
+- updated_by_user_id -> users.id（ON DELETE SET NULL）
+
+---
+
+## annual_schedule_rows
+
+### 役割
+年間予定表の各行を、公式PDFと同じ列構成で保持する。大会、プロテスト、講習会、備考のみの行、空欄行を扱う。
+
+### 主キー
+- id (bigint)
+
+### 主要カラム
+- annual_schedule_id（年度予定表）
+- tournament_id（大会データへの任意の紐づけ、unique / nullable）
+- month / sort_order（月と月内表示順）
+- start_date / end_date（日付検索・大会同期用）
+- date_label（公式資料どおりの日付表記）
+- title / eligibility / region / venue
+- point_mark / average_mark / prize_mark / title_mark
+- note（備考）
+- row_type（event / qualifier / note / placeholder）
+- source_type（official_pdf / tournament / manual）
+
+### 外部キー（FK）
+- annual_schedule_id -> annual_schedules.id（ON DELETE CASCADE）
+- tournament_id -> tournaments.id（ON DELETE SET NULL）
+
+---
 
 ## annual_dues
 
@@ -151,15 +205,98 @@ JPBA SYSTEM Database Data Dictionary
 ## approved_balls
 
 ### 役割
-JPBA公認ボールのマスタ。
+メーカー公式サイト掲載ボールのカタログマスタ兼、JPBA大会で選択可能なボールのマスタ。
+メーカー掲載状態とJPBA大会選択可否は分離し、`approved = false` のメーカー掲載品もカタログには保持する。
 
 ### 主キー
 - id (bigint)
 
 ### 主要カラム
 - name（ボール名）
-- manufacturer（メーカー）
-- released_on（発売日：nullable）
+- name_kana（カナ名：nullable）
+- sort_name（五十音順の比較用名称：nullable）
+- manufacturer（取得元メーカー名）
+- manufacturer_id（取得元メーカーID：nullable）
+- brand（ブランド：nullable）
+- release_date（発売日。月までしか確認できない場合は月初日：nullable）
+- approved（JPBA大会で選択可能か。メーカー掲載状態とは別）
+- source_key（正規化した商品URLのSHA-256。一意：nullable）
+- source_url（公式商品URL：nullable）
+- source_image_url（公式画像URL：nullable）
+- image_path（ローカル保存画像パス：nullable）
+- image_sha256（保存画像のSHA-256：nullable）
+- catalog_status（listed / archive / manual / hidden）
+- usbc_match_status（unchecked / matched / ambiguous / not_listed）
+- usbc_match_method（完全一致、公式URL名、検証済み別名など照合方法：nullable）
+- usbc_matched_brand / usbc_matched_name（USBC公式リスト上の一致名称：nullable）
+- usbc_match_candidates（自動確定できない候補：JSON、nullable）
+- usbc_checked_at（USBC照合日時：nullable）
+- source_payload（公式サイト固有情報・別掲載URL：JSON、nullable）
+- source_fingerprint（名称・ブランド・画像等の差分判定値：nullable）
+- first_seen_at / last_seen_at / imported_at / image_imported_at
+
+### 制約・運用
+- `source_key` は一意。公式サイトの同一商品二重投稿は、メーカー・ブランド・名称・画像URLの完全一致で同一商品へ統合し、別URLを `source_payload.alternate_source_urls` に保持する。
+- 画像は外部直リンクせず `storage/app/public/ball_catalog/{manufacturer}/` へ保存し、取得元URLとハッシュを保持する。
+- `approved` はJPBA大会での選択可否、`usbc_match_status` はUSBC公式リスト掲載有無であり、別の管理項目とする。
+- USBC未掲載でも保存は禁止せず、選手・スタッフの登録画面で警告する。
+
+### 外部キー（FK）
+- manufacturer_id -> ball_manufacturers.id（ON DELETE SET NULL）
+
+---
+
+## usbc_approved_ball_lists
+
+### 役割
+USBC公式Approved Ball Listの取得単位を保存する同期スナップショット。
+公式更新日、取得元、件数、照合集計を保持し、現行公式ページ閉鎖や内容更新後も取得時点を監査できるようにする。
+
+### 主キー
+- id (bigint)
+
+### 主要カラム
+- official_updated_on（USBC公式ページ記載の更新日：nullable）
+- source_page_url / source_pdf_url / source_api_url（公式取得元）
+- source_sha256（公式行の内容ハッシュ：一意）
+- status（running / completed / failed）
+- fetched_at / completed_at
+- brand_count / entry_count
+- matched_catalog_count / ambiguous_catalog_count / unlisted_catalog_count
+- report（同期結果・エラー情報：JSON、nullable）
+
+### 制約・運用
+- `source_sha256` は一意。同じ公式内容は再取得しても同一スナップショットを再利用する。
+- 毎週火曜03:15（Asia/Tokyo）に公式全ブランドを再取得し、ボールカタログを再照合する。
+- 公式取得に失敗した場合は、直前の正常スナップショットを破壊しない。
+
+---
+
+## usbc_approved_ball_entries
+
+### 役割
+1回のUSBC公式Approved Ball Listに含まれるブランド別ボール明細。
+英語表記、承認日、公式画像URLと照合用正規化値を保持する。
+
+### 主キー
+- id (bigint)
+
+### 主要カラム
+- list_id（取得スナップショットID）
+- brand / name（USBC公式英語表記）
+- approved_date_text（公式の承認日原文：nullable）
+- approved_on（解析できた承認日：nullable）
+- image_url（USBC公式画像URL：nullable）
+- normalized_brand / normalized_name（照合用正規化値）
+- source_fingerprint（公式明細の識別ハッシュ）
+
+### 制約・運用
+- `list_id + source_fingerprint` は一意。
+- ブランド・名称の正規化完全一致を優先し、公式商品URL名、検証済み別名、承認年の近さを補助に使う。
+- 似ているだけの名称は自動確定せず `ambiguous` とし、人の確認後に別名規則へ追加する。
+
+### 外部キー（FK）
+- list_id -> usbc_approved_ball_lists.id（ON DELETE CASCADE）
 
 ---
 
@@ -196,6 +333,154 @@ JPBA公認ボールのマスタ。
 
 ### 外部キー（FK）
 - なし
+
+---
+
+## ball_annual_registrations
+
+### 役割
+選手が暦年単位で提出するボール登録申請のヘッダー。選手単位で一括承認し、年度途中の追加申請は版を増やして履歴を保持する。
+
+### 主キー
+- id (bigint)
+
+### 主要カラム
+- pro_bowler_id（対象選手）
+- registration_year（申請年度）
+- revision（同一選手・年度内の版番号）
+- status（draft / submitted / approved / returned / superseded）
+- submitted_at / submitted_by_user_id（提出日時・提出者）
+- approved_at / approved_by_user_id（承認日時・承認者）
+- returned_at / returned_by_user_id / return_reason（差戻し情報）
+
+### 制約・運用
+- `pro_bowler_id + registration_year + revision` は一意。
+- 新しい版の承認までは直前の `approved` 版を有効に保つ。
+- 新版承認時に旧承認版を `superseded` とする。
+
+### 外部キー（FK）
+- pro_bowler_id -> pro_bowlers.id（ON DELETE CASCADE）
+- submitted_by_user_id -> users.id（ON DELETE SET NULL）
+- approved_by_user_id -> users.id（ON DELETE SET NULL）
+- returned_by_user_id -> users.id（ON DELETE SET NULL）
+
+---
+
+## ball_annual_registration_items
+
+### 役割
+年度申請の各版に含まれる現物ボールを `used_balls` と紐付ける。
+
+### 主キー
+- id (bigint)
+
+### 主要カラム
+- registration_id（年度申請版）
+- used_ball_id（選手の現物ボール）
+
+### 制約・運用
+- `registration_id + used_ball_id` は一意。
+- 申請履歴を保護するため、参照中の `used_balls` は物理削除を制限する。
+
+### 外部キー（FK）
+- registration_id -> ball_annual_registrations.id（ON DELETE CASCADE）
+- used_ball_id -> used_balls.id（ON DELETE RESTRICT）
+
+---
+
+## ball_annual_registration_histories
+
+### 役割
+年度申請の下書き保存、提出、承認、差戻し、旧版更新を監査履歴として保持する。
+
+### 主キー
+- id (bigint)
+
+### 主要カラム
+- registration_id（対象申請版）
+- action（draft_saved / submitted / approved / returned / superseded）
+- from_status / to_status（状態遷移）
+- acted_by_user_id（操作担当者：nullable）
+- note（差戻し理由等）
+- payload（対象ボールID・件数等：JSON）
+
+### 外部キー（FK）
+- registration_id -> ball_annual_registrations.id（ON DELETE CASCADE）
+- acted_by_user_id -> users.id（ON DELETE SET NULL）
+
+---
+
+## ball_catalog_import_failures
+
+### 役割
+メーカー公式カタログ取込中の一覧取得・画像取得失敗を、再取得可能な形で保存する。
+
+### 主キー
+- id (bigint)
+
+### 主要カラム
+- import_run_id
+- manufacturer_id（nullable）
+- phase（listing / image）
+- page_url / product_url / image_url（nullable）
+- error_message
+- attempt_count
+- resolved_at（nullable）
+- created_at / updated_at
+
+### 外部キー（FK）
+- import_run_id -> ball_catalog_import_runs.id（ON DELETE CASCADE）
+- manufacturer_id -> ball_manufacturers.id（ON DELETE SET NULL）
+
+---
+
+## ball_catalog_import_runs
+
+### 役割
+メーカー公式カタログの全件・差分取込について、ページ単位の進捗、件数、画像結果、途中再開位置、完了状態を保存する。
+
+### 主キー
+- id (bigint)
+
+### 主要カラム
+- manufacturer_id（nullable）
+- mode
+- status（running / completed / completed_with_errors / failed / interrupted）
+- started_at / completed_at（completed_atはnullable）
+- page_count / item_count
+- created_count / updated_count / unchanged_count
+- image_downloaded_count / image_reused_count / image_failed_count
+- error_count
+- cursor_url（次回ページURL：nullable）
+- report（詳細監査結果：JSON、nullable）
+- created_at / updated_at
+
+### 外部キー（FK）
+- manufacturer_id -> ball_manufacturers.id（ON DELETE SET NULL）
+
+---
+
+## ball_manufacturers
+
+### 役割
+ボールカタログの公式取得元メーカーを管理する。ブランドは `approved_balls.brand` として分離する。
+
+### 主キー
+- id (bigint)
+
+### 主要カラム
+- name（一意）
+- slug（一意）
+- base_url
+- catalog_url
+- is_active
+- sort_order
+- created_at / updated_at
+
+### 初期対象
+- ABS
+- HI-SP
+- サンブリッジ
 
 ---
 ## area
@@ -235,6 +520,124 @@ JPBA公認ボールのマスタ。
 ### 主要カラム
 - name（地区名：内部識別用の名称。旧来互換のため保持）
 - label（表示名：正本。画面表示・選択肢は基本こちらを使用）
+
+---
+
+## official_profile_stat_snapshots
+
+### 役割
+閉鎖予定の現行JPBA選手プロフィールから取得した公認記録総数の監査用スナップショット。新システムの総数を減らす目的では使用せず、移行時点の根拠を保存する。
+
+### 主キー
+- id (bigint)
+
+### 主要カラム
+- pro_bowler_id
+- license_no
+- source_url
+- captured_at
+- perfect_count
+- eight_hundred_count
+- seven_ten_count
+- payload
+- payload_hash
+
+### 外部キー（FK）
+- pro_bowler_id -> pro_bowlers.id（ON DELETE CASCADE）
+
+---
+
+## record_certification_sequences
+
+### 役割
+公認パーフェクト・公認800シリーズ・公認7－10メイドの次回公認番号を、記録種別および男女別に管理する。番号は確認時に自動採番し、後から手動修正可能。
+
+### 主キー
+- id (bigint)
+
+### 主要カラム
+- record_type
+- gender
+- next_number
+- prefix
+- suffix
+- is_enabled
+
+### 制約
+- record_type + gender は一意。
+- record_type は perfect / eight_hundred / seven_ten。
+- gender は M / F。
+
+---
+
+## record_types
+
+### 役割
+公認記録の明細、成績からの自動検出候補、公式記事の根拠、公認番号、確認状態を保持する。`pro_bowlers` の3種類の総数は新システムの正とし、過去明細の追加では総数を減らさず加算もしない。
+
+### 主キー
+- id (bigint)
+
+### 主要カラム
+- record_type
+- pro_bowler_id
+- tournament_id
+- source_game_score_id
+- score_series_definition_id
+- tournament_name
+- awarded_on
+- stage / shift / gender
+- game_numbers / frame_number
+- series_label / series_start_game / series_end_game / series_total / series_scores
+- status（candidate / confirmed / rejected / void）
+- registration_mode（historical_backfill / new_achievement）
+- detection_key
+- certification_number / certification_number_value
+- source_type / source_url / source_label / evidence_text
+- warning / notes
+- detected_at / confirmed_at / confirmed_by / count_applied_at
+
+### 運用ルール
+- historical_backfill は既存総数の内訳を補完するため、確認しても総数へ加算しない。
+- new_achievement は確認時に一度だけ総数へ加算し、`count_applied_at` で二重加算を防止する。
+- 確認済み明細の根拠スコアが訂正・削除されても自動削除・総数減算を行わず、`warning` を記録する。
+- 表示総数 = max（新システム総数, 確認済み明細数）。
+- その他過去達成数 = 表示総数 - 確認済み明細数。
+
+### 外部キー（FK）
+- pro_bowler_id -> pro_bowlers.id
+- tournament_id -> tournaments.id（ON DELETE SET NULL）
+- source_game_score_id -> game_scores.id（ON DELETE SET NULL）
+- score_series_definition_id -> score_series_definitions.id（ON DELETE SET NULL）
+- confirmed_by -> users.id（ON DELETE SET NULL）
+
+---
+
+## score_series_definitions
+
+### 役割
+800シリーズ判定対象を、大会・ラウンド・シフト・男女別の正確な3ゲームとして定義する。任意のスライディング3ゲームは対象にしない。
+
+### 主キー
+- id (bigint)
+
+### 主要カラム
+- tournament_id
+- stage
+- shift
+- gender
+- label
+- start_game
+- end_game
+- is_800_eligible
+- is_enabled
+- source
+
+### 制約
+- end_game - start_game + 1 = 3。
+
+### 外部キー（FK）
+- tournament_id -> tournaments.id（ON DELETE CASCADE）
 
 ---
 
@@ -849,6 +1252,16 @@ CSV一時取込、行修正、一括修正、`game_scores` への確定反映な
   - `honorary_or_overseas`
   - `other`
 - can_enter_official_tournament（公式戦出場可否）
+- training_compliance_status（TP講習会の運用ステータス）
+  - `unconfirmed`（履歴移行・確認待ち。一括移行中の暫定状態）
+  - `valid`（受講済み・有効）
+  - `official_list_valid`（JPBA公式修了者一覧で受講済みを確認）
+  - `expiring_this_year`（当年度中に期限切れ）
+  - `expiring_next_year`（翌年度に期限切れ）
+  - `expired`（期限切れ）
+  - `missing`（有効な受講履歴なし）
+  - `exempt`（管理上の適用除外）
+- training_compliance_checked_at（講習会ステータスの最終再判定日時）
 - is_active（有効フラグ。運用上は `membership_type` と `kaiin_status.is_retired` に整合させる）
 - is_visible
 - login_id（参照先未確定のためFKなし：ADR参照）
@@ -859,6 +1272,9 @@ CSV一時取込、行修正、一括修正、`game_scores` への確定反映な
 - `membership_type` は元データの会員種別名を保持する生値とする。
 - `member_class` は業務判定用の派生区分であり、競技導線・画面条件分岐は原則こちらを使う。
 - `can_enter_official_tournament` は公式戦の出場可否を示す補助フラグであり、一覧・大会系導線は原則こちらを使う。
+- 大会出場可否は `can_enter_official_tournament` だけで決めず、大会初日時点の有効なTP講習会履歴または公式修了者一覧の根拠も合わせて判定する。
+- 個別受講履歴と公式修了者一覧が両方ある場合は、正確な受講日を持つ個別履歴を優先する。
+- 過去履歴の移行完了前に一斉失格を発生させないため、`training_compliance_status = 'unconfirmed'` は暫定的に出場可とする。履歴投入後に管理画面から再判定し、以後は `expired` / `missing` を出場不可とする。
 - 現役/退会等の正本は `membership_type` と `kaiin_status.is_retired` とする。
 - `is_active` は公開・検索などで使う補助フラグであり、`membership_type` と不整合にならないよう importer / migration で維持する。
 - `member_class = 'player'` かつ `is_active = true` の行を、競技系では「現在の公式戦対象者」として扱う。
@@ -926,6 +1342,116 @@ SNS等リンク集を保持するテーブル。
 
 ### 外部キー（FK）
 - pro_bowler_id -> pro_bowlers.id
+
+---
+
+## pro_bowler_annual_records
+
+### 役割
+現行JPBA公式プロフィールから閉鎖前に移行した、選手別・年度別の公式戦記録を保持する。
+
+通常年度に加え、公式表記どおりの `2020-21` のような複数年シーズンも1行で保存する。新システム公開後の当年度行は、この保存値ではなく最新の `pro_bowler_ranking_snapshots` / `pro_bowler_ranking_rows` を優先して公開する。
+
+### 主キー
+- id (bigint)
+
+### 主要カラム
+- pro_bowler_id（対象プロボウラー）
+- season_key（表示年度。例: `2026`, `2020-21`）
+- season_start_year / season_end_year（並び替え・期間判定用）
+- ranking_rank（年度順位：nullable）
+- games（ゲーム数：nullable）
+- total_pin（トータルピン：nullable）
+- points（ポイント：nullable）
+- average（アベレージ：nullable）
+- prize_money（獲得賞金：nullable）
+- source_type / source_url / captured_at（移行元と取得時点）
+
+### 一意制約
+- pro_bowler_id + season_key
+
+### 外部キー（FK）
+- pro_bowler_id -> pro_bowlers.id（ON DELETE CASCADE）
+
+---
+
+## pro_bowler_official_history_imports
+
+### 役割
+旧公式プロフィールの年度別公式戦記録と全出場年度の移行が、選手単位で完了したことを保持する。
+
+全出場年度の完了マーカーが揃った場合だけ作成する。全選手移行の再開時は、この完了行がある選手の基礎プロフィールへ再アクセスしない。
+
+### 主キー
+- id (bigint)
+
+### 主要カラム
+- pro_bowler_id（対象プロボウラー）
+- annual_row_count（年度別公式戦記録の取得行数）
+- participation_year_count（出場年度数）
+- tournament_row_count（出場大会総行数）
+- source_url（取得元プロフィール）
+- completed_at（選手単位の移行完了時点）
+
+### 一意制約
+- pro_bowler_id
+
+### 外部キー（FK）
+- pro_bowler_id -> pro_bowlers.id（ON DELETE CASCADE）
+
+---
+
+## pro_bowler_tournament_histories
+
+### 役割
+現行JPBA公式プロフィールから閉鎖前に移行した、選手別の過去出場大会履歴を保持する。
+
+新システム内に正式成績がある年度・開催日は `tournament_results` を公開時に優先し、旧サイト移行行との重複を表示しない。これにより新ページ公開後の大会は成績登録だけで選手ページへ自動反映される。
+
+### 主キー
+- id (bigint)
+
+### 主要カラム
+- pro_bowler_id（対象プロボウラー）
+- season_year（出場年度）
+- held_on（開催年月日）
+- tournament_name（大会名）
+- ranking_rank（最終順位：nullable）
+- average（アベレージ：nullable）
+- prize_money（獲得賞金：nullable）
+- source_type / source_url / captured_at（移行元と取得時点）
+- source_fingerprint（選手・年度・日付・大会名から作る冪等取込キー）
+
+### 一意制約
+- source_fingerprint
+
+### 外部キー（FK）
+- pro_bowler_id -> pro_bowlers.id（ON DELETE CASCADE）
+
+---
+
+## pro_bowler_tournament_history_syncs
+
+### 役割
+旧公式プロフィールの出場大会履歴について、選手・年度単位の取得完了状態と取得行数を保持する。
+
+途中停止で大会履歴が一部だけ保存された年度を完了扱いにしないため、全行保存後にだけこのテーブルへ完了行を作る。再開時はこの完了行がある年度だけをスキップする。
+
+### 主キー
+- id (bigint)
+
+### 主要カラム
+- pro_bowler_id（対象プロボウラー）
+- season_year（取得完了年度）
+- row_count（公式ページから取得した行数）
+- source_url（取得元年度ページ）
+- captured_at（取得完了時点）
+
+### 一意制約
+- pro_bowler_id + season_year
+
+### 外部キー（FK）
+- pro_bowler_id -> pro_bowlers.id（ON DELETE CASCADE）
 
 ---
 
@@ -1291,6 +1817,55 @@ JPBA公式サイトの当該年度ランキング、前年度最終ランキン�
 
 ---
 
+## tournament_result_formats
+
+### 役割
+大会最終成績PDFの出力形式を管理するマスタ。大会固有の構図を無理に共通化せず、「ピュアフーズ岸方式」などの選択肢として大会作成・編集画面へ提供する。
+
+### 主キー
+- id (bigint)
+
+### 主要カラム
+- name（管理画面に表示するフォーマット名）
+- code（処理分岐に使用する一意コード）
+- description（用途説明：nullable）
+- is_active（新規大会で選択可能か）
+
+### 注意（運用方針）
+- このテーブルはフォーマットの種類だけを保持し、実際のExcelファイルは `tournament_result_format_versions` で版管理する。
+- 選手、スコア、順位、ポイント、賞金などの大会データを表示都合で重複保存しない。
+
+---
+
+## tournament_result_format_versions
+
+### 役割
+大会最終成績フォーマットのExcelファイルを変更不能な版として管理する。大会は使用する版を固定参照し、後から新しい版を登録しても過年度PDFの再現性を保つ。
+
+### 主キー
+- id (bigint)
+
+### 主要カラム
+- tournament_result_format_id（所属フォーマット）
+- version_no（フォーマット内の版番号）
+- template_disk（保存元種別。初期値 `resource`）
+- template_path（Excelテンプレートの相対パス）
+- notes（変更内容：nullable）
+- is_active（利用可能な版か）
+
+### 制約
+- tournament_result_format_id + version_no は一意。
+
+### 注意（運用方針）
+- 管理画面から編集済みExcelをアップロードすると、既存ファイルを上書きせず次の `version_no` を作成する。
+- PDF出力時は大会が選択した版のExcelへ、確定済み大会情報・成績・賞金・ポイント・プロフィール写真・既存作図Serviceの画像を転写する。
+- 優勝者写真は公式最終成績PDFから取り込まず、選手プロフィール画像を参照する。
+
+### 外部キー（FK）
+- tournament_result_format_id -> tournament_result_formats.id（ON DELETE CASCADE）
+
+---
+
 ## tournament_competitor_groups
 
 ### 役割
@@ -1434,10 +2009,23 @@ JPBA公式サイトの当該年度ランキング、前年度最終ランキン�
 ### 主要カラム
 - pro_bowler_id
 - training_id
+- training_session_id（年度別講習会との結線。個別入力時はnullable）
+- attended_on / expires_at（受講日・有効期限）
+- record_status（`valid` / `revoked`）
+- revoked_at（取消日時：nullable）
+- notes
+- recorded_by_user_id（登録・更新担当者：nullable）
+
+### 注意（運用方針）
+- TP講習会の有効期限は、講習マスタの `valid_for_months = 36` を正本に、受講日から36か月後の前日として保存する。
+- 講習会確定後に受講者を欠席へ修正した場合は、紐づく履歴を削除せず `record_status = 'revoked'` とし、監査可能な形で失効させる。
+- 出場資格判定では `record_status = 'valid'` かつ `revoked_at IS NULL` の履歴だけを対象とする。
 
 ### 外部キー（FK）
 - pro_bowler_id -> pro_bowlers.id
 - training_id -> trainings.id
+- training_session_id -> training_sessions.id（nullable, ON DELETE SET NULL）
+- recorded_by_user_id -> users.id（nullable, ON DELETE SET NULL）
 
 ---
 
@@ -1450,7 +2038,174 @@ JPBA公式サイトの当該年度ランキング、前年度最終ランキン�
 - id (bigint)
 
 ### 主要カラム
+- code（講習種別コード。TP講習会は `mandatory`）
 - name（講習名）
+- valid_for_months（有効月数。TP講習会は36）
+- mandatory（大会出場資格の必須講習か）
+
+---
+
+## managed_public_pages
+
+### 役割
+コンプライアンス、プライバシーポリシー、会長挨拶、インストラクター制度等の固定公開ページ本文を、新サイト側で編集・公開するための正本テーブル。
+
+### 主キー
+- id (bigint)
+
+### 主要カラム
+- slug（公開URL識別子、unique）
+- title / body_html
+- source_url（移行元の現行公式ページ：nullable）
+- navigation_group / sort_order
+- is_published / published_at
+- source_checked_at（現行公式ページの最終確認日時：nullable）
+- created_by_user_id / updated_by_user_id（nullable）
+
+### 注意（運用方針）
+- 外部サイト閉鎖後も本文が残るよう、公開時はこのテーブルを正本とする。
+- 管理画面保存時にHTMLを許可タグへ制限し、スクリプトやイベント属性は保存しない。
+- `is_published = false` のページは一般公開URLから表示しない。
+
+### 外部キー（FK）
+- created_by_user_id -> users.id（nullable, ON DELETE SET NULL）
+- updated_by_user_id -> users.id（nullable, ON DELETE SET NULL）
+
+---
+
+## training_sessions
+
+### 役割
+年度ごとのトーナメントプレイヤー講習会開催回を管理するテーブル。開催日、会場、確定状態と確定担当者を保持する。
+
+### 主キー
+- id (bigint)
+
+### 主要カラム
+- training_id
+- session_year / name / held_on / venue
+- status（`planning` / `completed`）
+- notes
+- finalized_at / finalized_by_user_id
+- created_by_user_id / updated_by_user_id
+
+### 注意（運用方針）
+- 受講者の入力中は `planning`、出欠確定と受講履歴反映後は `completed` とする。
+- 確定解除後に修正・再確定でき、再確定時に受講履歴と会員ステータスを再同期する。
+
+### 外部キー（FK）
+- training_id -> trainings.id（ON DELETE CASCADE）
+- finalized_by_user_id -> users.id（nullable, ON DELETE SET NULL）
+- created_by_user_id -> users.id（nullable, ON DELETE SET NULL）
+- updated_by_user_id -> users.id（nullable, ON DELETE SET NULL）
+
+---
+
+## training_session_participants
+
+### 役割
+講習会開催回ごとの対象会員と出欠結果を管理し、確定後に生成・更新した受講履歴へ結線するテーブル。
+
+### 主キー
+- id (bigint)
+
+### 主要カラム
+- training_session_id / pro_bowler_id（組み合わせunique）
+- attendance_status（`registered` / `attended` / `absent` / `exempt`）
+- notes
+- pro_bowler_training_id（確定後の受講履歴：nullable）
+- processed_at / processed_by_user_id
+
+### 外部キー（FK）
+- training_session_id -> training_sessions.id（ON DELETE CASCADE）
+- pro_bowler_id -> pro_bowlers.id（ON DELETE CASCADE）
+- pro_bowler_training_id -> pro_bowler_trainings.id（nullable, ON DELETE SET NULL）
+- processed_by_user_id -> users.id（nullable, ON DELETE SET NULL）
+
+---
+
+## training_compliance_notifications
+
+### 役割
+TP講習会の期限切れ前年度通知について、宛先、送信結果、失敗理由を記録し、同じ期限に対する重複メールを防止する監査テーブル。
+
+### 主キー
+- id (bigint)
+
+### 主要カラム
+- pro_bowler_id / pro_bowler_training_id
+- notification_type（既定値 `expiry_previous_year`）
+- expires_on / notice_year
+- recipient_email
+- status（`pending` / `sent` / `skipped` / `failed`）
+- sent_at / error_message
+- requested_by_user_id
+
+### 注意（運用方針）
+- `pro_bowler_id + expires_on + notification_type` をuniqueとし、自動実行と手動実行が重なっても二重送信しない。
+- バッチは毎日実行できるが、実際の送信対象は通知年と未送信履歴から抽出する。
+- メールアドレスがない会員も `skipped` として記録し、管理画面で追跡できるようにする。
+
+### 外部キー（FK）
+- pro_bowler_id -> pro_bowlers.id（ON DELETE CASCADE）
+- pro_bowler_training_id -> pro_bowler_trainings.id（nullable, ON DELETE SET NULL）
+- requested_by_user_id -> users.id（nullable, ON DELETE SET NULL）
+
+---
+
+## training_official_lists
+
+### 役割
+JPBAが公開するトーナメントプレイヤー講習会修了者一覧の版、有効期間、参照元、ハッシュ、照合件数を保持する監査テーブル。
+
+### 主キー
+- id (bigint)
+
+### 主要カラム
+- training_id / edition_number / title
+- valid_from / valid_through（公式の受講サイクルとして扱う資格有効期間）
+- source_page_url / source_url / source_published_at
+- source_sha256（公式PDFのSHA-256、unique）
+- is_current / sync_status
+- total_count / male_count / female_count
+- matched_count / unmatched_count / inactive_count
+- imported_at / imported_by_user_id / notes
+
+### 注意（運用方針）
+- 公開PDFに正確な受講日が記載されていないため、受講日は推測せず `date_precision = official_cycle` 相当の根拠として利用する。
+- 一覧の根拠は `source_published_at` より前の大会判定に遡及適用しない。
+- 同じ `source_sha256` のPDFは再実行しても重複登録しない。
+- 未照合または重複候補が1名でもあれば、全件の取り込みを中止する。
+
+### 外部キー（FK）
+- training_id -> trainings.id（ON DELETE CASCADE）
+- imported_by_user_id -> users.id（nullable, ON DELETE SET NULL）
+
+---
+
+## training_official_list_entries
+
+### 役割
+公式修了者一覧の男女別ライセンス番号と、選手マスタの照合結果を保持するテーブル。
+
+### 主キー
+- id (bigint)
+
+### 主要カラム
+- training_official_list_id / pro_bowler_id
+- gender（`M` / `F`）/ license_no_num / source_order
+- source_name（PDFから信頼できる氏名を抽出できた場合だけ保存）
+- match_status（`matched` / `inactive` / `unmatched` / `ambiguous`）
+- notes
+
+### 注意（照合規則）
+- `gender + license_no_num` に加え、標準形式 `^[MF][0-9]{8}$` のライセンス番号だけを照合対象にする。
+- ティーチング等の `M0000T...` / `M0000K...` / `M0000P...` を同じ数値番号の公式プロと誤結合しない。
+- 一覧内の `gender + license_no_num` はunique。
+
+### 外部キー（FK）
+- training_official_list_id -> training_official_lists.id（ON DELETE CASCADE）
+- pro_bowler_id -> pro_bowlers.id（nullable, ON DELETE SET NULL）
 
 ---
 
@@ -1466,6 +2221,7 @@ JPBA公式サイトの当該年度ランキング、前年度最終ランキン�
 - tournament_series_id（大会シリーズ：nullable）
 - tournament_edition_id（年度・季節単位の開催回：nullable）
 - tournament_template_version_id（作成元テンプレート版：nullable）
+- tournament_result_format_version_id（最終成績PDFで使用するExcelフォーマット版：nullable）
 - name（大会名）
 - setup_status（draft / ready / entry_open / in_progress / provisional / final / archived）
 - competition_type（singles / doubles / team / all_events / qualifier / priority_ranking / championship）
@@ -1527,6 +2283,7 @@ JPBA公式サイトの当該年度ランキング、前年度最終ランキン�
 - venue_name / venue_address / venue_tel / venue_fax
 - entry_start / entry_end
 - inspection_required
+- ball_registration_limit（選手1人が大会へ登録できる使用ボール数の上限。既定12、1～100）
 - spectator_policy（paid / free / none）
 - admission_fee（nullable text）
 - broadcast / streaming
@@ -1550,6 +2307,7 @@ JPBA公式サイトの当該年度ランキング、前年度最終ランキン�
 - tournament_series_id -> tournament_series.id（nullable, ON DELETE SET NULL）
 - tournament_edition_id -> tournament_editions.id（nullable, ON DELETE SET NULL）
 - tournament_template_version_id -> tournament_template_versions.id（nullable, ON DELETE SET NULL）
+- tournament_result_format_version_id -> tournament_result_format_versions.id（nullable, ON DELETE SET NULL）
 - venue_id -> venues.id（nullable）
 
 ### 抽選運営設定
@@ -2503,6 +3261,8 @@ JPBA公式ページのような「予選前半成績」「予選通算成績」�
 - `inspection_number` が空または `expires_at` が NULL の行は仮登録として表示する。
 - 期限切れのボールは通常の大会使用候補から外し、`expires_at` が NULL または当日以降の行を選択対象にする。
 - `registered_balls` で公式登録情報が作成/更新された場合、同じ選手・同じシリアルの `used_balls` へ同期する。
+- 新しく大会へ追加できるのは、大会開催年の最新 `ball_annual_registrations.status = approved` 版に含まれるボールだけとする。
+- 新版が承認されるまでは直前の承認版を有効にし、既存の大会登録は自動解除しない。
 - エントリーごとの実際の選択結果は `tournament_entry_balls` に保持する。
 
 ### 外部キー（FK）

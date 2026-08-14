@@ -6,6 +6,7 @@ use App\Models\ProBowler;
 use App\Models\Tournament;
 use App\Models\TournamentEntry;
 use App\Services\ProBowlerSeedService;
+use App\Services\BallInspectionService;
 use App\Services\TournamentLaneMovementService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
@@ -17,15 +18,21 @@ use Illuminate\Support\Str;
 
 class TournamentEntryAdminController extends Controller
 {
+    public function __construct(
+        private readonly BallInspectionService $inspectionService
+    ) {
+    }
+
     public function index(Request $request, Tournament $tournament)
     {
         $status = (string) $request->input('status', 'active');
         $keyword = trim((string) $request->input('q', ''));
+        $ballStatus = (string) $request->input('ball_status', '');
 
         $priorityLookup = $this->buildTournamentPriorityLookup($tournament);
 
         $query = TournamentEntry::query()
-            ->with('bowler')
+            ->with(['bowler', 'balls'])
             ->withCount('balls')
             ->where('tournament_id', $tournament->id);
 
@@ -37,12 +44,20 @@ class TournamentEntryAdminController extends Controller
 
         $this->applyBowlerKeyword($query, $keyword);
 
-        $entriesCollection = $this->decorateEntriesWithParticipantDisplay(
-            $this->decorateEntriesWithPriority(
-                $query->get(),
-                $priorityLookup
+        $entriesCollection = $this->decorateEntriesWithBallRegistrationStatus(
+            $this->decorateEntriesWithParticipantDisplay(
+                $this->decorateEntriesWithPriority(
+                    $query->get(),
+                    $priorityLookup
+                ),
+                $tournament
             ),
             $tournament
+        );
+
+        $entriesCollection = $this->filterEntriesByBallStatus(
+            $entriesCollection,
+            $ballStatus
         );
 
         $entries = $this->paginateCollection(
@@ -61,6 +76,7 @@ class TournamentEntryAdminController extends Controller
             'summary',
             'status',
             'keyword',
+            'ballStatus',
             'amateurBowlers',
             'amateurParticipants',
             'entryOperationLogs'
@@ -190,6 +206,92 @@ class TournamentEntryAdminController extends Controller
             'entries',
             'laneMovement'
         ));
+    }
+
+    public function storeEntry(Request $request, Tournament $tournament)
+    {
+        $data = $request->validate([
+            'entry_license_no' => ['required', 'string', 'max:255'],
+        ]);
+
+        $licenseNo = trim((string) $data['entry_license_no']);
+        $resolved = $this->resolveBowlerByLicenseInput($licenseNo, $tournament);
+
+        if (!$resolved['bowler']) {
+            return redirect()
+                ->route('tournaments.entries.index', $tournament->id)
+                ->withErrors(['entry_license_no' => $resolved['message']])
+                ->withInput();
+        }
+
+        /** @var ProBowler $bowler */
+        $bowler = $resolved['bowler'];
+        $eligibility = $this->resolveEligibility($bowler, $tournament);
+
+        if (($eligibility['short'] ?? '') !== '参加権利あり') {
+            return redirect()
+                ->route('tournaments.entries.index', $tournament->id)
+                ->withErrors([
+                    'entry_license_no' => '参加登録できません：'
+                        .($eligibility['message'] ?? '参加権利を確認してください。'),
+                ])
+                ->withInput();
+        }
+
+        $existing = TournamentEntry::query()
+            ->where('tournament_id', $tournament->id)
+            ->where('pro_bowler_id', $bowler->id)
+            ->first();
+
+        if ($existing && $existing->status === 'entry') {
+            return redirect()
+                ->route('tournaments.entries.index', $tournament->id)
+                ->withErrors([
+                    'entry_license_no' => 'この選手はすでに参加登録済みです。',
+                ]);
+        }
+
+        $fromStatus = $existing?->status;
+        $entry = TournamentEntry::query()->updateOrCreate(
+            [
+                'tournament_id' => $tournament->id,
+                'pro_bowler_id' => $bowler->id,
+            ],
+            [
+                'status' => 'entry',
+                'preferred_shift_code' => null,
+                'waitlist_priority' => null,
+                'waitlisted_at' => null,
+                'waitlist_note' => null,
+                'promoted_from_waitlist_at' => null,
+                'shift' => null,
+                'lane' => null,
+                'checked_in_at' => null,
+                'shift_drawn' => false,
+                'lane_drawn' => false,
+            ]
+        );
+        $entry->loadMissing('bowler');
+
+        $this->recordEntryOperation(
+            $entry,
+            'entry_registered_by_staff',
+            null,
+            ['source' => 'tournament_entry_admin'],
+            $fromStatus,
+            'entry'
+        );
+
+        return redirect()
+            ->route('tournaments.entries.index', $tournament->id)
+            ->with(
+                'success',
+                '参加選手を登録しました。 ['
+                    .$entry->bowler?->license_no
+                    .' '
+                    .($entry->bowler?->name_kanji ?? '')
+                    .']'
+            );
     }
 
     public function storeWaitlist(Request $request, Tournament $tournament)
@@ -672,7 +774,7 @@ class TournamentEntryAdminController extends Controller
                 ->with('error', 'ウェイティング行のみ繰り上げできます。');
         }
 
-        $eligibility = $this->resolveEligibility($entry->bowler);
+        $eligibility = $this->resolveEligibility($entry->bowler, $entry->tournament()->first());
         if (($eligibility['short'] ?? '') !== '参加権利あり') {
             return redirect()
                 ->route('tournaments.entries.index', $entry->tournament_id)
@@ -752,7 +854,7 @@ class TournamentEntryAdminController extends Controller
         $promotedAt = now();
 
         foreach ($entries as $entry) {
-            $eligibility = $this->resolveEligibility($entry->bowler);
+            $eligibility = $this->resolveEligibility($entry->bowler, $tournament);
             if (($eligibility['short'] ?? '') !== '参加権利あり') {
                 $this->recordEntryOperation(
                     $entry,
@@ -894,12 +996,17 @@ class TournamentEntryAdminController extends Controller
         $base = TournamentEntry::query()->where('tournament_id', $tournament->id);
 
         $activeEntries = TournamentEntry::query()
-            ->with('bowler')
+            ->with(['bowler', 'balls'])
+            ->withCount('balls')
             ->where('tournament_id', $tournament->id)
             ->whereIn('status', ['entry', 'waiting'])
             ->get();
 
-        $decorated = $this->decorateEntriesWithPriority($activeEntries, $priorityLookup);
+        $decorated = $this->decorateEntriesWithBallRegistrationStatus(
+            $this->decorateEntriesWithPriority($activeEntries, $priorityLookup),
+            $tournament
+        );
+        $ballEntryRows = $decorated->where('status', 'entry');
         $priorityCoverage = $this->buildPriorityCoverage($tournament, $priorityLookup);
 
         return [
@@ -918,6 +1025,24 @@ class TournamentEntryAdminController extends Controller
             'priority_total_count' => $priorityCoverage['total_count'],
             'priority_missing_count' => $priorityCoverage['missing_count'],
             'priority_missing_entries' => $priorityCoverage['missing_entries'],
+            'ball_registered_count' => $ballEntryRows
+                ->filter(fn (TournamentEntry $entry) => (int) ($entry->balls_count ?? 0) > 0)
+                ->count(),
+            'ball_unregistered_count' => $ballEntryRows
+                ->where('ball_registration_status_key', 'unregistered')
+                ->count(),
+            'ball_attention_count' => $ballEntryRows
+                ->filter(fn (TournamentEntry $entry) => (bool) ($entry->ball_registration_needs_attention ?? false))
+                ->count(),
+            'ball_inspection_attention_count' => $ballEntryRows
+                ->where('ball_registration_status_key', 'inspection_attention')
+                ->count(),
+            'ball_expiring_soon_count' => $ballEntryRows
+                ->filter(fn (TournamentEntry $entry) => (int) ($entry->ball_expiring_soon_count ?? 0) > 0)
+                ->count(),
+            'ball_over_limit_count' => $ballEntryRows
+                ->where('ball_registration_status_key', 'over_limit')
+                ->count(),
         ];
     }
 
@@ -1080,7 +1205,7 @@ class TournamentEntryAdminController extends Controller
 
             $bowler = $proBowlerId ? $bowlersById->get($proBowlerId) : null;
 
-            $eligibility = $this->resolveEligibility($bowler);
+            $eligibility = $this->resolveEligibility($bowler, $tournament);
 
             $missingEntries[] = [
                 'license_no' => $bowler?->license_no ?: ($candidate['license_no'] ?? null),
@@ -1441,6 +1566,102 @@ class TournamentEntryAdminController extends Controller
         });
     }
 
+    private function decorateEntriesWithBallRegistrationStatus(Collection $entries, Tournament $tournament): Collection
+    {
+        $limit = max(1, (int) ($tournament->ball_registration_limit ?? 12));
+        $inspectionRequired = (bool) ($tournament->inspection_required ?? false);
+
+        return $entries->map(function (TournamentEntry $entry) use ($tournament, $limit, $inspectionRequired) {
+            $balls = $entry->relationLoaded('balls') ? $entry->balls : collect();
+            $ballCount = (int) ($entry->balls_count ?? $balls->count());
+            $inspectionAttentionCount = $inspectionRequired
+                ? $balls->filter(function ($ball) use ($tournament) {
+                    return !$this->inspectionService
+                        ->tournamentEligibility($ball, $tournament)['allowed'];
+                })->count()
+                : 0;
+            $expiringSoonCount = $balls->filter(function ($ball) {
+                return $this->inspectionService
+                    ->status($ball->inspection_number, $ball->expires_at)['key'] === 'expiring_soon';
+            })->count();
+
+            $entry->ball_registration_limit = $limit;
+            $entry->ball_inspection_attention_count = $inspectionAttentionCount;
+            $entry->ball_expiring_soon_count = $expiringSoonCount;
+
+            if ($entry->status !== 'entry') {
+                $entry->ball_registration_status_key = 'not_applicable';
+                $entry->ball_registration_status_label = '参加確定後に登録';
+                $entry->ball_registration_badge_class = 'bg-secondary';
+                $entry->ball_registration_needs_attention = false;
+
+                return $entry;
+            }
+
+            if ($ballCount === 0) {
+                $entry->ball_registration_status_key = 'unregistered';
+                $entry->ball_registration_status_label = '未登録';
+                $entry->ball_registration_badge_class = 'bg-danger';
+                $entry->ball_registration_needs_attention = true;
+
+                return $entry;
+            }
+
+            if ($ballCount > $limit) {
+                $entry->ball_registration_status_key = 'over_limit';
+                $entry->ball_registration_status_label = '上限超過';
+                $entry->ball_registration_badge_class = 'bg-danger';
+                $entry->ball_registration_needs_attention = true;
+
+                return $entry;
+            }
+
+            if ($inspectionAttentionCount > 0) {
+                $entry->ball_registration_status_key = 'inspection_attention';
+                $entry->ball_registration_status_label = '検量証要確認';
+                $entry->ball_registration_badge_class = 'bg-warning text-dark';
+                $entry->ball_registration_needs_attention = true;
+
+                return $entry;
+            }
+
+            if ($expiringSoonCount > 0) {
+                $entry->ball_registration_status_key = 'expiring_soon';
+                $entry->ball_registration_status_label = '期限間近あり';
+                $entry->ball_registration_badge_class = 'bg-warning text-dark';
+                $entry->ball_registration_needs_attention = true;
+
+                return $entry;
+            }
+
+            $entry->ball_registration_status_key = 'registered';
+            $entry->ball_registration_status_label = '登録済み';
+            $entry->ball_registration_badge_class = 'bg-success';
+            $entry->ball_registration_needs_attention = false;
+
+            return $entry;
+        });
+    }
+
+    private function filterEntriesByBallStatus(Collection $entries, string $ballStatus): Collection
+    {
+        if ($ballStatus === '') {
+            return $entries;
+        }
+
+        return $entries->filter(function (TournamentEntry $entry) use ($ballStatus) {
+            return match ($ballStatus) {
+                'registered' => $entry->status === 'entry' && (int) ($entry->balls_count ?? 0) > 0,
+                'attention' => (bool) ($entry->ball_registration_needs_attention ?? false),
+                'unregistered' => ($entry->ball_registration_status_key ?? '') === 'unregistered',
+                'inspection_attention' => ($entry->ball_registration_status_key ?? '') === 'inspection_attention',
+                'expiring_soon' => (int) ($entry->ball_expiring_soon_count ?? 0) > 0,
+                'over_limit' => ($entry->ball_registration_status_key ?? '') === 'over_limit',
+                default => true,
+            };
+        })->values();
+    }
+
     private function formatEntryLicenseNoForSeedDisplay(
         ProBowlerSeedService $seedService,
         Tournament $tournament,
@@ -1466,7 +1687,7 @@ class TournamentEntryAdminController extends Controller
     {
         return $entries->map(function (TournamentEntry $entry) use ($priorityLookup) {
             $priority = $this->findPriorityForEntry($entry, $priorityLookup);
-            $eligibility = $this->resolveEligibility($entry->bowler);
+            $eligibility = $this->resolveEligibility($entry->bowler, $entry->tournament()->first());
 
             $entry->is_priority_entry = (bool) $priority;
             $entry->priority_info = $priority;
@@ -1781,44 +2002,9 @@ class TournamentEntryAdminController extends Controller
         };
     }
 
-    private function resolveEligibility(?ProBowler $bowler): array
+    private function resolveEligibility(?ProBowler $bowler, ?Tournament $tournament = null): array
     {
-        if (!$bowler) {
-            return [
-                'short' => '未結線',
-                'message' => '選手情報未結線',
-            ];
-        }
-
-        $memberClass = (string) ($bowler->member_class ?? '');
-        $isActive = (bool) ($bowler->is_active ?? false);
-        $canEnter = (bool) ($bowler->can_enter_official_tournament ?? false);
-
-        if (!$isActive) {
-            return [
-                'short' => '会員無効',
-                'message' => '現在の会員状態が無効です。',
-            ];
-        }
-
-        if ($memberClass !== 'player') {
-            return [
-                'short' => $this->memberClassLabel($memberClass),
-                'message' => '競技参加対象外の会員区分です。',
-            ];
-        }
-
-        if (!$canEnter) {
-            return [
-                'short' => '公式戦対象外',
-                'message' => '公式戦出場対象外として登録されています。',
-            ];
-        }
-
-        return [
-            'short' => '参加権利あり',
-            'message' => '通常参加対象です。',
-        ];
+        return app(\App\Services\TournamentEntryEligibilityService::class)->evaluate($bowler, $tournament);
     }
 
     private function memberClassLabel(?string $memberClass): string

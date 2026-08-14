@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\DB;
 use App\Models\ProBowler;
 use App\Models\Training;
 use App\Models\ProBowlerTraining;
+use App\Services\TrainingComplianceService;
 
 class BulkTrainingController extends Controller
 {
@@ -16,7 +17,7 @@ class BulkTrainingController extends Controller
         return view('trainings.bulk_form');
     }
 
-    public function store(Request $request)
+    public function store(Request $request, TrainingComplianceService $compliance)
     {
         // rows は最大20行まで
         $validated = $request->validate([
@@ -35,7 +36,7 @@ class BulkTrainingController extends Controller
 
         $results = ['ok'=>0,'ng'=>0,'detail'=>[]];
 
-        DB::transaction(function () use ($rows, $trainingId, &$results) {
+        DB::transaction(function () use ($rows, $trainingId, &$results, $compliance) {
             foreach ($rows as $i => $r) {
                 $ln  = trim((string)($r['license_no'] ?? ''));
                 $dt  = $r['completed_at'] ?? null;
@@ -58,7 +59,7 @@ class BulkTrainingController extends Controller
                 }
 
                 $completed = Carbon::parse($dt);
-                $expires   = (clone $completed)->addYearsNoOverflow(3)->subDay();
+                $expires = $compliance->calculateExpiry($completed);
 
                 // 記録を追加（同じ日が既にあれば上書き、無ければ新規）
                 ProBowlerTraining::updateOrCreate(
@@ -71,7 +72,16 @@ class BulkTrainingController extends Controller
                         'expires_at'    => $expires,
                         'proof_path'    => null,
                         'notes'         => null,
+                        'record_status' => 'valid',
+                        'revoked_at' => null,
+                        'recorded_by_user_id' => auth()->id(),
                     ]
+                );
+
+                $compliance->syncBowler($bowler);
+                app(\App\Services\ProBowlerMembershipClassificationService::class)->syncBowler(
+                    $bowler->fresh(),
+                    (int) now()->year,
                 );
 
                 $results['ok']++;

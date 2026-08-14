@@ -58,7 +58,7 @@
                 </div>
             </div>
             <div class="mt-3 small text-muted">
-                検量証番号を空にすると仮登録へ戻ります。入力すると登録日から1年−1日で有効期限を再計算します。
+                検量証番号を空にすると仮登録へ戻ります。再検量時は実際の検量日へ変更すると、1年−1日で有効期限を再計算します。
             </div>
         </div>
     </div>
@@ -134,7 +134,7 @@
             </div>
 
             <div class="col-md-12">
-                <label for="approved_ball_id" class="form-label">承認ボール <span class="text-danger">*</span></label>
+                <label for="approved_ball_id" class="form-label">登録ボール <span class="text-danger">*</span></label>
                 <select name="approved_ball_id" id="approved_ball_id" class="form-select" required>
                     <option value="">選択してください</option>
                     @foreach($approvedBalls as $ball)
@@ -142,12 +142,14 @@
                             value="{{ $ball->id }}"
                             data-manufacturer="{{ $ball->manufacturer }}"
                             data-release-year="{{ $ball->release_year }}"
+                            data-usbc-status="{{ $ball->usbc_match_status ?? 'unchecked' }}"
                             {{ (string) old('approved_ball_id', $registeredBall->approved_ball_id) === (string) $ball->id ? 'selected' : '' }}
                         >
                             {{ $ball->manufacturer }} - {{ $ball->name }}@if($ball->release_year)（{{ $ball->release_year }}年）@endif
                         </option>
                     @endforeach
                 </select>
+                <div id="usbc_ball_warning" class="alert alert-danger mt-2 mb-0 d-none" role="alert"></div>
             </div>
 
             <div class="col-md-6">
@@ -163,7 +165,7 @@
             </div>
 
             <div class="col-md-6">
-                <label for="registered_at" class="form-label">登録日 <span class="text-danger">*</span></label>
+                <label for="registered_at" class="form-label">検量日／登録日 <span class="text-danger">*</span></label>
                 <input
                     type="date"
                     name="registered_at"
@@ -225,6 +227,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const expiresGroup = document.getElementById('expires_group');
     const expiresPreview = document.getElementById('expires_at_preview');
     const statusPreview = document.getElementById('registered_ball_status_preview');
+    const usbcWarning = document.getElementById('usbc_ball_warning');
 
     const originalOptions = Array.from(approvedBallSelect.querySelectorAll('option'))
         .filter(option => option.value !== '')
@@ -233,6 +236,7 @@ document.addEventListener('DOMContentLoaded', () => {
             text: option.textContent,
             manufacturer: option.dataset.manufacturer || '',
             releaseYear: option.dataset.releaseYear || '',
+            usbcStatus: option.dataset.usbcStatus || 'unchecked',
             selected: option.selected,
         }));
 
@@ -253,6 +257,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 el.textContent = option.text;
                 el.dataset.manufacturer = option.manufacturer;
                 el.dataset.releaseYear = option.releaseYear;
+                el.dataset.usbcStatus = option.usbcStatus;
                 if (currentValue && currentValue === option.value) {
                     el.selected = true;
                 }
@@ -268,10 +273,37 @@ document.addEventListener('DOMContentLoaded', () => {
                 el.textContent = fallback.text + '（現在選択中）';
                 el.dataset.manufacturer = fallback.manufacturer;
                 el.dataset.releaseYear = fallback.releaseYear;
+                el.dataset.usbcStatus = fallback.usbcStatus;
                 el.selected = true;
                 approvedBallSelect.appendChild(el);
             }
         }
+
+        updateUsbcWarning();
+    }
+
+    function updateUsbcWarning() {
+        const selected = approvedBallSelect.options[approvedBallSelect.selectedIndex];
+        const usbcStatus = selected?.dataset.usbcStatus || '';
+
+        usbcWarning.classList.remove('alert-danger', 'alert-warning');
+        if (!selected || !selected.value || usbcStatus === 'matched') {
+            usbcWarning.classList.add('d-none');
+            usbcWarning.textContent = '';
+            return;
+        }
+
+        usbcWarning.classList.remove('d-none');
+        if (usbcStatus === 'not_listed') {
+            usbcWarning.classList.add('alert-danger');
+            usbcWarning.textContent = 'アブプールリストに記載のないボールです';
+            return;
+        }
+
+        usbcWarning.classList.add('alert-warning');
+        usbcWarning.textContent = usbcStatus === 'ambiguous'
+            ? 'アブプールリストとの照合結果が要確認のボールです。'
+            : 'アブプールリストとの照合が未実施のボールです。';
     }
 
     function calcExpire() {
@@ -302,6 +334,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     manufacturerFilter.addEventListener('change', rebuildApprovedBallOptions);
     releaseYearFilter.addEventListener('change', rebuildApprovedBallOptions);
+    approvedBallSelect.addEventListener('change', updateUsbcWarning);
     inspectionInput.addEventListener('input', calcExpire);
     registeredAtInput.addEventListener('change', calcExpire);
 

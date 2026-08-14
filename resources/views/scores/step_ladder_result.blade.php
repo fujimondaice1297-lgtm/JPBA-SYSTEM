@@ -587,7 +587,14 @@
                     @foreach($standings as $row)
                         <tr>
                             <td>{{ $row['rank'] ?? '—' }}</td>
-                            <td class="sl-left">{{ $row['player']['display_name'] ?? '—' }}</td>
+                            <td class="sl-left">
+                                @include('scores.partials.player_ball_link', [
+                                    'displayName' => $row['player']['display_name'] ?? '—',
+                                    'proBowlerId' => $row['player']['pro_bowler_id'] ?? null,
+                                    'licenseNo' => $row['player']['pro_bowler_license_no'] ?? null,
+                                    'scoreEntryBallLookup' => $scoreEntryBallLookup ?? [],
+                                ])
+                            </td>
                             <td>{{ $row['reason'] ?? '—' }}</td>
                         </tr>
                     @endforeach

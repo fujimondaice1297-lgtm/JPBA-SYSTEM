@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AnnualSchedule;
 use App\Models\CalendarEvent;
 use App\Models\Information;
+use App\Models\ManagedPublicPage;
 use App\Models\Tournament;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -30,6 +32,24 @@ class PublicPageController extends Controller
 
         if (!in_array($year, $availableYears, true) && !empty($availableYears)) {
             $year = $availableYears[0];
+        }
+
+        $annualSchedule = AnnualSchedule::query()
+            ->with('rows.tournament')
+            ->where('year', $year)
+            ->where('status', AnnualSchedule::STATUS_PUBLISHED)
+            ->first();
+
+        if ($annualSchedule) {
+            return view('public.schedule', [
+                'publicConfig' => config('jpba_public', []),
+                'year' => $year,
+                'availableYears' => $availableYears,
+                'annualSchedule' => $annualSchedule,
+                'groupedAnnualRows' => $annualSchedule->rows->groupBy('month'),
+                'scheduleRows' => collect(),
+                'groupedScheduleRows' => collect(),
+            ]);
         }
 
         $start = Carbon::create($year, 1, 1)->startOfDay();
@@ -131,6 +151,15 @@ class PublicPageController extends Controller
 
     public function staticPage(string $page): View
     {
+        $managedPage = ManagedPublicPage::query()
+            ->published()
+            ->where('slug', $page)
+            ->first();
+
+        if ($managedPage) {
+            return $this->managedPageView($managedPage);
+        }
+
         $pages = config('jpba_public.static_pages', []);
 
         if (!isset($pages[$page])) {
@@ -144,9 +173,26 @@ class PublicPageController extends Controller
         ]);
     }
 
+    public function managedPage(ManagedPublicPage $managedPublicPage): View
+    {
+        abort_unless($managedPublicPage->is_published, 404);
+
+        return $this->managedPageView($managedPublicPage);
+    }
+
+    private function managedPageView(ManagedPublicPage $managedPage): View
+    {
+        return view('public.managed_page', [
+            'publicConfig' => config('jpba_public', []),
+            'managedPage' => $managedPage,
+        ]);
+    }
+
     private function availableScheduleYears(): array
     {
-        $years = collect();
+        $years = AnnualSchedule::query()
+            ->where('status', AnnualSchedule::STATUS_PUBLISHED)
+            ->pluck('year');
 
         Tournament::query()
             ->select(['start_date', 'end_date'])

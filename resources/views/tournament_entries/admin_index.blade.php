@@ -97,6 +97,46 @@
         <div class="fs-4 fw-bold">{{ $summary['pending_lane_count'] }}</div>
       </div></div>
     </div>
+    <div class="col-md-2">
+      <a href="{{ route('tournaments.entries.index', ['tournament' => $tournament->id, 'status' => 'entry', 'ball_status' => 'registered']) }}" class="text-decoration-none text-reset">
+        <div class="card border-success"><div class="card-body">
+          <div class="text-muted small">ボール登録あり</div>
+          <div class="fs-4 fw-bold text-success">{{ $summary['ball_registered_count'] ?? 0 }}</div>
+        </div></div>
+      </a>
+    </div>
+    <div class="col-md-2">
+      <a href="{{ route('tournaments.entries.index', ['tournament' => $tournament->id, 'status' => 'entry', 'ball_status' => 'unregistered']) }}" class="text-decoration-none text-reset">
+        <div class="card border-danger"><div class="card-body">
+          <div class="text-muted small">ボール未登録</div>
+          <div class="fs-4 fw-bold text-danger">{{ $summary['ball_unregistered_count'] ?? 0 }}</div>
+        </div></div>
+      </a>
+    </div>
+    <div class="col-md-2">
+      <a href="{{ route('tournaments.entries.index', ['tournament' => $tournament->id, 'status' => 'entry', 'ball_status' => 'inspection_attention']) }}" class="text-decoration-none text-reset">
+        <div class="card border-warning"><div class="card-body">
+          <div class="text-muted small">検量証要確認</div>
+          <div class="fs-4 fw-bold text-warning">{{ $summary['ball_inspection_attention_count'] ?? 0 }}</div>
+        </div></div>
+      </a>
+    </div>
+    <div class="col-md-2">
+      <a href="{{ route('tournaments.entries.index', ['tournament' => $tournament->id, 'status' => 'entry', 'ball_status' => 'expiring_soon']) }}" class="text-decoration-none text-reset">
+        <div class="card border-warning"><div class="card-body">
+          <div class="text-muted small">期限間近あり</div>
+          <div class="fs-4 fw-bold text-warning">{{ $summary['ball_expiring_soon_count'] ?? 0 }}</div>
+        </div></div>
+      </a>
+    </div>
+    <div class="col-md-2">
+      <a href="{{ route('tournaments.entries.index', ['tournament' => $tournament->id, 'status' => 'entry', 'ball_status' => 'over_limit']) }}" class="text-decoration-none text-reset">
+        <div class="card border-danger"><div class="card-body">
+          <div class="text-muted small">上限超過</div>
+          <div class="fs-4 fw-bold text-danger">{{ $summary['ball_over_limit_count'] ?? 0 }}</div>
+        </div></div>
+      </a>
+    </div>
   </div>
 
   @include('tournament_entries.partials.entry_operation_logs', ['entryOperationLogs' => $entryOperationLogs ?? collect()])
@@ -479,6 +519,35 @@
     </div>
   @endif
 
+  <div class="card border-primary mb-4">
+    <div class="card-header fw-bold text-primary">参加選手を直接登録</div>
+    <div class="card-body">
+      <form method="POST" action="{{ route('tournaments.entries.store', $tournament->id) }}">
+        @csrf
+        <div class="row g-3 align-items-end">
+          <div class="col-md-5">
+            <label class="form-label">ライセンスNo</label>
+            <input type="text"
+                   name="entry_license_no"
+                   value="{{ old('entry_license_no') }}"
+                   class="form-control"
+                   placeholder="例: M00001297 / 1297"
+                   required>
+            <div class="form-text">下4桁入力時は、大会の対象性別を優先して照合します。</div>
+          </div>
+          <div class="col-md-4">
+            <div class="small text-muted">
+              競技者・会員有効・公式戦出場可の選手を、ウェイティングを経由せず参加登録します。
+            </div>
+          </div>
+          <div class="col-md-3">
+            <button type="submit" class="btn btn-primary w-100">参加選手を登録</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <div class="card mb-4">
     <div class="card-header fw-bold">ウェイティング登録</div>
     <div class="card-body">
@@ -509,11 +578,11 @@
 
   <form method="GET" action="{{ route('tournaments.entries.index', $tournament->id) }}" class="mb-3">
     <div class="row g-3 align-items-end">
-      <div class="col-md-4">
+      <div class="col-md-3">
         <label class="form-label">検索</label>
         <input type="text" name="q" value="{{ $keyword }}" class="form-control" placeholder="ライセンスNo / 氏名 / フリガナ">
       </div>
-      <div class="col-md-3">
+      <div class="col-md-2">
         <label class="form-label">状態</label>
         <select name="status" class="form-select">
           <option value="active" {{ $status === 'active' ? 'selected' : '' }}>参加 + ウェイティング</option>
@@ -522,7 +591,19 @@
           <option value="no_entry" {{ $status === 'no_entry' ? 'selected' : '' }}>不参加のみ</option>
         </select>
       </div>
-      <div class="col-md-5 d-flex gap-2">
+      <div class="col-md-3">
+        <label class="form-label">ボール登録状況</label>
+        <select name="ball_status" class="form-select">
+          <option value="" {{ $ballStatus === '' ? 'selected' : '' }}>すべて</option>
+          <option value="attention" {{ $ballStatus === 'attention' ? 'selected' : '' }}>要確認のみ</option>
+          <option value="unregistered" {{ $ballStatus === 'unregistered' ? 'selected' : '' }}>未登録</option>
+          <option value="registered" {{ $ballStatus === 'registered' ? 'selected' : '' }}>登録あり</option>
+          <option value="inspection_attention" {{ $ballStatus === 'inspection_attention' ? 'selected' : '' }}>検量証要確認</option>
+          <option value="expiring_soon" {{ $ballStatus === 'expiring_soon' ? 'selected' : '' }}>期限間近あり</option>
+          <option value="over_limit" {{ $ballStatus === 'over_limit' ? 'selected' : '' }}>上限超過</option>
+        </select>
+      </div>
+      <div class="col-md-4 d-flex gap-2">
         <button type="submit" class="btn btn-primary">絞り込む</button>
         <a href="{{ route('tournaments.entries.index', $tournament->id) }}" class="btn btn-secondary">リセット</a>
       </div>
@@ -564,7 +645,7 @@
           <th>希望シフト</th>
           <th>シフト</th>
           <th>レーン</th>
-          <th>ボール数</th>
+          <th>ボール登録</th>
           <th>チェックイン</th>
           <th>備考</th>
           <th>操作</th>
@@ -633,7 +714,27 @@
               {{ filled($displayShift) && !in_array($displayShift, ['予選'], true) ? $displayShift : 'なし' }}
             </td>
             <td>{{ filled($entry->participant_lane_label ?? null) ? $entry->participant_lane_label : (filled($entry->lane) ? $entry->lane : '-') }}</td>
-            <td>{{ $entry->balls_count }}</td>
+            <td>
+              @if ($entry->status === 'entry')
+                <a href="{{ route('member.entries.balls.edit', $entry->id) }}"
+                   class="btn btn-sm {{ ($entry->ball_registration_needs_attention ?? false) ? 'btn-outline-danger' : 'btn-outline-success' }}">
+                  {{ $entry->balls_count }} / {{ $entry->ball_registration_limit }}個 / 登録・閲覧
+                </a>
+                <div class="mt-1">
+                  <span class="badge {{ $entry->ball_registration_badge_class }}">
+                    {{ $entry->ball_registration_status_label }}
+                  </span>
+                </div>
+                @if(($entry->ball_inspection_attention_count ?? 0) > 0)
+                  <div class="small text-danger mt-1">検量証要確認 {{ $entry->ball_inspection_attention_count }}個</div>
+                @endif
+                @if(($entry->ball_expiring_soon_count ?? 0) > 0)
+                  <div class="small text-warning mt-1">期限間近 {{ $entry->ball_expiring_soon_count }}個</div>
+                @endif
+              @else
+                <span class="badge bg-secondary">参加確定後に登録</span>
+              @endif
+            </td>
             <td>{{ optional($entry->checked_in_at)->format('Y-m-d H:i') ?? '-' }}</td>
             <td class="small">{{ $entry->waitlist_note ?? '-' }}</td>
             <td>

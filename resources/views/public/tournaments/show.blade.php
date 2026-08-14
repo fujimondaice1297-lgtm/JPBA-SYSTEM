@@ -256,7 +256,20 @@
         @foreach($resultRows as $row)
           <tr>
             <td>{{ $row->ranking ?: '-' }}</td>
-            <td>{{ $row->amateur_name ?: ($row->pro_name ?: '-') }}</td>
+            <td>
+              <div class="d-flex align-items-center gap-2">
+                @if($row->pro_bowler_id)
+                  @if($row->pro_photo_url)
+                    <img src="{{ $row->pro_photo_url }}" alt="" style="width:38px;height:38px;border-radius:50%;object-fit:cover;border:1px solid #dbe3ec;flex:0 0 auto;">
+                  @endif
+                @endif
+                @if($row->pro_bowler_id)
+                  <a href="{{ route('public.players.show', $row->pro_bowler_id) }}">{{ $row->pro_name ?: '-' }}</a>
+                @else
+                  <span>{{ $row->amateur_name ?: '-' }}</span>
+                @endif
+              </div>
+            </td>
             <td>{{ $row->pro_bowler_license_no ?: '-' }}</td>
             <td>{{ $row->total_pin !== null ? number_format((int)$row->total_pin) : '-' }}</td>
             <td>{{ $row->games ?: '-' }}</td>

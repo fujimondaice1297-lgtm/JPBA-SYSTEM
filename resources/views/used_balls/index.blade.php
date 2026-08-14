@@ -14,6 +14,9 @@
     @if (session('success'))
         <div class="alert alert-success">{{ session('success') }}</div>
     @endif
+    @if (session('warning'))
+        <div class="alert alert-danger">{{ session('warning') }}</div>
+    @endif
 
     @if (session('error'))
         <div class="alert alert-danger">{{ session('error') }}</div>
@@ -23,12 +26,18 @@
         <div class="small">
             この一覧は <strong>大会使用ボールの候補</strong> です。<br>
             仮登録のボールは、ここで検量証番号を入れるか、<strong>本登録へ</strong> 進めて整備してください。<br>
+            期限切れも初期表示されます。期限間近は有効期限30日前から表示し、再検量後は検量日を更新してください。<br>
             本登録側を更新した場合は、大会使用ボール画面を開き直すと同期内容が反映されます。
         </div>
     </div>
 
     <div class="mb-3 d-flex gap-2 flex-wrap">
         <a href="{{ route('registered_balls.index') }}" class="btn btn-outline-secondary">登録ボール一覧へ</a>
+        <a href="{{ ($viewer?->isAdmin() || $viewer?->isEditor())
+            ? route('ball_annual_registrations.index')
+            : route('ball_annual_registrations.edit') }}" class="btn btn-primary">
+            {{ ($viewer?->isAdmin() || $viewer?->isEditor()) ? '年度申請・一括承認' : '年度申請へ' }}
+        </a>
         <a href="{{ route('tournaments.index') }}" class="btn btn-secondary">大会一覧へ</a>
         <a href="{{ route('tournament.entry.select') }}" class="btn btn-outline-secondary">大会エントリー選択へ</a>
         <a href="{{ route('approved_balls.index') }}" class="btn btn-outline-secondary">承認ボール一覧へ</a>
@@ -74,7 +83,7 @@
                 <th>ボール名</th>
                 <th style="min-width:120px;">シリアル番号</th>
                 <th style="min-width:170px;">検量証番号</th>
-                <th style="min-width:110px;">登録日</th>
+                <th style="min-width:110px;">検量日／登録日</th>
                 <th style="min-width:120px;">有効期限</th>
                 <th style="min-width:150px;">状態</th>
                 <th style="min-width:220px;">修正導線</th>

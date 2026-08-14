@@ -4,6 +4,7 @@
 @php
     $isTemporary = blank(old('inspection_number', $usedBall->inspection_number));
     $isExpired = !blank($usedBall->expires_at) && optional($usedBall->expires_at)->lt(now()->startOfDay());
+    $inspectionDateValue = old('registered_at', optional($usedBall->registered_at)->format('Y-m-d'));
     $returnTo = old('return_to', request('return_to'));
     $entryId = old('entry_id', request('entry_id'));
 @endphp
@@ -48,7 +49,7 @@
                 </div>
 
                 <div class="col-md-3">
-                    <div class="text-muted">登録日</div>
+                    <div class="text-muted">検量日／登録日</div>
                     <div>{{ optional($usedBall->registered_at)->format('Y-m-d') ?? '-' }}</div>
                 </div>
                 <div class="col-md-3">
@@ -74,8 +75,8 @@
             </div>
 
             <div class="mt-3 small text-muted">
-                この画面では、主に <strong>検量証番号の補正</strong> を行います。<br>
-                検量証番号を空にすると仮登録へ戻り、入力すると使用可能状態へ更新します。
+                検量証番号と実際の検量日を入力すると、検量日から1年−1日を有効期限として自動計算します。<br>
+                再検量時は検量日を新しい日付へ変更してください。検量証番号を空にすると仮登録へ戻ります。
             </div>
         </div>
     </div>
@@ -100,6 +101,18 @@
             </div>
 
             <div class="col-md-6">
+                <label for="registered_at" class="form-label">検量日</label>
+                <input
+                    type="date"
+                    name="registered_at"
+                    id="registered_at"
+                    class="form-control"
+                    value="{{ $inspectionDateValue }}"
+                >
+                <div class="form-text">検量証番号を入力する場合は必須です。</div>
+            </div>
+
+            <div class="col-md-6">
                 <label class="form-label">更新後の状態</label>
                 <div class="form-control bg-light" id="used_ball_status_preview">
                     {{ blank(old('inspection_number', $usedBall->inspection_number)) ? '仮登録（検量証待ち）' : '使用可能（検量証あり）' }}
@@ -115,7 +128,7 @@
                     value="{{ optional($usedBall->expires_at)->format('Y-m-d') }}"
                     readonly
                 >
-                <div class="form-text">更新時点を基準に、controller 側で有効期限を再設定します。</div>
+                <div class="form-text">入力した検量日から1年−1日で自動設定します。</div>
             </div>
         </div>
 
@@ -132,6 +145,7 @@
 <script>
 document.addEventListener('DOMContentLoaded', () => {
     const inspectionInput = document.getElementById('inspection_number');
+    const registeredAtInput = document.getElementById('registered_at');
     const expiresGroup = document.getElementById('expires_group');
     const expiresPreview = document.getElementById('expires_at_preview');
     const statusPreview = document.getElementById('used_ball_status_preview');
@@ -146,8 +160,13 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        const now = new Date();
-        const expires = new Date(now);
+        const inspectionDate = new Date(registeredAtInput.value);
+        if (isNaN(inspectionDate)) {
+            expiresPreview.value = '';
+            return;
+        }
+
+        const expires = new Date(inspectionDate);
         expires.setFullYear(expires.getFullYear() + 1);
         expires.setDate(expires.getDate() - 1);
 
@@ -158,6 +177,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     inspectionInput.addEventListener('input', calcExpire);
+    registeredAtInput.addEventListener('change', calcExpire);
     calcExpire();
 });
 </script>

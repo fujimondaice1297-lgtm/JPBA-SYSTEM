@@ -8,7 +8,9 @@ use App\Models\District;
 use App\Models\Instructor;
 use App\Models\InstructorRegistry;
 use App\Services\ProBowlerProfileNormalizer;
+use App\Services\ProBowlerPhotoService;
 use App\Services\ProBowlerSearchScopeService;
+use App\Services\ProBowlerMembershipClassificationService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Storage;
@@ -29,9 +31,9 @@ class ProBowlerController extends Controller
             ->with(['district', 'currentInstructorRegistry'])
             ->withCount(['officialTitles as official_titles_row_count'])
             ->withCount([
-                'records as perfect_count'       => fn ($q) => $q->where('record_type', 'perfect'),
-                'records as seven_ten_count'     => fn ($q) => $q->where('record_type', 'seven_ten'),
-                'records as eight_hundred_count' => fn ($q) => $q->where('record_type', 'eight_hundred'),
+                'confirmedRecords as perfect_detail_count' => fn ($q) => $q->where('record_type', 'perfect'),
+                'confirmedRecords as seven_ten_detail_count' => fn ($q) => $q->where('record_type', 'seven_ten'),
+                'confirmedRecords as eight_hundred_detail_count' => fn ($q) => $q->where('record_type', 'eight_hundred'),
             ]);
 
         $renewalStatusFilter = trim((string) $request->query('renewal_status', 'renewed'));
@@ -176,6 +178,11 @@ class ProBowlerController extends Controller
             $bowler = ProBowler::create($data);
             DB::commit();
             $this->syncInstructor($request, $bowler);
+            app(ProBowlerMembershipClassificationService::class)->syncBowler(
+                $bowler->fresh(),
+                (int) now()->year,
+                refreshTraining: true,
+            );
         } catch (QueryException $e) {
             DB::rollBack();
 
@@ -185,6 +192,11 @@ class ProBowlerController extends Controller
                 if ($bowler) {
                     $bowler->update($data);
                     $this->syncInstructor($request, $bowler);
+                    app(ProBowlerMembershipClassificationService::class)->syncBowler(
+                        $bowler->fresh(),
+                        (int) now()->year,
+                        refreshTraining: true,
+                    );
                     $back = $request->input('return') ?: route('pro_bowlers.list', session('pro_bowlers.last_filters', []));
 
                     return redirect()->to($back)->with('success', 'すでに登録済みのため内容を更新しました');
@@ -206,6 +218,9 @@ class ProBowlerController extends Controller
     {
         $bowler = ProBowler::with([
             'titles.tournament',
+            'confirmedRecords' => function ($query) {
+                $query->orderByDesc('awarded_on')->orderByDesc('id');
+            },
             'currentInstructorRegistry',
         ])
             ->withCount([
@@ -268,6 +283,11 @@ class ProBowlerController extends Controller
 
             $bowler->update($data);
             $this->syncInstructor($request, $bowler);
+            app(ProBowlerMembershipClassificationService::class)->syncBowler(
+                $bowler->fresh(),
+                (int) now()->year,
+                refreshTraining: true,
+            );
         } else {
             return $this->updateSelf($request, $bowler);
         }
@@ -314,6 +334,27 @@ class ProBowlerController extends Controller
         return redirect()->route('athlete.index')->with('success', 'プロフィールを更新しました');
     }
 
+    public function updateProfilePhoto(
+        Request $request,
+        ProBowler $bowler,
+        ProBowlerPhotoService $photos
+    ) {
+        $user = auth()->user();
+        abort_unless(
+            $user && ($user->isAdmin() || $user->pro_bowler_id === $bowler->id),
+            403,
+            '権限がありません。'
+        );
+
+        $validated = $request->validate([
+            'profile_photo' => ['required', 'file', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
+        ]);
+
+        $photos->storeUploadedPhoto($bowler, $validated['profile_photo']);
+
+        return back()->with('success', 'プロフィール写真を更新しました。');
+    }
+
     /* =========================
        検索つき一覧（list）
     ========================== */
@@ -353,6 +394,7 @@ class ProBowlerController extends Controller
         }
 
         $kaiinStatuses = DB::table('kaiin_status')
+            ->where('del_flg', false)
             ->orderBy('id')
             ->get(['id', 'name', 'is_retired']);
 
@@ -1291,7 +1333,11 @@ class ProBowlerController extends Controller
             return 'pro_instructor';
         }
 
-        if (in_array($value, ['その他', '海外'], true)) {
+        if ($value === 'その他') {
+            return 'other';
+        }
+
+        if (in_array($value, ['海外', '海外プロ', '名誉プロ・海外プロ'], true)) {
             return 'honorary_or_overseas';
         }
 

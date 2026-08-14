@@ -982,7 +982,11 @@ class ProBowlerImportController extends Controller
             return 'pro_instructor';
         }
 
-        if (in_array($value, ['その他', '海外'], true)) {
+        if ($value === 'その他') {
+            return 'other';
+        }
+
+        if (in_array($value, ['海外', '海外プロ', '名誉プロ・海外プロ'], true)) {
             return 'honorary_or_overseas';
         }
 

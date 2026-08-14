@@ -1602,7 +1602,14 @@
                         <tr>
                             <td>{{ $seed > 0 ? $finalRankLabel($seed) : '—' }}</td>
                             <td>{{ $row['source_ranking'] ?? $row['seed'] ?? '—' }}</td>
-                            <td class="so-left">{{ $row['display_name'] ?? '—' }}</td>
+                            <td class="so-left">
+                                @include('scores.partials.player_ball_link', [
+                                    'displayName' => $row['display_name'] ?? '—',
+                                    'proBowlerId' => $row['pro_bowler_id'] ?? null,
+                                    'licenseNo' => $row['pro_bowler_license_no'] ?? null,
+                                    'scoreEntryBallLookup' => $scoreEntryBallLookup ?? [],
+                                ])
+                            </td>
                             <td>{{ $formatSeedLicenseDisplay($row['pro_bowler_license_no'] ?? null, $row['pro_bowler_id'] ?? null) }}</td>
                             <td>{{ isset($row['total_pin']) && $row['total_pin'] !== null ? number_format((int) $row['total_pin']) : '—' }}</td>
                             <td>{{ $row['games'] ?? '—' }}</td>

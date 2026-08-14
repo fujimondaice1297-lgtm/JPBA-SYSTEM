@@ -9753,7 +9753,8 @@
                     "throw1": "X",
                     "throw2": "",
                     "throw3": ""
-                  }
+                  },
+                  "remaining_pins": []
                 },
                 {
                   "frame_no": 2,
@@ -9765,8 +9766,12 @@
                   "display_marks": {
                     "throw1": "9",
                     "throw2": "/",
-                    "throw3": ""
-                  }
+                    "throw3": "",
+                    "remaining_pins": "7"
+                  },
+                  "remaining_pins": [
+                    7
+                  ]
                 },
                 {
                   "frame_no": 3,
@@ -9779,7 +9784,8 @@
                     "throw1": "X",
                     "throw2": "",
                     "throw3": ""
-                  }
+                  },
+                  "remaining_pins": []
                 },
                 {
                   "frame_no": 4,
@@ -9792,7 +9798,8 @@
                     "throw1": "X",
                     "throw2": "",
                     "throw3": ""
-                  }
+                  },
+                  "remaining_pins": []
                 },
                 {
                   "frame_no": 5,
@@ -9804,8 +9811,12 @@
                   "display_marks": {
                     "throw1": "9",
                     "throw2": "/",
-                    "throw3": ""
-                  }
+                    "throw3": "",
+                    "remaining_pins": "2"
+                  },
+                  "remaining_pins": [
+                    2
+                  ]
                 },
                 {
                   "frame_no": 6,
@@ -9818,7 +9829,8 @@
                     "throw1": "X",
                     "throw2": "",
                     "throw3": ""
-                  }
+                  },
+                  "remaining_pins": []
                 },
                 {
                   "frame_no": 7,
@@ -9830,8 +9842,15 @@
                   "display_marks": {
                     "throw1": "6",
                     "throw2": "3",
-                    "throw3": ""
-                  }
+                    "throw3": "",
+                    "remaining_pins": "1.2.4.⑩"
+                  },
+                  "remaining_pins": [
+                    1,
+                    2,
+                    4,
+                    10
+                  ]
                 },
                 {
                   "frame_no": 8,
@@ -9843,8 +9862,14 @@
                   "display_marks": {
                     "throw1": "7",
                     "throw2": "/",
-                    "throw3": ""
-                  }
+                    "throw3": "",
+                    "remaining_pins": "2.4.5"
+                  },
+                  "remaining_pins": [
+                    2,
+                    4,
+                    5
+                  ]
                 },
                 {
                   "frame_no": 9,
@@ -9857,7 +9882,8 @@
                     "throw1": "X",
                     "throw2": "",
                     "throw3": ""
-                  }
+                  },
+                  "remaining_pins": []
                 },
                 {
                   "frame_no": 10,
@@ -9869,14 +9895,19 @@
                   "display_marks": {
                     "throw1": "X",
                     "throw2": "X",
-                    "throw3": "9"
-                  }
+                    "throw3": "9",
+                    "remaining_pins": "4"
+                  },
+                  "remaining_pins": [
+                    4
+                  ]
                 }
               ],
               "frame_candidate_count": 1,
               "frame_cumulative_corrections": [],
               "player_slot": "A",
-              "is_winner": true
+              "is_winner": true,
+              "lane_label": "33L"
             },
             {
               "identity": "P:F00000558",
@@ -9894,8 +9925,15 @@
                   "display_marks": {
                     "throw1": "6",
                     "throw2": "/",
-                    "throw3": ""
-                  }
+                    "throw3": "",
+                    "remaining_pins": "3.6.9.10"
+                  },
+                  "remaining_pins": [
+                    3,
+                    6,
+                    9,
+                    10
+                  ]
                 },
                 {
                   "frame_no": 2,
@@ -9907,8 +9945,12 @@
                   "display_marks": {
                     "throw1": "9",
                     "throw2": "/",
-                    "throw3": ""
-                  }
+                    "throw3": "",
+                    "remaining_pins": "4"
+                  },
+                  "remaining_pins": [
+                    4
+                  ]
                 },
                 {
                   "frame_no": 3,
@@ -9920,8 +9962,12 @@
                   "display_marks": {
                     "throw1": "9",
                     "throw2": "/",
-                    "throw3": ""
-                  }
+                    "throw3": "",
+                    "remaining_pins": "10"
+                  },
+                  "remaining_pins": [
+                    10
+                  ]
                 },
                 {
                   "frame_no": 4,
@@ -9933,8 +9979,12 @@
                   "display_marks": {
                     "throw1": "9",
                     "throw2": "/",
-                    "throw3": ""
-                  }
+                    "throw3": "",
+                    "remaining_pins": "4"
+                  },
+                  "remaining_pins": [
+                    4
+                  ]
                 },
                 {
                   "frame_no": 5,
@@ -9946,8 +9996,13 @@
                   "display_marks": {
                     "throw1": "8",
                     "throw2": "1",
-                    "throw3": ""
-                  }
+                    "throw3": "",
+                    "remaining_pins": "2.⑧"
+                  },
+                  "remaining_pins": [
+                    2,
+                    8
+                  ]
                 },
                 {
                   "frame_no": 6,
@@ -9959,8 +10014,12 @@
                   "display_marks": {
                     "throw1": "9",
                     "throw2": "/",
-                    "throw3": ""
-                  }
+                    "throw3": "",
+                    "remaining_pins": "10"
+                  },
+                  "remaining_pins": [
+                    10
+                  ]
                 },
                 {
                   "frame_no": 7,
@@ -9972,8 +10031,12 @@
                   "display_marks": {
                     "throw1": "9",
                     "throw2": "/",
-                    "throw3": ""
-                  }
+                    "throw3": "",
+                    "remaining_pins": "10"
+                  },
+                  "remaining_pins": [
+                    10
+                  ]
                 },
                 {
                   "frame_no": 8,
@@ -9985,8 +10048,13 @@
                   "display_marks": {
                     "throw1": "8",
                     "throw2": "1",
-                    "throw3": ""
-                  }
+                    "throw3": "",
+                    "remaining_pins": "6.⑩"
+                  },
+                  "remaining_pins": [
+                    6,
+                    10
+                  ]
                 },
                 {
                   "frame_no": 9,
@@ -9999,7 +10067,8 @@
                     "throw1": "X",
                     "throw2": "",
                     "throw3": ""
-                  }
+                  },
+                  "remaining_pins": []
                 },
                 {
                   "frame_no": 10,
@@ -10011,16 +10080,22 @@
                   "display_marks": {
                     "throw1": "9",
                     "throw2": "/",
-                    "throw3": "9"
-                  }
+                    "throw3": "9",
+                    "remaining_pins": "10　10"
+                  },
+                  "remaining_pins": [
+                    10
+                  ]
                 }
               ],
               "frame_candidate_count": 1,
               "frame_cumulative_corrections": [],
               "player_slot": "B",
-              "is_winner": false
+              "is_winner": false,
+              "lane_label": "34L"
             }
-          ]
+          ],
+          "lane_label": "33L / 34L"
         },
         {
           "sheet_type": "step_ladder",
@@ -10044,10 +10119,16 @@
                   "frame_score": 9,
                   "cumulative_score": 9,
                   "display_marks": {
-                    "throw1": "7",
+                    "throw1": "⑦",
                     "throw2": "2",
-                    "throw3": ""
-                  }
+                    "throw3": "",
+                    "remaining_pins": "4.⑥.7"
+                  },
+                  "remaining_pins": [
+                    4,
+                    6,
+                    7
+                  ]
                 },
                 {
                   "frame_no": 2,
@@ -10060,7 +10141,8 @@
                     "throw1": "X",
                     "throw2": "",
                     "throw3": ""
-                  }
+                  },
+                  "remaining_pins": []
                 },
                 {
                   "frame_no": 3,
@@ -10072,8 +10154,15 @@
                   "display_marks": {
                     "throw1": "6",
                     "throw2": "/",
-                    "throw3": ""
-                  }
+                    "throw3": "",
+                    "remaining_pins": "1.2.4.8"
+                  },
+                  "remaining_pins": [
+                    1,
+                    2,
+                    4,
+                    8
+                  ]
                 },
                 {
                   "frame_no": 4,
@@ -10086,7 +10175,8 @@
                     "throw1": "X",
                     "throw2": "",
                     "throw3": ""
-                  }
+                  },
+                  "remaining_pins": []
                 },
                 {
                   "frame_no": 5,
@@ -10098,8 +10188,13 @@
                   "display_marks": {
                     "throw1": "8",
                     "throw2": "/",
-                    "throw3": ""
-                  }
+                    "throw3": "",
+                    "remaining_pins": "4.7"
+                  },
+                  "remaining_pins": [
+                    4,
+                    7
+                  ]
                 },
                 {
                   "frame_no": 6,
@@ -10112,7 +10207,8 @@
                     "throw1": "X",
                     "throw2": "",
                     "throw3": ""
-                  }
+                  },
+                  "remaining_pins": []
                 },
                 {
                   "frame_no": 7,
@@ -10124,8 +10220,15 @@
                   "display_marks": {
                     "throw1": "6",
                     "throw2": "3",
-                    "throw3": ""
-                  }
+                    "throw3": "",
+                    "remaining_pins": "1.2.4.⑩"
+                  },
+                  "remaining_pins": [
+                    1,
+                    2,
+                    4,
+                    10
+                  ]
                 },
                 {
                   "frame_no": 8,
@@ -10137,8 +10240,12 @@
                   "display_marks": {
                     "throw1": "9",
                     "throw2": "/",
-                    "throw3": ""
-                  }
+                    "throw3": "",
+                    "remaining_pins": "10"
+                  },
+                  "remaining_pins": [
+                    10
+                  ]
                 },
                 {
                   "frame_no": 9,
@@ -10148,10 +10255,18 @@
                   "frame_score": 8,
                   "cumulative_score": 140,
                   "display_marks": {
-                    "throw1": "5",
+                    "throw1": "⑤",
                     "throw2": "3",
-                    "throw3": ""
-                  }
+                    "throw3": "",
+                    "remaining_pins": "④.6.⑦.9.10"
+                  },
+                  "remaining_pins": [
+                    4,
+                    6,
+                    7,
+                    9,
+                    10
+                  ]
                 },
                 {
                   "frame_no": 10,
@@ -10163,14 +10278,19 @@
                   "display_marks": {
                     "throw1": "X",
                     "throw2": "9",
-                    "throw3": "/"
-                  }
+                    "throw3": "/",
+                    "remaining_pins": "7"
+                  },
+                  "remaining_pins": [
+                    7
+                  ]
                 }
               ],
               "frame_candidate_count": 1,
               "frame_cumulative_corrections": [],
               "player_slot": "A",
-              "is_winner": false
+              "is_winner": false,
+              "lane_label": "33L"
             },
             {
               "identity": "P:F00000599",
@@ -10189,7 +10309,8 @@
                     "throw1": "X",
                     "throw2": "",
                     "throw3": ""
-                  }
+                  },
+                  "remaining_pins": []
                 },
                 {
                   "frame_no": 2,
@@ -10202,7 +10323,8 @@
                     "throw1": "X",
                     "throw2": "",
                     "throw3": ""
-                  }
+                  },
+                  "remaining_pins": []
                 },
                 {
                   "frame_no": 3,
@@ -10214,8 +10336,13 @@
                   "display_marks": {
                     "throw1": "8",
                     "throw2": "1",
-                    "throw3": ""
-                  }
+                    "throw3": "",
+                    "remaining_pins": "3.⑥"
+                  },
+                  "remaining_pins": [
+                    3,
+                    6
+                  ]
                 },
                 {
                   "frame_no": 4,
@@ -10227,8 +10354,12 @@
                   "display_marks": {
                     "throw1": "9",
                     "throw2": "/",
-                    "throw3": ""
-                  }
+                    "throw3": "",
+                    "remaining_pins": "2"
+                  },
+                  "remaining_pins": [
+                    2
+                  ]
                 },
                 {
                   "frame_no": 5,
@@ -10241,7 +10372,8 @@
                     "throw1": "X",
                     "throw2": "",
                     "throw3": ""
-                  }
+                  },
+                  "remaining_pins": []
                 },
                 {
                   "frame_no": 6,
@@ -10254,7 +10386,8 @@
                     "throw1": "X",
                     "throw2": "",
                     "throw3": ""
-                  }
+                  },
+                  "remaining_pins": []
                 },
                 {
                   "frame_no": 7,
@@ -10267,7 +10400,8 @@
                     "throw1": "X",
                     "throw2": "",
                     "throw3": ""
-                  }
+                  },
+                  "remaining_pins": []
                 },
                 {
                   "frame_no": 8,
@@ -10277,10 +10411,17 @@
                   "frame_score": 9,
                   "cumulative_score": 160,
                   "display_marks": {
-                    "throw1": "6",
+                    "throw1": "⑥",
                     "throw2": "3",
-                    "throw3": ""
-                  }
+                    "throw3": "",
+                    "remaining_pins": "2.4.8.⑩"
+                  },
+                  "remaining_pins": [
+                    2,
+                    4,
+                    8,
+                    10
+                  ]
                 },
                 {
                   "frame_no": 9,
@@ -10292,8 +10433,12 @@
                   "display_marks": {
                     "throw1": "9",
                     "throw2": "/",
-                    "throw3": ""
-                  }
+                    "throw3": "",
+                    "remaining_pins": "4"
+                  },
+                  "remaining_pins": [
+                    4
+                  ]
                 },
                 {
                   "frame_no": 10,
@@ -10305,16 +10450,22 @@
                   "display_marks": {
                     "throw1": "9",
                     "throw2": "/",
-                    "throw3": "X"
-                  }
+                    "throw3": "X",
+                    "remaining_pins": "7"
+                  },
+                  "remaining_pins": [
+                    7
+                  ]
                 }
               ],
               "frame_candidate_count": 1,
               "frame_cumulative_corrections": [],
               "player_slot": "B",
-              "is_winner": true
+              "is_winner": true,
+              "lane_label": "34L"
             }
-          ]
+          ],
+          "lane_label": "33L / 34L"
         },
         {
           "sheet_type": "step_ladder",
@@ -10340,8 +10491,12 @@
                   "display_marks": {
                     "throw1": "9",
                     "throw2": "/",
-                    "throw3": ""
-                  }
+                    "throw3": "",
+                    "remaining_pins": "4"
+                  },
+                  "remaining_pins": [
+                    4
+                  ]
                 },
                 {
                   "frame_no": 2,
@@ -10353,8 +10508,12 @@
                   "display_marks": {
                     "throw1": "9",
                     "throw2": "/",
-                    "throw3": ""
-                  }
+                    "throw3": "",
+                    "remaining_pins": "7"
+                  },
+                  "remaining_pins": [
+                    7
+                  ]
                 },
                 {
                   "frame_no": 3,
@@ -10366,8 +10525,12 @@
                   "display_marks": {
                     "throw1": "9",
                     "throw2": "/",
-                    "throw3": ""
-                  }
+                    "throw3": "",
+                    "remaining_pins": "10"
+                  },
+                  "remaining_pins": [
+                    10
+                  ]
                 },
                 {
                   "frame_no": 4,
@@ -10379,8 +10542,13 @@
                   "display_marks": {
                     "throw1": "8",
                     "throw2": "/",
-                    "throw3": ""
-                  }
+                    "throw3": "",
+                    "remaining_pins": "6.10"
+                  },
+                  "remaining_pins": [
+                    6,
+                    10
+                  ]
                 },
                 {
                   "frame_no": 5,
@@ -10392,8 +10560,14 @@
                   "display_marks": {
                     "throw1": "7",
                     "throw2": "/",
-                    "throw3": ""
-                  }
+                    "throw3": "",
+                    "remaining_pins": "3.6.10"
+                  },
+                  "remaining_pins": [
+                    3,
+                    6,
+                    10
+                  ]
                 },
                 {
                   "frame_no": 6,
@@ -10405,8 +10579,15 @@
                   "display_marks": {
                     "throw1": "6",
                     "throw2": "/",
-                    "throw3": ""
-                  }
+                    "throw3": "",
+                    "remaining_pins": "3.6.9.10"
+                  },
+                  "remaining_pins": [
+                    3,
+                    6,
+                    9,
+                    10
+                  ]
                 },
                 {
                   "frame_no": 7,
@@ -10419,7 +10600,8 @@
                     "throw1": "X",
                     "throw2": "",
                     "throw3": ""
-                  }
+                  },
+                  "remaining_pins": []
                 },
                 {
                   "frame_no": 8,
@@ -10431,8 +10613,16 @@
                   "display_marks": {
                     "throw1": "5",
                     "throw2": "3",
-                    "throw3": ""
-                  }
+                    "throw3": "",
+                    "remaining_pins": "1.2.⑥.8.⑩"
+                  },
+                  "remaining_pins": [
+                    1,
+                    2,
+                    6,
+                    8,
+                    10
+                  ]
                 },
                 {
                   "frame_no": 9,
@@ -10445,7 +10635,8 @@
                     "throw1": "X",
                     "throw2": "",
                     "throw3": ""
-                  }
+                  },
+                  "remaining_pins": []
                 },
                 {
                   "frame_no": 10,
@@ -10456,15 +10647,21 @@
                   "cumulative_score": 182,
                   "display_marks": {
                     "throw1": "X",
-                    "throw2": "8",
-                    "throw3": "1"
-                  }
+                    "throw2": "⑧",
+                    "throw3": "1",
+                    "remaining_pins": "2.⑩"
+                  },
+                  "remaining_pins": [
+                    2,
+                    10
+                  ]
                 }
               ],
               "frame_candidate_count": 1,
               "frame_cumulative_corrections": [],
               "player_slot": "A",
-              "is_winner": false
+              "is_winner": false,
+              "lane_label": "33L"
             },
             {
               "identity": "P:F00000600",
@@ -10483,7 +10680,8 @@
                     "throw1": "X",
                     "throw2": "",
                     "throw3": ""
-                  }
+                  },
+                  "remaining_pins": []
                 },
                 {
                   "frame_no": 2,
@@ -10493,10 +10691,15 @@
                   "frame_score": 9,
                   "cumulative_score": 28,
                   "display_marks": {
-                    "throw1": "8",
+                    "throw1": "⑧",
                     "throw2": "1",
-                    "throw3": ""
-                  }
+                    "throw3": "",
+                    "remaining_pins": "⑦.10"
+                  },
+                  "remaining_pins": [
+                    7,
+                    10
+                  ]
                 },
                 {
                   "frame_no": 3,
@@ -10509,7 +10712,8 @@
                     "throw1": "X",
                     "throw2": "",
                     "throw3": ""
-                  }
+                  },
+                  "remaining_pins": []
                 },
                 {
                   "frame_no": 4,
@@ -10522,7 +10726,8 @@
                     "throw1": "X",
                     "throw2": "",
                     "throw3": ""
-                  }
+                  },
+                  "remaining_pins": []
                 },
                 {
                   "frame_no": 5,
@@ -10535,7 +10740,8 @@
                     "throw1": "X",
                     "throw2": "",
                     "throw3": ""
-                  }
+                  },
+                  "remaining_pins": []
                 },
                 {
                   "frame_no": 6,
@@ -10548,7 +10754,8 @@
                     "throw1": "X",
                     "throw2": "",
                     "throw3": ""
-                  }
+                  },
+                  "remaining_pins": []
                 },
                 {
                   "frame_no": 7,
@@ -10561,7 +10768,8 @@
                     "throw1": "X",
                     "throw2": "",
                     "throw3": ""
-                  }
+                  },
+                  "remaining_pins": []
                 },
                 {
                   "frame_no": 8,
@@ -10573,8 +10781,13 @@
                   "display_marks": {
                     "throw1": "8",
                     "throw2": "/",
-                    "throw3": ""
-                  }
+                    "throw3": "",
+                    "remaining_pins": "6.10"
+                  },
+                  "remaining_pins": [
+                    6,
+                    10
+                  ]
                 },
                 {
                   "frame_no": 9,
@@ -10586,8 +10799,13 @@
                   "display_marks": {
                     "throw1": "8",
                     "throw2": "/",
-                    "throw3": ""
-                  }
+                    "throw3": "",
+                    "remaining_pins": "6.10"
+                  },
+                  "remaining_pins": [
+                    6,
+                    10
+                  ]
                 },
                 {
                   "frame_no": 10,
@@ -10598,17 +10816,26 @@
                   "cumulative_score": 222,
                   "display_marks": {
                     "throw1": "X",
-                    "throw2": "6",
-                    "throw3": "2"
-                  }
+                    "throw2": "⑥",
+                    "throw3": "2",
+                    "remaining_pins": "④.6.⑦.10"
+                  },
+                  "remaining_pins": [
+                    4,
+                    6,
+                    7,
+                    10
+                  ]
                 }
               ],
               "frame_candidate_count": 1,
               "frame_cumulative_corrections": [],
               "player_slot": "B",
-              "is_winner": true
+              "is_winner": true,
+              "lane_label": "34L"
             }
-          ]
+          ],
+          "lane_label": "33L / 34L"
         }
       ],
       "bracket_matches": []

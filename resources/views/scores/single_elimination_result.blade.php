@@ -1776,7 +1776,14 @@
                         <div class="se-seed-card">
                             <div class="se-seed-top">
                                 <span class="se-seed">{{ $row['seed'] ?? '—' }}位</span>
-                                <span class="se-seed-name">{{ $row['display_name'] ?? '—' }}</span>
+                                <span class="se-seed-name">
+                                    @include('scores.partials.player_ball_link', [
+                                        'displayName' => $row['display_name'] ?? '—',
+                                        'proBowlerId' => $row['pro_bowler_id'] ?? null,
+                                        'licenseNo' => $row['pro_bowler_license_no'] ?? null,
+                                        'scoreEntryBallLookup' => $scoreEntryBallLookup ?? [],
+                                    ])
+                                </span>
                             </div>
                             <div class="se-mini">
                                 {{ $formatLicenseShort($row['pro_bowler_license_no'] ?? '', $row['pro_bowler_id'] ?? null) ?: '—' }}

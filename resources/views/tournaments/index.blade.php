@@ -295,7 +295,10 @@
   <div class="tournament-toolbar">
     <a href="{{ route('tournaments.create') }}" class="btn btn-success">新規登録</a>
     <a href="{{ route('tournament_templates.index') }}" class="btn btn-outline-success btn-sm">大会テンプレート</a>
-    <a href="{{ route('tournament.entry.select') }}" class="btn btn-outline-primary btn-sm">大会使用ボール登録へ</a>
+    <a href="{{ route('tournament_result_formats.index') }}" class="btn btn-outline-primary btn-sm">最終成績フォーマット</a>
+    @if(auth()->user()?->pro_bowler_id)
+      <a href="{{ route('tournament.entry.select') }}" class="btn btn-outline-primary btn-sm">自分の大会使用ボール登録へ</a>
+    @endif
     <a href="{{ route('used_balls.index') }}" class="btn btn-outline-secondary btn-sm">使用ボール一覧（管理）</a>
   </div>
 
@@ -378,6 +381,7 @@
                 <a href="{{ route('tournaments.clone', $tournament->id) }}" class="btn btn-outline-success btn-sm">コピー</a>
                 <a href="{{ route('tournament_templates.create', ['source_tournament_id' => $tournament->id]) }}" class="btn btn-outline-secondary btn-sm">テンプレート化</a>
                 <a href="{{ route('tournaments.results.index', $tournament->id) }}" class="btn btn-success btn-sm">成績一覧</a>
+                <a href="{{ route('tournaments.entries.index', $tournament->id) }}" class="btn btn-outline-dark btn-sm">選手・ボール登録</a>
                 <a href="{{ route('scores.result', [
                     'tournament_id' => $tournament->id,
                     'stage' => '予選',

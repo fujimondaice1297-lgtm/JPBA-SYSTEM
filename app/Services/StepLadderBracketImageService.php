@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\ProBowler;
 use App\Models\Tournament;
 use RuntimeException;
 
@@ -14,9 +15,9 @@ class StepLadderBracketImageService
         $this->fontPath = $this->resolveFontPath();
     }
 
-    public function generateDataUri(Tournament $tournament, array $stepLadder): ?string
+    public function generateDataUri(Tournament $tournament, array $stepLadder, array $options = []): ?string
     {
-        $pngBinary = $this->generatePngBinary($tournament, $stepLadder);
+        $pngBinary = $this->generatePngBinary($tournament, $stepLadder, $options);
 
         if ($pngBinary === '') {
             return null;
@@ -25,8 +26,15 @@ class StepLadderBracketImageService
         return 'data:image/png;base64,' . base64_encode($pngBinary);
     }
 
-    private function generatePngBinary(Tournament $tournament, array $stepLadder): string
+    private function generatePngBinary(Tournament $tournament, array $stepLadder, array $options = []): string
     {
+        if (($options['layout'] ?? '') === 'rokko_queens') {
+            return $this->generateRokkoQueensPngBinary(
+                $tournament,
+                (array) ($options['layout_data'] ?? [])
+            );
+        }
+
         if (!extension_loaded('gd') || !function_exists('imagepng') || !function_exists('imagettftext')) {
             throw new RuntimeException('GD拡張、imagepng、imagettftext が有効ではありません。');
         }
@@ -190,6 +198,167 @@ class StepLadderBracketImageService
         imagedestroy($canvas);
 
         return $pngBinary;
+    }
+
+    /**
+     * 六甲クイーンズ公式PDFの4名ステップラダー専用配置。
+     * 既存の標準作図は変更せず、layout=rokko_queens のときだけ使用する。
+     */
+    private function generateRokkoQueensPngBinary(Tournament $tournament, array $layoutData): string
+    {
+        if (! extension_loaded('gd') || ! function_exists('imagepng') || ! function_exists('imagettftext')) {
+            throw new RuntimeException('六甲クイーンズ作図に必要なGD拡張が利用できません。');
+        }
+
+        $width = 1012;
+        $height = 328;
+        $image = imagecreatetruecolor($width, $height);
+        if ($image === false) {
+            throw new RuntimeException('六甲クイーンズのステップラダー画像を作成できませんでした。');
+        }
+
+        imageantialias($image, true);
+        $white = imagecolorallocate($image, 255, 255, 255);
+        $black = imagecolorallocate($image, 0, 0, 0);
+        imagefilledrectangle($image, 0, 0, $width, $height, $white);
+
+        $seeds = array_values((array) ($layoutData['seeds'] ?? []));
+        $rankLabels = ['(優　勝)', '(第２位)', '(第３位)', '(第４位)'];
+        $seedY = [0, 79, 158, 237];
+        $boxLeft = 124;
+        $boxWidth = 264;
+        $boxHeight = 68;
+
+        foreach ($seedY as $index => $y) {
+            $seed = (array) ($seeds[$index] ?? []);
+            $name = trim((string) ($seed['display_name'] ?? ''));
+            $period = trim((string) ($seed['period'] ?? ''));
+            if ($period === '' && ! empty($seed['pro_bowler_id'])) {
+                $period = trim((string) ProBowler::query()
+                    ->whereKey((int) $seed['pro_bowler_id'])
+                    ->value('kibetsu'));
+            }
+
+            $this->drawCenteredText($image, $rankLabels[$index], 58, $y + 34, 116, 42, 27, $black, true);
+
+            imagesetthickness($image, $index === 0 ? 5 : 2);
+            imagerectangle(
+                $image,
+                $boxLeft,
+                $y,
+                $boxLeft + $boxWidth,
+                $y + $boxHeight,
+                $black
+            );
+            imagesetthickness($image, 1);
+
+            $seedLabel = ($index + 1).'位通過'
+                .($period !== '' ? '　('.$period.'期生)' : '');
+            $this->drawCenteredText($image, $seedLabel, $boxLeft + 132, $y + 15, $boxWidth - 8, 26, 22, $black);
+            $this->drawCenteredText(
+                $image,
+                $this->spacedOfficialName($name),
+                $boxLeft + 132,
+                $y + 47,
+                $boxWidth - 8,
+                38,
+                30,
+                $black
+            );
+        }
+
+        $scores = (array) ($layoutData['scores'] ?? []);
+        $score = static fn (string $key): string => isset($scores[$key]) && $scores[$key] !== null
+            ? (string) (int) $scores[$key]
+            : '';
+
+        $this->drawCenteredText($image, $score('final_top'), 585, 0, 72, 36, 28, $black, true);
+        $this->drawCenteredText($image, $score('round2_top'), 498, 79, 72, 36, 28, $black, true);
+        $this->drawCenteredText($image, $score('round1_top'), 410, 158, 72, 36, 28, $black, true);
+        $this->drawCenteredText($image, $score('round1_bottom'), 410, 286, 72, 36, 28, $black);
+        $this->drawCenteredText($image, $score('round2_bottom'), 498, 207, 72, 36, 28, $black);
+        $this->drawCenteredText($image, $score('final_bottom'), 585, 128, 72, 36, 28, $black);
+
+        // 4位決定戦
+        $this->drawLine($image, 388, 192, 494, 192, $black, 4);
+        $this->drawLine($image, 388, 271, 494, 271, $black, 2);
+        $this->drawLine($image, 494, 192, 494, 271, $black, 4);
+
+        // 3位決定戦
+        $this->drawLine($image, 388, 113, 582, 113, $black, 4);
+        $this->drawLine($image, 494, 232, 582, 232, $black, 4);
+        $this->drawLine($image, 582, 113, 582, 232, $black, 4);
+
+        // 優勝決定戦
+        $this->drawLine($image, 388, 34, 670, 34, $black, 4);
+        $this->drawLine($image, 582, 153, 670, 153, $black, 4);
+        $this->drawLine($image, 670, 34, 670, 153, $black, 4);
+        $this->drawLine($image, 670, 93, 724, 93, $black, 4);
+
+        $champion = (array) ($layoutData['champion'] ?? []);
+        $championName = trim((string) ($champion['display_name'] ?? ''));
+        $championKana = trim((string) ($champion['name_kana'] ?? ''));
+        imagesetthickness($image, 5);
+        imagerectangle($image, 724, 36, 988, 120, $black);
+        imagesetthickness($image, 1);
+        $this->drawCenteredText(
+            $image,
+            trim('優勝　'.$this->halfWidthKana($championKana)),
+            856,
+            55,
+            252,
+            32,
+            27,
+            $black,
+            true
+        );
+        $this->drawCenteredText(
+            $image,
+            $this->spacedOfficialName($championName),
+            856,
+            93,
+            252,
+            45,
+            32,
+            $black,
+            true
+        );
+        $this->drawCenteredText(
+            $image,
+            trim((string) ($layoutData['winner_note'] ?? '')),
+            867,
+            175,
+            286,
+            48,
+            27,
+            $black
+        );
+
+        ob_start();
+        imagepng($image);
+        $binary = (string) ob_get_clean();
+        imagedestroy($image);
+
+        return $binary;
+    }
+
+    private function spacedOfficialName(string $name): string
+    {
+        $name = trim(preg_replace('/[\s　]+/u', '', $name) ?? $name);
+        if ($name === '' || str_contains($name, '･') || str_contains($name, '・')) {
+            return $name;
+        }
+
+        return implode('　', preg_split('//u', $name, -1, PREG_SPLIT_NO_EMPTY) ?: [$name]);
+    }
+
+    private function halfWidthKana(string $value): string
+    {
+        if ($value === '' || ! function_exists('mb_convert_kana')) {
+            return $value;
+        }
+
+        return mb_convert_kana($value, 'kV', 'UTF-8');
     }
 
     private function drawLine($image, int $x1, int $y1, int $x2, int $y2, int $color, int $thickness): void

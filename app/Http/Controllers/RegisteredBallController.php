@@ -167,7 +167,11 @@ class RegisteredBallController extends Controller
 
     public function create(Request $request)
     {
-        $approvedBalls = ApprovedBall::where('approved', true)->get();
+        $approvedBalls = ApprovedBall::query()
+            ->orderBy('manufacturer')
+            ->orderBy('sort_name')
+            ->orderBy('name')
+            ->get();
         $proBowlers = ProBowler::all();
 
         $manufacturers = [
@@ -238,14 +242,23 @@ class RegisteredBallController extends Controller
 
         $this->syncRegisteredBallToUsedBall($registeredBall);
 
-        return $this->redirectAfterSave($request, 'registered_balls.index', '登録完了');
+        return $this->redirectAfterSave(
+            $request,
+            'registered_balls.index',
+            '登録完了',
+            $this->usbcWarningForBallId((int) $registeredBall->approved_ball_id)
+        );
     }
 
     public function edit(Request $request, RegisteredBall $registeredBall)
     {
         $this->authorizeRegisteredBallAccess($request->user(), $registeredBall);
 
-        $approvedBalls = ApprovedBall::where('approved', true)->get();
+        $approvedBalls = ApprovedBall::query()
+            ->orderBy('manufacturer')
+            ->orderBy('sort_name')
+            ->orderBy('name')
+            ->get();
         $proBowlers = ProBowler::all();
         $fixedLicenseNo = null;
 
@@ -306,7 +319,12 @@ class RegisteredBallController extends Controller
 
         $this->syncRegisteredBallToUsedBall($registeredBall->fresh());
 
-        return $this->redirectAfterSave($request, 'registered_balls.index', '更新完了');
+        return $this->redirectAfterSave(
+            $request,
+            'registered_balls.index',
+            '更新完了',
+            $this->usbcWarningForBallId((int) $registeredBall->approved_ball_id)
+        );
     }
 
     public function destroy(Request $request, RegisteredBall $registeredBall)
@@ -474,19 +492,42 @@ class RegisteredBallController extends Controller
         ));
     }
 
-    private function redirectAfterSave(Request $request, string $defaultRoute, string $message)
+    private function redirectAfterSave(
+        Request $request,
+        string $defaultRoute,
+        string $message,
+        ?string $warning = null
+    )
     {
         $returnTo = (string) $request->input('return_to', '');
         $entryId = (int) $request->input('entry_id', 0);
 
         if ($returnTo === 'entry_balls' && $entryId > 0) {
-            return redirect()
+            $redirect = redirect()
                 ->route('member.entries.balls.edit', $entryId)
                 ->with('success', $message);
+
+            return $warning ? $redirect->with('warning', $warning) : $redirect;
         }
 
-        return redirect()
+        $redirect = redirect()
             ->route($defaultRoute)
             ->with('success', $message);
+
+        return $warning ? $redirect->with('warning', $warning) : $redirect;
+    }
+
+    private function usbcWarningForBallId(int $ballId): ?string
+    {
+        $status = ApprovedBall::query()
+            ->whereKey($ballId)
+            ->value('usbc_match_status');
+
+        return match ($status) {
+            'matched' => null,
+            'ambiguous' => 'アブプールリストとの照合結果が要確認のボールです。',
+            'unchecked' => 'アブプールリストとの照合が未実施のボールです。',
+            default => 'アブプールリストに記載のないボールです',
+        };
     }
 }

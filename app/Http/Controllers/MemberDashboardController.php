@@ -2,11 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\TrainingComplianceService;
 use Illuminate\Http\Request;
 
 class MemberDashboardController extends Controller
 {
-    public function index()
+    public function index(TrainingComplianceService $trainingComplianceService)
     {
         $user = auth()->user();
         if (!$user) {
@@ -34,6 +35,9 @@ class MemberDashboardController extends Controller
             'bowler'        => $bowler,
             'b'             => $bowler,       // 互換用
             'mypageGroups'  => $mypageGroups, // ← ビューでそのまま使う
+            'trainingCompliance' => $bowler
+                ? $trainingComplianceService->entryDecision($bowler)
+                : null,
         ]);
     }
 }

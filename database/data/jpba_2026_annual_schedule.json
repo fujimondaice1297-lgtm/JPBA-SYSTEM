@@ -1,0 +1,85 @@
+{
+  "year": 2026,
+  "title": "トーナメント年間予定表",
+  "source_updated_on": "2026-07-01",
+  "source_url": "https://www.jpba.or.jp/information/tournament/tournament2026/PDF/2026_TournamentSchedule_260702.pdf",
+  "notice": "※都合により、日時・会場等変更になる場合があります。",
+  "rows": [
+    {"month":1,"start_date":"2026-01-12","end_date":"2026-01-16","date_label":"12（月・祝）－16（金）","title":"io.LEAGUE 2026","eligibility":"チーム戦","region":"京都","venue":"MKボウル上賀茂VIPレーン"},
+    {"month":1,"start_date":"2026-01-20","date_label":"20（火）","title":"メリーランドカップ シーズントライアル2026 ウィンターシリーズ","eligibility":"男子","region":"茨城","venue":"大学ボウル土浦本店","point_mark":"○","average_mark":"○","prize_mark":"○"},
+    {"month":1,"start_date":"2026-01-20","date_label":"20（火）","title":"メリーランドカップ シーズントライアル2026 ウィンターシリーズ","eligibility":"男子","region":"兵庫","venue":"神戸六甲ボウル","point_mark":"○","average_mark":"○","prize_mark":"○"},
+    {"month":1,"start_date":"2026-01-27","date_label":"27（火）","title":"メリーランドカップ シーズントライアル2026 ウィンターシリーズ","eligibility":"男子","region":"東京","venue":"品川プリンスホテルボウリングセンター","point_mark":"○","average_mark":"○","prize_mark":"○","note":"1/22（木）BPAJ賀詞交歓会"},
+    {"month":1,"start_date":"2026-01-28","date_label":"28（水）","title":"メリーランドカップ シーズントライアル2026 ウィンターシリーズ","eligibility":"男子","region":"静岡","venue":"狐ヶ崎ヤングランドボウル","point_mark":"○","average_mark":"○","prize_mark":"○"},
+    {"month":1,"start_date":"2026-01-29","date_label":"29（木）","title":"ROUND1 GCB 2026 JPBA予選ラウンドA会場","eligibility":"男子・女子","region":"愛知","venue":"ラウンドワンスタジアム半田店","average_mark":"○","row_type":"qualifier"},
+
+    {"month":2,"date_label":"（　）－（　）","row_type":"placeholder"},
+    {"month":2,"start_date":"2026-02-26","date_label":"26（木）","title":"ROUND1 GCB 2026 JPBA予選ラウンドB会場","eligibility":"男子・女子","region":"香川","venue":"ラウンドワンスタジアム高松店","average_mark":"○","row_type":"qualifier"},
+
+    {"month":3,"start_date":"2026-03-02","end_date":"2026-03-04","date_label":"2（月）前夜祭パーティ、3（火）－4（水）","title":"KISHIKAGAKU GROUP・ピュアフーズ岸プレゼンツレディース2026","eligibility":"女子36名","region":"鹿児島","venue":"笠之原ボウリングセンター","point_mark":"○","average_mark":"○","prize_mark":"○","title_mark":"○"},
+    {"month":3,"date_label":"（　）","note":"3/10（火）スポンサー感謝の集い","row_type":"note"},
+    {"month":3,"date_label":"","note":"3/11（水）総会","row_type":"note"},
+
+    {"month":4,"start_date":"2026-03-31","end_date":"2026-04-03","date_label":"3/31（火）－4/3（金）","title":"第64回男子・第58回女子プロテスト（第1次）4日間","eligibility":"男子・女子","region":"中日本","venue":"稲沢グランドボウル（4日間）"},
+    {"month":4,"start_date":"2026-04-14","date_label":"14（火）","title":"ROUND1 GCB 2026 JPBA予選ラウンドC会場","eligibility":"男子・女子","region":"埼玉","venue":"ラウンドワンスタジアム上尾店","average_mark":"○","note":"専門講習会 4/9（木）","row_type":"qualifier"},
+    {"month":4,"start_date":"2026-04-21","date_label":"21（火）","title":"ROUND1 GCB 2026 JPBA予選ラウンドD会場","eligibility":"男子・女子","region":"福岡","venue":"ラウンドワンスタジアム博多・半道橋店","average_mark":"○","note":"C級リモート 4/14（火）・15（水）","row_type":"qualifier"},
+    {"month":4,"start_date":"2026-04-21","end_date":"2026-04-22","date_label":"21（火）－22（水）","title":"プロテスト（第2次）1・2日目","eligibility":"男子・女子","region":"西日本","venue":"MKボウル上賀茂（2日間）"},
+    {"month":4,"start_date":"2026-04-24","end_date":"2026-04-26","date_label":"24（月）宮崎フェス＆前夜祭パーティ、25（土）－26（日）","title":"2026宮崎プロアマオープン","eligibility":"女子","region":"宮崎","venue":"宮崎エースレーン","point_mark":"○B","average_mark":"○","prize_mark":"○","title_mark":"○"},
+
+    {"month":5,"start_date":"2026-05-11","end_date":"2026-05-12","date_label":"11（月）－12（火）","title":"プロテスト（第2次）3・4日目","eligibility":"男子・女子","region":"東日本","venue":"品川プリンスホテルボウリングセンター（2日間）"},
+    {"month":5,"start_date":"2026-05-12","date_label":"12（火）","title":"ROUND1 GCB 2026 JPBA予選ラウンドE会場","eligibility":"男子・女子","region":"岡山","venue":"ラウンドワンスタジアム岡山妹尾店","average_mark":"○","row_type":"qualifier"},
+    {"month":5,"start_date":"2026-05-13","end_date":"2026-05-16","date_label":"13（水）－16（土）","title":"プロテスト（第3次）研修会（C級講習会含む）","eligibility":"男子・女子","region":"東京","venue":"仏教伝道会館会議室、他"},
+    {"month":5,"start_date":"2026-05-18","date_label":"18（月）","title":"メリーランドカップ シーズントライアル2026 スプリングシリーズ","eligibility":"男子","region":"神奈川","venue":"伊勢原ボウル","point_mark":"○","average_mark":"○","prize_mark":"○"},
+    {"month":5,"start_date":"2026-05-18","date_label":"18（月）","title":"メリーランドカップ シーズントライアル2026 スプリングシリーズ","eligibility":"男子","region":"広島","venue":"ミスズボウル","point_mark":"○","average_mark":"○","prize_mark":"○"},
+    {"month":5,"start_date":"2026-05-19","date_label":"19（火）","title":"メリーランドカップ シーズントライアル2026 スプリングシリーズ","eligibility":"男子","region":"埼玉","venue":"新狭山グランドボウル","point_mark":"○","average_mark":"○","prize_mark":"○"},
+    {"month":5,"start_date":"2026-05-20","date_label":"20（水）","title":"メリーランドカップ シーズントライアル2026 スプリングシリーズ","eligibility":"男子","region":"京都","venue":"MKボウル上賀茂","point_mark":"○","average_mark":"○","prize_mark":"○"},
+    {"month":5,"start_date":"2026-05-21","date_label":"21（木）","title":"ROUND1 GCB 2026 JPBA予選ラウンドF会場","eligibility":"男子・女子","region":"宮城","venue":"ラウンドワン仙台苦竹店","average_mark":"○","row_type":"qualifier"},
+    {"month":5,"start_date":"2026-05-23","end_date":"2026-05-24","date_label":"23（土）－24（日）","title":"「Glicoセブンティーンアイス杯」第13回プロアマボウリング","eligibility":"男子・女子","region":"山形","venue":"山形ファミリーボウル","point_mark":"○B","average_mark":"○","prize_mark":"○","title_mark":"○"},
+    {"month":5,"start_date":"2026-05-26","end_date":"2026-05-27","date_label":"26（火）－27（水）","title":"𠮷川高広税理士事務所プレゼンツ 男子プロボウリング2026","eligibility":"男子","region":"神奈川","venue":"川崎グランドボウル","point_mark":"○B","average_mark":"○","prize_mark":"○","title_mark":"○"},
+    {"month":5,"start_date":"2026-05-28","date_label":"28（木）","title":"ROUND1 GCB 2026 JPBA予選ラウンドG会場","eligibility":"男子・女子","region":"東京","venue":"ラウンドワン南砂店","average_mark":"○","row_type":"qualifier"},
+
+    {"month":6,"start_date":"2026-06-02","date_label":"2（火）","title":"2026下半期女子出場優先順位決定戦","eligibility":"女子","region":"愛知","venue":"稲沢グランドボウル","average_mark":"○","note":"6/6・7 BPAJ BOWLEX富山"},
+    {"month":6,"start_date":"2026-06-09","date_label":"9（火）","title":"ROUND1 GCB 2026 JPBA予選ラウンドH会場","eligibility":"男子・女子","region":"北海道","venue":"ラウンドワンスタジアム札幌・白石本通店","average_mark":"○","row_type":"qualifier"},
+    {"month":6,"start_date":"2026-06-13","end_date":"2026-06-14","date_label":"13（土）－14（日）","title":"スカイAカップ2026プロボウリングレディース新人戦","eligibility":"女子有資格者","region":"神奈川","venue":"ボウリング王国スポルト八景店","average_mark":"○","prize_mark":"○","title_mark":"○"},
+    {"month":6,"start_date":"2026-06-18","end_date":"2026-06-21","date_label":"18（木）－21（日）","title":"大安興業プレゼンツ シーホースカップ2026","eligibility":"男子","region":"神奈川","venue":"伊勢原ボウル","point_mark":"○","average_mark":"○","prize_mark":"○","title_mark":"○"},
+    {"month":6,"start_date":"2026-06-26","end_date":"2026-06-28","date_label":"26（金）－28（日）","title":"中日杯2026東海オープン（男女）","eligibility":"男子予選\n女子予選","region":"三重\n愛知","venue":"アソビックスあさひ\nアソビックスかにえ","point_mark":"○","average_mark":"○","prize_mark":"○","title_mark":"○","note":"※男女準決勝＆決勝は、あさひ会場にて開催"},
+    {"month":6,"start_date":"2026-06-30","date_label":"30（火）","title":"ROUND1 GCB 2026 JPBA予選ラウンドI会場","eligibility":"男子・女子","region":"静岡","venue":"ラウンドワン富士店","average_mark":"○","row_type":"qualifier"},
+
+    {"month":7,"start_date":"2026-07-01","date_label":"1（水）","title":"メリーランドカップ シーズントライアル2026 サマーシリーズ","eligibility":"男子","region":"東京","venue":"サンスクエアボウル","point_mark":"○","average_mark":"○","prize_mark":"○"},
+    {"month":7,"start_date":"2026-07-02","date_label":"2（木）","title":"メリーランドカップ シーズントライアル2026 サマーシリーズ","eligibility":"男子","region":"群馬","venue":"ドリームスタジアム太田","point_mark":"○","average_mark":"○","prize_mark":"○"},
+    {"month":7,"start_date":"2026-07-07","date_label":"7（火）","title":"メリーランドカップ シーズントライアル2026 サマーシリーズ","eligibility":"男子","region":"愛知","venue":"アソビックスびさい","point_mark":"○","average_mark":"○","prize_mark":"○"},
+    {"month":7,"start_date":"2026-07-08","date_label":"8（水）","title":"ROUND1 GCB 2026 JPBA予選ラウンドJ会場","eligibility":"男子・女子","region":"滋賀","venue":"ラウンドワンスタジアム浜大津アーカス店","average_mark":"○","row_type":"qualifier"},
+    {"month":7,"start_date":"2026-07-10","end_date":"2026-07-11","date_label":"10（金）－11（土）","title":"第42回六甲クイーンズオープン","eligibility":"女子","region":"兵庫","venue":"神戸六甲ボウル","point_mark":"○","average_mark":"○","prize_mark":"○","title_mark":"○"},
+    {"month":7,"start_date":"2026-07-14","date_label":"14（火）","title":"ROUND1 GCB 2026 JPBA予選ラウンドK会場","eligibility":"男子・女子","region":"群馬","venue":"ラウンドワンスタジアム前橋店","average_mark":"○","row_type":"qualifier"},
+    {"month":7,"start_date":"2026-07-17","end_date":"2026-07-18","date_label":"17（金）－18（土）","title":"アントールカップ 男子トーナメント2026","eligibility":"男子","region":"石川","venue":"クァトロブーム鹿島","point_mark":"○","average_mark":"○","prize_mark":"○","title_mark":"○"},
+    {"month":7,"start_date":"2026-07-22","end_date":"2026-07-24","date_label":"22（水）－24（金）","title":"大岡産業レディース「THE OPEN」トーナメント2026","eligibility":"女子","region":"大阪","venue":"アルゴボウル","point_mark":"○","average_mark":"○","prize_mark":"○","title_mark":"○"},
+    {"month":7,"start_date":"2026-07-28","date_label":"28（火）","title":"メリーランドカップ シーズントライアル2026 サマーシリーズ","eligibility":"男子","region":"広島","venue":"賀茂ボール","point_mark":"○","average_mark":"○","prize_mark":"○"},
+
+    {"month":8,"date_label":"（　）－（　）","row_type":"placeholder"},
+    {"month":8,"date_label":"","note":"B級リモート 8/24・25","row_type":"note"},
+    {"month":8,"start_date":"2026-08-29","end_date":"2026-08-30","date_label":"29（土）－30（日）","title":"コロナワールドカップ 2026プロボウリング男子新人戦","eligibility":"男子有資格者","region":"愛知","venue":"コロナキャットボウル中川店","average_mark":"○","prize_mark":"○","title_mark":"○"},
+
+    {"month":9,"date_label":"","row_type":"placeholder"},
+    {"month":9,"start_date":"2026-09-03","end_date":"2026-09-07","date_label":"3（木）－7（月）","title":"第28回三湖コリアンカップ","eligibility":"男子（女子）","region":"韓国","point_mark":"○","average_mark":"○","prize_mark":"○","title_mark":"○"},
+    {"month":9,"start_date":"2026-09-15","date_label":"15（火）","title":"ROUND1 GCB 2026 JPBA予選ラウンドL会場","eligibility":"男子・女子","region":"大阪","venue":"ラウンドワンスタジアム堺中央環状店","average_mark":"○","row_type":"qualifier"},
+    {"month":9,"start_date":"2026-09-17","end_date":"2026-09-19","date_label":"17（木）－19（土）","title":"第19回MKチャリティカップ","eligibility":"男子・女子","region":"京都","venue":"MKボウル上賀茂","point_mark":"○","average_mark":"○","prize_mark":"○","title_mark":"○","note":"※選抜大会無し"},
+    {"month":9,"start_date":"2026-09-26","end_date":"2026-09-27","date_label":"26（土）－27（日）","title":"2026山梨レディースプロボウリングT/M 兼男女アマチュア選手権","eligibility":"女子","region":"山梨","venue":"山梨県場協会加盟4センター","point_mark":"○B","average_mark":"○","prize_mark":"○","title_mark":"○"},
+    {"month":9,"start_date":"2026-09-29","date_label":"29（火）","title":"メリーランドカップ シーズントライアル2026 オータムシリーズ","eligibility":"男子","region":"栃木","venue":"宇都宮第二トーヨーボウル","point_mark":"○","average_mark":"○","prize_mark":"○"},
+    {"month":9,"start_date":"2026-09-29","date_label":"29（火）","title":"メリーランドカップ シーズントライアル2026 オータムシリーズ","eligibility":"男子","region":"愛知","venue":"稲沢グランドボウル","point_mark":"○","average_mark":"○","prize_mark":"○"},
+
+    {"month":10,"start_date":"2026-10-02","end_date":"2026-10-03","date_label":"2（金）－3（土）","title":"ちゃおちゃおボウリング大会～2026ちゃおちゃおハウスT/M～","eligibility":"女子","region":"東京","venue":"品川プリンスホテルボウリングセンター","point_mark":"○","average_mark":"○","prize_mark":"○","title_mark":"○"},
+    {"month":10,"start_date":"2026-10-08","end_date":"2026-10-09","date_label":"8（木）－9（金）","title":"ROUND1 GRAND CHAMPIONSHIP BOWLING 2026 JPBA決勝大会","eligibility":"男子・女子","region":"大阪","venue":"ラウンドワンスタジアム堺中央環状店","point_mark":"○R","average_mark":"○","prize_mark":"○","title_mark":"○","note":"※男女GG部門無し"},
+    {"month":10,"start_date":"2026-10-16","date_label":"16（金）","title":"メリーランドカップ シーズントライアル2026 オータムシリーズ","eligibility":"男子","region":"佐賀","venue":"メリーランドタケオボウル","point_mark":"○","average_mark":"○","prize_mark":"○","note":"青森国スポ10/12～10/16"},
+    {"month":10,"start_date":"2026-10-21","date_label":"21（水）","title":"メリーランドカップ シーズントライアル2026 オータムシリーズ","eligibility":"男子","region":"神奈川","venue":"ハマボール","point_mark":"○","average_mark":"○","prize_mark":"○"},
+    {"month":10,"start_date":"2026-10-23","end_date":"2026-10-25","date_label":"23（金）－25（日）","title":"さわやかカップ2026第33回千葉オープン","eligibility":"男子","region":"千葉","venue":"ときわ平ボウリングセンター","point_mark":"○","average_mark":"○","prize_mark":"○","title_mark":"○"},
+
+    {"month":11,"start_date":"2026-10-31","end_date":"2026-11-03","date_label":"10/31（土）－3（火・祝）","title":"第48回STORMジャパンオープンボウリング選手権","eligibility":"男子・女子","region":"愛知","venue":"稲沢グランドボウル","point_mark":"○","average_mark":"○","prize_mark":"○","title_mark":"○"},
+    {"month":11,"start_date":"2026-11-14","date_label":"14（土）","title":"ROUND1 GRAND CHAMPIONSHIP BOWLING 2026 FINAL","eligibility":"男子・女子","region":"大阪","venue":"ラウンドワンスタジアム堺中央環状店","average_mark":"○","prize_mark":"○","title_mark":"○","note":"※男女各3部門実施"},
+    {"month":11,"start_date":"2026-11-18","end_date":"2026-11-21","date_label":"18（水）－21（土）","title":"ドリスタカップJPBAプレイヤーズドリームマッチ2026","eligibility":"男子","region":"群馬","venue":"ドリームスタジアム太田","point_mark":"○","average_mark":"○","prize_mark":"○","title_mark":"○"},
+    {"month":11,"start_date":"2026-11-26","end_date":"2026-11-28","date_label":"26（木）－28（土）","title":"サンスクエアボウルグランドフィナーレ女子プロトーナメント","eligibility":"女子","region":"東京","venue":"サンスクエアボウル","point_mark":"○","average_mark":"○","prize_mark":"○","title_mark":"○","note":"11/28・29宮様チャリティ"},
+
+    {"month":12,"start_date":"2026-12-03","end_date":"2026-12-05","date_label":"3（木）－5（土）","title":"メリーランドカップ JPBAプレイヤーズSTチャンピオンズ2026","eligibility":"男子","region":"佐賀","venue":"メリーランドタケオボウル","point_mark":"○","average_mark":"○","prize_mark":"○","title_mark":"○"},
+    {"month":12,"start_date":"2026-12-03","end_date":"2026-12-05","date_label":"3（木）－5（土）","title":"第47回JLBCプリンスカップ","eligibility":"女子","region":"東京","venue":"品川プリンスホテルボウリングセンター","point_mark":"○","average_mark":"○","prize_mark":"○","title_mark":"○"},
+    {"month":12,"start_date":"2026-12-10","end_date":"2026-12-12","date_label":"10（木）－12（土）","title":"「HANDA CUP」・第58回全日本女子プロ選手権大会","eligibility":"女子","region":"埼玉","venue":"新狭山グランドボウル","point_mark":"○","average_mark":"○","prize_mark":"○","title_mark":"○"},
+    {"month":12,"start_date":"2026-12-17","end_date":"2026-12-19","date_label":"17（木）－19（土）","title":"HANDA CUP 第60回全日本プロ選手権大会","eligibility":"男子","region":"埼玉","venue":"新狭山グランドボウル","point_mark":"○","average_mark":"○","prize_mark":"○","title_mark":"○"}
+  ]
+}

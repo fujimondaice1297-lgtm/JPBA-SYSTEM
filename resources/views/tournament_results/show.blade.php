@@ -138,6 +138,13 @@
             PDF出力
         </a>
 
+        @if($tournament->resultFormatVersion)
+            <a href="{{ route('tournaments.results.excel', $tournament) }}"
+               class="btn btn-outline-success">
+                転写済みExcel
+            </a>
+        @endif
+
     </div>
 
     @if($currentPublication)

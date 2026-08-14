@@ -18,6 +18,39 @@ annual_dues,4,paid_at,date,YES
 annual_dues,5,note,character varying,YES
 annual_dues,6,created_at,timestamp without time zone,YES
 annual_dues,7,updated_at,timestamp without time zone,YES
+annual_schedule_rows,1,id,bigint,NO
+annual_schedule_rows,2,annual_schedule_id,bigint,NO
+annual_schedule_rows,3,tournament_id,bigint,YES
+annual_schedule_rows,4,month,smallint,NO
+annual_schedule_rows,5,sort_order,smallint,NO
+annual_schedule_rows,6,start_date,date,YES
+annual_schedule_rows,7,end_date,date,YES
+annual_schedule_rows,8,date_label,character varying,YES
+annual_schedule_rows,9,title,text,YES
+annual_schedule_rows,10,eligibility,character varying,YES
+annual_schedule_rows,11,region,character varying,YES
+annual_schedule_rows,12,venue,text,YES
+annual_schedule_rows,13,point_mark,character varying,YES
+annual_schedule_rows,14,average_mark,character varying,YES
+annual_schedule_rows,15,prize_mark,character varying,YES
+annual_schedule_rows,16,title_mark,character varying,YES
+annual_schedule_rows,17,note,text,YES
+annual_schedule_rows,18,row_type,character varying,NO
+annual_schedule_rows,19,source_type,character varying,NO
+annual_schedule_rows,20,created_at,timestamp without time zone,YES
+annual_schedule_rows,21,updated_at,timestamp without time zone,YES
+annual_schedules,1,id,bigint,NO
+annual_schedules,2,year,smallint,NO
+annual_schedules,3,title,character varying,NO
+annual_schedules,4,source_updated_on,date,YES
+annual_schedules,5,source_url,text,YES
+annual_schedules,6,notice,text,YES
+annual_schedules,7,status,character varying,NO
+annual_schedules,8,published_at,timestamp without time zone,YES
+annual_schedules,9,created_by_user_id,bigint,YES
+annual_schedules,10,updated_by_user_id,bigint,YES
+annual_schedules,11,created_at,timestamp without time zone,YES
+annual_schedules,12,updated_at,timestamp without time zone,YES
 approved_ball_pro_bowler,1,id,bigint,NO
 approved_ball_pro_bowler,2,pro_bowler_license_no,character varying,NO
 approved_ball_pro_bowler,3,approved_ball_id,bigint,NO
@@ -33,17 +66,107 @@ approved_balls,6,approved,boolean,NO
 approved_balls,7,created_at,timestamp without time zone,YES
 approved_balls,8,updated_at,timestamp without time zone,YES
 approved_balls,9,release_date,date,YES
+approved_balls,10,manufacturer_id,bigint,YES
+approved_balls,11,brand,character varying,YES
+approved_balls,12,sort_name,character varying,YES
+approved_balls,13,source_key,character varying,YES
+approved_balls,14,source_url,text,YES
+approved_balls,15,source_image_url,text,YES
+approved_balls,16,image_path,text,YES
+approved_balls,17,image_sha256,character varying,YES
+approved_balls,18,catalog_status,character varying,NO
+approved_balls,19,source_payload,json,YES
+approved_balls,20,source_fingerprint,character varying,YES
+approved_balls,21,first_seen_at,timestamp without time zone,YES
+approved_balls,22,last_seen_at,timestamp without time zone,YES
+approved_balls,23,imported_at,timestamp without time zone,YES
+approved_balls,24,image_imported_at,timestamp without time zone,YES
+approved_balls,25,usbc_match_status,character varying,NO
+approved_balls,26,usbc_match_method,character varying,YES
+approved_balls,27,usbc_matched_brand,character varying,YES
+approved_balls,28,usbc_matched_name,character varying,YES
+approved_balls,29,usbc_match_candidates,json,YES
+approved_balls,30,usbc_checked_at,timestamp without time zone,YES
 area,1,id,bigint,NO
 area,2,name,text,NO
 area,3,update_date,timestamp without time zone,YES
 area,4,created_by,character varying,YES
 area,5,updated_by,character varying,YES
+ball_annual_registration_histories,1,id,bigint,NO
+ball_annual_registration_histories,2,registration_id,bigint,NO
+ball_annual_registration_histories,3,action,character varying,NO
+ball_annual_registration_histories,4,from_status,character varying,YES
+ball_annual_registration_histories,5,to_status,character varying,YES
+ball_annual_registration_histories,6,acted_by_user_id,bigint,YES
+ball_annual_registration_histories,7,note,text,YES
+ball_annual_registration_histories,8,payload,json,YES
+ball_annual_registration_histories,9,created_at,timestamp without time zone,YES
+ball_annual_registration_histories,10,updated_at,timestamp without time zone,YES
+ball_annual_registration_items,1,id,bigint,NO
+ball_annual_registration_items,2,registration_id,bigint,NO
+ball_annual_registration_items,3,used_ball_id,bigint,NO
+ball_annual_registration_items,4,created_at,timestamp without time zone,YES
+ball_annual_registration_items,5,updated_at,timestamp without time zone,YES
+ball_annual_registrations,1,id,bigint,NO
+ball_annual_registrations,2,pro_bowler_id,bigint,NO
+ball_annual_registrations,3,registration_year,smallint,NO
+ball_annual_registrations,4,revision,integer,NO
+ball_annual_registrations,5,status,character varying,NO
+ball_annual_registrations,6,submitted_at,timestamp without time zone,YES
+ball_annual_registrations,7,submitted_by_user_id,bigint,YES
+ball_annual_registrations,8,approved_at,timestamp without time zone,YES
+ball_annual_registrations,9,approved_by_user_id,bigint,YES
+ball_annual_registrations,10,returned_at,timestamp without time zone,YES
+ball_annual_registrations,11,returned_by_user_id,bigint,YES
+ball_annual_registrations,12,return_reason,text,YES
+ball_annual_registrations,13,created_at,timestamp without time zone,YES
+ball_annual_registrations,14,updated_at,timestamp without time zone,YES
+ball_catalog_import_failures,1,id,bigint,NO
+ball_catalog_import_failures,2,import_run_id,bigint,NO
+ball_catalog_import_failures,3,manufacturer_id,bigint,YES
+ball_catalog_import_failures,4,phase,character varying,NO
+ball_catalog_import_failures,5,page_url,text,YES
+ball_catalog_import_failures,6,product_url,text,YES
+ball_catalog_import_failures,7,image_url,text,YES
+ball_catalog_import_failures,8,error_message,text,NO
+ball_catalog_import_failures,9,attempt_count,smallint,NO
+ball_catalog_import_failures,10,resolved_at,timestamp without time zone,YES
+ball_catalog_import_failures,11,created_at,timestamp without time zone,YES
+ball_catalog_import_failures,12,updated_at,timestamp without time zone,YES
+ball_catalog_import_runs,1,id,bigint,NO
+ball_catalog_import_runs,2,manufacturer_id,bigint,YES
+ball_catalog_import_runs,3,mode,character varying,NO
+ball_catalog_import_runs,4,status,character varying,NO
+ball_catalog_import_runs,5,started_at,timestamp without time zone,NO
+ball_catalog_import_runs,6,completed_at,timestamp without time zone,YES
+ball_catalog_import_runs,7,page_count,integer,NO
+ball_catalog_import_runs,8,item_count,integer,NO
+ball_catalog_import_runs,9,created_count,integer,NO
+ball_catalog_import_runs,10,updated_count,integer,NO
+ball_catalog_import_runs,11,unchanged_count,integer,NO
+ball_catalog_import_runs,12,image_downloaded_count,integer,NO
+ball_catalog_import_runs,13,image_reused_count,integer,NO
+ball_catalog_import_runs,14,image_failed_count,integer,NO
+ball_catalog_import_runs,15,error_count,integer,NO
+ball_catalog_import_runs,16,cursor_url,text,YES
+ball_catalog_import_runs,17,report,json,YES
+ball_catalog_import_runs,18,created_at,timestamp without time zone,YES
+ball_catalog_import_runs,19,updated_at,timestamp without time zone,YES
 ball_info,1,id,bigint,NO
 ball_info,2,brand,character varying,YES
 ball_info,3,model,character varying,YES
 ball_info,4,update_date,timestamp without time zone,YES
 ball_info,5,created_by,character varying,YES
 ball_info,6,updated_by,character varying,YES
+ball_manufacturers,1,id,bigint,NO
+ball_manufacturers,2,name,character varying,NO
+ball_manufacturers,3,slug,character varying,NO
+ball_manufacturers,4,base_url,text,NO
+ball_manufacturers,5,catalog_url,text,NO
+ball_manufacturers,6,is_active,boolean,NO
+ball_manufacturers,7,sort_order,smallint,NO
+ball_manufacturers,8,created_at,timestamp without time zone,YES
+ball_manufacturers,9,updated_at,timestamp without time zone,YES
 cache,1,key,character varying,NO
 cache,2,value,text,NO
 cache,3,expiration,integer,NO
@@ -249,6 +372,20 @@ license,2,name,text,NO
 license,3,update_date,timestamp without time zone,YES
 license,4,created_by,character varying,YES
 license,5,updated_by,character varying,YES
+managed_public_pages,1,id,bigint,NO
+managed_public_pages,2,slug,character varying,NO
+managed_public_pages,3,title,character varying,NO
+managed_public_pages,4,body_html,text,NO
+managed_public_pages,5,source_url,text,YES
+managed_public_pages,6,navigation_group,character varying,YES
+managed_public_pages,7,sort_order,smallint,NO
+managed_public_pages,8,is_published,boolean,NO
+managed_public_pages,9,published_at,timestamp without time zone,YES
+managed_public_pages,10,source_checked_at,timestamp without time zone,YES
+managed_public_pages,11,created_by_user_id,bigint,YES
+managed_public_pages,12,updated_by_user_id,bigint,YES
+managed_public_pages,13,created_at,timestamp without time zone,YES
+managed_public_pages,14,updated_at,timestamp without time zone,YES
 match_videos,1,id,bigint,NO
 match_videos,2,video_url,text,NO
 match_videos,3,description,text,YES
@@ -265,6 +402,18 @@ media_publications,8,updated_at,timestamp without time zone,YES
 migrations,1,id,integer,NO
 migrations,2,migration,character varying,NO
 migrations,3,batch,integer,NO
+official_profile_stat_snapshots,1,id,bigint,NO
+official_profile_stat_snapshots,2,pro_bowler_id,bigint,NO
+official_profile_stat_snapshots,3,license_no,character varying,NO
+official_profile_stat_snapshots,4,source_url,text,NO
+official_profile_stat_snapshots,5,captured_at,timestamp without time zone,NO
+official_profile_stat_snapshots,6,perfect_count,integer,NO
+official_profile_stat_snapshots,7,eight_hundred_count,integer,NO
+official_profile_stat_snapshots,8,seven_ten_count,integer,NO
+official_profile_stat_snapshots,9,payload,json,NO
+official_profile_stat_snapshots,10,payload_hash,character varying,NO
+official_profile_stat_snapshots,11,created_at,timestamp without time zone,YES
+official_profile_stat_snapshots,12,updated_at,timestamp without time zone,YES
 official_title_import_candidates,1,id,bigint,NO
 official_title_import_candidates,2,pro_bowler_id,bigint,YES
 official_title_import_candidates,3,license_no,character varying,YES
@@ -315,6 +464,22 @@ prize_distributions,4,amount,integer,NO
 prize_distributions,5,pattern_id,bigint,YES
 prize_distributions,6,created_at,timestamp without time zone,YES
 prize_distributions,7,updated_at,timestamp without time zone,YES
+pro_bowler_annual_records,1,id,bigint,NO
+pro_bowler_annual_records,2,pro_bowler_id,bigint,NO
+pro_bowler_annual_records,3,season_key,character varying,NO
+pro_bowler_annual_records,4,season_start_year,smallint,NO
+pro_bowler_annual_records,5,season_end_year,smallint,NO
+pro_bowler_annual_records,6,ranking_rank,integer,YES
+pro_bowler_annual_records,7,games,integer,YES
+pro_bowler_annual_records,8,total_pin,bigint,YES
+pro_bowler_annual_records,9,points,numeric,YES
+pro_bowler_annual_records,10,average,numeric,YES
+pro_bowler_annual_records,11,prize_money,bigint,YES
+pro_bowler_annual_records,12,source_type,character varying,NO
+pro_bowler_annual_records,13,source_url,text,YES
+pro_bowler_annual_records,14,captured_at,timestamp without time zone,YES
+pro_bowler_annual_records,15,created_at,timestamp without time zone,YES
+pro_bowler_annual_records,16,updated_at,timestamp without time zone,YES
 pro_bowler_biographies,1,id,bigint,NO
 pro_bowler_biographies,2,pro_bowler_id,bigint,NO
 pro_bowler_biographies,3,motto,character varying,YES
@@ -339,6 +504,15 @@ pro_bowler_links,6,youtube_url,character varying,YES
 pro_bowler_links,7,facebook_url,character varying,YES
 pro_bowler_links,8,created_at,timestamp without time zone,YES
 pro_bowler_links,9,updated_at,timestamp without time zone,YES
+pro_bowler_official_history_imports,1,id,bigint,NO
+pro_bowler_official_history_imports,2,pro_bowler_id,bigint,NO
+pro_bowler_official_history_imports,3,annual_row_count,integer,NO
+pro_bowler_official_history_imports,4,participation_year_count,integer,NO
+pro_bowler_official_history_imports,5,tournament_row_count,integer,NO
+pro_bowler_official_history_imports,6,source_url,text,YES
+pro_bowler_official_history_imports,7,completed_at,timestamp without time zone,NO
+pro_bowler_official_history_imports,8,created_at,timestamp without time zone,YES
+pro_bowler_official_history_imports,9,updated_at,timestamp without time zone,YES
 pro_bowler_profiles,1,id,bigint,NO
 pro_bowler_profiles,2,pro_bowler_id,bigint,NO
 pro_bowler_profiles,3,birthdate,date,YES
@@ -442,6 +616,28 @@ pro_bowler_titles,9,updated_at,timestamp without time zone,YES
 pro_bowler_titles,10,tournament_name,character varying,YES
 pro_bowler_titles,11,source_url,text,YES
 pro_bowler_titles,12,source_label,character varying,YES
+pro_bowler_tournament_histories,1,id,bigint,NO
+pro_bowler_tournament_histories,2,pro_bowler_id,bigint,NO
+pro_bowler_tournament_histories,3,season_year,smallint,NO
+pro_bowler_tournament_histories,4,held_on,date,NO
+pro_bowler_tournament_histories,5,tournament_name,text,NO
+pro_bowler_tournament_histories,6,ranking_rank,integer,YES
+pro_bowler_tournament_histories,7,average,numeric,YES
+pro_bowler_tournament_histories,8,prize_money,bigint,YES
+pro_bowler_tournament_histories,9,source_type,character varying,NO
+pro_bowler_tournament_histories,10,source_url,text,YES
+pro_bowler_tournament_histories,11,source_fingerprint,character,NO
+pro_bowler_tournament_histories,12,captured_at,timestamp without time zone,YES
+pro_bowler_tournament_histories,13,created_at,timestamp without time zone,YES
+pro_bowler_tournament_histories,14,updated_at,timestamp without time zone,YES
+pro_bowler_tournament_history_syncs,1,id,bigint,NO
+pro_bowler_tournament_history_syncs,2,pro_bowler_id,bigint,NO
+pro_bowler_tournament_history_syncs,3,season_year,smallint,NO
+pro_bowler_tournament_history_syncs,4,row_count,integer,NO
+pro_bowler_tournament_history_syncs,5,source_url,text,YES
+pro_bowler_tournament_history_syncs,6,captured_at,timestamp without time zone,NO
+pro_bowler_tournament_history_syncs,7,created_at,timestamp without time zone,YES
+pro_bowler_tournament_history_syncs,8,updated_at,timestamp without time zone,YES
 pro_bowler_trainings,1,id,bigint,NO
 pro_bowler_trainings,2,pro_bowler_id,bigint,NO
 pro_bowler_trainings,3,training_id,bigint,NO
@@ -451,6 +647,10 @@ pro_bowler_trainings,6,proof_path,character varying,YES
 pro_bowler_trainings,7,notes,text,YES
 pro_bowler_trainings,8,created_at,timestamp without time zone,YES
 pro_bowler_trainings,9,updated_at,timestamp without time zone,YES
+pro_bowler_trainings,10,training_session_id,bigint,YES
+pro_bowler_trainings,11,record_status,character varying,NO
+pro_bowler_trainings,12,revoked_at,timestamp without time zone,YES
+pro_bowler_trainings,13,recorded_by_user_id,bigint,YES
 pro_bowlers,1,id,bigint,NO
 pro_bowlers,2,license_no,character varying,NO
 pro_bowlers,3,name_kanji,text,YES
@@ -575,6 +775,8 @@ pro_bowlers,123,official_profile_url,character varying,YES
 pro_bowlers,124,official_profile_imported_at,timestamp without time zone,YES
 pro_bowlers,125,official_profile_import_error,text,YES
 pro_bowlers,126,season_trial_win_count,integer,YES
+pro_bowlers,127,training_compliance_status,character varying,NO
+pro_bowlers,128,training_compliance_checked_at,timestamp without time zone,YES
 pro_dsp,1,id,bigint,NO
 pro_dsp,2,name,character varying,NO
 pro_dsp,3,gender,character varying,YES
@@ -669,16 +871,50 @@ pro_test_venue,4,phone,character varying,YES
 pro_test_venue,5,update_date,timestamp without time zone,YES
 pro_test_venue,6,created_by,character varying,YES
 pro_test_venue,7,updated_by,character varying,YES
+record_certification_sequences,1,id,bigint,NO
+record_certification_sequences,2,record_type,character varying,NO
+record_certification_sequences,3,gender,character,NO
+record_certification_sequences,4,next_number,bigint,NO
+record_certification_sequences,5,prefix,character varying,YES
+record_certification_sequences,6,suffix,character varying,YES
+record_certification_sequences,7,is_enabled,boolean,NO
+record_certification_sequences,8,created_at,timestamp without time zone,YES
+record_certification_sequences,9,updated_at,timestamp without time zone,YES
 record_types,1,id,bigint,NO
 record_types,2,pro_bowler_id,bigint,NO
 record_types,3,record_type,character varying,NO
 record_types,4,tournament_name,character varying,NO
-record_types,5,game_numbers,character varying,NO
+record_types,5,game_numbers,character varying,YES
 record_types,6,frame_number,character varying,YES
-record_types,7,awarded_on,date,NO
-record_types,8,certification_number,character varying,NO
+record_types,7,awarded_on,date,YES
+record_types,8,certification_number,character varying,YES
 record_types,9,created_at,timestamp without time zone,YES
 record_types,10,updated_at,timestamp without time zone,YES
+record_types,11,tournament_id,bigint,YES
+record_types,12,source_game_score_id,bigint,YES
+record_types,13,score_series_definition_id,bigint,YES
+record_types,14,stage,character varying,YES
+record_types,15,shift,character varying,YES
+record_types,16,gender,character,YES
+record_types,17,series_label,character varying,YES
+record_types,18,series_start_game,smallint,YES
+record_types,19,series_end_game,smallint,YES
+record_types,20,series_total,smallint,YES
+record_types,21,series_scores,json,YES
+record_types,22,status,character varying,NO
+record_types,23,registration_mode,character varying,NO
+record_types,24,detection_key,character varying,YES
+record_types,25,source_type,character varying,YES
+record_types,26,source_url,text,YES
+record_types,27,source_label,character varying,YES
+record_types,28,evidence_text,text,YES
+record_types,29,warning,text,YES
+record_types,30,detected_at,timestamp without time zone,YES
+record_types,31,confirmed_at,timestamp without time zone,YES
+record_types,32,confirmed_by,bigint,YES
+record_types,33,count_applied_at,timestamp without time zone,YES
+record_types,34,certification_number_value,bigint,YES
+record_types,35,notes,text,YES
 registered_balls,1,id,bigint,NO
 registered_balls,2,license_no,character varying,NO
 registered_balls,3,approved_ball_id,bigint,NO
@@ -756,6 +992,19 @@ score_import_rows,19,reviewed_at,timestamp without time zone,YES
 score_import_rows,20,confirmed_game_score_id,bigint,YES
 score_import_rows,21,created_at,timestamp without time zone,YES
 score_import_rows,22,updated_at,timestamp without time zone,YES
+score_series_definitions,1,id,bigint,NO
+score_series_definitions,2,tournament_id,bigint,NO
+score_series_definitions,3,stage,character varying,NO
+score_series_definitions,4,shift,character varying,YES
+score_series_definitions,5,gender,character,YES
+score_series_definitions,6,label,character varying,NO
+score_series_definitions,7,start_game,smallint,NO
+score_series_definitions,8,end_game,smallint,NO
+score_series_definitions,9,is_800_eligible,boolean,NO
+score_series_definitions,10,is_enabled,boolean,NO
+score_series_definitions,11,source,character varying,NO
+score_series_definitions,12,created_at,timestamp without time zone,YES
+score_series_definitions,13,updated_at,timestamp without time zone,YES
 sessions,1,id,character varying,NO
 sessions,2,user_id,bigint,YES
 sessions,3,ip_address,character varying,YES
@@ -996,6 +1245,22 @@ tournament_points,2,rank,integer,NO
 tournament_points,3,point,integer,NO
 tournament_points,4,created_at,timestamp without time zone,YES
 tournament_points,5,updated_at,timestamp without time zone,YES
+tournament_result_format_versions,1,id,bigint,NO
+tournament_result_format_versions,2,tournament_result_format_id,bigint,NO
+tournament_result_format_versions,3,version_no,integer,NO
+tournament_result_format_versions,4,template_disk,character varying,NO
+tournament_result_format_versions,5,template_path,character varying,NO
+tournament_result_format_versions,6,notes,text,YES
+tournament_result_format_versions,7,is_active,boolean,NO
+tournament_result_format_versions,8,created_at,timestamp without time zone,YES
+tournament_result_format_versions,9,updated_at,timestamp without time zone,YES
+tournament_result_formats,1,id,bigint,NO
+tournament_result_formats,2,name,character varying,NO
+tournament_result_formats,3,code,character varying,NO
+tournament_result_formats,4,description,text,YES
+tournament_result_formats,5,is_active,boolean,NO
+tournament_result_formats,6,created_at,timestamp without time zone,YES
+tournament_result_formats,7,updated_at,timestamp without time zone,YES
 tournament_result_outputs,1,id,bigint,NO
 tournament_result_outputs,2,tournament_id,bigint,NO
 tournament_result_outputs,3,output_type,character varying,NO
@@ -1287,10 +1552,83 @@ tournaments,93,counts_for_average,boolean,NO
 tournaments,94,counts_for_prize,boolean,NO
 tournaments,95,title_scope,character varying,NO
 tournaments,96,template_snapshot,json,YES
+tournaments,97,tournament_result_format_version_id,bigint,YES
+tournaments,98,ball_registration_limit,smallint,NO
 tournamentscore,1,id,bigint,NO
 tournamentscore,2,name,character varying,NO
 tournamentscore,3,created_at,timestamp without time zone,YES
 tournamentscore,4,updated_at,timestamp without time zone,YES
+training_compliance_notifications,1,id,bigint,NO
+training_compliance_notifications,2,pro_bowler_id,bigint,NO
+training_compliance_notifications,3,pro_bowler_training_id,bigint,YES
+training_compliance_notifications,4,notification_type,character varying,NO
+training_compliance_notifications,5,expires_on,date,NO
+training_compliance_notifications,6,notice_year,smallint,NO
+training_compliance_notifications,7,recipient_email,character varying,YES
+training_compliance_notifications,8,status,character varying,NO
+training_compliance_notifications,9,sent_at,timestamp without time zone,YES
+training_compliance_notifications,10,error_message,text,YES
+training_compliance_notifications,11,requested_by_user_id,bigint,YES
+training_compliance_notifications,12,created_at,timestamp without time zone,YES
+training_compliance_notifications,13,updated_at,timestamp without time zone,YES
+training_official_list_entries,1,id,bigint,NO
+training_official_list_entries,2,training_official_list_id,bigint,NO
+training_official_list_entries,3,pro_bowler_id,bigint,YES
+training_official_list_entries,4,gender,character,NO
+training_official_list_entries,5,license_no_num,integer,NO
+training_official_list_entries,6,source_order,integer,NO
+training_official_list_entries,7,source_name,character varying,YES
+training_official_list_entries,8,match_status,character varying,NO
+training_official_list_entries,9,notes,text,YES
+training_official_list_entries,10,created_at,timestamp without time zone,YES
+training_official_list_entries,11,updated_at,timestamp without time zone,YES
+training_official_lists,1,id,bigint,NO
+training_official_lists,2,training_id,bigint,NO
+training_official_lists,3,edition_number,smallint,NO
+training_official_lists,4,title,character varying,NO
+training_official_lists,5,valid_from,date,NO
+training_official_lists,6,valid_through,date,NO
+training_official_lists,7,source_page_url,text,YES
+training_official_lists,8,source_url,text,NO
+training_official_lists,9,source_published_at,timestamp without time zone,NO
+training_official_lists,10,source_sha256,character varying,NO
+training_official_lists,11,is_current,boolean,NO
+training_official_lists,12,sync_status,character varying,NO
+training_official_lists,13,total_count,integer,NO
+training_official_lists,14,male_count,integer,NO
+training_official_lists,15,female_count,integer,NO
+training_official_lists,16,matched_count,integer,NO
+training_official_lists,17,unmatched_count,integer,NO
+training_official_lists,18,inactive_count,integer,NO
+training_official_lists,19,imported_at,timestamp without time zone,YES
+training_official_lists,20,imported_by_user_id,bigint,YES
+training_official_lists,21,notes,text,YES
+training_official_lists,22,created_at,timestamp without time zone,YES
+training_official_lists,23,updated_at,timestamp without time zone,YES
+training_session_participants,1,id,bigint,NO
+training_session_participants,2,training_session_id,bigint,NO
+training_session_participants,3,pro_bowler_id,bigint,NO
+training_session_participants,4,attendance_status,character varying,NO
+training_session_participants,5,notes,text,YES
+training_session_participants,6,pro_bowler_training_id,bigint,YES
+training_session_participants,7,processed_at,timestamp without time zone,YES
+training_session_participants,8,processed_by_user_id,bigint,YES
+training_session_participants,9,created_at,timestamp without time zone,YES
+training_session_participants,10,updated_at,timestamp without time zone,YES
+training_sessions,1,id,bigint,NO
+training_sessions,2,training_id,bigint,NO
+training_sessions,3,session_year,smallint,NO
+training_sessions,4,name,character varying,NO
+training_sessions,5,held_on,date,NO
+training_sessions,6,venue,character varying,YES
+training_sessions,7,status,character varying,NO
+training_sessions,8,notes,text,YES
+training_sessions,9,finalized_at,timestamp without time zone,YES
+training_sessions,10,finalized_by_user_id,bigint,YES
+training_sessions,11,created_by_user_id,bigint,YES
+training_sessions,12,updated_by_user_id,bigint,YES
+training_sessions,13,created_at,timestamp without time zone,YES
+training_sessions,14,updated_at,timestamp without time zone,YES
 trainings,1,id,bigint,NO
 trainings,2,code,character varying,NO
 trainings,3,name,character varying,NO
@@ -1298,6 +1636,35 @@ trainings,4,valid_for_months,integer,NO
 trainings,5,mandatory,boolean,NO
 trainings,6,created_at,timestamp without time zone,YES
 trainings,7,updated_at,timestamp without time zone,YES
+usbc_approved_ball_entries,1,id,bigint,NO
+usbc_approved_ball_entries,2,list_id,bigint,NO
+usbc_approved_ball_entries,3,brand,character varying,NO
+usbc_approved_ball_entries,4,name,character varying,NO
+usbc_approved_ball_entries,5,approved_date_text,character varying,YES
+usbc_approved_ball_entries,6,approved_on,date,YES
+usbc_approved_ball_entries,7,image_url,text,YES
+usbc_approved_ball_entries,8,normalized_brand,character varying,NO
+usbc_approved_ball_entries,9,normalized_name,character varying,NO
+usbc_approved_ball_entries,10,source_fingerprint,character varying,NO
+usbc_approved_ball_entries,11,created_at,timestamp without time zone,YES
+usbc_approved_ball_entries,12,updated_at,timestamp without time zone,YES
+usbc_approved_ball_lists,1,id,bigint,NO
+usbc_approved_ball_lists,2,official_updated_on,date,YES
+usbc_approved_ball_lists,3,source_page_url,text,NO
+usbc_approved_ball_lists,4,source_pdf_url,text,YES
+usbc_approved_ball_lists,5,source_api_url,text,NO
+usbc_approved_ball_lists,6,source_sha256,character varying,NO
+usbc_approved_ball_lists,7,status,character varying,NO
+usbc_approved_ball_lists,8,fetched_at,timestamp without time zone,NO
+usbc_approved_ball_lists,9,completed_at,timestamp without time zone,YES
+usbc_approved_ball_lists,10,brand_count,integer,NO
+usbc_approved_ball_lists,11,entry_count,integer,NO
+usbc_approved_ball_lists,12,matched_catalog_count,integer,NO
+usbc_approved_ball_lists,13,ambiguous_catalog_count,integer,NO
+usbc_approved_ball_lists,14,unlisted_catalog_count,integer,NO
+usbc_approved_ball_lists,15,report,json,YES
+usbc_approved_ball_lists,16,created_at,timestamp without time zone,YES
+usbc_approved_ball_lists,17,updated_at,timestamp without time zone,YES
 used_balls,1,id,bigint,NO
 used_balls,2,pro_bowler_id,bigint,NO
 used_balls,3,approved_ball_id,bigint,NO

@@ -83,7 +83,8 @@
         <h2 class="jpba-section-title">関連リンク</h2>
         <div class="jpba-link-grid">
           @foreach($links as $link)
-            <a href="{{ $link['url'] }}" target="_blank" rel="noopener">{{ $link['label'] }}</a>
+            @php($href = !empty($link['route']) && Route::has($link['route']) ? route($link['route'], $link['params'] ?? []) : ($link['url'] ?? '#'))
+            <a href="{{ $href }}" @if(!empty($link['url'])) target="_blank" rel="noopener" @endif>{{ $link['label'] }}</a>
           @endforeach
         </div>
       </div>

@@ -75,6 +75,9 @@ class ScoreImportCommitService
             ], $user);
         });
 
+        $summary['achievement_candidates'] = app(AchievementDetectionService::class)
+            ->scanTournament((int) $tournament->id);
+
         return $summary;
     }
 

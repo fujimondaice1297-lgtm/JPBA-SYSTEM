@@ -55,6 +55,7 @@ class TournamentTemplateService
         'entry_conditions',
         'materials',
         'inspection_required',
+        'ball_registration_limit',
         'use_shift_draw',
         'shift_codes',
         'accept_shift_preference',

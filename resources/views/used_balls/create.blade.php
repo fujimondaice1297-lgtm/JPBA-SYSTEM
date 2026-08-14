@@ -32,7 +32,7 @@
     <div class="card mb-4">
         <div class="card-header fw-bold">入力ルール</div>
         <div class="card-body small">
-            <div>・検量証番号を入力すると、<strong>使用可能</strong> として扱います。</div>
+            <div>・検量証番号を入力すると、検量日から1年−1日を有効期限として<strong>使用可能</strong>と扱います。</div>
             <div>・検量証番号が空欄なら、<strong>仮登録 / 検量証待ち</strong> として扱います。</div>
             <div>・大会使用ボール画面から来た場合は、ライセンス番号が事前に入ります。</div>
         </div>
@@ -42,7 +42,7 @@
         <a href="{{ route('used_balls.index') }}" class="btn btn-secondary">使用ボール一覧へ</a>
         <a href="{{ route('registered_balls.index') }}" class="btn btn-outline-secondary">登録ボール一覧へ</a>
         <a href="{{ route('tournament.entry.select') }}" class="btn btn-outline-secondary">大会エントリー選択へ</a>
-        <a href="{{ route('approved_balls.index') }}" class="btn btn-outline-secondary">承認ボール一覧へ</a>
+        <a href="{{ route('approved_balls.index') }}" class="btn btn-outline-secondary">ボールカタログへ</a>
     </div>
 
     <form method="POST" action="{{ route('used_balls.store') }}">
@@ -100,12 +100,17 @@
                 <select name="approved_ball_id" id="approved_ball_id" class="form-select" required>
                     <option value="">選択してください</option>
                     @foreach($balls as $ball)
-                        <option value="{{ $ball->id }}" {{ $selectedApprovedBallId === (string) $ball->id ? 'selected' : '' }}>
+                        <option
+                            value="{{ $ball->id }}"
+                            data-usbc-status="{{ $ball->usbc_match_status ?? 'unchecked' }}"
+                            {{ $selectedApprovedBallId === (string) $ball->id ? 'selected' : '' }}
+                        >
                             {{ $ball->manufacturer }} - {{ $ball->name }}
                         </option>
                     @endforeach
                 </select>
                 <div class="form-text">メーカー絞り込み後にボールを選択します。</div>
+                <div id="usbc_ball_warning" class="alert alert-danger mt-2 mb-0 d-none" role="alert"></div>
             </div>
 
             <div class="col-md-6">
@@ -122,7 +127,7 @@
             </div>
 
             <div class="col-md-6">
-                <label for="registered_at" class="form-label">登録日 <span class="text-danger">*</span></label>
+                <label for="registered_at" class="form-label">検量日／登録日 <span class="text-danger">*</span></label>
                 <input
                     type="date"
                     name="registered_at"
@@ -174,6 +179,32 @@ document.addEventListener('DOMContentLoaded', () => {
     const expiresGroup = document.getElementById('expires_group');
     const expiresPreview = document.getElementById('expires_at_preview');
     const statusPreview = document.getElementById('used_ball_status_preview');
+    const approvedBallSelect = document.getElementById('approved_ball_id');
+    const usbcWarning = document.getElementById('usbc_ball_warning');
+
+    function updateUsbcWarning() {
+        const selected = approvedBallSelect.options[approvedBallSelect.selectedIndex];
+        const usbcStatus = selected?.dataset.usbcStatus || '';
+
+        usbcWarning.classList.remove('alert-danger', 'alert-warning');
+        if (!selected || !selected.value || usbcStatus === 'matched') {
+            usbcWarning.classList.add('d-none');
+            usbcWarning.textContent = '';
+            return;
+        }
+
+        usbcWarning.classList.remove('d-none');
+        if (usbcStatus === 'not_listed') {
+            usbcWarning.classList.add('alert-danger');
+            usbcWarning.textContent = 'アブプールリストに記載のないボールです';
+            return;
+        }
+
+        usbcWarning.classList.add('alert-warning');
+        usbcWarning.textContent = usbcStatus === 'ambiguous'
+            ? 'アブプールリストとの照合結果が要確認のボールです。'
+            : 'アブプールリストとの照合が未実施のボールです。';
+    }
 
     function calcExpire() {
         const hasInspection = inspectionInput.value.trim() !== '';
@@ -203,8 +234,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     inspectionInput.addEventListener('input', calcExpire);
     registeredAtInput.addEventListener('change', calcExpire);
+    approvedBallSelect.addEventListener('change', updateUsbcWarning);
 
     calcExpire();
+    updateUsbcWarning();
 });
 </script>
 @endpush

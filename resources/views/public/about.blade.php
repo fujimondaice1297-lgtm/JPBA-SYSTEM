@@ -51,7 +51,8 @@
   @if(!empty($documents))
     <div class="jpba-link-grid">
       @foreach($documents as $link)
-        <a href="{{ $link['url'] }}" target="_blank" rel="noopener">{{ $link['label'] }}</a>
+        @php($href = !empty($link['route']) && Route::has($link['route']) ? route($link['route'], $link['params'] ?? []) : ($link['url'] ?? '#'))
+        <a href="{{ $href }}" @if(!empty($link['url'])) target="_blank" rel="noopener" @endif>{{ $link['label'] }}</a>
       @endforeach
     </div>
   @else

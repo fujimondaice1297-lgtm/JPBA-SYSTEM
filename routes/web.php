@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Artisan;
 
 use App\Http\Controllers\Admin\AdminHomeController;
 use App\Http\Controllers\Admin\InformationAdminController;
+use App\Http\Controllers\Admin\ManagedPublicPageController;
 use App\Http\Controllers\Auth\ForgotPasswordController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\Auth\ChangePasswordController;
@@ -17,13 +18,14 @@ use App\Http\Controllers\VenuePageController;
 
 use App\Http\Controllers\{
     ProBowlerController, TournamentController, TournamentResultController, RecordTypeController,
+    RecordCertificationSequenceController, ScoreSeriesDefinitionController,
     InstructorController, PrizeDistributionController, PointDistributionController,
     ApprovedBallController, ApprovedBallImportController, UsedBallController,
     TournamentProController, TpRegistrationController, RankingController, PerfectRecordController,
     ProGroupController, CertificateController, RegisteredBallController, ComplianceController,
     ProBowlerTrainingController, BulkTrainingController, TrainingReportController,
-    CalendarController, CalendarEventController, ProBowlerTitleController,
-    MemberDashboardController, InformationController, TournamentEntryBallController,
+    CalendarController, CalendarEventController, AnnualScheduleController, ProBowlerTitleController,
+    MemberDashboardController, InformationController, TournamentEntryBallController, BallAnnualRegistrationController,
     TournamentEntryController, DrawController, ProBowlerImportController, AuthInstructorImportController, HofController, HofManageController,
     AuthController, ScoreController, EligibilityController, PublicHomeController, PublicInstructorController, PublicPageController, PublicPlayerController, PublicProfileController, PublicTournamentController, FlashNewsController,
     FlashNewsPublicController
@@ -168,7 +170,13 @@ if (app()->environment('local')) {
 Route::get('/', [PublicHomeController::class, 'index'])->name('public.home');
 Route::get('/about', [PublicPageController::class, 'about'])->name('public.about');
 Route::get('/schedule', [PublicPageController::class, 'schedule'])->name('public.schedule');
+Route::get('/schedule/{year}/pdf', [AnnualScheduleController::class, 'pdf'])
+    ->whereNumber('year')
+    ->name('annual_schedules.pdf');
 Route::get('/players', [PublicPlayerController::class, 'index'])->name('public.players.index');
+Route::get('/players/{bowler}/photo', [\App\Http\Controllers\PublicPlayerPhotoController::class, 'show'])
+    ->whereNumber('bowler')
+    ->name('players.photo');
 Route::get('/players/{id}', [PublicProfileController::class, 'show'])
     ->whereNumber('id')
     ->name('public.players.show');
@@ -198,6 +206,14 @@ Route::redirect('/ovservance.html', '/commerce', 301);
 Route::get('/privacy', [PublicPageController::class, 'staticPage'])->defaults('page', 'privacy')->name('public.privacy');
 Route::redirect('/policy', '/privacy', 301);
 Route::redirect('/policy/index.html', '/privacy', 301);
+Route::get('/pages/{managedPublicPage:slug}', [PublicPageController::class, 'managedPage'])
+    ->name('public.managed_pages.show');
+Route::redirect('/association/president.html', '/pages/president', 301);
+Route::redirect('/association/map.html', '/pages/organization-chart', 301);
+Route::redirect('/instructor/overview.html', '/pages/instructor-overview', 301);
+Route::redirect('/instructor/textbook.html', '/pages/instructor-textbook', 301);
+Route::redirect('/instructor/school_guide.html', '/pages/instructor-school', 301);
+Route::redirect('/protest/guide.html', '/pages/pro-test-guide', 301);
 
 /* ========================
    認証（公開）
@@ -220,6 +236,9 @@ Route::post('/reset-password', [ForgotPasswordController::class, 'reset'])->name
 Route::get('/info', [InformationController::class,'index'])->name('informations.index');
 Route::get('/info/{information}', [InformationController::class,'show'])->name('informations.show');
 Route::get('/info/files/{informationFile}', [InformationController::class,'downloadFile'])->name('information_files.download');
+Route::get('/ball-catalog/images/{approved_ball}', [ApprovedBallController::class, 'image'])
+    ->whereNumber('approved_ball')
+    ->name('approved_balls.image');
 
 /* =======================================================================
    会員・編集者・管理者 共通（閲覧/自分の操作）  auth + role:member,editor,admin
@@ -232,12 +251,18 @@ Route::middleware(['auth','role:member,editor,admin'])->group(function () {
     Route::post('/password/change', [ChangePasswordController::class, 'update'])->name('password.update.self');
     Route::get('/athlete', [ProBowlerController::class, 'editSelf'])->name('athlete.edit');
     Route::put('/athlete/{bowler}', [ProBowlerController::class, 'updateSelf'])->name('athlete.update');
+    Route::put('/athlete/{bowler}/profile-photo', [ProBowlerController::class, 'updateProfilePhoto'])
+        ->whereNumber('bowler')
+        ->name('athlete.photo.update');
 
     // 大会エントリー（会員本人の操作）
     Route::get('/entry/select', [TournamentEntryController::class, 'select'])->name('tournament.entry.select');
     Route::post('/entry/select', [TournamentEntryController::class, 'storeSelection'])->name('tournament.entry.select.store');
     Route::get('/member/entries/{entry}/balls', [TournamentEntryBallController::class, 'edit'])->name('member.entries.balls.edit');
     Route::post('/member/entries/{entry}/balls', [TournamentEntryBallController::class, 'bulkStore'])->name('member.entries.balls.store');
+    Route::get('/tournament-entries/{entry}/registered-balls', [TournamentEntryBallController::class, 'showForResults'])
+        ->whereNumber('entry')
+        ->name('scores.entry_balls.show');
     Route::post('/member/entries/{entry}/shift-draw', [DrawController::class, 'shift'])->name('member.entries.shift.draw');
     Route::post('/member/entries/{entry}/lane-draw', [DrawController::class, 'lane'])->name('member.entries.lane.draw');
     Route::post('/member/entries/{entry}/check-in', [TournamentEntryController::class, 'checkIn'])->name('member.entries.check_in');
@@ -252,9 +277,24 @@ Route::middleware(['auth','role:member,editor,admin'])->group(function () {
     Route::resource('used_balls', UsedBallController::class)->except(['show','destroy']);
     Route::resource('registered_balls', RegisteredBallController::class)->except(['show','destroy']);
 
+    // 選手単位の年度ボール申請・スタッフ一括承認
+    Route::get('/ball-annual-registration', [BallAnnualRegistrationController::class, 'edit'])
+        ->name('ball_annual_registrations.edit');
+    Route::post('/ball-annual-registration/draft', [BallAnnualRegistrationController::class, 'saveDraft'])
+        ->name('ball_annual_registrations.draft');
+    Route::post('/ball-annual-registration/submit', [BallAnnualRegistrationController::class, 'submit'])
+        ->name('ball_annual_registrations.submit');
+    Route::get('/ball-annual-registrations/manage', [BallAnnualRegistrationController::class, 'index'])
+        ->name('ball_annual_registrations.index');
+    Route::post('/ball-annual-registrations/{registration}/approve', [BallAnnualRegistrationController::class, 'approve'])
+        ->whereNumber('registration')
+        ->name('ball_annual_registrations.approve');
+    Route::post('/ball-annual-registrations/{registration}/return', [BallAnnualRegistrationController::class, 'sendBack'])
+        ->whereNumber('registration')
+        ->name('ball_annual_registrations.return');
+
     // サイト内の閲覧系
     Route::get('/tournament_pro', [TournamentProController::class, 'index'])->name('tournament_pro.index');
-    Route::get('/tp_registration', [TpRegistrationController::class, 'index'])->name('tp_registration.index');
     Route::get('/rankings', [RankingController::class, 'index'])->name('rankings.index');
     Route::post('/rankings/import-official', [RankingController::class, 'storeOfficialRanking'])->name('rankings.import_official');
     Route::get('/perfect_records', [PerfectRecordController::class, 'index'])->name('perfect_records.index');
@@ -300,6 +340,17 @@ Route::middleware(['auth','role:member,editor,admin'])->group(function () {
    編集者 + 管理者（作成/更新は可、削除は不可） auth + role:editor,admin
 ======================================================================= */
 Route::middleware(['auth','role:editor,admin'])->group(function () {
+
+    Route::get('/management', [AdminHomeController::class, 'index'])
+        ->name('management.home');
+
+    Route::prefix('annual-schedules')->name('annual_schedules.')->group(function () {
+        Route::get('{year}/edit', [AnnualScheduleController::class, 'edit'])->whereNumber('year')->name('edit');
+        Route::put('{year}', [AnnualScheduleController::class, 'update'])->whereNumber('year')->name('update');
+        Route::post('{year}/publish', [AnnualScheduleController::class, 'publish'])->whereNumber('year')->name('publish');
+        Route::post('{year}/unpublish', [AnnualScheduleController::class, 'unpublish'])->whereNumber('year')->name('unpublish');
+        Route::post('{year}/import-official', [AnnualScheduleController::class, 'importOfficial'])->whereNumber('year')->name('import_official');
+    });
 
     Route::get('/tournaments/{tournament}/result-publications', [\App\Http\Controllers\TournamentResultPublicationController::class, 'index'])
         ->name('tournaments.result_publications.index');
@@ -373,12 +424,29 @@ Route::middleware(['auth','role:editor,admin'])->group(function () {
         ->name('tournament_templates.store');
     Route::get('/tournament-template-versions/{version}/apply', [\App\Http\Controllers\TournamentTemplateController::class, 'apply'])
         ->name('tournament_templates.apply');
+
+    Route::get('/tournament-result-formats', [\App\Http\Controllers\TournamentResultFormatController::class, 'index'])
+        ->name('tournament_result_formats.index');
+    Route::post('/tournament-result-formats', [\App\Http\Controllers\TournamentResultFormatController::class, 'store'])
+        ->name('tournament_result_formats.store');
+    Route::post('/tournament-result-formats/{format}/versions', [\App\Http\Controllers\TournamentResultFormatController::class, 'storeVersion'])
+        ->name('tournament_result_formats.versions.store');
+    Route::get('/tournament-result-format-versions/{version}/download', [\App\Http\Controllers\TournamentResultFormatController::class, 'download'])
+        ->name('tournament_result_format_versions.download');
     
     Route::resource('tournaments', TournamentController::class)->except(['destroy']);
     
     // 大会エントリー後続（管理）
     Route::get('/tournaments/{tournament}/entries', [\App\Http\Controllers\TournamentEntryAdminController::class, 'index'])
         ->name('tournaments.entries.index');
+    Route::post('/tournaments/{tournament}/amateur-participants', [\App\Http\Controllers\TournamentEntryAdminController::class, 'storeAmateurParticipant'])
+        ->name('tournaments.amateur_participants.store');
+    Route::patch('/tournament-amateur-participants/{participant}', [\App\Http\Controllers\TournamentEntryAdminController::class, 'updateAmateurParticipant'])
+        ->whereNumber('participant')
+        ->name('tournaments.amateur_participants.update');
+    Route::delete('/tournament-amateur-participants/{participant}', [\App\Http\Controllers\TournamentEntryAdminController::class, 'destroyAmateurParticipant'])
+        ->whereNumber('participant')
+        ->name('tournaments.amateur_participants.destroy');
     Route::get('/tournaments/{tournament}/draws', [\App\Http\Controllers\TournamentEntryAdminController::class, 'draws'])
         ->name('tournaments.draws.index');
     Route::get('/tournaments/{tournament}/lane-movement-table', [\App\Http\Controllers\TournamentEntryAdminController::class, 'laneMovementTable'])
@@ -423,6 +491,8 @@ Route::middleware(['auth','role:editor,admin'])->group(function () {
         ->name('tournaments.draw_reminders.create');
     Route::post('/tournaments/{tournament}/draw-reminders', [\App\Http\Controllers\TournamentDrawReminderController::class, 'store'])
         ->name('tournaments.draw_reminders.store');
+    Route::post('/tournaments/{tournament}/entries', [\App\Http\Controllers\TournamentEntryAdminController::class, 'storeEntry'])
+        ->name('tournaments.entries.store');
     Route::post('/tournaments/{tournament}/waitlist', [\App\Http\Controllers\TournamentEntryAdminController::class, 'storeWaitlist'])
         ->name('tournaments.waitlist.store');
     Route::post('/tournaments/{tournament}/waitlist/bulk-promote', [\App\Http\Controllers\TournamentEntryAdminController::class, 'bulkPromoteWaitlist'])
@@ -459,6 +529,8 @@ Route::middleware(['auth','role:editor,admin'])->group(function () {
 
     Route::get('/tournaments/{tournament}/results/pdf', [TournamentResultController::class, 'exportTournamentPdf'])
         ->name('tournaments.results.pdf');
+    Route::get('/tournaments/{tournament}/results/excel', [TournamentResultController::class, 'exportTournamentExcel'])
+        ->name('tournaments.results.excel');
 
     Route::get('/tournaments/{tournament}/result-snapshots', [\App\Http\Controllers\TournamentResultSnapshotController::class, 'index'])
         ->name('tournaments.result_snapshots.index');
@@ -528,6 +600,15 @@ Route::middleware(['auth','role:editor,admin'])->group(function () {
         ->whereIn('scope', ['compliant','missing','expired','expiring'])
         ->name('trainings.reports');
 
+    Route::get('/tp-registration', [TpRegistrationController::class, 'index'])->name('tp_registration.index');
+    Route::post('/tp-registration/sessions', [TpRegistrationController::class, 'storeSession'])->name('tp_registration.sessions.store');
+    Route::post('/tp-registration/sessions/{trainingSession}/participants', [TpRegistrationController::class, 'addParticipants'])->name('tp_registration.sessions.participants.add');
+    Route::put('/tp-registration/sessions/{trainingSession}/participants', [TpRegistrationController::class, 'updateParticipants'])->name('tp_registration.sessions.participants.update');
+    Route::post('/tp-registration/sessions/{trainingSession}/finalize', [TpRegistrationController::class, 'finalize'])->name('tp_registration.sessions.finalize');
+    Route::post('/tp-registration/sessions/{trainingSession}/reopen', [TpRegistrationController::class, 'reopen'])->name('tp_registration.sessions.reopen');
+    Route::get('/tp-registration/sessions/{trainingSession}/export', [TpRegistrationController::class, 'export'])->name('tp_registration.sessions.export');
+    Route::redirect('/tp_registration', '/tp-registration', 301);
+
     Route::prefix('calendar-events')->name('calendar_events.')->group(function () {
         Route::get('', [CalendarEventController::class,'index'])->name('index');
         Route::get('create', [CalendarEventController::class,'create'])->name('create');
@@ -538,6 +619,24 @@ Route::middleware(['auth','role:editor,admin'])->group(function () {
         Route::post('import', [CalendarEventController::class,'import'])->name('import');
     });
 
+    Route::prefix('record_types')->name('record_types.')->group(function () {
+        Route::get('/certification-sequences', [RecordCertificationSequenceController::class, 'index'])
+            ->name('sequences.index');
+        Route::post('/certification-sequences', [RecordCertificationSequenceController::class, 'store'])
+            ->name('sequences.store');
+        Route::get('/score-series-definitions', [ScoreSeriesDefinitionController::class, 'index'])
+            ->name('series_definitions.index');
+        Route::post('/score-series-definitions', [ScoreSeriesDefinitionController::class, 'store'])
+            ->name('series_definitions.store');
+        Route::put(
+            '/score-series-definitions/{scoreSeriesDefinition}',
+            [ScoreSeriesDefinitionController::class, 'update']
+        )->name('series_definitions.update');
+        Route::delete(
+            '/score-series-definitions/{scoreSeriesDefinition}',
+            [ScoreSeriesDefinitionController::class, 'destroy']
+        )->name('series_definitions.destroy');
+    });
     Route::resource('record_types', RecordTypeController::class)->except(['destroy']);
 
     Route::post('/pro_bowlers/{bowler}/titles', [ProBowlerTitleController::class, 'store'])->name('pro_bowler_titles.store');
@@ -631,6 +730,12 @@ Route::prefix('admin')->name('admin.')
         Route::get('/informations/{information}/edit', [InformationAdminController::class, 'edit'])->name('informations.edit');
         Route::put('/informations/{information}', [InformationAdminController::class, 'update'])->name('informations.update');
 
+        Route::get('/public-pages', [ManagedPublicPageController::class, 'index'])->name('public_pages.index');
+        Route::get('/public-pages/create', [ManagedPublicPageController::class, 'create'])->name('public_pages.create');
+        Route::post('/public-pages', [ManagedPublicPageController::class, 'store'])->name('public_pages.store');
+        Route::get('/public-pages/{publicPage}/edit', [ManagedPublicPageController::class, 'edit'])->name('public_pages.edit');
+        Route::put('/public-pages/{publicPage}', [ManagedPublicPageController::class, 'update'])->name('public_pages.update');
+
         Route::delete('/hof/photos/{photo}', [HofManageController::class, 'destroyPhoto'])
         ->whereNumber('photo')
         ->name('hof.photos.destroy');
@@ -643,7 +748,10 @@ Route::prefix('admin')->name('admin.')
         Route::post('/tournaments/{tournament}/draw-settings', [DrawController::class, 'saveSettings'])->name('tournaments.draw.settings.save');
 
         Route::get('/compliance', [ComplianceController::class,'index'])->name('compliance.index');
+        Route::post('/compliance/sync-official-list', [ComplianceController::class,'syncOfficialList'])->name('compliance.sync_official_list');
         Route::post('/compliance/notify', [ComplianceController::class,'notify'])->name('compliance.notify');
+        Route::post('/compliance/reconcile', [ComplianceController::class,'reconcile'])->name('compliance.reconcile');
+        Route::get('/compliance/export', [ComplianceController::class,'export'])->name('compliance.export');
 
         Route::delete('/tournaments/{tournament}', [TournamentController::class,'destroy'])->name('tournaments.destroy');
         Route::delete('/tournaments/{tournament}/results/{result}', [TournamentResultController::class,'destroy'])->name('tournaments.results.destroy');

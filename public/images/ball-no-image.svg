@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" role="img" aria-labelledby="title desc">
+  <title id="title">画像なし</title>
+  <desc id="desc">ボール写真が登録されていない場合の共通画像</desc>
+  <rect width="240" height="240" rx="24" fill="#f1f3f5"/>
+  <circle cx="120" cy="105" r="66" fill="#cbd3da"/>
+  <circle cx="101" cy="76" r="8" fill="#f1f3f5"/>
+  <circle cx="126" cy="68" r="8" fill="#f1f3f5"/>
+  <circle cx="125" cy="94" r="8" fill="#f1f3f5"/>
+  <text x="120" y="204" text-anchor="middle" font-family="sans-serif" font-size="18" fill="#68737d">NO IMAGE</text>
+</svg>

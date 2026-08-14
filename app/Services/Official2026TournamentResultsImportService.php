@@ -12,6 +12,7 @@ use App\Models\TournamentResultSnapshot;
 use App\Models\User;
 use App\Models\Venue;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use RuntimeException;
 
 final class Official2026TournamentResultsImportService
@@ -543,6 +544,12 @@ final class Official2026TournamentResultsImportService
             'source_url' => $source['source_url'],
             'source_checked_at' => '2026-07-22',
         ];
+        $existingTemplateSnapshot = is_array($existing?->template_snapshot)
+            ? $existing->template_snapshot
+            : [];
+        if (isset($existingTemplateSnapshot['result_format']) && is_array($existingTemplateSnapshot['result_format'])) {
+            $templateSnapshot['result_format'] = $existingTemplateSnapshot['result_format'];
+        }
         if (array_key_exists('pdf_prize_breakdowns', $source)) {
             $templateSnapshot['pdf_prize_breakdowns'] = array_values($source['pdf_prize_breakdowns']);
         }
@@ -589,6 +596,15 @@ final class Official2026TournamentResultsImportService
             'single_elimination_seed_policy' => $hasSingleElimination ? 'standard' : null,
             'template_snapshot' => $templateSnapshot,
         ];
+
+        if ($event['key'] === 'purefoods_2026' && Schema::hasTable('tournament_result_format_versions')) {
+            $attributes['tournament_result_format_version_id'] = DB::table('tournament_result_format_versions as versions')
+                ->join('tournament_result_formats as formats', 'formats.id', '=', 'versions.tournament_result_format_id')
+                ->where('formats.code', 'purefoods_kishi')
+                ->where('versions.is_active', true)
+                ->orderByDesc('versions.version_no')
+                ->value('versions.id');
+        }
 
         foreach (['special_sponsor', 'support', 'sponsor', 'supervisor'] as $optionalField) {
             if (array_key_exists($optionalField, $source)) {

@@ -4,10 +4,12 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Tournament;
+use App\Models\TournamentResultFormatVersion;
 use App\Models\TournamentSeries;
 use App\Models\TournamentTemplateVersion;
 use App\Models\Venue;
 use App\Services\TournamentConfigurationService;
+use App\Services\AnnualScheduleSyncService;
 use App\Services\TournamentEditionService;
 use App\Services\TournamentPrioritySyncService;
 use App\Services\TournamentResultCarryService;
@@ -67,6 +69,7 @@ class TournamentController extends Controller
             'official_type',
             'title_category',
             'tournament_series_id',
+            'tournament_result_format_version_id',
             'competition_type',
             'include_annual_seeds',
             'annual_seed_rank_limit',
@@ -102,6 +105,7 @@ class TournamentController extends Controller
             'previous_event',
             'previous_event_url',
             'inspection_required',
+            'ball_registration_limit',
             'use_shift_draw',
             'shift_codes',
             'accept_shift_preference',
@@ -117,6 +121,7 @@ class TournamentController extends Controller
             'award_highlights',
             'result_cards',
             'title_logo_path',
+            'template_snapshot',
         ]);
 
         foreach ([
@@ -188,6 +193,7 @@ class TournamentController extends Controller
             'edition',
             'series',
             'templateVersion.template',
+            'resultFormatVersion.format',
         ])->findOrFail($id);
 
         return view('tournaments.edit', array_merge(
@@ -239,6 +245,7 @@ class TournamentController extends Controller
         }
 
         $old['org'] = $prefill['org'] ?? [];
+        $old['result_format'] = (array) (($prefill['template_snapshot']['result_format'] ?? null) ?: []);
         $old['schedule'] = $this->buildPrefillScheduleRows($prefill['sidebar_schedule'] ?? []);
         $old['awards'] = $this->buildPrefillAwardRows($prefill['award_highlights'] ?? []);
         $old['result_cards'] = $this->buildPrefillResultCardRows($prefill['result_cards'] ?? []);
@@ -248,7 +255,8 @@ class TournamentController extends Controller
             $old['award_highlights'],
             $old['gallery_items'],
             $old['simple_result_pdfs'],
-            $old['result_cards']
+            $old['result_cards'],
+            $old['template_snapshot']
         );
 
         return $old;
@@ -262,7 +270,7 @@ class TournamentController extends Controller
                     $query->where('is_active', true);
 
                     if ($currentTournament?->venue_id) {
-                        $query->orWhereKey($currentTournament->venue_id);
+                        $query->orWhere('id', $currentTournament->venue_id);
                     }
                 })
                 ->orderBy('name')
@@ -283,6 +291,21 @@ class TournamentController extends Controller
                 ->orderByDesc('year')
                 ->orderBy('name')
                 ->get(['id', 'name', 'year']),
+            'resultFormatVersions' => TournamentResultFormatVersion::query()
+                ->with('format')
+                ->where(function ($query) use ($currentTournament) {
+                    $query->where(function ($query) {
+                        $query->where('is_active', true)
+                            ->whereHas('format', fn ($formatQuery) => $formatQuery->where('is_active', true));
+                    });
+
+                    if ($currentTournament?->tournament_result_format_version_id) {
+                        $query->orWhere('id', $currentTournament->tournament_result_format_version_id);
+                    }
+                })
+                ->get()
+                ->sortBy(fn ($version) => ($version->format?->name ?? '').sprintf('%08d', $version->version_no))
+                ->values(),
         ];
     }
 
@@ -752,6 +775,7 @@ class TournamentController extends Controller
             'name'                 => 'required|string|max:255',
             'tournament_series_id' => 'nullable|integer|exists:tournament_series,id',
             'tournament_template_version_id' => 'nullable|integer|exists:tournament_template_versions,id',
+            'tournament_result_format_version_id' => 'nullable|integer|exists:tournament_result_format_versions,id',
             'season_key'           => 'nullable|string|max:50',
             'setup_status'         => 'nullable|in:draft,ready,entry_open,in_progress,provisional,final,archived',
             'competition_type'     => 'nullable|in:singles,doubles,team,all_events,qualifier,priority_ranking,championship',
@@ -807,6 +831,9 @@ class TournamentController extends Controller
             'entry_start'          => 'nullable|date',
             'entry_end'            => 'nullable|date|after_or_equal:entry_start',
             'inspection_required'  => 'nullable|boolean',
+            'ball_registration_limit' => 'required|integer|min:1|max:100',
+            'sync_annual_schedule' => 'nullable|boolean',
+            'annual_schedule_conflict_action' => 'nullable|in:ask,link,overwrite,separate,skip',
 
             'spectator_policy'     => 'nullable|in:paid,free,none',
             'prize'                => 'nullable|string',
@@ -819,6 +846,19 @@ class TournamentController extends Controller
             'previous_event_url'   => 'nullable|string|max:255',
             'entry_conditions'     => 'nullable|string',
             'materials'            => 'nullable|string',
+            'result_format' => 'nullable|array',
+            'result_format.english_title' => 'nullable|string|max:500',
+            'result_format.tagline' => 'nullable|string|max:1000',
+            'result_format.schedule_text' => 'nullable|string|max:5000',
+            'result_format.broadcast_text' => 'nullable|string|max:2000',
+            'result_format.winner_roman_name' => 'nullable|string|max:255',
+            'result_format.winner_headline' => 'nullable|string|max:2000',
+            'result_format.winner_record' => 'nullable|string|max:5000',
+            'result_format.winner_prize_display' => 'nullable|string|max:1000',
+            'result_format.awards_text' => 'nullable|string|max:5000',
+            'result_format.previous_results_text' => 'nullable|string|max:10000',
+            'result_format.bracket_rules' => 'nullable|string|max:2000',
+            'result_format.footnote' => 'nullable|string|max:2000',
 
             'venue_id'             => 'nullable|integer|exists:venues,id',
 
@@ -928,6 +968,8 @@ class TournamentController extends Controller
             : null;
 
         $validated['inspection_required'] = $request->boolean('inspection_required');
+        $validated['ball_registration_limit'] = (int) ($validated['ball_registration_limit'] ?? 12);
+        unset($validated['sync_annual_schedule'], $validated['annual_schedule_conflict_action']);
         $validated['setup_status'] = trim((string) ($validated['setup_status'] ?? 'draft')) ?: 'draft';
         $validated['competition_type'] = trim((string) ($validated['competition_type'] ?? 'singles')) ?: 'singles';
         $validated['include_annual_seeds'] = $request->boolean('include_annual_seeds', true);
@@ -1184,15 +1226,41 @@ class TournamentController extends Controller
         return $validated;
     }
 
+    private function applyResultFormatSettings(array &$validated, ?Tournament $tournament): void
+    {
+        $settings = (array) ($validated['result_format'] ?? []);
+        unset($validated['result_format']);
+
+        $settings = collect($settings)
+            ->map(fn ($value) => is_string($value) ? trim($value) : $value)
+            ->filter(fn ($value) => $value !== null && $value !== '')
+            ->all();
+
+        $snapshot = is_array($tournament?->template_snapshot)
+            ? $tournament->template_snapshot
+            : [];
+
+        if ($settings === []) {
+            unset($snapshot['result_format']);
+        } else {
+            $snapshot['result_format'] = $settings;
+        }
+
+        $validated['template_snapshot'] = $snapshot === [] ? null : $snapshot;
+    }
+
     private function buildOrgRowsAndTexts(Request $request): array
     {
         $rows = [];
         $texts = [
             'host' => [],
+            'co_host' => [],
             'special_sponsor' => [],
             'sponsor' => [],
             'support' => [],
             'cooperation' => [],
+            'supervisor' => [],
+            'authorized' => [],
         ];
 
         $seen = [];
@@ -1524,6 +1592,11 @@ class TournamentController extends Controller
     )
     {
         $validated = $this->validateAndNormalize($request);
+        $scheduleAction = $request->boolean('sync_annual_schedule', true)
+            ? (string) $request->input('annual_schedule_conflict_action', AnnualScheduleSyncService::ACTION_ASK)
+            : AnnualScheduleSyncService::ACTION_SKIP;
+        app(AnnualScheduleSyncService::class)->assertNoUnresolvedConflict($validated, $scheduleAction);
+        $this->applyResultFormatSettings($validated, null);
         $templateVersion = $request->filled('tournament_template_version_id')
             ? TournamentTemplateVersion::query()->findOrFail($request->integer('tournament_template_version_id'))
             : null;
@@ -1581,6 +1654,8 @@ class TournamentController extends Controller
             'special_sponsor' => $org['text']['special_sponsor'],
             'sponsor' => $org['text']['sponsor'],
             'support' => $org['text']['support'],
+            'supervisor' => $org['text']['supervisor'],
+            'authorized_by' => $org['text']['authorized'],
         ])->save();
 
         $filesToStore = [
@@ -1635,6 +1710,7 @@ class TournamentController extends Controller
         ]));
         $editionService->attach($t->fresh('series'), $request->input('season_key'));
         $prioritySummary = $prioritySyncService->sync($t->fresh(['entryRules', 'series']));
+        app(AnnualScheduleSyncService::class)->sync($t->fresh(), $scheduleAction);
 
         return redirect()->route('tournaments.show', $t->id)
             ->with('success', sprintf(
@@ -1656,6 +1732,13 @@ class TournamentController extends Controller
         $t = Tournament::with(['organizations', 'files'])->findOrFail($id);
         $originalTemplateVersionId = $t->tournament_template_version_id;
         $validated = $this->validateAndNormalize($request);
+        $scheduleAction = $request->boolean('sync_annual_schedule', true)
+            ? (string) $request->input('annual_schedule_conflict_action', AnnualScheduleSyncService::ACTION_ASK)
+            : AnnualScheduleSyncService::ACTION_SKIP;
+        if (!$t->annualScheduleRow()->exists()) {
+            app(AnnualScheduleSyncService::class)->assertNoUnresolvedConflict($validated, $scheduleAction);
+        }
+        $this->applyResultFormatSettings($validated, $t);
 
         if ($request->hasFile('hero_image')) {
             $validated['hero_image_path'] = $request->file('hero_image')->store('posters', 'public');
@@ -1709,6 +1792,8 @@ class TournamentController extends Controller
             'special_sponsor' => $org['text']['special_sponsor'],
             'sponsor' => $org['text']['sponsor'],
             'support' => $org['text']['support'],
+            'supervisor' => $org['text']['supervisor'],
+            'authorized_by' => $org['text']['authorized'],
         ])->save();
 
         $filesToStore = [
@@ -1771,6 +1856,7 @@ class TournamentController extends Controller
         ]));
         $editionService->attach($t->fresh('series'), $request->input('season_key'));
         $prioritySummary = $prioritySyncService->sync($t->fresh(['entryRules', 'series']));
+        app(AnnualScheduleSyncService::class)->sync($t->fresh(), $scheduleAction);
 
         return redirect()->route('tournaments.show', $t->id)
             ->with('success', sprintf(

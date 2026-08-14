@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ProBowler;
 use App\Models\Tournament;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -184,8 +185,25 @@ class PublicTournamentController extends Controller
                 'tr.average',
                 'tr.points',
                 'tr.amateur_name',
+                'pb.id as pro_bowler_id',
                 'pb.name_kanji as pro_name',
-            ]);
+                'pb.public_image_path as pro_photo_path',
+                'pb.updated_at as pro_updated_at',
+            ])
+            ->map(function ($row) {
+                $row->pro_photo_url = null;
+                if ($row->pro_bowler_id) {
+                    $bowler = (new ProBowler())->forceFill([
+                        'id' => $row->pro_bowler_id,
+                        'public_image_path' => $row->pro_photo_path,
+                        'updated_at' => $row->pro_updated_at,
+                        'is_visible' => true,
+                    ]);
+                    $row->pro_photo_url = $bowler->public_photo_url;
+                }
+
+                return $row;
+            });
     }
 
     private function applyRegionFilter($query, string $region): void

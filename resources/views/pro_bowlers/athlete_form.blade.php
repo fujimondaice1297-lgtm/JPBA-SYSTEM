@@ -7,13 +7,29 @@
   $action = isset($bowler)
       ? ($isAdmin ? route('pro_bowlers.update', $bowler->id) : route('athlete.update', $bowler->id))
       : route('pro_bowlers.store');
+
+  // TP講習会は instructor_registry の更新状態とは別制度。
+  // 保存済みの文字列だけではなく、受講履歴・公式修了者一覧から現在日で判定する。
+  $trainingDecision = isset($bowler) && $bowler?->id
+      ? app(\App\Services\TrainingComplianceService::class)->entryDecision($bowler)
+      : null;
+  $entryEligibility = isset($bowler) && $bowler?->id
+      ? app(\App\Services\TournamentEntryEligibilityService::class)->evaluate($bowler)
+      : null;
+  $membershipDecision = isset($bowler) && $bowler?->id
+      ? app(\App\Services\ProBowlerMembershipClassificationService::class)->decide($bowler, (int) now()->year)
+      : null;
 @endphp
 
 @section('content')
 <h2>選手データ登録</h2>
 
 {{-- 管理者のみ表示する補助ウィジェット --}}
-@includeWhen($isAdmin && isset($bowler) && $bowler?->id, 'pro_bowlers._training_widget', ['bowler' => $bowler])
+@includeWhen($isAdmin && isset($bowler) && $bowler?->id, 'pro_bowlers._training_widget', [
+  'bowler' => $bowler,
+  'trainingDecision' => $trainingDecision,
+  'entryEligibility' => $entryEligibility,
+])
 
 @if ($errors->any())
   <div class="alert alert-danger">
@@ -30,30 +46,75 @@
   <div class="alert alert-success">{{ session('success') }}</div>
 @endif
 
+@if(isset($bowler) && $bowler?->id)
+  <section class="card border-primary mb-4 shadow-sm">
+    <div class="card-body">
+      <div class="row g-3 align-items-center">
+        <div class="col-auto">
+          @if($bowler->public_photo_url)
+            <img src="{{ $bowler->public_photo_url }}"
+                 alt="{{ $bowler->name_kanji }}"
+                 style="width:112px;height:112px;border-radius:12px;object-fit:cover;object-position:center;border:1px solid #dbe3ec;background:#f8fafc;">
+          @else
+            <div class="d-flex align-items-center justify-content-center text-muted bg-light border rounded"
+                 style="width:112px;height:112px;">写真なし</div>
+          @endif
+        </div>
+        <div class="col">
+          <h3 class="h5 mb-1">公開プロフィール写真</h3>
+          <p class="small text-muted mb-3">
+            写真を選んで「写真を更新」を押すだけで差し替えられます。大会成績・速報・登録ボール・公開プロフィールへ共通反映します。
+          </p>
+          <form method="POST" action="{{ route('athlete.photo.update', $bowler) }}" enctype="multipart/form-data" class="row g-2 align-items-end">
+            @csrf
+            @method('PUT')
+            <div class="col-12 col-lg">
+              <label for="profile_photo" class="form-label">新しい写真</label>
+              <input id="profile_photo" type="file" name="profile_photo" class="form-control @error('profile_photo') is-invalid @enderror"
+                     accept="image/jpeg,image/png,image/webp" required>
+              @error('profile_photo')<div class="invalid-feedback">{{ $message }}</div>@enderror
+              <div class="form-text">JPEG・PNG・WebP、5MBまで。未選択のときは現在の写真を維持します。</div>
+            </div>
+            <div class="col-12 col-lg-auto">
+              <button type="submit" class="btn btn-primary w-100">写真を更新</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </section>
+@endif
+
 @if($isAdmin && isset($bowler))
   @php
     $currentRegistry = $bowler->currentInstructorRegistry;
+    $hasSeparateInstructorRenewal = $currentRegistry
+        && in_array($currentRegistry->instructor_category, ['pro_instructor', 'certified'], true);
   @endphp
   <div class="alert alert-secondary">
-    <div class="fw-bold mb-2">現在の自動判定・同期状況</div>
+    <div class="fw-bold mb-2">会員種別の自動判定</div>
     <div class="row g-2 small">
       <div class="col-md-3"><strong>会員種別名:</strong> {{ $bowler->membership_type ?? '-' }}</div>
-      <div class="col-md-3"><strong>会員区分:</strong> {{ $bowler->member_class_label }}</div>
-      <div class="col-md-3"><strong>公式戦:</strong> {{ $bowler->official_tournament_eligibility_label }}</div>
-      <div class="col-md-3"><strong>有効状態:</strong> {{ $bowler->is_active ? '有効' : '無効' }}</div>
-      <div class="col-md-3"><strong>同期状態:</strong> {{ $bowler->current_instructor_sync_state_label }}</div>
-      <div class="col-md-3"><strong>現在資格:</strong> {{ $bowler->current_instructor_type_label }}</div>
-      <div class="col-md-3"><strong>取込元:</strong> {{ $bowler->current_instructor_source_label }}</div>
-      <div class="col-md-3"><strong>更新状態:</strong> {{ $bowler->current_instructor_renewal_status_label }}</div>
-      @if($currentRegistry)
-        <div class="col-md-3"><strong>資格等級:</strong> {{ $currentRegistry->grade ?? '-' }}</div>
-        <div class="col-md-3"><strong>履歴理由:</strong> {{ $currentRegistry->supersede_reason ?? '-' }}</div>
-        <div class="col-md-3"><strong>最終同期:</strong> {{ optional($currentRegistry->last_synced_at)->format('Y-m-d H:i') ?? '-' }}</div>
-      @endif
+      <div class="col-md-2"><strong>判定年度:</strong> {{ data_get($membershipDecision, 'year', now()->year) }}年度</div>
+      <div class="col-md-5"><strong>判定根拠:</strong> {{ data_get($membershipDecision, 'reason', '-') }}</div>
+      <div class="col-md-2"><strong>会員状態:</strong> {{ $bowler->is_active ? '有効' : '無効' }}</div>
     </div>
     <div class="mt-2 small text-muted">
-      保存時に <code>membership_type</code> と <code>license_no</code> から <code>member_class</code> / 公式戦可否 / instructor_registry 同期内容を再計算します。
+      年度別シード、TP講習の有効状態、当年度の公式戦出場履歴、海外表記の順に自動判定します。
     </div>
+
+    @if($hasSeparateInstructorRenewal)
+      <hr>
+      <div class="fw-bold mb-2">インストラクター資格（TP講習会とは別制度）</div>
+      <div class="row g-2 small">
+        <div class="col-md-3"><strong>資格区分:</strong> {{ $bowler->current_instructor_type_label }}</div>
+        <div class="col-md-3"><strong>資格等級:</strong> {{ $currentRegistry->grade ?? '-' }}</div>
+        <div class="col-md-3"><strong>資格更新状態:</strong> {{ $bowler->current_instructor_renewal_status_label }}</div>
+        <div class="col-md-3"><strong>更新期限:</strong> {{ optional($currentRegistry->renewal_due_on)->format('Y-m-d') ?? '-' }}</div>
+        <div class="col-md-3"><strong>取込元:</strong> {{ $bowler->current_instructor_source_label }}</div>
+        <div class="col-md-3"><strong>最終同期:</strong> {{ optional($currentRegistry->last_synced_at)->format('Y-m-d H:i') ?? '-' }}</div>
+      </div>
+    @endif
   </div>
 @endif
 
@@ -171,13 +232,13 @@
         <select name="membership_type" class="form-control @error('membership_type') is-invalid @enderror">
           <option value="">選んでください</option>
           @php
-            $types = ["第1シード","第2シード","トーナメントプロ","講習会出席者","その他","名誉プロ・海外プロ","プロインストラクター","除名","死亡","退会員","認定プロインストラクター"];
+            $types = ["第１シード","第２シード","トーナメントプロ","講習会出席者","海外プロ","その他","プロインストラクター","認定プロインストラクター","除名","死亡","退会届"];
           @endphp
           @foreach ($types as $type)
             <option value="{{ $type }}" {{ old('membership_type', $bowler->membership_type ?? '') == $type ? 'selected' : '' }}>{{ $type }}</option>
           @endforeach
         </select>
-        <small class="form-text text-muted">保存時に会員種別名とライセンスNoから、会員区分（プロボウラー / プロインストラクター / 名誉プロ・海外）と公式戦可否を自動判定します。</small>
+        <small class="form-text text-muted">保存後に、年度別シード・TP講習・当年度公式戦出場履歴・海外表記から自動で再判定します。死亡・除名・退会届とインストラクター区分は手動指定を維持します。</small>
         @error('membership_type')<div class="invalid-feedback">{{ $message }}</div>@enderror
       </div>
 
@@ -204,12 +265,6 @@
       <div class="col-md-6 mb-3">
         <label>ライセンス交付日</label>
         <input type="date" name="license_issue_date" class="form-control" value="{{ old('license_issue_date', $bowler?->license_issue_date?->format('Y-m-d')) }}">
-      </div>
-
-      <div class="col-md-6 mb-3">
-        <label>プロフィール写真</label>
-        <input type="file" name="public_image_path" class="form-control">
-        <small class="form-text text-muted">選手プロフィールに掲載する写真をアップロード（推奨：顔がはっきり写っているもの）</small>
       </div>
 
       <div class="col-md-6 mb-3">
@@ -288,15 +343,13 @@
       一般公開情報（管理者管轄） <small class="text-muted">（クリックで開閉）</small>
     </h4>
     <div class="form-section row collapse" id="public-section">
-      <div class="col-md-6 mb-3">
-        <label>プロフィール写真</label>
-        <input type="file" name="profile_image_public" class="form-control">
-        <small class="form-text text-muted">
-          公開プロフィール用の顔写真をアップロードしてください。<br>
-          ファイル名は選手ID（m,fは小文字）にしてください。<br>
-          例：m0000xxx.jpg、f0000xxx.jpg
-        </small>
-      </div>
+      @unless(isset($bowler))
+        <div class="col-md-6 mb-3">
+          <label>公開プロフィール写真</label>
+          <input type="file" name="profile_image_public" class="form-control" accept="image/jpeg,image/png,image/webp">
+          <small class="form-text text-muted">選手の登録後は、画面上部の写真専用欄から簡単に差し替えられます。</small>
+        </div>
+      @endunless
 
       @if(isset($bowler))
         @php
@@ -662,6 +715,16 @@
                 class="d-none">
             @csrf
             @method('DELETE')
+          </form>
+        @endforeach
+        @foreach ($bowler->confirmedRecords as $record)
+          <form id="achievement-del-{{ $record->id }}"
+                method="POST"
+                action="{{ route('admin.record_types.destroy', ['record_type' => $record->id]) }}"
+                class="d-none">
+            @csrf
+            @method('DELETE')
+            <input type="hidden" name="return_to" value="pro_bowler_edit">
           </form>
         @endforeach
       @endif

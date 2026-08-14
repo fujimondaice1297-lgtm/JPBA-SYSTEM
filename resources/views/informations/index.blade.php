@@ -4,6 +4,17 @@
 <div class="container" style="max-width:860px">
   <h2 class="mb-3">お知らせ</h2>
 
+  @auth
+    @if(auth()->user()?->isEditor() || auth()->user()?->isAdmin())
+      <div class="alert alert-light border d-flex flex-wrap justify-content-between align-items-center gap-2">
+        <span>メーカー公式掲載品は、写真・発売時期付きのボールカタログから確認できます。</span>
+        <a href="{{ route('approved_balls.index') }}" class="btn btn-sm btn-outline-primary">
+          ボールカタログリストを見る
+        </a>
+      </div>
+    @endif
+  @endauth
+
   {{-- 年度フィルタ + カテゴリ + 戻る --}}
   <form method="GET" class="d-flex flex-wrap gap-2 mb-3">
     <select name="year" class="form-select" style="max-width: 180px;">

@@ -23,6 +23,8 @@ class ProBowler extends Model
         'membership_type',
         'member_class',
         'can_enter_official_tournament',
+        'training_compliance_status',
+        'training_compliance_checked_at',
         'license_issue_date',
         'phone_home',
         'has_title',
@@ -175,7 +177,13 @@ class ProBowler extends Model
         'hall_of_fame_date' => 'date',
         'birthdate_public' => 'date',
         'official_profile_imported_at' => 'datetime',
+        'training_compliance_checked_at' => 'datetime',
     ];
+
+    public function getPublicPhotoUrlAttribute(): ?string
+    {
+        return app(\App\Services\ProBowlerPhotoService::class)->publicUrl($this);
+    }
 
     public function district()
     {
@@ -242,15 +250,69 @@ class ProBowler extends Model
         return $this->hasMany(RecordType::class, 'pro_bowler_id');
     }
 
+    public function confirmedRecords()
+    {
+        return $this->hasMany(RecordType::class, 'pro_bowler_id')
+            ->where('status', RecordType::STATUS_CONFIRMED);
+    }
+
+    public function officialProfileStatSnapshots()
+    {
+        return $this->hasMany(OfficialProfileStatSnapshot::class, 'pro_bowler_id')
+            ->orderByDesc('captured_at');
+    }
+
+    public function annualRecords()
+    {
+        return $this->hasMany(ProBowlerAnnualRecord::class, 'pro_bowler_id')
+            ->orderByDesc('season_end_year')
+            ->orderByDesc('season_start_year');
+    }
+
+    public function tournamentHistories()
+    {
+        return $this->hasMany(ProBowlerTournamentHistory::class, 'pro_bowler_id')
+            ->orderByDesc('season_year')
+            ->orderBy('held_on');
+    }
+
+    public function tournamentHistorySyncs()
+    {
+        return $this->hasMany(ProBowlerTournamentHistorySync::class, 'pro_bowler_id')
+            ->orderByDesc('season_year');
+    }
+
+    public function officialHistoryImport()
+    {
+        return $this->hasOne(ProBowlerOfficialHistoryImport::class, 'pro_bowler_id');
+    }
+
     public function trainings()
     {
         return $this->hasMany(ProBowlerTraining::class, 'pro_bowler_id');
+    }
+
+    public function trainingSessionParticipants()
+    {
+        return $this->hasMany(TrainingSessionParticipant::class, 'pro_bowler_id');
+    }
+
+    public function officialTrainingListEntries()
+    {
+        return $this->hasMany(TrainingOfficialListEntry::class, 'pro_bowler_id');
+    }
+
+    public function userAccount()
+    {
+        return $this->hasOne(User::class, 'pro_bowler_id');
     }
 
     public function latestMandatoryTraining()
     {
         return $this->hasOne(ProBowlerTraining::class, 'pro_bowler_id')
             ->whereHas('training', fn ($q) => $q->where('code', 'mandatory'))
+            ->where('record_status', 'valid')
+            ->whereNull('revoked_at')
             ->ofMany('completed_at', 'max')
             ->withDefault();
     }
@@ -264,6 +326,8 @@ class ProBowler extends Model
                     ->where('code', 'mandatory')
                     ->limit(1);
             })
+            ->where('record_status', 'valid')
+            ->whereNull('revoked_at')
             ->orderByDesc('completed_at');
     }
 
@@ -355,6 +419,7 @@ class ProBowler extends Model
             'pro_instructor'      => 'プロインストラクター',
             'player'              => 'プロボウラー',
             'honorary_or_overseas'=> '名誉プロ・海外',
+            'other'               => 'その他',
             default               => '-',
         };
     }
@@ -430,24 +495,14 @@ class ProBowler extends Model
 
     public function getComplianceStatusAttribute(): string
     {
-        $rec = $this->latestMandatoryTraining()->first();
-        if (!$rec) {
-            return 'missing';
-        }
-
-        $expiresAt = $rec->expires_at;
-        if (!$expiresAt) {
-            return 'missing';
-        }
-
-        if ($expiresAt->isPast()) {
-            return 'expired';
-        }
-        if ($expiresAt->lte(today()->addDays(60))) {
-            return 'expiring_soon';
-        }
-
-        return 'compliant';
+        return match ((string) ($this->attributes['training_compliance_status'] ?? 'unconfirmed')) {
+            'valid', 'official_list_valid' => 'compliant',
+            'expiring_this_year', 'expiring_next_year' => 'expiring_soon',
+            'expired' => 'expired',
+            'missing' => 'missing',
+            'exempt' => 'compliant',
+            default => 'unconfirmed',
+        };
     }
 
     public function getTitleCountAttribute(): int
@@ -455,6 +510,16 @@ class ProBowler extends Model
         return isset($this->attributes['titles_count'])
             ? (int) $this->attributes['titles_count']
             : $this->officialTitles()->count();
+    }
+
+    public function usedBalls()
+    {
+        return $this->hasMany(UsedBall::class, 'pro_bowler_id');
+    }
+
+    public function ballAnnualRegistrations()
+    {
+        return $this->hasMany(BallAnnualRegistration::class, 'pro_bowler_id');
     }
 
     public function getKibetsuLabelAttribute(): string

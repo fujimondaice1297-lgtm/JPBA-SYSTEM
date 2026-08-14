@@ -6,6 +6,7 @@ namespace App\Http\Controllers;
 use App\Models\GameScore;
 use App\Models\ProBowler;
 use App\Models\Tournament;
+use App\Models\TournamentEntry;
 use App\Models\TournamentMatchScoreSheet;
 use App\Services\ScoreService;
 use App\Services\TournamentResultCarryService;
@@ -377,6 +378,7 @@ final class ScoreController extends Controller
         }
 
         $stageLinks = $this->buildStageNavigationLinks($t, $stageSettings, $r, (string) $opt['stage'], (int) $opt['upto_game']);
+        $scoreEntryBallLookup = $this->buildScoreEntryBallLookup((int) $opt['tournament_id']);
 
         $this->applyConfiguredCarryForRanking($opt, $t, $carryService);
 
@@ -396,6 +398,7 @@ final class ScoreController extends Controller
                 'shifts' => (string) $opt['shifts'],
                 'gender_filter' => (string) $opt['gender_filter'],
                 'stageLinks' => $stageLinks,
+                'scoreEntryBallLookup' => $scoreEntryBallLookup,
             ]);
         }
 
@@ -415,6 +418,7 @@ final class ScoreController extends Controller
                 'shifts' => (string) $opt['shifts'],
                 'gender_filter' => (string) $opt['gender_filter'],
                 'stageLinks' => $stageLinks,
+                'scoreEntryBallLookup' => $scoreEntryBallLookup,
             ]);
         }
 
@@ -429,6 +433,7 @@ final class ScoreController extends Controller
                 'shifts' => (string) $opt['shifts'],
                 'gender_filter' => (string) $opt['gender_filter'],
                 'stageLinks' => $stageLinks,
+                'scoreEntryBallLookup' => $scoreEntryBallLookup,
             ]);
         }
 
@@ -443,6 +448,7 @@ final class ScoreController extends Controller
                 'shifts' => (string) $opt['shifts'],
                 'gender_filter' => (string) $opt['gender_filter'],
                 'stageLinks' => $stageLinks,
+                'scoreEntryBallLookup' => $scoreEntryBallLookup,
             ]);
         }
 
@@ -462,6 +468,7 @@ final class ScoreController extends Controller
             'shifts'          => (string) $opt['shifts'],
             'gender_filter'   => (string) $opt['gender_filter'],
             'stageLinks'       => $stageLinks,
+            'scoreEntryBallLookup' => $scoreEntryBallLookup,
         ]);
     }
 
@@ -2904,6 +2911,62 @@ final class ScoreController extends Controller
         }
 
         return $this->normalizeName($value);
+    }
+
+    /**
+     * 速報の選手情報から、その大会のエントリーと登録ボール数を引ける索引を作る。
+     *
+     * スコア行は画面種別によって pro_bowler_id / ライセンス番号の保持方法が異なるため、
+     * ID・正式ライセンス番号・重複しない下4桁の3種類を用意する。
+     */
+    private function buildScoreEntryBallLookup(int $tournamentId): array
+    {
+        if ($tournamentId <= 0) {
+            return [];
+        }
+
+        $entries = TournamentEntry::query()
+            ->with(['bowler:id,license_no,name_kanji'])
+            ->withCount('balls')
+            ->where('tournament_id', $tournamentId)
+            ->where('status', 'entry')
+            ->get(['id', 'tournament_id', 'pro_bowler_id']);
+
+        $lookup = [];
+        $tailCandidates = [];
+
+        foreach ($entries as $entry) {
+            $licenseNo = strtoupper(preg_replace('/\s+/u', '', trim((string) ($entry->bowler?->license_no ?? ''))) ?? '');
+            $digits = preg_replace('/\D+/u', '', $licenseNo) ?: '';
+            $tail = $digits !== '' ? substr($digits, -4) : '';
+            $payload = [
+                'entry_id' => (int) $entry->id,
+                'pro_bowler_id' => (int) $entry->pro_bowler_id,
+                'license_no' => $licenseNo,
+                'player_name' => (string) ($entry->bowler?->name_kanji ?? ''),
+                'ball_count' => (int) $entry->balls_count,
+            ];
+
+            if ((int) $entry->pro_bowler_id > 0) {
+                $lookup['pro:' . (int) $entry->pro_bowler_id] = $payload;
+            }
+
+            if ($licenseNo !== '') {
+                $lookup['license:' . $licenseNo] = $payload;
+            }
+
+            if ($tail !== '') {
+                $tailCandidates[$tail][] = $payload;
+            }
+        }
+
+        foreach ($tailCandidates as $tail => $candidates) {
+            if (count($candidates) === 1) {
+                $lookup['tail:' . $tail] = $candidates[0];
+            }
+        }
+
+        return $lookup;
     }
 
     private function licenseVariantKey(string $licenseNo, string $gender): string

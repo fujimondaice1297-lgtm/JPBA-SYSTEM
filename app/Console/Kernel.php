@@ -21,7 +21,8 @@ class Kernel extends ConsoleKernel
                 ->delete();
         })->yearlyOn(12, 31, '00:00');
 
-        $schedule->command('training:notify --days=60')->dailyAt('08:00');
+        // 次年度に期限が切れる会員へ、送信履歴で重複を防ぎながら前年度中に1回案内する。
+        $schedule->command('training:notify')->dailyAt('08:00')->withoutOverlapping();
 
         $schedule->command('tournament:send-draw-reminders')->dailyAt('09:00');
 

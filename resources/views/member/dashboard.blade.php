@@ -30,6 +30,13 @@
 
     {{-- ★ パスワード変更 --}}
     <a href="{{ route('password.change.form') }}" class="btn btn-warning">パスワードを変更</a>
+    <a href="{{ route('tournament.entry.select') }}" class="btn btn-success">大会エントリー・使用ボール登録</a>
+    <a href="{{ route('registered_balls.index') }}" class="btn btn-outline-success">マイボール管理</a>
+    <a href="{{ ($user?->isAdmin() || $user?->isEditor())
+        ? route('ball_annual_registrations.index')
+        : route('ball_annual_registrations.edit') }}" class="btn btn-primary">
+      {{ ($user?->isAdmin() || $user?->isEditor()) ? '年度ボール申請・承認' : '年度ボール申請' }}
+    </a>
 
     @if($bowler?->id)
       <a href="{{ ($user?->isAdmin() || $user?->isEditor())
@@ -42,6 +49,18 @@
 
   {{-- ようこそ帯 --}}
   <p class="mb-4">{{ $bowler?->name ?? $user?->name }} さん、ようこそ。</p>
+
+  @if($trainingCompliance)
+    @php($trainingOk = (bool)($trainingCompliance['allowed'] ?? false))
+    <div class="alert {{ $trainingOk ? 'alert-success' : 'alert-danger' }} d-flex flex-wrap justify-content-between align-items-center gap-3">
+      <div>
+        <strong>トーナメントプレイヤー講習：{{ $trainingCompliance['label'] ?? '-' }}</strong>
+        <div class="small">{{ $trainingCompliance['message'] ?? '' }}</div>
+        @if($trainingCompliance['expires_at'] ?? null)<div class="small">有効期限：{{ $trainingCompliance['expires_at']->format('Y年n月j日') }}</div>@endif
+      </div>
+      @if(!$trainingOk)<span class="badge bg-danger fs-6">出場資格なし</span>@endif
+    </div>
+  @endif
 
   {{-- 2カラム：左に公開プロフィール、右にアカウント情報 --}}
   <div class="row g-3">

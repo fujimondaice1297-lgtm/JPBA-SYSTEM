@@ -39,18 +39,32 @@ final class Official2026StandardFinalImportService
     ) {}
 
     /** @return array<string,mixed> */
-    public function import(bool $write = false, string $adminEmail = 'yamaguchi@jpba.or.jp'): array
+    public function import(
+        bool $write = false,
+        string $adminEmail = 'yamaguchi@jpba.or.jp',
+        ?string $eventKey = null,
+    ): array
     {
         $dataset = $this->dataset();
+        $eventKey = trim((string) $eventKey);
+        $selectedEvents = $eventKey === ''
+            ? $dataset['events']
+            : array_values(array_filter(
+                $dataset['events'],
+                static fn (array $event): bool => (string) ($event['key'] ?? '') === $eventKey,
+            ));
         $admin = User::query()->where('email', $adminEmail)->first();
         $errors = [];
         $events = [];
 
+        if ($eventKey !== '' && $selectedEvents === []) {
+            $errors[] = "Dataset event was not found: {$eventKey}";
+        }
         if ($admin === null) {
             $errors[] = "Administrator was not found: {$adminEmail}";
         }
 
-        foreach ($dataset['events'] as $event) {
+        foreach ($selectedEvents as $event) {
             $eventErrors = $this->validateEvent($event);
             $tournament = $this->findTournament((string) $event['key']);
             $participants = ['map' => [], 'errors' => []];
@@ -96,13 +110,47 @@ final class Official2026StandardFinalImportService
             'dataset' => $dataset['dataset'],
             'dataset_sha256' => hash_file('sha256', database_path(self::DATASET_PATH)),
             'source_checked_at' => $dataset['source_checked_at'],
-            'event_count' => count($dataset['events']),
-            'score_sheet_count' => (int) $dataset['score_sheet_count'],
-            'frame_player_count' => (int) $dataset['frame_player_count'],
-            'frame_count' => (int) $dataset['frame_count'],
-            'additional_stage_score_count' => (int) $dataset['additional_stage_score_count'],
-            'bracket_match_count' => (int) $dataset['bracket_match_count'],
-            'bracket_score_count' => (int) $dataset['bracket_score_count'],
+            'event_filter' => $eventKey !== '' ? $eventKey : null,
+            'event_count' => count($selectedEvents),
+            'score_sheet_count' => array_sum(array_map(
+                static fn (array $event): int => count($event['score_sheets'] ?? []),
+                $selectedEvents,
+            )),
+            'frame_player_count' => array_sum(array_map(
+                static fn (array $event): int => array_sum(array_map(
+                    static fn (array $sheet): int => count($sheet['players'] ?? []),
+                    $event['score_sheets'] ?? [],
+                )),
+                $selectedEvents,
+            )),
+            'frame_count' => array_sum(array_map(
+                static fn (array $event): int => array_sum(array_map(
+                    static fn (array $sheet): int => array_sum(array_map(
+                        static fn (array $player): int => count($player['frames'] ?? []),
+                        $sheet['players'] ?? [],
+                    )),
+                    $event['score_sheets'] ?? [],
+                )),
+                $selectedEvents,
+            )),
+            'additional_stage_score_count' => array_sum(array_map(
+                fn (array $event): int => $this->additionalStageScoreCount($event),
+                $selectedEvents,
+            )),
+            'bracket_match_count' => array_sum(array_map(
+                static fn (array $event): int => count($event['bracket_matches'] ?? []),
+                $selectedEvents,
+            )),
+            'bracket_score_count' => array_sum(array_map(
+                static fn (array $event): int => array_sum(array_map(
+                    static fn (array $match): int => array_sum(array_map(
+                        static fn (array $player): int => count($player['scores'] ?? []),
+                        $match['players'] ?? [],
+                    )),
+                    $event['bracket_matches'] ?? [],
+                )),
+                $selectedEvents,
+            )),
             'admin_id' => $admin?->id,
             'events' => $events,
             'errors' => $errors,
@@ -113,8 +161,8 @@ final class Official2026StandardFinalImportService
             return $report;
         }
 
-        return DB::transaction(function () use ($dataset, $admin, $report): array {
-            foreach ($dataset['events'] as $event) {
+        return DB::transaction(function () use ($selectedEvents, $admin, $report): array {
+            foreach ($selectedEvents as $event) {
                 $tournament = $this->findTournament((string) $event['key'], true);
                 if ($tournament === null) {
                     throw new RuntimeException("{$event['key']}: tournament disappeared before final repair.");
@@ -601,7 +649,7 @@ final class Official2026StandardFinalImportService
                 'match_label' => $sheet['match_label'],
                 'match_order' => $sheet['match_order'],
                 'game_number' => 1,
-                'lane_label' => null,
+                'lane_label' => $sheet['lane_label'] ?? null,
                 'is_published' => true,
                 'confirmed_at' => $now,
                 'notes' => self::IMPORT_MARKER.':'.$event['key'].' / '.$source['filename']
@@ -626,7 +674,7 @@ final class Official2026StandardFinalImportService
                     'display_name' => $participant->display_name,
                     'name_kana' => $bowler?->name_kana,
                     'dominant_arm' => $bowler?->dominant_arm,
-                    'lane_label' => null,
+                    'lane_label' => $player['lane_label'] ?? null,
                     'final_score' => (int) $player['score'],
                     'is_winner' => (bool) $player['is_winner'],
                     'score_summary' => json_encode([
@@ -654,7 +702,12 @@ final class Official2026StandardFinalImportService
                             $frame['display_marks'],
                             JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR,
                         ),
-                        'remaining_pins' => null,
+                        'remaining_pins' => ! empty($frame['remaining_pins'])
+                            ? json_encode(
+                                array_values($frame['remaining_pins']),
+                                JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR,
+                            )
+                            : null,
                         'created_at' => $now,
                         'updated_at' => $now,
                     ];

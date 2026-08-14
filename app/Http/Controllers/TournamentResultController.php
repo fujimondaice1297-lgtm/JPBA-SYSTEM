@@ -46,6 +46,7 @@ class TournamentResultController extends Controller
     /** 大会ごとの成績一覧（←“成績一覧” 入口） */
     public function index(Tournament $tournament)
     {
+        $tournament->loadMissing('resultFormatVersion');
         $rankCol = collect(['ranking', 'rank', 'position', 'placing', 'result_rank', 'order_no'])
             ->first(fn ($c) => Schema::hasColumn('tournament_results', $c));
 
@@ -791,6 +792,17 @@ class TournamentResultController extends Controller
 
     public function exportTournamentPdf(Tournament $tournament)
     {
+        return $this->exportTournamentDocument($tournament, false);
+    }
+
+    public function exportTournamentExcel(Tournament $tournament)
+    {
+        return $this->exportTournamentDocument($tournament, true);
+    }
+
+    private function exportTournamentDocument(Tournament $tournament, bool $asExcel)
+    {
+        $tournament->loadMissing('resultFormatVersion.format');
         $rankCol = collect(['ranking', 'rank', 'position', 'placing', 'result_rank', 'order_no'])
             ->first(fn ($c) => Schema::hasColumn('tournament_results', $c));
 
@@ -894,6 +906,28 @@ class TournamentResultController extends Controller
             'prizeDistributionMap'
         );
         $downloadName = "{$tournament->year}_{$tournament->name}_results.pdf";
+
+        if ($tournament->resultFormatVersion?->format?->code === 'purefoods_kishi') {
+            /** @var \App\Services\PureFoodsKishiResultExportService $exportService */
+            $exportService = app(\App\Services\PureFoodsKishiResultExportService::class);
+
+            return $asExcel
+                ? $exportService->downloadWorkbook($pdfData, $downloadName)
+                : $exportService->downloadPdf($pdfData, $downloadName);
+        }
+
+        if ($tournament->resultFormatVersion?->format?->code === 'rokko_queens') {
+            /** @var \App\Services\RokkoQueensResultExportService $exportService */
+            $exportService = app(\App\Services\RokkoQueensResultExportService::class);
+
+            return $asExcel
+                ? $exportService->downloadWorkbook($pdfData, $downloadName)
+                : $exportService->downloadPdf($pdfData, $downloadName);
+        }
+
+        if ($asExcel) {
+            abort(422, 'この大会にはExcel形式の最終成績フォーマットが設定されていません。');
+        }
 
         if (! $isSeasonTrialPdf && ! empty($roundRobinPdf['players'] ?? [])) {
             return $this->makeOfficialStandardTournamentPdf($pdfData, $downloadName);

@@ -230,7 +230,8 @@
 
   <div class="jpba-feature-grid">
     @foreach($featureLinks as $link)
-      <a class="jpba-feature-link" href="{{ $link['url'] }}" target="_blank" rel="noopener">
+      @php($href = !empty($link['route']) && Route::has($link['route']) ? route($link['route'], $link['params'] ?? []) : ($link['url'] ?? '#'))
+      <a class="jpba-feature-link" href="{{ $href }}" @if(!empty($link['url'])) target="_blank" rel="noopener" @endif>
         <div class="jpba-feature-title">{{ $link['label'] }}</div>
         <div class="jpba-feature-description">{{ $link['description'] ?? '' }}</div>
       </a>
@@ -244,7 +245,8 @@
   @if(!empty($licenseLinks))
     <div class="jpba-link-grid">
       @foreach($licenseLinks as $link)
-        <a href="{{ $link['url'] }}" target="_blank" rel="noopener">{{ $link['label'] }}</a>
+        @php($href = !empty($link['route']) && Route::has($link['route']) ? route($link['route'], $link['params'] ?? []) : ($link['url'] ?? '#'))
+        <a href="{{ $href }}" @if(!empty($link['url'])) target="_blank" rel="noopener" @endif>{{ $link['label'] }}</a>
       @endforeach
     </div>
   @else

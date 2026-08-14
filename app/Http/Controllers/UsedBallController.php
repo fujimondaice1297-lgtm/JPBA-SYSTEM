@@ -3,13 +3,20 @@
 namespace App\Http\Controllers;
 
 use App\Models\UsedBall;
+use App\Models\RegisteredBall;
 use App\Models\ProBowler;
 use App\Models\ApprovedBall;
+use App\Services\BallInspectionService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 
 class UsedBallController extends Controller
 {
+    public function __construct(
+        private readonly BallInspectionService $inspectionService
+    ) {
+    }
+
     public function index(Request $request)
     {
         $user = $request->user();
@@ -67,10 +74,6 @@ class UsedBallController extends Controller
                 break;
 
             default:
-                $query->where(function ($q) {
-                    $q->whereNull('expires_at')
-                        ->orWhereDate('expires_at', '>=', today());
-                });
                 break;
         }
 
@@ -165,14 +168,20 @@ class UsedBallController extends Controller
         ];
 
         if ($inspectionNumber !== '') {
-            $payload['expires_at'] = Carbon::parse($payload['registered_at'])->addYear()->subDay();
+            $payload['expires_at'] = $this->inspectionService
+                ->expiresOn($payload['registered_at']);
         } else {
             $payload['expires_at'] = null;
         }
 
-        UsedBall::create($payload);
+        $usedBall = UsedBall::create($payload);
 
-        return $this->redirectAfterSave($request, 'used_balls.index', '使用ボールを登録しました。');
+        return $this->redirectAfterSave(
+            $request,
+            'used_balls.index',
+            '使用ボールを登録しました。',
+            $this->usbcWarningForBallId((int) $usedBall->approved_ball_id)
+        );
     }
 
     public function edit(UsedBall $usedBall)
@@ -188,6 +197,7 @@ class UsedBallController extends Controller
 
         $validated = $request->validate([
             'inspection_number' => 'nullable|string|unique:used_balls,inspection_number,' . $usedBall->id,
+            'registered_at'     => ['nullable', 'date', 'required_with:inspection_number'],
             'return_to'         => ['nullable', 'string', 'max:50'],
             'entry_id'          => ['nullable', 'integer'],
         ]);
@@ -195,23 +205,31 @@ class UsedBallController extends Controller
         $inspectionNumber = trim((string) ($validated['inspection_number'] ?? ''));
 
         if ($inspectionNumber === '') {
-            $usedBall->update([
-                'inspection_number' => null,
-                'expires_at'        => null,
-            ]);
+            DB::transaction(function () use ($usedBall) {
+                $usedBall->update([
+                    'inspection_number' => null,
+                    'expires_at'        => null,
+                ]);
+
+                $this->syncInspectionToRegisteredBall($usedBall->fresh());
+            });
 
             return $this->redirectAfterSave($request, 'used_balls.index', '仮登録状態に更新しました。');
         }
 
-        $now = now();
+        $inspectionDate = $validated['registered_at'];
 
-        $usedBall->update([
-            'inspection_number' => $inspectionNumber,
-            'registered_at'     => $now,
-            'expires_at'        => $now->copy()->addYear()->subDay(),
-        ]);
+        DB::transaction(function () use ($usedBall, $inspectionNumber, $inspectionDate) {
+            $usedBall->update([
+                'inspection_number' => $inspectionNumber,
+                'registered_at'     => $inspectionDate,
+                'expires_at'        => $this->inspectionService->expiresOn($inspectionDate),
+            ]);
 
-        return $this->redirectAfterSave($request, 'used_balls.index', 'ボール情報を更新しました');
+            $this->syncInspectionToRegisteredBall($usedBall->fresh());
+        });
+
+        return $this->redirectAfterSave($request, 'used_balls.index', '検量証情報を更新しました。');
     }
 
     public function destroy(UsedBall $usedBall)
@@ -272,19 +290,65 @@ class UsedBallController extends Controller
         }
     }
 
-    private function redirectAfterSave(Request $request, string $defaultRoute, string $message)
+    private function syncInspectionToRegisteredBall(UsedBall $usedBall): void
+    {
+        $licenseNo = trim((string) ($usedBall->proBowler?->license_no ?? ''));
+        if ($licenseNo === '') {
+            return;
+        }
+
+        $registeredBall = RegisteredBall::query()
+            ->where('license_no', $licenseNo)
+            ->whereRaw('upper(serial_number) = ?', [mb_strtoupper((string) $usedBall->serial_number)])
+            ->first();
+
+        if (!$registeredBall) {
+            return;
+        }
+
+        $registeredBall->update([
+            'inspection_number' => $usedBall->inspection_number,
+            'registered_at' => $usedBall->registered_at,
+            'expires_at' => $usedBall->expires_at,
+        ]);
+    }
+
+    private function redirectAfterSave(
+        Request $request,
+        string $defaultRoute,
+        string $message,
+        ?string $warning = null
+    )
     {
         $returnTo = (string) $request->input('return_to', '');
         $entryId = (int) $request->input('entry_id', 0);
 
         if ($returnTo === 'entry_balls' && $entryId > 0) {
-            return redirect()
+            $redirect = redirect()
                 ->route('member.entries.balls.edit', $entryId)
                 ->with('success', $message);
+
+            return $warning ? $redirect->with('warning', $warning) : $redirect;
         }
 
-        return redirect()
+        $redirect = redirect()
             ->route($defaultRoute)
             ->with('success', $message);
+
+        return $warning ? $redirect->with('warning', $warning) : $redirect;
+    }
+
+    private function usbcWarningForBallId(int $ballId): ?string
+    {
+        $status = ApprovedBall::query()
+            ->whereKey($ballId)
+            ->value('usbc_match_status');
+
+        return match ($status) {
+            'matched' => null,
+            'ambiguous' => 'アブプールリストとの照合結果が要確認のボールです。',
+            'unchecked' => 'アブプールリストとの照合が未実施のボールです。',
+            default => 'アブプールリストに記載のないボールです',
+        };
     }
 }

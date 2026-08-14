@@ -88,8 +88,7 @@ class ProBowlerSearchScopeService
     {
         $query->where(function ($q) {
             $q->where('pro_bowlers.member_class', 'honorary_or_overseas')
-                ->orWhereIn('pro_bowlers.membership_type', ['名誉プロ・海外プロ', '海外'])
-                ->orWhereHas('district', fn ($district) => $district->where('label', '海外'));
+                ->orWhereIn('pro_bowlers.membership_type', ['名誉プロ・海外プロ', '海外', '海外プロ']);
         });
     }
 
@@ -105,12 +104,7 @@ class ProBowlerSearchScopeService
 
         $query->where(function ($q) {
             $q->whereNull('pro_bowlers.membership_type')
-                ->orWhereNotIn('pro_bowlers.membership_type', ['名誉プロ・海外プロ', '海外']);
-        });
-
-        $query->where(function ($q) {
-            $q->whereDoesntHave('district', fn ($district) => $district->where('label', '海外'))
-                ->orWhereNull('pro_bowlers.district_id');
+                ->orWhereNotIn('pro_bowlers.membership_type', ['名誉プロ・海外プロ', '海外', '海外プロ']);
         });
     }
 

@@ -1,32 +1,77 @@
-<aside class="jpba-side-menu bg-light p-3">
-    <h5>Menu</h5>
+@php
+    $sideUser = auth()->user();
+    $sideIsStaff = $sideUser && ($sideUser->isEditor() || $sideUser->isAdmin());
+    $sideGroups = $sideIsStaff
+        ? app(\App\Support\ManagementNavigation::class)->groups($sideUser)
+        : [];
+@endphp
 
-    <ul class="list-unstyled mb-0">
-        <li>
-            <a href="{{ route('logout') }}"
-               onclick="event.preventDefault(); document.getElementById('side-menu-logout-form').submit();">
-                ログアウト
+<aside class="jpba-side-menu" aria-label="{{ $sideIsStaff ? '管理メニュー' : '選手メニュー' }}">
+    <div class="jpba-side-menu-header">
+        <h2 class="jpba-side-menu-title">{{ $sideIsStaff ? '管理メニュー' : '選手メニュー' }}</h2>
+        <div class="jpba-side-menu-subtitle">
+            {{ $sideIsStaff ? '作業内容から画面を選択' : '登録・申請・お知らせ' }}
+        </div>
+    </div>
+
+    <div class="jpba-side-menu-body">
+        @if($sideIsStaff)
+            <a class="jpba-side-home {{ request()->routeIs('management.home', 'admin.home') ? 'active' : '' }}"
+               href="{{ route('management.home') }}">
+                <span>●</span><span>管理ホーム</span>
             </a>
-            <form id="side-menu-logout-form" action="{{ route('logout') }}" method="POST" class="d-none">
-                @csrf
-            </form>
-        </li>
-        <li><a href="{{ route('calendar.annual') }}">カレンダー</a></li>
-        <li><a href="{{ route('informations.index') }}">INFORMATION</a></li>
-        <li><a href="{{ route('informations.member') }}">会員用INFORMATION</a></li>
-        <li><a href="{{ route('pro_bowlers.list') }}">全プロデータ</a></li>
-        <li><a href="{{ route('tournament_pro.index') }}">今年度シードプロ</a></li>
-        <li><a href="{{ route('tp_registration.index') }}">TP登録会受講情報</a></li>
-        <li><a href="{{ route('tournaments.index') }}">大会情報</a></li>
-        <li><a href="{{ route('tournament_results.index') }}">大会成績</a></li>
-        <li><a href="{{ route('record_types.index') }}">公認パーフェクト等の記録</a></li>
-        <li><a href="{{ route('pro_groups.index') }}">プログループ管理</a></li>
-        <li><a href="{{ route('instructors.index') }}">認定インストラクター情報</a></li>
-        <li><a href="{{ route('approved_balls.index') }}">アブプールボールリスト</a></li>
-        <li><a href="{{ route('registered_balls.index') }}">選手登録ボール管理</a></li>
-        <li><a href="{{ route('trainings.bulk') }}">講習一括登録</a></li>
-        <li><a href="{{ route('used_balls.index') }}">大会別使用ボール登録</a></li>
-        <li><a href="{{ url('/') }}">トップ</a></li>
-        <li><a href="{{ route('member.dashboard') }}">選手マイページ</a></li>
-    </ul>
+
+            @foreach($sideGroups as $group)
+                @php
+                    $groupActive = collect($group['items'])->contains(function (array $item): bool {
+                        return collect($item['patterns'])->contains(
+                            fn (string $pattern): bool => request()->routeIs($pattern)
+                        );
+                    });
+                @endphp
+                <details class="jpba-side-section" {{ $groupActive ? 'open' : '' }}>
+                    <summary>
+                        <span>{{ $group['label'] }}</span>
+                    </summary>
+                    <div class="jpba-side-section-links">
+                        @foreach($group['items'] as $item)
+                            @php
+                                $itemActive = collect($item['patterns'])->contains(
+                                    fn (string $pattern): bool => request()->routeIs($pattern)
+                                );
+                            @endphp
+                            <a class="jpba-side-link {{ $itemActive ? 'active' : '' }}"
+                               href="{{ route($item['route'], $item['route_parameters'] ?? []) }}">
+                                {{ $item['label'] }}
+                            </a>
+                        @endforeach
+                    </div>
+                </details>
+            @endforeach
+        @else
+            <a class="jpba-side-home {{ request()->routeIs('member.dashboard') ? 'active' : '' }}"
+               href="{{ route('member.dashboard') }}">選手マイページ</a>
+            <a class="jpba-side-link {{ request()->routeIs('tournament.entry.*') ? 'active' : '' }}"
+               href="{{ route('tournament.entry.select') }}">大会エントリー</a>
+            <a class="jpba-side-link {{ request()->routeIs('registered_balls.*') ? 'active' : '' }}"
+               href="{{ route('registered_balls.index') }}">マイボール管理</a>
+            <a class="jpba-side-link {{ request()->routeIs('ball_annual_registrations.edit') ? 'active' : '' }}"
+               href="{{ route('ball_annual_registrations.edit') }}">年度ボール申請</a>
+            <a class="jpba-side-link {{ request()->routeIs('informations.member*') ? 'active' : '' }}"
+               href="{{ route('informations.member') }}">会員用INFORMATION</a>
+            <a class="jpba-side-link {{ request()->routeIs('calendar.*') ? 'active' : '' }}"
+               href="{{ route('calendar.annual') }}">カレンダー</a>
+        @endif
+    </div>
+
+    <div class="jpba-side-footer">
+        <a class="jpba-side-link" href="{{ url('/') }}">一般公開サイト</a>
+        <a class="jpba-side-link text-danger" href="{{ route('logout') }}"
+           onclick="event.preventDefault(); document.getElementById('side-menu-logout-form').submit();">
+            ログアウト
+        </a>
+        <form id="side-menu-logout-form" action="{{ route('logout') }}" method="POST" class="d-none">
+            @csrf
+        </form>
+    </div>
 </aside>

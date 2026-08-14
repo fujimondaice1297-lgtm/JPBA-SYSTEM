@@ -1,7 +1,7 @@
 # Columns by table (generated)
 
 - Source: `docs/db/columns_public.csv`
-- Generated: 2026-07-22 08:30:05
+- Generated: 2026-08-13 17:57:40
 
 > ⚠️ このファイルは自動生成です。手で編集しないでください。
 
@@ -34,6 +34,49 @@
 | 6 | created_at | timestamp without time zone | YES |
 | 7 | updated_at | timestamp without time zone | YES |
 
+## annual_schedule_rows (21 columns)
+
+| # | column | type | nullable |
+|---:|---|---|---|
+| 1 | id | bigint | NO |
+| 2 | annual_schedule_id | bigint | NO |
+| 3 | tournament_id | bigint | YES |
+| 4 | month | smallint | NO |
+| 5 | sort_order | smallint | NO |
+| 6 | start_date | date | YES |
+| 7 | end_date | date | YES |
+| 8 | date_label | character varying | YES |
+| 9 | title | text | YES |
+| 10 | eligibility | character varying | YES |
+| 11 | region | character varying | YES |
+| 12 | venue | text | YES |
+| 13 | point_mark | character varying | YES |
+| 14 | average_mark | character varying | YES |
+| 15 | prize_mark | character varying | YES |
+| 16 | title_mark | character varying | YES |
+| 17 | note | text | YES |
+| 18 | row_type | character varying | NO |
+| 19 | source_type | character varying | NO |
+| 20 | created_at | timestamp without time zone | YES |
+| 21 | updated_at | timestamp without time zone | YES |
+
+## annual_schedules (12 columns)
+
+| # | column | type | nullable |
+|---:|---|---|---|
+| 1 | id | bigint | NO |
+| 2 | year | smallint | NO |
+| 3 | title | character varying | NO |
+| 4 | source_updated_on | date | YES |
+| 5 | source_url | text | YES |
+| 6 | notice | text | YES |
+| 7 | status | character varying | NO |
+| 8 | published_at | timestamp without time zone | YES |
+| 9 | created_by_user_id | bigint | YES |
+| 10 | updated_by_user_id | bigint | YES |
+| 11 | created_at | timestamp without time zone | YES |
+| 12 | updated_at | timestamp without time zone | YES |
+
 ## approved_ball_pro_bowler (7 columns)
 
 | # | column | type | nullable |
@@ -46,7 +89,7 @@
 | 6 | updated_at | timestamp without time zone | YES |
 | 7 | pro_bowler_id | bigint | YES |
 
-## approved_balls (8 columns)
+## approved_balls (29 columns)
 
 | # | column | type | nullable |
 |---:|---|---|---|
@@ -58,6 +101,27 @@
 | 7 | created_at | timestamp without time zone | YES |
 | 8 | updated_at | timestamp without time zone | YES |
 | 9 | release_date | date | YES |
+| 10 | manufacturer_id | bigint | YES |
+| 11 | brand | character varying | YES |
+| 12 | sort_name | character varying | YES |
+| 13 | source_key | character varying | YES |
+| 14 | source_url | text | YES |
+| 15 | source_image_url | text | YES |
+| 16 | image_path | text | YES |
+| 17 | image_sha256 | character varying | YES |
+| 18 | catalog_status | character varying | NO |
+| 19 | source_payload | json | YES |
+| 20 | source_fingerprint | character varying | YES |
+| 21 | first_seen_at | timestamp without time zone | YES |
+| 22 | last_seen_at | timestamp without time zone | YES |
+| 23 | imported_at | timestamp without time zone | YES |
+| 24 | image_imported_at | timestamp without time zone | YES |
+| 25 | usbc_match_status | character varying | NO |
+| 26 | usbc_match_method | character varying | YES |
+| 27 | usbc_matched_brand | character varying | YES |
+| 28 | usbc_matched_name | character varying | YES |
+| 29 | usbc_match_candidates | json | YES |
+| 30 | usbc_checked_at | timestamp without time zone | YES |
 
 ## area (5 columns)
 
@@ -69,6 +133,91 @@
 | 4 | created_by | character varying | YES |
 | 5 | updated_by | character varying | YES |
 
+## ball_annual_registration_histories (10 columns)
+
+| # | column | type | nullable |
+|---:|---|---|---|
+| 1 | id | bigint | NO |
+| 2 | registration_id | bigint | NO |
+| 3 | action | character varying | NO |
+| 4 | from_status | character varying | YES |
+| 5 | to_status | character varying | YES |
+| 6 | acted_by_user_id | bigint | YES |
+| 7 | note | text | YES |
+| 8 | payload | json | YES |
+| 9 | created_at | timestamp without time zone | YES |
+| 10 | updated_at | timestamp without time zone | YES |
+
+## ball_annual_registration_items (5 columns)
+
+| # | column | type | nullable |
+|---:|---|---|---|
+| 1 | id | bigint | NO |
+| 2 | registration_id | bigint | NO |
+| 3 | used_ball_id | bigint | NO |
+| 4 | created_at | timestamp without time zone | YES |
+| 5 | updated_at | timestamp without time zone | YES |
+
+## ball_annual_registrations (14 columns)
+
+| # | column | type | nullable |
+|---:|---|---|---|
+| 1 | id | bigint | NO |
+| 2 | pro_bowler_id | bigint | NO |
+| 3 | registration_year | smallint | NO |
+| 4 | revision | integer | NO |
+| 5 | status | character varying | NO |
+| 6 | submitted_at | timestamp without time zone | YES |
+| 7 | submitted_by_user_id | bigint | YES |
+| 8 | approved_at | timestamp without time zone | YES |
+| 9 | approved_by_user_id | bigint | YES |
+| 10 | returned_at | timestamp without time zone | YES |
+| 11 | returned_by_user_id | bigint | YES |
+| 12 | return_reason | text | YES |
+| 13 | created_at | timestamp without time zone | YES |
+| 14 | updated_at | timestamp without time zone | YES |
+
+## ball_catalog_import_failures (12 columns)
+
+| # | column | type | nullable |
+|---:|---|---|---|
+| 1 | id | bigint | NO |
+| 2 | import_run_id | bigint | NO |
+| 3 | manufacturer_id | bigint | YES |
+| 4 | phase | character varying | NO |
+| 5 | page_url | text | YES |
+| 6 | product_url | text | YES |
+| 7 | image_url | text | YES |
+| 8 | error_message | text | NO |
+| 9 | attempt_count | smallint | NO |
+| 10 | resolved_at | timestamp without time zone | YES |
+| 11 | created_at | timestamp without time zone | YES |
+| 12 | updated_at | timestamp without time zone | YES |
+
+## ball_catalog_import_runs (19 columns)
+
+| # | column | type | nullable |
+|---:|---|---|---|
+| 1 | id | bigint | NO |
+| 2 | manufacturer_id | bigint | YES |
+| 3 | mode | character varying | NO |
+| 4 | status | character varying | NO |
+| 5 | started_at | timestamp without time zone | NO |
+| 6 | completed_at | timestamp without time zone | YES |
+| 7 | page_count | integer | NO |
+| 8 | item_count | integer | NO |
+| 9 | created_count | integer | NO |
+| 10 | updated_count | integer | NO |
+| 11 | unchanged_count | integer | NO |
+| 12 | image_downloaded_count | integer | NO |
+| 13 | image_reused_count | integer | NO |
+| 14 | image_failed_count | integer | NO |
+| 15 | error_count | integer | NO |
+| 16 | cursor_url | text | YES |
+| 17 | report | json | YES |
+| 18 | created_at | timestamp without time zone | YES |
+| 19 | updated_at | timestamp without time zone | YES |
+
 ## ball_info (6 columns)
 
 | # | column | type | nullable |
@@ -79,6 +228,20 @@
 | 4 | update_date | timestamp without time zone | YES |
 | 5 | created_by | character varying | YES |
 | 6 | updated_by | character varying | YES |
+
+## ball_manufacturers (9 columns)
+
+| # | column | type | nullable |
+|---:|---|---|---|
+| 1 | id | bigint | NO |
+| 2 | name | character varying | NO |
+| 3 | slug | character varying | NO |
+| 4 | base_url | text | NO |
+| 5 | catalog_url | text | NO |
+| 6 | is_active | boolean | NO |
+| 7 | sort_order | smallint | NO |
+| 8 | created_at | timestamp without time zone | YES |
+| 9 | updated_at | timestamp without time zone | YES |
 
 ## cache (3 columns)
 
@@ -400,6 +563,25 @@
 | 4 | created_by | character varying | YES |
 | 5 | updated_by | character varying | YES |
 
+## managed_public_pages (14 columns)
+
+| # | column | type | nullable |
+|---:|---|---|---|
+| 1 | id | bigint | NO |
+| 2 | slug | character varying | NO |
+| 3 | title | character varying | NO |
+| 4 | body_html | text | NO |
+| 5 | source_url | text | YES |
+| 6 | navigation_group | character varying | YES |
+| 7 | sort_order | smallint | NO |
+| 8 | is_published | boolean | NO |
+| 9 | published_at | timestamp without time zone | YES |
+| 10 | source_checked_at | timestamp without time zone | YES |
+| 11 | created_by_user_id | bigint | YES |
+| 12 | updated_by_user_id | bigint | YES |
+| 13 | created_at | timestamp without time zone | YES |
+| 14 | updated_at | timestamp without time zone | YES |
+
 ## match_videos (5 columns)
 
 | # | column | type | nullable |
@@ -430,6 +612,23 @@
 | 1 | id | integer | NO |
 | 2 | migration | character varying | NO |
 | 3 | batch | integer | NO |
+
+## official_profile_stat_snapshots (12 columns)
+
+| # | column | type | nullable |
+|---:|---|---|---|
+| 1 | id | bigint | NO |
+| 2 | pro_bowler_id | bigint | NO |
+| 3 | license_no | character varying | NO |
+| 4 | source_url | text | NO |
+| 5 | captured_at | timestamp without time zone | NO |
+| 6 | perfect_count | integer | NO |
+| 7 | eight_hundred_count | integer | NO |
+| 8 | seven_ten_count | integer | NO |
+| 9 | payload | json | NO |
+| 10 | payload_hash | character varying | NO |
+| 11 | created_at | timestamp without time zone | YES |
+| 12 | updated_at | timestamp without time zone | YES |
 
 ## official_title_import_candidates (21 columns)
 
@@ -511,6 +710,27 @@
 | 6 | created_at | timestamp without time zone | YES |
 | 7 | updated_at | timestamp without time zone | YES |
 
+## pro_bowler_annual_records (16 columns)
+
+| # | column | type | nullable |
+|---:|---|---|---|
+| 1 | id | bigint | NO |
+| 2 | pro_bowler_id | bigint | NO |
+| 3 | season_key | character varying | NO |
+| 4 | season_start_year | smallint | NO |
+| 5 | season_end_year | smallint | NO |
+| 6 | ranking_rank | integer | YES |
+| 7 | games | integer | YES |
+| 8 | total_pin | bigint | YES |
+| 9 | points | numeric | YES |
+| 10 | average | numeric | YES |
+| 11 | prize_money | bigint | YES |
+| 12 | source_type | character varying | NO |
+| 13 | source_url | text | YES |
+| 14 | captured_at | timestamp without time zone | YES |
+| 15 | created_at | timestamp without time zone | YES |
+| 16 | updated_at | timestamp without time zone | YES |
+
 ## pro_bowler_biographies (7 columns)
 
 | # | column | type | nullable |
@@ -547,6 +767,20 @@
 | 5 | instagram_url | character varying | YES |
 | 6 | youtube_url | character varying | YES |
 | 7 | facebook_url | character varying | YES |
+| 8 | created_at | timestamp without time zone | YES |
+| 9 | updated_at | timestamp without time zone | YES |
+
+## pro_bowler_official_history_imports (9 columns)
+
+| # | column | type | nullable |
+|---:|---|---|---|
+| 1 | id | bigint | NO |
+| 2 | pro_bowler_id | bigint | NO |
+| 3 | annual_row_count | integer | NO |
+| 4 | participation_year_count | integer | NO |
+| 5 | tournament_row_count | integer | NO |
+| 6 | source_url | text | YES |
+| 7 | completed_at | timestamp without time zone | NO |
 | 8 | created_at | timestamp without time zone | YES |
 | 9 | updated_at | timestamp without time zone | YES |
 
@@ -688,7 +922,39 @@
 | 11 | source_url | text | YES |
 | 12 | source_label | character varying | YES |
 
-## pro_bowler_trainings (9 columns)
+## pro_bowler_tournament_histories (14 columns)
+
+| # | column | type | nullable |
+|---:|---|---|---|
+| 1 | id | bigint | NO |
+| 2 | pro_bowler_id | bigint | NO |
+| 3 | season_year | smallint | NO |
+| 4 | held_on | date | NO |
+| 5 | tournament_name | text | NO |
+| 6 | ranking_rank | integer | YES |
+| 7 | average | numeric | YES |
+| 8 | prize_money | bigint | YES |
+| 9 | source_type | character varying | NO |
+| 10 | source_url | text | YES |
+| 11 | source_fingerprint | character | NO |
+| 12 | captured_at | timestamp without time zone | YES |
+| 13 | created_at | timestamp without time zone | YES |
+| 14 | updated_at | timestamp without time zone | YES |
+
+## pro_bowler_tournament_history_syncs (8 columns)
+
+| # | column | type | nullable |
+|---:|---|---|---|
+| 1 | id | bigint | NO |
+| 2 | pro_bowler_id | bigint | NO |
+| 3 | season_year | smallint | NO |
+| 4 | row_count | integer | NO |
+| 5 | source_url | text | YES |
+| 6 | captured_at | timestamp without time zone | NO |
+| 7 | created_at | timestamp without time zone | YES |
+| 8 | updated_at | timestamp without time zone | YES |
+
+## pro_bowler_trainings (13 columns)
 
 | # | column | type | nullable |
 |---:|---|---|---|
@@ -701,8 +967,12 @@
 | 7 | notes | text | YES |
 | 8 | created_at | timestamp without time zone | YES |
 | 9 | updated_at | timestamp without time zone | YES |
+| 10 | training_session_id | bigint | YES |
+| 11 | record_status | character varying | NO |
+| 12 | revoked_at | timestamp without time zone | YES |
+| 13 | recorded_by_user_id | bigint | YES |
 
-## pro_bowlers (124 columns)
+## pro_bowlers (126 columns)
 
 | # | column | type | nullable |
 |---:|---|---|---|
@@ -830,6 +1100,8 @@
 | 124 | official_profile_imported_at | timestamp without time zone | YES |
 | 125 | official_profile_import_error | text | YES |
 | 126 | season_trial_win_count | integer | YES |
+| 127 | training_compliance_status | character varying | NO |
+| 128 | training_compliance_checked_at | timestamp without time zone | YES |
 
 ## pro_dsp (7 columns)
 
@@ -985,7 +1257,21 @@
 | 6 | created_by | character varying | YES |
 | 7 | updated_by | character varying | YES |
 
-## record_types (10 columns)
+## record_certification_sequences (9 columns)
+
+| # | column | type | nullable |
+|---:|---|---|---|
+| 1 | id | bigint | NO |
+| 2 | record_type | character varying | NO |
+| 3 | gender | character | NO |
+| 4 | next_number | bigint | NO |
+| 5 | prefix | character varying | YES |
+| 6 | suffix | character varying | YES |
+| 7 | is_enabled | boolean | NO |
+| 8 | created_at | timestamp without time zone | YES |
+| 9 | updated_at | timestamp without time zone | YES |
+
+## record_types (35 columns)
 
 | # | column | type | nullable |
 |---:|---|---|---|
@@ -993,12 +1279,37 @@
 | 2 | pro_bowler_id | bigint | NO |
 | 3 | record_type | character varying | NO |
 | 4 | tournament_name | character varying | NO |
-| 5 | game_numbers | character varying | NO |
+| 5 | game_numbers | character varying | YES |
 | 6 | frame_number | character varying | YES |
-| 7 | awarded_on | date | NO |
-| 8 | certification_number | character varying | NO |
+| 7 | awarded_on | date | YES |
+| 8 | certification_number | character varying | YES |
 | 9 | created_at | timestamp without time zone | YES |
 | 10 | updated_at | timestamp without time zone | YES |
+| 11 | tournament_id | bigint | YES |
+| 12 | source_game_score_id | bigint | YES |
+| 13 | score_series_definition_id | bigint | YES |
+| 14 | stage | character varying | YES |
+| 15 | shift | character varying | YES |
+| 16 | gender | character | YES |
+| 17 | series_label | character varying | YES |
+| 18 | series_start_game | smallint | YES |
+| 19 | series_end_game | smallint | YES |
+| 20 | series_total | smallint | YES |
+| 21 | series_scores | json | YES |
+| 22 | status | character varying | NO |
+| 23 | registration_mode | character varying | NO |
+| 24 | detection_key | character varying | YES |
+| 25 | source_type | character varying | YES |
+| 26 | source_url | text | YES |
+| 27 | source_label | character varying | YES |
+| 28 | evidence_text | text | YES |
+| 29 | warning | text | YES |
+| 30 | detected_at | timestamp without time zone | YES |
+| 31 | confirmed_at | timestamp without time zone | YES |
+| 32 | confirmed_by | bigint | YES |
+| 33 | count_applied_at | timestamp without time zone | YES |
+| 34 | certification_number_value | bigint | YES |
+| 35 | notes | text | YES |
 
 ## registered_balls (10 columns)
 
@@ -1101,6 +1412,24 @@
 | 20 | confirmed_game_score_id | bigint | YES |
 | 21 | created_at | timestamp without time zone | YES |
 | 22 | updated_at | timestamp without time zone | YES |
+
+## score_series_definitions (13 columns)
+
+| # | column | type | nullable |
+|---:|---|---|---|
+| 1 | id | bigint | NO |
+| 2 | tournament_id | bigint | NO |
+| 3 | stage | character varying | NO |
+| 4 | shift | character varying | YES |
+| 5 | gender | character | YES |
+| 6 | label | character varying | NO |
+| 7 | start_game | smallint | NO |
+| 8 | end_game | smallint | NO |
+| 9 | is_800_eligible | boolean | NO |
+| 10 | is_enabled | boolean | NO |
+| 11 | source | character varying | NO |
+| 12 | created_at | timestamp without time zone | YES |
+| 13 | updated_at | timestamp without time zone | YES |
 
 ## sessions (6 columns)
 
@@ -1457,6 +1786,32 @@
 | 4 | created_at | timestamp without time zone | YES |
 | 5 | updated_at | timestamp without time zone | YES |
 
+## tournament_result_format_versions (9 columns)
+
+| # | column | type | nullable |
+|---:|---|---|---|
+| 1 | id | bigint | NO |
+| 2 | tournament_result_format_id | bigint | NO |
+| 3 | version_no | integer | NO |
+| 4 | template_disk | character varying | NO |
+| 5 | template_path | character varying | NO |
+| 6 | notes | text | YES |
+| 7 | is_active | boolean | NO |
+| 8 | created_at | timestamp without time zone | YES |
+| 9 | updated_at | timestamp without time zone | YES |
+
+## tournament_result_formats (7 columns)
+
+| # | column | type | nullable |
+|---:|---|---|---|
+| 1 | id | bigint | NO |
+| 2 | name | character varying | NO |
+| 3 | code | character varying | NO |
+| 4 | description | text | YES |
+| 5 | is_active | boolean | NO |
+| 6 | created_at | timestamp without time zone | YES |
+| 7 | updated_at | timestamp without time zone | YES |
+
 ## tournament_result_outputs (9 columns)
 
 | # | column | type | nullable |
@@ -1707,7 +2062,7 @@
 | 7 | created_at | timestamp without time zone | YES |
 | 8 | updated_at | timestamp without time zone | YES |
 
-## tournaments (96 columns)
+## tournaments (98 columns)
 
 | # | column | type | nullable |
 |---:|---|---|---|
@@ -1807,6 +2162,8 @@
 | 94 | counts_for_prize | boolean | NO |
 | 95 | title_scope | character varying | NO |
 | 96 | template_snapshot | json | YES |
+| 97 | tournament_result_format_version_id | bigint | YES |
+| 98 | ball_registration_limit | smallint | NO |
 
 ## tournamentscore (4 columns)
 
@@ -1816,6 +2173,102 @@
 | 2 | name | character varying | NO |
 | 3 | created_at | timestamp without time zone | YES |
 | 4 | updated_at | timestamp without time zone | YES |
+
+## training_compliance_notifications (13 columns)
+
+| # | column | type | nullable |
+|---:|---|---|---|
+| 1 | id | bigint | NO |
+| 2 | pro_bowler_id | bigint | NO |
+| 3 | pro_bowler_training_id | bigint | YES |
+| 4 | notification_type | character varying | NO |
+| 5 | expires_on | date | NO |
+| 6 | notice_year | smallint | NO |
+| 7 | recipient_email | character varying | YES |
+| 8 | status | character varying | NO |
+| 9 | sent_at | timestamp without time zone | YES |
+| 10 | error_message | text | YES |
+| 11 | requested_by_user_id | bigint | YES |
+| 12 | created_at | timestamp without time zone | YES |
+| 13 | updated_at | timestamp without time zone | YES |
+
+## training_official_list_entries (11 columns)
+
+| # | column | type | nullable |
+|---:|---|---|---|
+| 1 | id | bigint | NO |
+| 2 | training_official_list_id | bigint | NO |
+| 3 | pro_bowler_id | bigint | YES |
+| 4 | gender | character | NO |
+| 5 | license_no_num | integer | NO |
+| 6 | source_order | integer | NO |
+| 7 | source_name | character varying | YES |
+| 8 | match_status | character varying | NO |
+| 9 | notes | text | YES |
+| 10 | created_at | timestamp without time zone | YES |
+| 11 | updated_at | timestamp without time zone | YES |
+
+## training_official_lists (23 columns)
+
+| # | column | type | nullable |
+|---:|---|---|---|
+| 1 | id | bigint | NO |
+| 2 | training_id | bigint | NO |
+| 3 | edition_number | smallint | NO |
+| 4 | title | character varying | NO |
+| 5 | valid_from | date | NO |
+| 6 | valid_through | date | NO |
+| 7 | source_page_url | text | YES |
+| 8 | source_url | text | NO |
+| 9 | source_published_at | timestamp without time zone | NO |
+| 10 | source_sha256 | character varying | NO |
+| 11 | is_current | boolean | NO |
+| 12 | sync_status | character varying | NO |
+| 13 | total_count | integer | NO |
+| 14 | male_count | integer | NO |
+| 15 | female_count | integer | NO |
+| 16 | matched_count | integer | NO |
+| 17 | unmatched_count | integer | NO |
+| 18 | inactive_count | integer | NO |
+| 19 | imported_at | timestamp without time zone | YES |
+| 20 | imported_by_user_id | bigint | YES |
+| 21 | notes | text | YES |
+| 22 | created_at | timestamp without time zone | YES |
+| 23 | updated_at | timestamp without time zone | YES |
+
+## training_session_participants (10 columns)
+
+| # | column | type | nullable |
+|---:|---|---|---|
+| 1 | id | bigint | NO |
+| 2 | training_session_id | bigint | NO |
+| 3 | pro_bowler_id | bigint | NO |
+| 4 | attendance_status | character varying | NO |
+| 5 | notes | text | YES |
+| 6 | pro_bowler_training_id | bigint | YES |
+| 7 | processed_at | timestamp without time zone | YES |
+| 8 | processed_by_user_id | bigint | YES |
+| 9 | created_at | timestamp without time zone | YES |
+| 10 | updated_at | timestamp without time zone | YES |
+
+## training_sessions (14 columns)
+
+| # | column | type | nullable |
+|---:|---|---|---|
+| 1 | id | bigint | NO |
+| 2 | training_id | bigint | NO |
+| 3 | session_year | smallint | NO |
+| 4 | name | character varying | NO |
+| 5 | held_on | date | NO |
+| 6 | venue | character varying | YES |
+| 7 | status | character varying | NO |
+| 8 | notes | text | YES |
+| 9 | finalized_at | timestamp without time zone | YES |
+| 10 | finalized_by_user_id | bigint | YES |
+| 11 | created_by_user_id | bigint | YES |
+| 12 | updated_by_user_id | bigint | YES |
+| 13 | created_at | timestamp without time zone | YES |
+| 14 | updated_at | timestamp without time zone | YES |
 
 ## trainings (7 columns)
 
@@ -1828,6 +2281,45 @@
 | 5 | mandatory | boolean | NO |
 | 6 | created_at | timestamp without time zone | YES |
 | 7 | updated_at | timestamp without time zone | YES |
+
+## usbc_approved_ball_entries (12 columns)
+
+| # | column | type | nullable |
+|---:|---|---|---|
+| 1 | id | bigint | NO |
+| 2 | list_id | bigint | NO |
+| 3 | brand | character varying | NO |
+| 4 | name | character varying | NO |
+| 5 | approved_date_text | character varying | YES |
+| 6 | approved_on | date | YES |
+| 7 | image_url | text | YES |
+| 8 | normalized_brand | character varying | NO |
+| 9 | normalized_name | character varying | NO |
+| 10 | source_fingerprint | character varying | NO |
+| 11 | created_at | timestamp without time zone | YES |
+| 12 | updated_at | timestamp without time zone | YES |
+
+## usbc_approved_ball_lists (17 columns)
+
+| # | column | type | nullable |
+|---:|---|---|---|
+| 1 | id | bigint | NO |
+| 2 | official_updated_on | date | YES |
+| 3 | source_page_url | text | NO |
+| 4 | source_pdf_url | text | YES |
+| 5 | source_api_url | text | NO |
+| 6 | source_sha256 | character varying | NO |
+| 7 | status | character varying | NO |
+| 8 | fetched_at | timestamp without time zone | NO |
+| 9 | completed_at | timestamp without time zone | YES |
+| 10 | brand_count | integer | NO |
+| 11 | entry_count | integer | NO |
+| 12 | matched_catalog_count | integer | NO |
+| 13 | ambiguous_catalog_count | integer | NO |
+| 14 | unlisted_catalog_count | integer | NO |
+| 15 | report | json | YES |
+| 16 | created_at | timestamp without time zone | YES |
+| 17 | updated_at | timestamp without time zone | YES |
 
 ## used_balls (9 columns)
 

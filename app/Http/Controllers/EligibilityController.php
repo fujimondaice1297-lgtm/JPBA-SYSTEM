@@ -5,19 +5,10 @@ namespace App\Http\Controllers;
 use App\Models\ProBowler;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Schema;
-use Illuminate\Support\Str;
 
 class EligibilityController extends Controller
 {
     /* ============================== 共通ユーティリティ ============================== */
-
-    /** 画像URL正規化（/storage 付与など） */
-    private function normalizePortrait(?string $p): ?string
-    {
-        if (!$p) return null;
-        if (Str::startsWith($p, ['http://','https://','/'])) return $p;
-        return '/storage/' . ltrim($p, '/');
-    }
 
     /** 名前での並び（かな→漢字→ID） */
     private function orderByFor(Builder $q): Builder
@@ -37,17 +28,13 @@ class EligibilityController extends Controller
     private function pickForList(ProBowler $p): array
     {
         $name  = $p->name_kanji ?? $p->name ?? '';
-        $photo = $p->profile_image_public
-               ?? $p->public_image_path
-               ?? null;
-
         return [
             'id'           => $p->id,
             'name'         => $name,
             'name_kana'    => $p->name_kana ?? null,
             'license_no'   => $p->license_no ?? null,   // 表示時に英字を落とす
             'sex'          => (int)($p->sex ?? 0),      // 1:男, 2:女
-            'portrait_url' => $this->normalizePortrait($photo),
+            'portrait_url' => $p->public_photo_url,
             'a_number'     => $p->a_license_number ?? null,
             'seed_date'    => $p->permanent_seed_date ? (string)$p->permanent_seed_date : null,
         ];

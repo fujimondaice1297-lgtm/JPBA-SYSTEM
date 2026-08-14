@@ -411,14 +411,18 @@
           <tbody>
             <tr>
               <td class="fw-bold">1. エントリー確認</td>
-              @php($badge = $badgeFor($readiness['entries'] ?? 'waiting'))
+              @php
+                $badge = $badgeFor($readiness['entries'] ?? 'waiting');
+              @endphp
               <td><span class="badge {{ $badge['class'] }}">{{ $badge['label'] }}</span></td>
               <td>出場者・シフト・レーン・使用ボールの前提を確認します。</td>
               <td><a href="{{ route('tournaments.entries.index', $tournament->id) }}" class="btn btn-sm btn-outline-dark">エントリー一覧</a></td>
             </tr>
             <tr>
               <td class="fw-bold">2. スコア入力</td>
-              @php($badge = $badgeFor($readiness['scores'] ?? 'waiting'))
+              @php
+                $badge = $badgeFor($readiness['scores'] ?? 'waiting');
+              @endphp
               <td><span class="badge {{ $badge['class'] }}">{{ $badge['label'] }}</span></td>
               <td>
                 `game_scores` を速報・順位計算の正本として入力します。
@@ -438,7 +442,9 @@
             </tr>
             <tr>
               <td class="fw-bold">3. 正式成績反映</td>
-              @php($badge = $badgeFor($readiness['snapshots'] ?? 'waiting'))
+              @php
+                $badge = $badgeFor($readiness['snapshots'] ?? 'waiting');
+              @endphp
               <td><span class="badge {{ $badge['class'] }}">{{ $badge['label'] }}</span></td>
               <td>
                 @if ($fullFinalSnapshot)
@@ -455,7 +461,9 @@
             </tr>
             <tr>
               <td class="fw-bold">4. 賞金・ポイント</td>
-              @php($badge = $badgeFor($readiness['awards'] ?? 'waiting'))
+              @php
+                $badge = $badgeFor($readiness['awards'] ?? 'waiting');
+              @endphp
               <td><span class="badge {{ $badge['class'] }}">{{ $badge['label'] }}</span></td>
               <td>
                 配分: ポイント {{ $awards['point_distribution_count'] ?? 0 }} / 賞金 {{ $awards['prize_distribution_count'] ?? 0 }}
@@ -466,15 +474,14 @@
                 @endif
               </td>
               <td>
-                <form method="POST" action="{{ route('tournaments.results.apply_awards_points', $tournament->id) }}" class="d-inline">
-                  @csrf
-                  <button type="submit" class="btn btn-sm btn-outline-danger">賞金・ポイント反映</button>
-                </form>
+                <a href="{{ route('tournaments.result_publications.index', $tournament->id) }}" class="btn btn-sm btn-outline-danger">確定前プレビューで確認</a>
               </td>
             </tr>
             <tr>
               <td class="fw-bold">5. タイトル同期</td>
-              @php($badge = $badgeFor($readiness['titles'] ?? 'waiting'))
+              @php
+                $badge = $badgeFor($readiness['titles'] ?? 'waiting');
+              @endphp
               <td><span class="badge {{ $badge['class'] }}">{{ $badge['label'] }}</span></td>
               <td>
                 優勝者を `pro_bowler_titles` へ同期します。同期済み: {{ $titles['title_count'] ?? 0 }} 件
@@ -483,16 +490,14 @@
                 @endif
               </td>
               <td>
-                <form method="POST" action="{{ route('tournaments.results.sync', $tournament->id) }}" class="d-inline">
-                  @csrf
-                  <input type="hidden" name="year" value="{{ $automationSummary['tournament_year'] ?? $tournament->year }}">
-                  <button type="submit" class="btn btn-sm btn-outline-primary">タイトル同期</button>
-                </form>
+                <a href="{{ route('tournaments.result_publications.index', $tournament->id) }}" class="btn btn-sm btn-outline-primary">公式結果の確定へ</a>
               </td>
             </tr>
             <tr>
               <td class="fw-bold">6. シード確認</td>
-              @php($badge = $badgeFor($readiness['seeds'] ?? 'waiting'))
+              @php
+                $badge = $badgeFor($readiness['seeds'] ?? 'waiting');
+              @endphp
               <td><span class="badge {{ $badge['class'] }}">{{ $badge['label'] }}</span></td>
               <td>
                 年度別シードと大会別追加シードを確認し、PDFの `S` 表示へつなげます。
@@ -504,7 +509,9 @@
             </tr>
             <tr>
               <td class="fw-bold">7. PDF確認</td>
-              @php($badge = $badgeFor($readiness['pdf'] ?? 'waiting'))
+              @php
+                $badge = $badgeFor($readiness['pdf'] ?? 'waiting');
+              @endphp
               <td><span class="badge {{ $badge['class'] }}">{{ $badge['label'] }}</span></td>
               <td>最終成績PDF・優先出場PDFを確認します。</td>
               <td>

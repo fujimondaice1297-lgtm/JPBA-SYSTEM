@@ -17,6 +17,7 @@ class TournamentPrioritySyncService
 
     public function __construct(
         private readonly ProBowlerSeedService $seedService,
+        private readonly TournamentEntryEligibilityService $entryEligibility,
     ) {}
 
     public function sync(Tournament $tournament): array
@@ -202,6 +203,10 @@ class TournamentPrioritySyncService
     private function eligibleBowler(?ProBowler $bowler, Tournament $tournament): bool
     {
         if (! $bowler || ! $bowler->is_active) {
+            return false;
+        }
+
+        if (! $this->entryEligibility->evaluate($bowler, $tournament)['allowed']) {
             return false;
         }
 

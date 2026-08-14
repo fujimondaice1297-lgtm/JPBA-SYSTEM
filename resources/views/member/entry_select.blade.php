@@ -84,6 +84,8 @@
               $laneReady = !$useLaneDraw || !empty($entry?->lane);
               $checkedIn = !is_null($entry?->checked_in_at);
               $preferredShift = old("preferred_shifts.{$tournament->id}", $entry?->preferred_shift_code);
+              $rowEligibility = $tournamentEligibility[$tournament->id] ?? $eligibility;
+              $rowAllowed = (bool) ($rowEligibility['allowed'] ?? false);
             @endphp
 
             <tr>
@@ -96,7 +98,7 @@
               <td>
                 @if ($status === 'waiting')
                   <span class="badge bg-warning text-dark">ウェイティング中</span>
-                @elseif ($isAllowed)
+                @elseif ($rowAllowed)
                   <select name="entries[{{ $tournament->id }}]" class="form-select">
                     <option value="entry" {{ $status === 'entry' ? 'selected' : '' }}>エントリーする</option>
                     <option value="no_entry" {{ $status === 'no_entry' ? 'selected' : '' }}>エントリーしない</option>
@@ -109,7 +111,7 @@
               <td>
                 @if ($status === 'waiting')
                   <span class="text-muted">管理者登録</span>
-                @elseif ($isAllowed && $useShiftDraw && $acceptShiftPreference && $shiftCodes->isNotEmpty())
+                @elseif ($rowAllowed && $useShiftDraw && $acceptShiftPreference && $shiftCodes->isNotEmpty())
                   <select name="preferred_shifts[{{ $tournament->id }}]" class="form-select">
                     <option value="">指定なし</option>
                     @foreach ($shiftCodes as $shiftCode)
@@ -135,8 +137,8 @@
                     抽選結果
                   </a>
 
-                  @if (!$isAllowed && !$entry)
-                    <span class="text-muted">{{ $eligibility['message'] ?? 'エントリー対象外です。' }}</span>
+                  @if (!$rowAllowed && !$entry)
+                    <span class="text-danger">{{ $rowEligibility['message'] ?? 'エントリー対象外です。' }}</span>
                   @elseif ($entry && $status === 'waiting')
                     <span class="badge bg-warning text-dark">ウェイティング登録済み</span>
                     @if (!is_null($entry->waitlist_priority))

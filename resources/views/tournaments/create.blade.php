@@ -180,7 +180,37 @@
              {{ old('inspection_required') ? 'checked' : '' }}>
       <small class="text-muted d-block">※ チェック時：検量証未入力のボールは仮登録扱い</small>
     </div>
-  </div>
+
+    <div class="col-md-3 mb-3">
+      <label class="form-label">大会使用ボール登録上限</label>
+      <div class="input-group">
+        <input type="number" name="ball_registration_limit" min="1" max="100" required
+               class="form-control @error('ball_registration_limit') is-invalid @enderror"
+               value="{{ old('ball_registration_limit', $prefill['ball_registration_limit'] ?? 12) }}">
+        <span class="input-group-text">個／選手</span>
+      </div>
+      @error('ball_registration_limit')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+      <small class="text-muted d-block">大会要項で定める、1選手あたりの登録可能個数です。</small>
+    </div>
+    </div>
+
+    <div class="col-12 mb-3">
+      <div class="border rounded p-3 bg-light">
+        <input type="hidden" name="sync_annual_schedule" value="0">
+        <div class="form-check mb-2">
+          <input class="form-check-input" type="checkbox" name="sync_annual_schedule" value="1" id="sync_annual_schedule" {{ old('sync_annual_schedule', 1) ? 'checked' : '' }}>
+          <label class="form-check-label fw-bold" for="sync_annual_schedule">大会を年間予定表へ自動反映する</label>
+        </div>
+        <label class="form-label mb-1">同名の予定がすでにある場合</label>
+        <select class="form-select form-select-sm @error('annual_schedule_conflict_action') is-invalid @enderror" name="annual_schedule_conflict_action" style="max-width:520px">
+          @foreach(['ask'=>'確認してから決める（推奨）','link'=>'既存行に紐づける（掲載内容は維持）','overwrite'=>'既存行を大会情報で上書きする','separate'=>'別の行として追加する','skip'=>'年間予定表へ反映しない'] as $value => $label)
+            <option value="{{ $value }}" {{ old('annual_schedule_conflict_action', 'ask') === $value ? 'selected' : '' }}>{{ $label }}</option>
+          @endforeach
+        </select>
+        @error('annual_schedule_conflict_action')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+        <small class="text-muted d-block mt-1">大会名・開催日・会場を確認し、同名候補があれば無断で上書きしません。</small>
+      </div>
+    </div>
 
   <h4 data-bs-toggle="collapse" href="#t-qualification" role="button" aria-expanded="true" aria-controls="t-qualification">
     集計・優先出場設定 <small class="text-muted">（クリックで開閉）</small>
@@ -254,6 +284,84 @@
     <div class="col-md-3 mb-3">
       <label class="form-label">上位通過人数</label>
       <input type="number" name="priority_source_tournament_top_n" min="1" max="999" class="form-control" value="{{ old('priority_source_tournament_top_n') }}">
+    </div>
+  </div>
+
+  {{-- 最終成績PDF形式 --}}
+  <h4 data-bs-toggle="collapse" href="#t-result-format" role="button" aria-expanded="true" aria-controls="t-result-format">
+    最終成績PDF形式 <small class="text-muted">（クリックで開閉）</small>
+  </h4>
+  <div class="form-section row collapse show" id="t-result-format">
+    <div class="col-md-6 mb-3">
+      <label class="form-label">今回の最終成績出力形式</label>
+      <select name="tournament_result_format_version_id"
+              class="form-select @error('tournament_result_format_version_id') is-invalid @enderror">
+        <option value="">既存の標準形式</option>
+        @foreach($resultFormatVersions as $formatVersion)
+          <option value="{{ $formatVersion->id }}"
+                  {{ (string) old('tournament_result_format_version_id') === (string) $formatVersion->id ? 'selected' : '' }}>
+            {{ $formatVersion->format?->name }}（v{{ $formatVersion->version_no }}）
+          </option>
+        @endforeach
+      </select>
+      @error('tournament_result_format_version_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
+      <small class="text-muted d-block">
+        選択したExcel版をこの大会に固定します。Excelの編集・版追加は
+        <a href="{{ route('tournament_result_formats.index') }}" target="_blank">最終成績フォーマット</a>
+        から行えます。
+      </small>
+    </div>
+    <div class="col-md-6 mb-3">
+      <label class="form-label">英語大会名</label>
+      <input type="text" name="result_format[english_title]" class="form-control"
+             value="{{ old('result_format.english_title') }}">
+    </div>
+    <div class="col-md-6 mb-3">
+      <label class="form-label">大会キャッチコピー</label>
+      <textarea name="result_format[tagline]" class="form-control" rows="2">{{ old('result_format.tagline') }}</textarea>
+    </div>
+    <div class="col-md-6 mb-3">
+      <label class="form-label">PDF用大会スケジュール</label>
+      <textarea name="result_format[schedule_text]" class="form-control" rows="2"
+                placeholder="空欄なら日程欄から自動作成">{{ old('result_format.schedule_text') }}</textarea>
+    </div>
+    <div class="col-md-6 mb-3">
+      <label class="form-label">PDF用TV放映予定</label>
+      <textarea name="result_format[broadcast_text]" class="form-control" rows="2"
+                placeholder="空欄なら大会の放映・配信情報から自動作成">{{ old('result_format.broadcast_text') }}</textarea>
+    </div>
+    <div class="col-md-4 mb-3">
+      <label class="form-label">優勝者ローマ字名</label>
+      <input type="text" name="result_format[winner_roman_name]" class="form-control"
+             value="{{ old('result_format.winner_roman_name') }}">
+    </div>
+    <div class="col-md-4 mb-3">
+      <label class="form-label">優勝見出し</label>
+      <textarea name="result_format[winner_headline]" class="form-control" rows="2">{{ old('result_format.winner_headline') }}</textarea>
+    </div>
+    <div class="col-md-4 mb-3">
+      <label class="form-label">優勝ボール・記録</label>
+      <textarea name="result_format[winner_record]" class="form-control" rows="2">{{ old('result_format.winner_record') }}</textarea>
+    </div>
+    <div class="col-md-4 mb-3">
+      <label class="form-label">優勝賞金表示</label>
+      <textarea name="result_format[winner_prize_display]" class="form-control" rows="2"
+                placeholder="例：2,500,000&#10;副賞 500,000">{{ old('result_format.winner_prize_display') }}</textarea>
+    </div>
+    <div class="col-md-4 mb-3">
+      <label class="form-label">副賞・褒賞</label>
+      <textarea name="result_format[awards_text]" class="form-control" rows="4">{{ old('result_format.awards_text') }}</textarea>
+    </div>
+    <div class="col-md-4 mb-3">
+      <label class="form-label">前シーズン主な成績</label>
+      <textarea name="result_format[previous_results_text]" class="form-control" rows="4">{{ old('result_format.previous_results_text') }}</textarea>
+    </div>
+    <div class="col-md-4 mb-3">
+      <label class="form-label">対戦方式注記</label>
+      <textarea name="result_format[bracket_rules]" class="form-control" rows="2"
+                placeholder="空欄なら登録スコアから自動作成">{{ old('result_format.bracket_rules') }}</textarea>
+      <input type="text" name="result_format[footnote]" class="form-control mt-2"
+             placeholder="対戦表の脚注" value="{{ old('result_format.footnote') }}">
     </div>
   </div>
 
@@ -1128,10 +1236,13 @@
       <button type="button" id="org_search_btn" class="btn btn-outline-secondary btn-sm">検索</button>
       <select id="org_target_cat" class="form-select form-select-sm" style="width:auto;">
         <option value="host">主催へ反映</option>
+        <option value="co_host">共催へ反映</option>
         <option value="special_sponsor">特別協賛へ反映</option>
         <option value="sponsor" selected>協賛へ反映</option>
         <option value="support">後援へ反映</option>
         <option value="cooperation">協力へ反映</option>
+        <option value="supervisor">主管へ反映</option>
+        <option value="authorized">公認へ反映</option>
       </select>
       <a href="{{ route('organizations.create') }}" target="_blank" class="btn btn-sm btn-outline-primary">組織を新規登録（別タブ）</a>
       <small class="text-muted">（検索：組織マスタ／ヒットをクリックで選択中の区分に反映）</small>
@@ -1143,10 +1254,13 @@
     @php
       $orgCats = [
         'host' => '主催',
+        'co_host' => '共催',
         'special_sponsor' => '特別協賛',
         'sponsor' => '協賛',
         'support' => '後援',
         'cooperation' => '協力',
+        'supervisor' => '主管',
+        'authorized' => '公認',
       ];
     @endphp
 
@@ -1509,7 +1623,7 @@ document.addEventListener('DOMContentLoaded', function () {
   toggleOperationFields();
   toggleLaneMovementFields();
 
-  const cats = ['host', 'special_sponsor', 'sponsor', 'support', 'cooperation', '__free__'];
+  const cats = ['host', 'co_host', 'special_sponsor', 'sponsor', 'support', 'cooperation', 'supervisor', 'authorized', '__free__'];
   let ORG_SEQ = 0;
 
   function rowTpl(cat, name = '', url = '') {

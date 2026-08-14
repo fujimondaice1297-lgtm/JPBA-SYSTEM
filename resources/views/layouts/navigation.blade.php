@@ -1,7 +1,7 @@
 <nav class="navbar navbar-expand-md navbar-light bg-light border-bottom">
   <div class="container">
-    {{-- ブランド：外部サイトへ --}}
-    <a class="navbar-brand text-nowrap" href="https://www.jpba1.jp/" target="_blank" rel="noopener">
+    {{-- ブランド：新サイトの公開トップへ --}}
+    <a class="navbar-brand text-nowrap" href="{{ route('public.home') }}">
       JPBAサイト
     </a>
 
@@ -67,7 +67,7 @@
             <li><a class="dropdown-item" href="{{ route('tournament_results.index') }}">大会成績</a></li>
             <li><a class="dropdown-item" href="{{ route('record_types.index') }}">公認パーフェクト等の記録</a></li>
             <li><a class="dropdown-item" href="{{ route('instructors.index') }}">認定インストラクター情報</a></li>
-            <li><a class="dropdown-item" href="{{ route('approved_balls.index') }}">アブプールボールリスト</a></li>
+            <li><a class="dropdown-item" href="{{ route('approved_balls.index') }}">ボールカタログリスト</a></li>
 
             @auth
               <li><a class="dropdown-item" href="{{ route('informations.member') }}">会員用INFORMATION</a></li>

@@ -13,6 +13,7 @@ class Tournament extends Model
         'tournament_series_id',
         'tournament_edition_id',
         'tournament_template_version_id',
+        'tournament_result_format_version_id',
         'name',
         'setup_status',
         'competition_type',
@@ -49,6 +50,7 @@ class Tournament extends Model
         'entry_start',
         'entry_end',
         'inspection_required',
+        'ball_registration_limit',
         'title_category',
         'include_annual_seeds',
         'annual_seed_rank_limit',
@@ -121,6 +123,7 @@ class Tournament extends Model
         'lane_draw_open_at' => 'datetime:Y-m-d H:i:s',
         'lane_draw_close_at' => 'datetime:Y-m-d H:i:s',
         'inspection_required' => 'boolean',
+        'ball_registration_limit' => 'integer',
         'include_annual_seeds' => 'boolean',
         'annual_seed_rank_limit' => 'integer',
         'auto_sync_priority_rules' => 'boolean',
@@ -190,6 +193,11 @@ class Tournament extends Model
         return $this->belongsTo(TournamentTemplateVersion::class, 'tournament_template_version_id');
     }
 
+    public function resultFormatVersion()
+    {
+        return $this->belongsTo(TournamentResultFormatVersion::class, 'tournament_result_format_version_id');
+    }
+
     public function entryRules()
     {
         return $this->hasMany(TournamentEntryRule::class);
@@ -232,6 +240,11 @@ class Tournament extends Model
     public function files()
     {
         return $this->hasMany(TournamentFile::class);
+    }
+
+    public function annualScheduleRow()
+    {
+        return $this->hasOne(AnnualScheduleRow::class);
     }
 
     public function entries()

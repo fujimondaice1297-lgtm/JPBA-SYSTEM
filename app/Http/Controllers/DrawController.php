@@ -354,7 +354,7 @@ class DrawController extends Controller
         }
 
         $bowler = ProBowler::query()->find($entry->pro_bowler_id);
-        $eligibility = $this->resolveEntryEligibility($bowler);
+        $eligibility = $this->resolveEntryEligibility($bowler, $entry->tournament()->first());
 
         if (!$eligibility['allowed']) {
             abort(403, $eligibility['message']);
@@ -616,44 +616,9 @@ class DrawController extends Controller
         return $normalized !== '' ? $normalized : null;
     }
 
-    private function resolveEntryEligibility(?ProBowler $bowler): array
+    private function resolveEntryEligibility(?ProBowler $bowler, ?\App\Models\Tournament $tournament = null): array
     {
-        if (!$bowler) {
-            return [
-                'allowed' => false,
-                'message' => '選手情報が未結線のため、大会エントリーを利用できません。管理者に確認してください。',
-            ];
-        }
-
-        $memberClass = (string) ($bowler->member_class ?? '');
-        $officialEntryAllowed = (bool) ($bowler->can_enter_official_tournament ?? false);
-        $isActive = (bool) ($bowler->is_active ?? false);
-
-        if (!$isActive) {
-            return [
-                'allowed' => false,
-                'message' => '現在の会員状態が無効のため、大会エントリー対象外です。',
-            ];
-        }
-
-        if ($memberClass !== 'player') {
-            return [
-                'allowed' => false,
-                'message' => $this->memberClassLabel($memberClass) . 'のため、大会エントリー対象外です。',
-            ];
-        }
-
-        if (!$officialEntryAllowed) {
-            return [
-                'allowed' => false,
-                'message' => '現在の会員区分では公式戦出場対象外として登録されています。',
-            ];
-        }
-
-        return [
-            'allowed' => true,
-            'message' => '大会エントリー可能です。',
-        ];
+        return app(\App\Services\TournamentEntryEligibilityService::class)->evaluate($bowler, $tournament);
     }
 
     private function memberClassLabel(?string $memberClass): string

@@ -478,7 +478,14 @@
                     @foreach($players as $row)
                         <tr>
                             <td>{{ $row['seed'] }}</td>
-                            <td class="rr-left">{{ $row['display_name'] }}</td>
+                            <td class="rr-left">
+                                @include('scores.partials.player_ball_link', [
+                                    'displayName' => $row['display_name'] ?? '—',
+                                    'proBowlerId' => $row['pro_bowler_id'] ?? null,
+                                    'licenseNo' => $row['pro_bowler_license_no'] ?? ($row['license_no'] ?? null),
+                                    'scoreEntryBallLookup' => $scoreEntryBallLookup ?? [],
+                                ])
+                            </td>
                             <td class="rr-license">{{ $roundRobinLicenseDisplay($row) }}</td>
                             @foreach($players as $col)
                                 @php $entries = $matrix[$row['seed']][$col['seed']] ?? []; @endphp
@@ -529,7 +536,12 @@
                             </div>
 
                             <div class="rr-step-entrant-name">
-                                {{ $entrant['display_name'] ?? '—' }}
+                                @include('scores.partials.player_ball_link', [
+                                    'displayName' => $entrant['display_name'] ?? '—',
+                                    'proBowlerId' => $entrant['pro_bowler_id'] ?? null,
+                                    'licenseNo' => $entrant['pro_bowler_license_no'] ?? ($entrant['license_no'] ?? null),
+                                    'scoreEntryBallLookup' => $scoreEntryBallLookup ?? [],
+                                ])
                             </div>
 
                             @unless($isPublic)
@@ -583,7 +595,14 @@
                         <tr>
                             <td>{{ $player['rank'] }}</td>
                             <td>{{ $player['seed'] }}</td>
-                            <td class="rr-left">{{ $player['display_name'] }}</td>
+                            <td class="rr-left">
+                                @include('scores.partials.player_ball_link', [
+                                    'displayName' => $player['display_name'] ?? '—',
+                                    'proBowlerId' => $player['pro_bowler_id'] ?? null,
+                                    'licenseNo' => $player['pro_bowler_license_no'] ?? ($player['license_no'] ?? null),
+                                    'scoreEntryBallLookup' => $scoreEntryBallLookup ?? [],
+                                ])
+                            </td>
                             <td class="rr-license">{{ $roundRobinLicenseDisplay($player) }}</td>
                             <td>{{ number_format($player['carry_pin']) }}</td>
                             <td>{{ $player['record'] }}</td>

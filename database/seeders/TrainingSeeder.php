@@ -13,7 +13,7 @@ class TrainingSeeder extends Seeder
         DB::table('trainings')->updateOrInsert(
             ['code' => 'mandatory'],
             [
-                'name' => '必修講習',
+                'name' => 'トーナメントプレイヤー講習会',
                 'valid_for_months' => 36,
                 'mandatory' => true,
                 'created_at' => now(),

@@ -8,6 +8,9 @@
   @if(session('success'))
     <div class="alert alert-success">{{ session('success') }}</div>
   @endif
+  @if(session('warning'))
+    <div class="alert alert-danger">{{ session('warning') }}</div>
+  @endif
 
   @if(session('error'))
     <div class="alert alert-danger">{{ session('error') }}</div>
@@ -93,7 +96,7 @@
           <th>メーカー名</th>
           <th>ボール名</th>
           <th>シリアルNo</th>
-          <th>登録日</th>
+          <th>検量日／登録日</th>
           <th>有効期限</th>
           <th>検量証番号 / 状態</th>
           <th>修正導線</th>

@@ -18,12 +18,12 @@ class MatchScoreSheetImageService
      * @param \Illuminate\Support\Collection<int, TournamentMatchScoreSheet> $scoreSheets
      * @return array<int,array{sheet_id:int,match_label:string,game_number:int,lane_label:string,player_count:int,image:string}>
      */
-    public function generateDataUris(Collection $scoreSheets): array
+    public function generateDataUris(Collection $scoreSheets, array $options = []): array
     {
         $images = [];
 
         foreach ($scoreSheets as $scoreSheet) {
-            $image = $this->generateDataUri($scoreSheet);
+            $image = $this->generateDataUri($scoreSheet, $options);
 
             if ($image === null) {
                 continue;
@@ -42,8 +42,12 @@ class MatchScoreSheetImageService
         return $images;
     }
 
-    public function generateDataUri(TournamentMatchScoreSheet $scoreSheet): ?string
+    public function generateDataUri(TournamentMatchScoreSheet $scoreSheet, array $options = []): ?string
     {
+        if (($options['layout'] ?? '') === 'rokko_queens') {
+            return $this->generateRokkoQueensDataUri($scoreSheet, $options);
+        }
+
         $scoreSheet->loadMissing(['players.frames']);
         $players = $scoreSheet->players instanceof Collection ? $scoreSheet->players : collect($scoreSheet->players ?? []);
 
@@ -154,6 +158,303 @@ class MatchScoreSheetImageService
         }
 
         return 'data:image/png;base64,' . base64_encode($binary);
+    }
+
+    /**
+     * 六甲クイーンズ公式PDFの1試合分（2選手）に合わせた作図。
+     * 標準レイアウトは変更せず、layout=rokko_queens の場合だけ使用する。
+     */
+    private function generateRokkoQueensDataUri(
+        TournamentMatchScoreSheet $scoreSheet,
+        array $options
+    ): ?string {
+        $scoreSheet->loadMissing(['players.frames']);
+        $players = $scoreSheet->players instanceof Collection
+            ? $scoreSheet->players->values()
+            : collect($scoreSheet->players ?? [])->values();
+
+        if ($players->isEmpty()) {
+            return null;
+        }
+
+        $width = 1012;
+        $height = 328;
+        $image = imagecreatetruecolor($width, $height);
+        if ($image === false) {
+            return null;
+        }
+
+        imageantialias($image, true);
+        $white = imagecolorallocate($image, 255, 255, 255);
+        $black = imagecolorallocate($image, 0, 0, 0);
+        $dark = imagecolorallocate($image, 35, 35, 35);
+        imagefilledrectangle($image, 0, 0, $width, $height, $white);
+
+        $this->drawRokkoLogo($image);
+        $this->drawCenteredText(
+            $image,
+            $this->officialMatchLabel((string) ($scoreSheet->match_label ?: $scoreSheet->match_code)),
+            72,
+            0,
+            330,
+            36,
+            31,
+            $black,
+            false
+        );
+
+        $tableLeft = 76;
+        $frameW = 86;
+        $tenthW = 96;
+        $headerH = 24;
+        $markH = 25;
+        $totalH = 28;
+        $tableH = $headerH + $markH + $totalH;
+        $fallbackLanes = [
+            trim((string) ($options['top_lane'] ?? '33L')),
+            trim((string) ($options['bottom_lane'] ?? '34L')),
+        ];
+
+        foreach ($players->take(2) as $index => $player) {
+            $nameTop = $index === 0 ? 32 : 166;
+            $tableTop = $index === 0 ? 66 : 200;
+            $frames = $player->frames instanceof Collection
+                ? $player->frames->keyBy('frame_no')
+                : collect($player->frames ?? [])->keyBy('frame_no');
+            $calculatedCumulativeScores = $this->calculateCumulativeScoresForPdf($frames);
+            $storedCumulativeScores = $this->storedCumulativeScoresForPdf($frames);
+
+            $displayName = $this->spacedOfficialName((string) ($player->display_name ?? ''));
+            $arm = $this->rokkoArmLabel((string) ($player->dominant_arm ?? ''));
+            $this->drawCenteredText(
+                $image,
+                trim($displayName.'（'.$arm.'投げ）'),
+                $tableLeft,
+                $nameTop,
+                ($frameW * 9) + $tenthW,
+                34,
+                30,
+                $black,
+                false
+            );
+
+            $lane = trim((string) ($player->lane_label ?? ''));
+            if ($lane === '') {
+                $lane = trim((string) ($scoreSheet->lane_label ?? ''));
+            }
+            if ($lane === '') {
+                $lane = $fallbackLanes[$index] ?? '';
+            }
+            if ($lane !== '' && preg_match('/^\d+$/', $lane)) {
+                $lane .= 'L';
+            }
+            $this->drawRightText($image, $lane, 0, $tableTop + 24, 66, 38, 27, $black);
+
+            $this->drawScoreTableFrame(
+                $image,
+                $tableLeft,
+                $tableTop,
+                $frameW,
+                $tenthW,
+                $headerH,
+                $markH,
+                $totalH,
+                $black
+            );
+
+            $x = $tableLeft;
+            for ($frameNo = 1; $frameNo <= 10; $frameNo++) {
+                $cellWidth = $frameNo === 10 ? $tenthW : $frameW;
+                $this->drawCenteredText(
+                    $image,
+                    (string) $frameNo,
+                    $x,
+                    $tableTop,
+                    $cellWidth,
+                    $headerH,
+                    22,
+                    $black,
+                    true
+                );
+
+                $frame = $frames->get($frameNo);
+                $marks = $this->rokkoMarksForFrame($frame, $frameNo);
+                $markTop = $tableTop + $headerH;
+                if ($frameNo < 10) {
+                    $half = (int) floor($cellWidth / 2);
+                    $this->drawRokkoMarkCell($image, $marks[0] ?? '', $x, $markTop, $half, $markH, $black);
+                    $this->drawRokkoMarkCell($image, $marks[1] ?? '', $x + $half, $markTop, $cellWidth - $half, $markH, $black);
+                } else {
+                    $third = (int) floor($cellWidth / 3);
+                    $this->drawRokkoMarkCell($image, $marks[0] ?? '', $x, $markTop, $third, $markH, $black);
+                    $this->drawRokkoMarkCell($image, $marks[1] ?? '', $x + $third, $markTop, $third, $markH, $black);
+                    $this->drawRokkoMarkCell($image, $marks[2] ?? '', $x + ($third * 2), $markTop, $cellWidth - ($third * 2), $markH, $black);
+                }
+
+                $total = $storedCumulativeScores[$frameNo]
+                    ?? $calculatedCumulativeScores[$frameNo]
+                    ?? null;
+                $this->drawCenteredText(
+                    $image,
+                    $total !== null ? (string) $total : '',
+                    $x,
+                    $tableTop + $headerH + $markH,
+                    $cellWidth,
+                    $totalH,
+                    27,
+                    $black,
+                    $frameNo === 10 && ! empty($player->is_winner)
+                );
+
+                $remaining = $this->rokkoRemainingPinsLabel($frame);
+                if ($remaining !== '') {
+                    $this->drawCenteredText(
+                        $image,
+                        $remaining,
+                        $x - 10,
+                        $tableTop + $tableH + 3,
+                        $cellWidth + 20,
+                        25,
+                        14,
+                        $dark,
+                        false
+                    );
+                }
+
+                $x += $cellWidth;
+            }
+        }
+
+        ob_start();
+        imagepng($image);
+        $binary = (string) ob_get_clean();
+        imagedestroy($image);
+
+        return $binary !== ''
+            ? 'data:image/png;base64,'.base64_encode($binary)
+            : null;
+    }
+
+    private function drawRokkoLogo($image): void
+    {
+        $path = public_path('images/jpba_logo.png');
+        if (! is_file($path)) {
+            return;
+        }
+
+        $logo = @imagecreatefrompng($path);
+        if ($logo === false) {
+            return;
+        }
+
+        imagefilter($logo, IMG_FILTER_GRAYSCALE);
+        imagefilter($logo, IMG_FILTER_CONTRAST, -20);
+        imagecopyresampled(
+            $image,
+            $logo,
+            2,
+            2,
+            0,
+            0,
+            36,
+            30,
+            imagesx($logo),
+            imagesy($logo)
+        );
+        imagedestroy($logo);
+    }
+
+    private function officialMatchLabel(string $label): string
+    {
+        $label = trim($label);
+        if (str_contains($label, '3位')) {
+            return '３位決定戦';
+        }
+        if (str_contains($label, '4位')) {
+            return '４位決定戦';
+        }
+
+        return $label !== '' ? $label : '優勝決定戦';
+    }
+
+    private function spacedOfficialName(string $name): string
+    {
+        $name = trim(preg_replace('/[\s　]+/u', '', $name) ?? $name);
+        if ($name === '' || str_contains($name, '･') || str_contains($name, '・')) {
+            return str_replace(['・', '･'], ' ･ ', $name);
+        }
+
+        return implode('　', preg_split('//u', $name, -1, PREG_SPLIT_NO_EMPTY) ?: [$name]);
+    }
+
+    private function rokkoArmLabel(string $arm): string
+    {
+        return str_contains($arm, '左') ? '左' : '右';
+    }
+
+    /** @return array<int,string> */
+    private function rokkoMarksForFrame($frame, int $frameNo): array
+    {
+        if (! $frame) {
+            return ['', '', ''];
+        }
+
+        $displayMarks = is_array($frame->display_marks ?? null)
+            ? $frame->display_marks
+            : [];
+        $marks = [
+            trim((string) ($displayMarks['throw1'] ?? $frame->throw1 ?? '')),
+            trim((string) ($displayMarks['throw2'] ?? $frame->throw2 ?? '')),
+            trim((string) ($displayMarks['throw3'] ?? $frame->throw3 ?? '')),
+        ];
+
+        if ($frameNo < 10 && ($marks[0] === 'X' || $marks[1] === 'X')) {
+            return ['', 'X', ''];
+        }
+
+        return $marks;
+    }
+
+    private function drawRokkoMarkCell(
+        $image,
+        string $mark,
+        int $x,
+        int $y,
+        int $width,
+        int $height,
+        int $black
+    ): void {
+        $mark = trim($mark);
+        if ($mark === '') {
+            return;
+        }
+        if ($mark === 'X') {
+            $this->drawStrikeMark($image, $x, $y, $width, $height, $black);
+            return;
+        }
+        if ($mark === '/') {
+            $this->drawSpareMark($image, $x, $y, $width, $height, $black);
+            return;
+        }
+
+        $this->drawCenteredText($image, $mark, $x, $y, $width, $height, 22, $black);
+    }
+
+    private function rokkoRemainingPinsLabel($frame): string
+    {
+        if (! $frame) {
+            return '';
+        }
+
+        $displayMarks = is_array($frame->display_marks ?? null)
+            ? $frame->display_marks
+            : [];
+        $official = trim((string) ($displayMarks['remaining_pins'] ?? ''));
+        if ($official !== '') {
+            return $official;
+        }
+
+        return $this->remainingPinsLabel($frame->remaining_pins ?? null);
     }
 
     private function drawScoreTableFrame($image, int $left, int $top, int $frameW, int $tenthW, int $headerH, int $markH, int $totalH, int $color): void

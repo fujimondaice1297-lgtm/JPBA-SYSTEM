@@ -9,7 +9,8 @@ use Throwable;
 final class RepairOfficial2026StandardFinalsCommand extends Command
 {
     protected $signature = 'jpba:repair-official-2026-standard-finals
-        {--force : Replace final-stage scores and frame sheets, then republish all 11 tournaments}
+        {--force : Replace final-stage scores and frame sheets, then republish selected tournaments}
+        {--event= : Limit validation/repair to one dataset event key}
         {--admin-email=yamaguchi@jpba.or.jp : Administrator recorded as the publisher}
         {--json : Output the full validation report as JSON}';
 
@@ -21,6 +22,7 @@ final class RepairOfficial2026StandardFinalsCommand extends Command
             $report = $service->import(
                 (bool) $this->option('force'),
                 (string) $this->option('admin-email'),
+                ($event = trim((string) $this->option('event'))) !== '' ? $event : null,
             );
         } catch (Throwable $exception) {
             $this->error($exception->getMessage());

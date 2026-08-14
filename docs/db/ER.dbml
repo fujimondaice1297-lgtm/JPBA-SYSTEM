@@ -1,5 +1,5 @@
 // Auto-generated from docs/db/data_dictionary.md
-// Generated at: 2026-07-22T08:30:10+09:00
+// Generated at: 2026-08-13T17:57:40+09:00
 
 Project JPBA_SYSTEM {
   database_type: 'PostgreSQL'
@@ -13,6 +13,14 @@ Table annual_dues {
   // columns omitted (see docs/db/columns_by_table.md)
 }
 
+Table annual_schedule_rows {
+  // columns omitted (see docs/db/columns_by_table.md)
+}
+
+Table annual_schedules {
+  // columns omitted (see docs/db/columns_by_table.md)
+}
+
 Table approved_ball_pro_bowler {
   // columns omitted (see docs/db/columns_by_table.md)
 }
@@ -22,6 +30,30 @@ Table approved_balls {
 }
 
 Table area {
+  // columns omitted (see docs/db/columns_by_table.md)
+}
+
+Table ball_annual_registration_histories {
+  // columns omitted (see docs/db/columns_by_table.md)
+}
+
+Table ball_annual_registration_items {
+  // columns omitted (see docs/db/columns_by_table.md)
+}
+
+Table ball_annual_registrations {
+  // columns omitted (see docs/db/columns_by_table.md)
+}
+
+Table ball_catalog_import_failures {
+  // columns omitted (see docs/db/columns_by_table.md)
+}
+
+Table ball_catalog_import_runs {
+  // columns omitted (see docs/db/columns_by_table.md)
+}
+
+Table ball_manufacturers {
   // columns omitted (see docs/db/columns_by_table.md)
 }
 
@@ -85,7 +117,15 @@ Table license {
   // columns omitted (see docs/db/columns_by_table.md)
 }
 
+Table managed_public_pages {
+  // columns omitted (see docs/db/columns_by_table.md)
+}
+
 Table media_publications {
+  // columns omitted (see docs/db/columns_by_table.md)
+}
+
+Table official_profile_stat_snapshots {
   // columns omitted (see docs/db/columns_by_table.md)
 }
 
@@ -101,7 +141,15 @@ Table prize_distributions {
   // columns omitted (see docs/db/columns_by_table.md)
 }
 
+Table pro_bowler_annual_records {
+  // columns omitted (see docs/db/columns_by_table.md)
+}
+
 Table pro_bowler_links {
+  // columns omitted (see docs/db/columns_by_table.md)
+}
+
+Table pro_bowler_official_history_imports {
   // columns omitted (see docs/db/columns_by_table.md)
 }
 
@@ -133,6 +181,14 @@ Table pro_bowler_titles {
   // columns omitted (see docs/db/columns_by_table.md)
 }
 
+Table pro_bowler_tournament_histories {
+  // columns omitted (see docs/db/columns_by_table.md)
+}
+
+Table pro_bowler_tournament_history_syncs {
+  // columns omitted (see docs/db/columns_by_table.md)
+}
+
 Table pro_bowler_trainings {
   // columns omitted (see docs/db/columns_by_table.md)
 }
@@ -142,6 +198,14 @@ Table pro_bowlers {
 }
 
 Table pro_dsp {
+  // columns omitted (see docs/db/columns_by_table.md)
+}
+
+Table record_certification_sequences {
+  // columns omitted (see docs/db/columns_by_table.md)
+}
+
+Table record_types {
   // columns omitted (see docs/db/columns_by_table.md)
 }
 
@@ -162,6 +226,10 @@ Table score_import_row_candidates {
 }
 
 Table score_import_rows {
+  // columns omitted (see docs/db/columns_by_table.md)
+}
+
+Table score_series_definitions {
   // columns omitted (see docs/db/columns_by_table.md)
 }
 
@@ -249,6 +317,14 @@ Table tournament_points {
   // columns omitted (see docs/db/columns_by_table.md)
 }
 
+Table tournament_result_format_versions {
+  // columns omitted (see docs/db/columns_by_table.md)
+}
+
+Table tournament_result_formats {
+  // columns omitted (see docs/db/columns_by_table.md)
+}
+
 Table tournament_result_outputs {
   // columns omitted (see docs/db/columns_by_table.md)
 }
@@ -297,7 +373,35 @@ Table tournaments {
   // columns omitted (see docs/db/columns_by_table.md)
 }
 
+Table training_compliance_notifications {
+  // columns omitted (see docs/db/columns_by_table.md)
+}
+
+Table training_official_list_entries {
+  // columns omitted (see docs/db/columns_by_table.md)
+}
+
+Table training_official_lists {
+  // columns omitted (see docs/db/columns_by_table.md)
+}
+
+Table training_session_participants {
+  // columns omitted (see docs/db/columns_by_table.md)
+}
+
+Table training_sessions {
+  // columns omitted (see docs/db/columns_by_table.md)
+}
+
 Table trainings {
+  // columns omitted (see docs/db/columns_by_table.md)
+}
+
+Table usbc_approved_ball_entries {
+  // columns omitted (see docs/db/columns_by_table.md)
+}
+
+Table usbc_approved_ball_lists {
   // columns omitted (see docs/db/columns_by_table.md)
 }
 
@@ -314,8 +418,24 @@ Table venues {
 }
 
 Ref: annual_dues.pro_bowler_id > pro_bowlers.id
+Ref: annual_schedule_rows.annual_schedule_id > annual_schedules.id
+Ref: annual_schedule_rows.tournament_id > tournaments.id
+Ref: annual_schedules.created_by_user_id > users.id
+Ref: annual_schedules.updated_by_user_id > users.id
 Ref: approved_ball_pro_bowler.approved_ball_id > approved_balls.id
 Ref: approved_ball_pro_bowler.pro_bowler_id > pro_bowlers.id
+Ref: approved_balls.manufacturer_id > ball_manufacturers.id
+Ref: ball_annual_registration_histories.acted_by_user_id > users.id
+Ref: ball_annual_registration_histories.registration_id > ball_annual_registrations.id
+Ref: ball_annual_registration_items.registration_id > ball_annual_registrations.id
+Ref: ball_annual_registration_items.used_ball_id > used_balls.id
+Ref: ball_annual_registrations.approved_by_user_id > users.id
+Ref: ball_annual_registrations.pro_bowler_id > pro_bowlers.id
+Ref: ball_annual_registrations.returned_by_user_id > users.id
+Ref: ball_annual_registrations.submitted_by_user_id > users.id
+Ref: ball_catalog_import_failures.import_run_id > ball_catalog_import_runs.id
+Ref: ball_catalog_import_failures.manufacturer_id > ball_manufacturers.id
+Ref: ball_catalog_import_runs.manufacturer_id > ball_manufacturers.id
 Ref: game_scores.pro_bowler_id > pro_bowlers.id
 Ref: game_scores.tournament_id > tournaments.id
 Ref: game_scores.tournament_participant_id > tournament_participants.id
@@ -332,12 +452,17 @@ Ref: instructor_registry.district_id > districts.id
 Ref: instructor_registry.pro_bowler_id > pro_bowlers.id
 Ref: instructors.district_id > districts.id
 Ref: instructors.pro_bowler_id > pro_bowlers.id
+Ref: managed_public_pages.created_by_user_id > users.id
+Ref: managed_public_pages.updated_by_user_id > users.id
 Ref: media_publications.tournament_id > tournaments.id
+Ref: official_profile_stat_snapshots.pro_bowler_id > pro_bowlers.id
 Ref: point_distributions.pattern_id > distribution_patterns.id
 Ref: point_distributions.tournament_id > tournaments.id
 Ref: prize_distributions.pattern_id > distribution_patterns.id
 Ref: prize_distributions.tournament_id > tournaments.id
+Ref: pro_bowler_annual_records.pro_bowler_id > pro_bowlers.id
 Ref: pro_bowler_links.pro_bowler_id > pro_bowlers.id
+Ref: pro_bowler_official_history_imports.pro_bowler_id > pro_bowlers.id
 Ref: pro_bowler_profiles.pro_bowler_id > pro_bowlers.id
 Ref: pro_bowler_ranking_rows.pro_bowler_id > pro_bowlers.id
 Ref: pro_bowler_ranking_rows.ranking_snapshot_id > pro_bowler_ranking_snapshots.id
@@ -350,12 +475,21 @@ Ref: pro_bowler_seed_lists.source_ranking_snapshot_id > pro_bowler_ranking_snaps
 Ref: pro_bowler_sponsors.pro_bowler_id > pro_bowlers.id
 Ref: pro_bowler_titles.pro_bowler_id > pro_bowlers.id
 Ref: pro_bowler_titles.tournament_id > tournaments.id
+Ref: pro_bowler_tournament_histories.pro_bowler_id > pro_bowlers.id
+Ref: pro_bowler_tournament_history_syncs.pro_bowler_id > pro_bowlers.id
 Ref: pro_bowler_trainings.pro_bowler_id > pro_bowlers.id
+Ref: pro_bowler_trainings.recorded_by_user_id > users.id
 Ref: pro_bowler_trainings.training_id > trainings.id
+Ref: pro_bowler_trainings.training_session_id > training_sessions.id
 Ref: pro_bowlers.district_id > districts.id
 Ref: pro_bowlers.membership_type > kaiin_status.name
 Ref: pro_bowlers.sex > sexes.id
 Ref: pro_dsp.pro_bowler_id > pro_bowlers.id
+Ref: record_types.confirmed_by > users.id
+Ref: record_types.pro_bowler_id > pro_bowlers.id
+Ref: record_types.score_series_definition_id > score_series_definitions.id
+Ref: record_types.source_game_score_id > game_scores.id
+Ref: record_types.tournament_id > tournaments.id
 Ref: registered_balls.approved_ball_id > approved_balls.id
 Ref: registered_balls.pro_bowler_id > pro_bowlers.id
 Ref: score_import_batches.confirmed_by > users.id
@@ -372,6 +506,7 @@ Ref: score_import_rows.pro_bowler_id > pro_bowlers.id
 Ref: score_import_rows.reviewed_by > users.id
 Ref: score_import_rows.score_import_batch_id > score_import_batches.id
 Ref: score_import_rows.tournament_participant_id > tournament_participants.id
+Ref: score_series_definitions.tournament_id > tournaments.id
 Ref: sessions.user_id > users.id
 Ref: tournament_aggregate_definitions.tournament_id > tournaments.id
 Ref: tournament_aggregate_sources.aggregate_definition_id > tournament_aggregate_definitions.id
@@ -405,6 +540,7 @@ Ref: tournament_participants.amateur_bowler_id > amateur_bowlers.id
 Ref: tournament_participants.pro_bowler_id > pro_bowlers.id
 Ref: tournament_participants.tournament_id > tournaments.id
 Ref: tournament_points.tournament_id > tournaments.id
+Ref: tournament_result_format_versions.tournament_result_format_id > tournament_result_formats.id
 Ref: tournament_result_outputs.distribution_pattern_id > distribution_patterns.id
 Ref: tournament_result_outputs.tournament_id > tournaments.id
 Ref: tournament_result_publication_rows.amateur_bowler_id > amateur_bowlers.id
@@ -437,9 +573,26 @@ Ref: tournament_seed_players.tournament_id > tournaments.id
 Ref: tournament_template_versions.tournament_template_id > tournament_templates.id
 Ref: tournament_templates.tournament_series_id > tournament_series.id
 Ref: tournaments.tournament_edition_id > tournament_editions.id
+Ref: tournaments.tournament_result_format_version_id > tournament_result_format_versions.id
 Ref: tournaments.tournament_series_id > tournament_series.id
 Ref: tournaments.tournament_template_version_id > tournament_template_versions.id
 Ref: tournaments.venue_id > venues.id
+Ref: training_compliance_notifications.pro_bowler_id > pro_bowlers.id
+Ref: training_compliance_notifications.pro_bowler_training_id > pro_bowler_trainings.id
+Ref: training_compliance_notifications.requested_by_user_id > users.id
+Ref: training_official_list_entries.pro_bowler_id > pro_bowlers.id
+Ref: training_official_list_entries.training_official_list_id > training_official_lists.id
+Ref: training_official_lists.imported_by_user_id > users.id
+Ref: training_official_lists.training_id > trainings.id
+Ref: training_session_participants.pro_bowler_id > pro_bowlers.id
+Ref: training_session_participants.pro_bowler_training_id > pro_bowler_trainings.id
+Ref: training_session_participants.processed_by_user_id > users.id
+Ref: training_session_participants.training_session_id > training_sessions.id
+Ref: training_sessions.created_by_user_id > users.id
+Ref: training_sessions.finalized_by_user_id > users.id
+Ref: training_sessions.training_id > trainings.id
+Ref: training_sessions.updated_by_user_id > users.id
+Ref: usbc_approved_ball_entries.list_id > usbc_approved_ball_lists.id
 Ref: used_balls.approved_ball_id > approved_balls.id
 Ref: used_balls.pro_bowler_id > pro_bowlers.id
 Ref: users.pro_bowler_id > pro_bowlers.id
