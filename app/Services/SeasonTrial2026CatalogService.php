@@ -19,7 +19,7 @@ final class SeasonTrial2026CatalogService
 
     private const EXPECTED_EVENT_COUNT = 12;
 
-    private const EXPECTED_PUBLISHED_RESULT_COUNT = 11;
+    private const EXPECTED_PUBLISHED_RESULT_COUNT = 12;
 
     public function __construct(
         private readonly TournamentTemplateService $templateService,

@@ -18,8 +18,8 @@ class SeasonTrial2026CatalogServiceTest extends TestCase
         $this->assertSame('season-trial-standard', $catalog['template_code']);
         $this->assertSame(['winter', 'spring', 'summer'], $editions->keys()->all());
         $this->assertCount(12, $events);
-        $this->assertCount(11, $events->whereNotNull('final_result_url'));
-        $this->assertCount(1, $events->whereNull('final_result_url'));
+        $this->assertCount(12, $events->whereNotNull('final_result_url'));
+        $this->assertCount(0, $events->whereNull('final_result_url'));
 
         foreach ($editions as $seasonKey => $edition) {
             $this->assertCount(4, $edition['events']);
@@ -43,6 +43,10 @@ class SeasonTrial2026CatalogServiceTest extends TestCase
         $this->assertNotNull($summerB['final_result_url']);
         $this->assertSame('2026-07-28', $summerD['date']);
         $this->assertSame('賀茂ボール', $summerD['venue_name']);
-        $this->assertNull($summerD['final_result_url']);
+        $this->assertSame('completed', $summer['status']);
+        $this->assertSame(
+            'https://www.jpba.or.jp/information/tournament/tournament2026/ST_Summer/Result/D_FinalResult.pdf',
+            $summerD['final_result_url'],
+        );
     }
 }

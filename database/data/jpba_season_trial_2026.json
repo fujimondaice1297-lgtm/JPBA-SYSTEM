@@ -1,6 +1,6 @@
 {
   "dataset": "JPBA 2026 season trial official venue catalog",
-  "source_checked_at": "2026-07-22",
+  "source_checked_at": "2026-08-22",
   "year": 2026,
   "series_code": "jpba-season-trial",
   "template_code": "season-trial-standard",
@@ -76,7 +76,7 @@
     {
       "season_key": "summer",
       "name": "JPBAシーズントライアル2026 サマーシリーズ",
-      "status": "in_progress",
+      "status": "completed",
       "start_date": "2026-07-01",
       "end_date": "2026-07-28",
       "source_url": "https://www.jpba.or.jp/information/tournament/tournament2026/ST_Summer/ST_Summer2026.html",
@@ -103,7 +103,7 @@
           "venue_code": "D",
           "date": "2026-07-28",
           "venue_name": "賀茂ボール",
-          "final_result_url": null
+          "final_result_url": "https://www.jpba.or.jp/information/tournament/tournament2026/ST_Summer/Result/D_FinalResult.pdf"
         }
       ]
     }
