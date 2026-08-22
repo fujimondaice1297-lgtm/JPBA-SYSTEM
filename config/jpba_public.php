@@ -24,11 +24,11 @@ return [
         ],
         [
             'label' => 'JPBAツアー ご観戦時のご案内',
-            'url' => 'https://www.jpba.or.jp/information/tournament/PDF/JPBA_TournamentSpectatorRules.pdf',
+            'url' => '/documents/jpba/tournament-spectator-rules.pdf',
         ],
         [
             'label' => 'ウレタンボールの使用規制について',
-            'url' => 'https://www.jpba1.jp/mypage/notification/document/2026/RegulationsAboutUrethaneBalls_260407.pdf',
+            'url' => '/documents/jpba/urethane-ball-regulations-2026-04-07.pdf',
         ],
     ],
 
@@ -70,14 +70,14 @@ return [
             'その他本協会の目的を達成するために必要な事業',
         ],
         'documents' => [
-            ['label' => '定款(PDF)', 'url' => 'https://www.jpba1.jp/assets/pdf/Association/Articles_202007.pdf'],
+            ['label' => '定款(PDF)', 'url' => '/documents/jpba/articles-2020-07.pdf'],
             ['label' => '会長挨拶', 'route' => 'public.managed_pages.show', 'params' => ['managedPublicPage' => 'president']],
             ['label' => '運営機構図', 'route' => 'public.managed_pages.show', 'params' => ['managedPublicPage' => 'organization-chart']],
-            ['label' => '役員・代議員名簿(PDF)', 'url' => 'https://www.jpba1.jp/assets/pdf/Association/2025/2025_2026_Directors.pdf'],
-            ['label' => '2026年度事業計画(PDF)', 'url' => 'https://www.jpba1.jp/assets/pdf/Association/2026/Plan_2026.pdf'],
-            ['label' => '2026年度収支予算(PDF)', 'url' => 'https://www.jpba1.jp/assets/pdf/Association/2026/Budget_2026.pdf'],
-            ['label' => '2025年度事業報告(PDF)', 'url' => 'https://www.jpba1.jp/assets/pdf/Association/2026/Report_2025.pdf'],
-            ['label' => '2025年度正味財産増減計算書(PDF)', 'url' => 'https://www.jpba1.jp/assets/pdf/Association/2026/Settlement_2025.pdf'],
+            ['label' => '役員・代議員名簿(PDF)', 'url' => '/documents/jpba/directors-2025-2026.pdf'],
+            ['label' => '2026年度事業計画(PDF)', 'url' => '/documents/jpba/business-plan-2026.pdf'],
+            ['label' => '2026年度収支予算(PDF)', 'url' => '/documents/jpba/budget-2026.pdf'],
+            ['label' => '2025年度事業報告(PDF)', 'url' => '/documents/jpba/business-report-2025.pdf'],
+            ['label' => '2025年度正味財産増減計算書(PDF)', 'url' => '/documents/jpba/financial-statement-2025.pdf'],
         ],
     ],
 
@@ -157,10 +157,10 @@ return [
     'topics' => [
         'lead' => '大会終了記事、達成記録、社会貢献活動、プロボウラー紹介、大会ページリンクを公開記事として扱います。新サイト側では informations を正本にし、画像やPDFは添付ファイルとして紐づけます。',
         'legacy_links' => [
-            ['label' => '現行トピックス', 'url' => 'https://www.jpba.or.jp/topics.html'],
-            ['label' => '社会貢献活動', 'url' => 'https://www.jpba.or.jp/information/Charity/Charity.html'],
-            ['label' => 'プロボウラー紹介', 'url' => 'https://www.jpba.or.jp/interview/index.html'],
-            ['label' => '大会ページ一覧', 'url' => 'https://www.jpba.or.jp/information/tournament/tournament.html'],
+            ['label' => 'トピックス一覧', 'route' => 'public.topics'],
+            ['label' => '社会貢献活動を含む公開記事', 'route' => 'public.topics'],
+            ['label' => 'プロボウラー紹介', 'route' => 'public.players.index'],
+            ['label' => '大会ページ一覧', 'route' => 'public.tournaments.index'],
         ],
     ],
 
@@ -198,8 +198,8 @@ return [
                 ],
             ],
             'links' => [
-                ['label' => '取材時遵守事項 PDF', 'url' => 'https://www.jpba1.jp/media/PDF/ComplianceRules_forMedia_230508.pdf'],
-                ['label' => '取材申請書 PDF', 'url' => 'https://www.jpba1.jp/media/PDF/ApplicationSheet_forMedia_2024.pdf'],
+                ['label' => '取材時遵守事項 PDF', 'url' => '/documents/jpba/media-compliance-rules-2023-05-08.pdf'],
+                ['label' => '取材申請書 PDF', 'url' => '/documents/jpba/media-application-2024.pdf'],
                 ['label' => '取材申請書フォーム', 'url' => 'https://ws.formzu.net/fgen/S86209866/'],
             ],
         ],

@@ -111,6 +111,14 @@
   $legacyLinks = $topicsConfig['legacy_links'] ?? [];
   $lead = $topicsConfig['lead'] ?? '';
 
+  $urlFor = function (array $link) {
+      if (!empty($link['route']) && \Illuminate\Support\Facades\Route::has($link['route'])) {
+          return route($link['route'], $link['params'] ?? []);
+      }
+
+      return $link['url'] ?? '#';
+  };
+
   $fileUrl = function ($file) {
       return asset('storage/' . ltrim((string) $file->file_path, '/'));
   };
@@ -201,11 +209,11 @@
     </section>
 
     @if(!empty($legacyLinks))
-      <section class="jpba-panel" aria-labelledby="topics-legacy-heading">
-        <h2 id="topics-legacy-heading" class="jpba-section-title">現行サイト導線</h2>
+      <section class="jpba-panel" aria-labelledby="topics-related-heading">
+        <h2 id="topics-related-heading" class="jpba-section-title">関連ページ</h2>
         <div class="jpba-link-grid">
           @foreach($legacyLinks as $link)
-            <a href="{{ $link['url'] }}" target="_blank" rel="noopener">{{ $link['label'] }}</a>
+            <a href="{{ $urlFor($link) }}" @if(!empty($link['url'])) target="_blank" rel="noopener" @endif>{{ $link['label'] }}</a>
           @endforeach
         </div>
       </section>

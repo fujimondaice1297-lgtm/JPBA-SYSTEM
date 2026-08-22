@@ -73,7 +73,7 @@ HTML,
 <p>大会の取材については、感染予防対策及びセキュリティ強化のため、会場への出入りを厳密に管理させていただきたく、取材にお越しになる方に下記ご協力をお願いしております。大変恐れ入りますがご協力のほどお願いいたします。</p>
 <h2>1．取材申請について</h2>
 <p>取材をご希望の際は、「取材時遵守事項」をお読みいただき、JPBA事務局に「取材申請書」を以てお申込みください。申請期限は原則として開催14日前までとさせて頂きます。申請期限を過ぎた場合はお受けできない場合がございます。</p>
-<ul><li><a href="https://www.jpba1.jp/media/PDF/ComplianceRules_forMedia_230508.pdf">取材時遵守事項（PDF）</a></li><li><a href="https://www.jpba1.jp/media/PDF/ApplicationSheet_forMedia_2024.pdf">取材申請書（PDF）</a></li><li><a href="https://ws.formzu.net/fgen/S86209866/">取材申請書フォーム</a></li></ul>
+<ul><li><a href="/documents/jpba/media-compliance-rules-2023-05-08.pdf">取材時遵守事項（PDF）</a></li><li><a href="/documents/jpba/media-application-2024.pdf">取材申請書（PDF）</a></li><li><a href="https://ws.formzu.net/fgen/S86209866/">取材申請書フォーム</a></li></ul>
 <h2>2．申請受理について</h2>
 <p>取材申請書の内容を審査させていただきます。取材内容の使用用途、掲載用途などが不明瞭な場合はお断りする場合がございます。その際はご連絡いたします。</p>
 <h2>3．会場受付について</h2>
