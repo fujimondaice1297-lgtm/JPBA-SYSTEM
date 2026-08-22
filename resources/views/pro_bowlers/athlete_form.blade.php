@@ -315,7 +315,35 @@
         <input type="text" name="mailing_addr2" class="form-control" value="{{ old('mailing_addr2', $bowler->mailing_addr2 ?? '') }}">
       </div>
 
-      <div class="col-md-4 mb-3">
+      @if ($isAdmin && isset($bowler))
+      @php($memberAccount = $bowler->userAccount)
+      <div class="col-12 mb-3">
+        <div class="card border-primary-subtle">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <strong>新システム 選手アカウント</strong>
+            <span class="badge {{ $memberAccount ? 'bg-success' : 'bg-secondary' }}">
+              {{ $memberAccount ? '発行済み' : '未発行' }}
+            </span>
+          </div>
+          <div class="card-body">
+            @if ($memberAccount)
+              <div class="row g-3">
+                <div class="col-md-4"><small class="text-muted d-block">ログインID</small>{{ $memberAccount->pro_bowler_license_no ?: $memberAccount->license_no ?: $bowler->license_no }}</div>
+                <div class="col-md-4"><small class="text-muted d-block">アカウントメール</small>{{ $memberAccount->email }}</div>
+                <div class="col-md-2"><small class="text-muted d-block">権限</small>{{ $memberAccount->role }}</div>
+                <div class="col-md-2"><small class="text-muted d-block">選手ID結線</small>{{ (int) $memberAccount->pro_bowler_id === (int) $bowler->id ? '正常' : '要確認' }}</div>
+                <div class="col-12"><small class="text-muted d-block">パスワード</small>設定済み（暗号化保存のため表示できません。再設定はログイン画面の「パスワードを忘れた方」から行います）</div>
+              </div>
+            @else
+              <p class="mb-1">この選手には、ボール登録に使用する会員アカウントがまだ発行されていません。</p>
+              <small class="text-muted">下の旧ログインIDは旧プロフィール由来の参照値です。新システムのアカウント発行後は、選手IDでマイボール・年度申請・大会登録へ連動します。</small>
+            @endif
+          </div>
+        </div>
+      </div>
+      @endif
+
+      <div class="col-md-6 mb-3">
         <label>パスワード変更状況</label>
         <select name="password_change_status" class="form-control">
           @foreach ([2=>'未更新',1=>'確認中',0=>'更新済'] as $k=>$v)
@@ -323,13 +351,9 @@
           @endforeach
         </select>
       </div>
-      <div class="col-md-4 mb-3">
-        <label>ログインID</label>
+      <div class="col-md-6 mb-3">
+        <label>旧サイトログインID（参照・ログイン別名）</label>
         <input type="text" name="login_id" class="form-control" value="{{ old('login_id',$bowler->login_id ?? '') }}">
-      </div>
-      <div class="col-md-4 mb-3">
-        <label>マイページ仮パスワード</label>
-        <input type="text" name="mypage_temp_password" class="form-control" value="{{ old('mypage_temp_password',$bowler->mypage_temp_password ?? '') }}">
       </div>
 
       <div class="col-12 mb-3">

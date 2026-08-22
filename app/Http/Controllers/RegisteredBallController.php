@@ -2,17 +2,22 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ApprovedBall;
+use App\Models\ProBowler;
 use App\Models\RegisteredBall;
 use App\Models\UsedBall;
-use App\Models\ProBowler;
-use App\Models\ApprovedBall;
+use App\Services\RegisteredBallLinkageService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Validation\Rule;
 
 class RegisteredBallController extends Controller
 {
+    public function __construct(
+        private readonly RegisteredBallLinkageService $linkageService
+    ) {}
+
     public function index(Request $request)
     {
         $user = $request->user();
@@ -24,21 +29,21 @@ class RegisteredBallController extends Controller
 
         $regQ = RegisteredBall::with(['approvedBall', 'proBowler']);
 
-        if (!$isPrivileged) {
-            if (!$currentLicenseNo) {
+        if (! $isPrivileged) {
+            if (! $currentLicenseNo) {
                 abort(403, 'プロ情報が未結線のため、登録ボール一覧を利用できません。');
             }
             $regQ->where('license_no', $currentLicenseNo);
         }
 
         if ($request->filled('license_no')) {
-            $regQ->where('license_no', 'like', '%' . trim((string) $request->license_no) . '%');
+            $regQ->where('license_no', 'like', '%'.trim((string) $request->license_no).'%');
         }
 
         if ($request->filled('name')) {
             $name = trim((string) $request->name);
             $regQ->whereHas('proBowler', function ($qq) use ($name) {
-                $qq->where('name_kanji', 'like', '%' . $name . '%');
+                $qq->where('name_kanji', 'like', '%'.$name.'%');
             });
         }
 
@@ -54,29 +59,29 @@ class RegisteredBallController extends Controller
             $status = $this->buildStatusMeta($rb->inspection_number, $rb->expires_at);
 
             return [
-                'source'            => 'registered',
-                'source_label'      => '本登録',
-                'id'                => $rb->id,
-                'license_no'        => $rb->license_no ?: optional($rb->proBowler)->license_no,
-                'name_kanji'        => optional($rb->proBowler)->name_kanji,
-                'manufacturer'      => $rb->approvedBall->manufacturer ?? $rb->approvedBall->brand ?? '',
-                'ball_name'         => $rb->approvedBall->name ?? $rb->approvedBall->model_name ?? '',
-                'serial_number'     => $rb->serial_number,
-                'registered_at'     => $rb->registered_at,
-                'expires_at'        => $rb->expires_at,
+                'source' => 'registered',
+                'source_label' => '本登録',
+                'id' => $rb->id,
+                'license_no' => $rb->license_no ?: optional($rb->proBowler)->license_no,
+                'name_kanji' => optional($rb->proBowler)->name_kanji,
+                'manufacturer' => $rb->approvedBall->manufacturer ?? $rb->approvedBall->brand ?? '',
+                'ball_name' => $rb->approvedBall->name ?? $rb->approvedBall->model_name ?? '',
+                'serial_number' => $rb->serial_number,
+                'registered_at' => $rb->registered_at,
+                'expires_at' => $rb->expires_at,
                 'inspection_number' => $rb->inspection_number,
-                'status_key'        => $status['key'],
-                'status_label'      => $status['label'],
-                'status_badge'      => $status['badge'],
-                'days_to_expire'    => $status['days_to_expire'],
-                '_model'            => $rb,
+                'status_key' => $status['key'],
+                'status_label' => $status['label'],
+                'status_badge' => $status['badge'],
+                'days_to_expire' => $status['days_to_expire'],
+                '_model' => $rb,
             ];
         });
 
         $usedQ = UsedBall::with(['approvedBall', 'proBowler'])
             ->whereNull('inspection_number');
 
-        if (!$isPrivileged) {
+        if (! $isPrivileged) {
             $userProBowlerId = (int) ($user?->pro_bowler_id ?? 0);
             if ($userProBowlerId <= 0) {
                 abort(403, 'プロ情報が未結線のため、登録ボール一覧を利用できません。');
@@ -108,22 +113,22 @@ class RegisteredBallController extends Controller
             $status = $this->buildStatusMeta($ub->inspection_number, $ub->expires_at);
 
             return [
-                'source'            => 'used',
-                'source_label'      => '仮登録',
-                'id'                => $ub->id,
-                'license_no'        => optional($ub->proBowler)->license_no,
-                'name_kanji'        => optional($ub->proBowler)->name_kanji,
-                'manufacturer'      => $ub->approvedBall->manufacturer ?? $ub->approvedBall->brand ?? '',
-                'ball_name'         => $ub->approvedBall->name ?? $ub->approvedBall->model_name ?? '',
-                'serial_number'     => $ub->serial_number,
-                'registered_at'     => $ub->registered_at,
-                'expires_at'        => $ub->expires_at,
+                'source' => 'used',
+                'source_label' => '仮登録',
+                'id' => $ub->id,
+                'license_no' => optional($ub->proBowler)->license_no,
+                'name_kanji' => optional($ub->proBowler)->name_kanji,
+                'manufacturer' => $ub->approvedBall->manufacturer ?? $ub->approvedBall->brand ?? '',
+                'ball_name' => $ub->approvedBall->name ?? $ub->approvedBall->model_name ?? '',
+                'serial_number' => $ub->serial_number,
+                'registered_at' => $ub->registered_at,
+                'expires_at' => $ub->expires_at,
                 'inspection_number' => $ub->inspection_number,
-                'status_key'        => $status['key'],
-                'status_label'      => $status['label'],
-                'status_badge'      => $status['badge'],
-                'days_to_expire'    => $status['days_to_expire'],
-                '_model'            => $ub,
+                'status_key' => $status['key'],
+                'status_label' => $status['label'],
+                'status_badge' => $status['badge'],
+                'days_to_expire' => $status['days_to_expire'],
+                '_model' => $ub,
             ];
         });
 
@@ -134,13 +139,13 @@ class RegisteredBallController extends Controller
         }
 
         $summary = [
-            'total'         => $all->count(),
-            'registered'    => $all->where('source', 'registered')->count(),
-            'used'          => $all->where('source', 'used')->count(),
-            'provisional'   => $all->where('status_key', 'provisional')->count(),
-            'valid'         => $all->where('status_key', 'valid')->count(),
+            'total' => $all->count(),
+            'registered' => $all->where('source', 'registered')->count(),
+            'used' => $all->where('source', 'used')->count(),
+            'provisional' => $all->where('status_key', 'provisional')->count(),
+            'valid' => $all->where('status_key', 'valid')->count(),
             'expiring_soon' => $all->where('status_key', 'expiring_soon')->count(),
-            'expired'       => $all->where('status_key', 'expired')->count(),
+            'expired' => $all->where('status_key', 'expired')->count(),
         ];
 
         $all = $all->sortByDesc(function ($row) {
@@ -180,9 +185,9 @@ class RegisteredBallController extends Controller
         ];
 
         $fixedLicenseNo = null;
-        if (!$this->isPrivilegedUser($request->user())) {
+        if (! $this->isPrivilegedUser($request->user())) {
             $fixedLicenseNo = $this->resolveCurrentUserLicenseNo($request->user());
-            if (!$fixedLicenseNo) {
+            if (! $fixedLicenseNo) {
                 abort(403, 'プロ情報が未結線のため、本登録ボールを作成できません。');
             }
         }
@@ -196,30 +201,31 @@ class RegisteredBallController extends Controller
         $isPrivileged = $this->isPrivilegedUser($user);
         $fixedLicenseNo = $isPrivileged ? null : $this->resolveCurrentUserLicenseNo($user);
 
-        if (!$isPrivileged && !$fixedLicenseNo) {
+        if (! $isPrivileged && ! $fixedLicenseNo) {
             abort(403, 'プロ情報が未結線のため、本登録ボールを作成できません。');
         }
 
         $licenseNo = $fixedLicenseNo ?: $request->input('license_no');
 
         $request->validate([
-            'license_no'         => ['nullable', 'exists:pro_bowlers,license_no'],
-            'approved_ball_id'   => ['required', 'exists:approved_balls,id'],
-            'serial_number'      => [
+            'license_no' => ['nullable', 'exists:pro_bowlers,license_no'],
+            'approved_ball_id' => ['required', 'exists:approved_balls,id'],
+            'serial_number' => [
                 'required',
                 'string',
                 'max:255',
                 Rule::unique('registered_balls')->where(function ($q) use ($request, $licenseNo) {
                     $year = Carbon::parse($request->registered_at)->year;
+
                     return $q->where('license_no', $licenseNo)
                         ->whereYear('registered_at', $year);
                 }),
             ],
-            'registered_at'      => ['required', 'date'],
-            'inspection_number'  => ['nullable', 'string', 'max:255'],
+            'registered_at' => ['required', 'date'],
+            'inspection_number' => ['nullable', 'string', 'max:255'],
             'certificate_number' => ['nullable', 'string', 'max:255'],
-            'return_to'          => ['nullable', 'string', 'max:50'],
-            'entry_id'           => ['nullable', 'integer'],
+            'return_to' => ['nullable', 'string', 'max:50'],
+            'entry_id' => ['nullable', 'integer'],
         ]);
 
         $inspection = trim((string) ($request->input('inspection_number')
@@ -227,10 +233,11 @@ class RegisteredBallController extends Controller
             ?? ''));
 
         $data = [
-            'license_no'       => $licenseNo,
+            'pro_bowler_id' => ProBowler::query()->where('license_no', $licenseNo)->value('id'),
+            'license_no' => $licenseNo,
             'approved_ball_id' => $request->input('approved_ball_id'),
-            'serial_number'    => $request->input('serial_number'),
-            'registered_at'    => $request->input('registered_at'),
+            'serial_number' => $request->input('serial_number'),
+            'registered_at' => $request->input('registered_at'),
         ];
 
         $data['inspection_number'] = ($inspection === '') ? null : $inspection;
@@ -240,7 +247,7 @@ class RegisteredBallController extends Controller
 
         $registeredBall = RegisteredBall::create($data);
 
-        $this->syncRegisteredBallToUsedBall($registeredBall);
+        $this->linkageService->sync($registeredBall);
 
         return $this->redirectAfterSave(
             $request,
@@ -262,7 +269,7 @@ class RegisteredBallController extends Controller
         $proBowlers = ProBowler::all();
         $fixedLicenseNo = null;
 
-        if (!$this->isPrivilegedUser($request->user())) {
+        if (! $this->isPrivilegedUser($request->user())) {
             $fixedLicenseNo = $registeredBall->license_no;
         }
 
@@ -278,9 +285,9 @@ class RegisteredBallController extends Controller
         $licenseNo = $isPrivileged ? $request->input('license_no') : $registeredBall->license_no;
 
         $request->validate([
-            'license_no'         => ['nullable', 'exists:pro_bowlers,license_no'],
-            'approved_ball_id'   => ['required', 'exists:approved_balls,id'],
-            'serial_number'      => [
+            'license_no' => ['nullable', 'exists:pro_bowlers,license_no'],
+            'approved_ball_id' => ['required', 'exists:approved_balls,id'],
+            'serial_number' => [
                 'required',
                 'string',
                 'max:255',
@@ -288,15 +295,16 @@ class RegisteredBallController extends Controller
                     ->ignore($registeredBall->id)
                     ->where(function ($q) use ($request, $licenseNo) {
                         $year = Carbon::parse($request->registered_at)->year;
+
                         return $q->where('license_no', $licenseNo)
                             ->whereYear('registered_at', $year);
                     }),
             ],
-            'registered_at'      => ['required', 'date'],
-            'inspection_number'  => ['nullable', 'string', 'max:255'],
+            'registered_at' => ['required', 'date'],
+            'inspection_number' => ['nullable', 'string', 'max:255'],
             'certificate_number' => ['nullable', 'string', 'max:255'],
-            'return_to'          => ['nullable', 'string', 'max:50'],
-            'entry_id'           => ['nullable', 'integer'],
+            'return_to' => ['nullable', 'string', 'max:50'],
+            'entry_id' => ['nullable', 'integer'],
         ]);
 
         $inspection = trim((string) ($request->input('inspection_number')
@@ -304,10 +312,11 @@ class RegisteredBallController extends Controller
             ?? ''));
 
         $data = [
-            'license_no'       => $licenseNo,
+            'pro_bowler_id' => ProBowler::query()->where('license_no', $licenseNo)->value('id'),
+            'license_no' => $licenseNo,
             'approved_ball_id' => $request->input('approved_ball_id'),
-            'serial_number'    => $request->input('serial_number'),
-            'registered_at'    => $request->input('registered_at'),
+            'serial_number' => $request->input('serial_number'),
+            'registered_at' => $request->input('registered_at'),
         ];
 
         $data['inspection_number'] = ($inspection === '') ? null : $inspection;
@@ -317,7 +326,7 @@ class RegisteredBallController extends Controller
 
         $registeredBall->update($data);
 
-        $this->syncRegisteredBallToUsedBall($registeredBall->fresh());
+        $this->linkageService->sync($registeredBall->fresh());
 
         return $this->redirectAfterSave(
             $request,
@@ -329,7 +338,7 @@ class RegisteredBallController extends Controller
 
     public function destroy(Request $request, RegisteredBall $registeredBall)
     {
-        if (!auth()->user()->isAdmin()) {
+        if (! auth()->user()->isAdmin()) {
             abort(403, 'この操作は許可されていません。');
         }
 
@@ -374,7 +383,7 @@ class RegisteredBallController extends Controller
 
     private function buildStatusMeta(?string $inspectionNumber, $expiresAt): array
     {
-        if (!$inspectionNumber || !$expiresAt) {
+        if (! $inspectionNumber || ! $expiresAt) {
             return [
                 'key' => 'provisional',
                 'label' => '仮登録 / 検量証待ち',
@@ -420,14 +429,14 @@ class RegisteredBallController extends Controller
         }
 
         $licenseNo = $this->resolveCurrentUserLicenseNo($user);
-        if (!$licenseNo || $licenseNo !== $registeredBall->license_no) {
+        if (! $licenseNo || $licenseNo !== $registeredBall->license_no) {
             abort(403, 'この本登録ボールは操作できません。');
         }
     }
 
     private function resolveCurrentUserLicenseNo($user): ?string
     {
-        if (!$user) {
+        if (! $user) {
             return null;
         }
 
@@ -446,50 +455,11 @@ class RegisteredBallController extends Controller
 
     private function isPrivilegedUser($user): bool
     {
-        if (!$user) {
+        if (! $user) {
             return false;
         }
 
         return $user->isAdmin() || $user->isEditor();
-    }
-
-    private function syncRegisteredBallToUsedBall(RegisteredBall $registeredBall): void
-    {
-        $licenseNo = trim((string) ($registeredBall->license_no ?? ''));
-        if ($licenseNo === '') {
-            return;
-        }
-
-        $proBowler = ProBowler::query()
-            ->where('license_no', $licenseNo)
-            ->first();
-
-        if (!$proBowler) {
-            return;
-        }
-
-        $payload = [
-            'approved_ball_id'  => $registeredBall->approved_ball_id,
-            'serial_number'     => $registeredBall->serial_number,
-            'inspection_number' => $registeredBall->inspection_number,
-            'registered_at'     => $registeredBall->registered_at,
-            'expires_at'        => $registeredBall->expires_at,
-        ];
-
-        $existing = UsedBall::query()
-            ->where('pro_bowler_id', $proBowler->id)
-            ->whereRaw('upper(serial_number) = ?', [mb_strtoupper((string) $registeredBall->serial_number)])
-            ->first();
-
-        if ($existing) {
-            $existing->update($payload);
-            return;
-        }
-
-        UsedBall::create(array_merge(
-            ['pro_bowler_id' => $proBowler->id],
-            $payload
-        ));
     }
 
     private function redirectAfterSave(
@@ -497,8 +467,7 @@ class RegisteredBallController extends Controller
         string $defaultRoute,
         string $message,
         ?string $warning = null
-    )
-    {
+    ) {
         $returnTo = (string) $request->input('return_to', '');
         $entryId = (int) $request->input('entry_id', 0);
 

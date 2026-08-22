@@ -7,9 +7,6 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 
-use App\Models\ProBowler;
-use App\Models\ApprovedBall;
-
 class User extends Authenticatable
 {
     use HasApiTokens, HasFactory, Notifiable;
@@ -22,6 +19,7 @@ class User extends Authenticatable
         'role',                     // ← 新ロール管理ここで追加
         'pro_bowler_id',
         'pro_bowler_license_no',
+        'license_no',
     ];
 
     protected $hidden = ['password', 'remember_token'];
@@ -30,8 +28,8 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
-            'password'          => 'hashed',
-            'is_admin'          => 'boolean', // ← これは残しても動作には問題なし
+            'password' => 'hashed',
+            'is_admin' => 'boolean', // ← これは残しても動作には問題なし
         ];
     }
 
@@ -71,6 +69,6 @@ class User extends Authenticatable
 
     public function isMember(): bool
     {
-        return in_array($this->role, ['member', null]); // nullは旧データ対応
+        return in_array($this->role, ['member', 'bowler', null], true); // bowler/nullは旧データ対応
     }
 }

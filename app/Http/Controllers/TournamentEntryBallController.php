@@ -2,12 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ProBowler;
 use App\Models\TournamentEntry;
 use App\Models\UsedBall;
-use App\Models\RegisteredBall;
-use App\Models\ProBowler;
 use App\Services\BallAnnualRegistrationService;
 use App\Services\BallInspectionService;
+use App\Services\RegisteredBallLinkageService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -17,9 +17,9 @@ class TournamentEntryBallController extends Controller
 
     public function __construct(
         private readonly BallAnnualRegistrationService $annualRegistrationService,
-        private readonly BallInspectionService $inspectionService
-    ) {
-    }
+        private readonly BallInspectionService $inspectionService,
+        private readonly RegisteredBallLinkageService $linkageService
+    ) {}
 
     /**
      * 使用ボール選択画面（会員）
@@ -34,7 +34,7 @@ class TournamentEntryBallController extends Controller
             return $guard;
         }
 
-        $this->syncFromRegisteredBalls((int) $entry->pro_bowler_id);
+        $this->linkageService->syncForBowler((int) $entry->pro_bowler_id);
 
         $linkedIds = $entry->balls()->pluck('used_balls.id')->all();
         $registrationYear = $this->annualRegistrationService
@@ -53,7 +53,7 @@ class TournamentEntryBallController extends Controller
         $usedBalls = UsedBall::with('approvedBall')
             ->where('pro_bowler_id', $entry->pro_bowler_id)
             ->whereIn('id', $candidateIds)
-            ->orderByRaw("case when inspection_number is null then 0 else 1 end asc")
+            ->orderByRaw('case when inspection_number is null then 0 else 1 end asc')
             ->orderByDesc('registered_at')
             ->orderByDesc('id')
             ->get();
@@ -79,13 +79,13 @@ class TournamentEntryBallController extends Controller
         $staffProxy = $this->isStaffUser(Auth::user());
 
         $summary = [
-            'total'       => $usedBalls->count(),
-            'linked'      => collect($usedBalls)->whereIn('id', $linkedIds)->count(),
-            'available'   => collect($usedBalls)->reject(fn ($ball) => in_array($ball->id, $linkedIds, true))->count(),
+            'total' => $usedBalls->count(),
+            'linked' => collect($usedBalls)->whereIn('id', $linkedIds)->count(),
+            'available' => collect($usedBalls)->reject(fn ($ball) => in_array($ball->id, $linkedIds, true))->count(),
             'provisional' => collect($inspectionStatuses)->where('current.key', 'provisional')->count(),
             'expiring_soon' => collect($inspectionStatuses)->where('current.key', 'expiring_soon')->count(),
-            'expired'     => collect($inspectionStatuses)->where('current.key', 'expired')->count(),
-            'valid'       => collect($inspectionStatuses)->whereIn('current.key', ['valid', 'expiring_soon'])->count(),
+            'expired' => collect($inspectionStatuses)->where('current.key', 'expired')->count(),
+            'valid' => collect($inspectionStatuses)->whereIn('current.key', ['valid', 'expiring_soon'])->count(),
             'tournament_ineligible' => $inspectionRequired
                 ? collect($inspectionStatuses)->where('tournament.allowed', false)->count()
                 : 0,
@@ -136,7 +136,7 @@ class TournamentEntryBallController extends Controller
                 );
                 $name = (string) ($ball->approvedBall?->name ?? '');
 
-                return mb_strtolower($manufacturer . '|' . $name . '|' . (string) $ball->id);
+                return mb_strtolower($manufacturer.'|'.$name.'|'.(string) $ball->id);
             })
             ->values();
 
@@ -145,7 +145,7 @@ class TournamentEntryBallController extends Controller
         $requestedReturn = trim((string) $request->query('return', ''));
         $applicationRoot = rtrim(url('/'), '/');
         $returnUrl = $requestedReturn !== ''
-            && ($requestedReturn === $applicationRoot || str_starts_with($requestedReturn, $applicationRoot . '/'))
+            && ($requestedReturn === $applicationRoot || str_starts_with($requestedReturn, $applicationRoot.'/'))
                 ? $requestedReturn
                 : route('member.dashboard');
         $isPublic = (int) $request->query('public', 0) === 1;
@@ -171,7 +171,7 @@ class TournamentEntryBallController extends Controller
         }
 
         $data = $request->validate([
-            'used_ball_ids'   => ['array'],
+            'used_ball_ids' => ['array'],
             'used_ball_ids.*' => ['integer', 'exists:used_balls,id'],
         ]);
 
@@ -194,7 +194,7 @@ class TournamentEntryBallController extends Controller
 
         foreach ($targetIds as $ballId) {
             $usedBall = UsedBall::findOrFail($ballId);
-            $isNewSelection = !in_array((int) $ballId, array_map('intval', $already), true);
+            $isNewSelection = ! in_array((int) $ballId, array_map('intval', $already), true);
 
             if ((int) $usedBall->pro_bowler_id !== (int) $entry->pro_bowler_id) {
                 return back()->withErrors([
@@ -204,7 +204,7 @@ class TournamentEntryBallController extends Controller
 
             if (
                 $isNewSelection
-                && !in_array((int) $ballId, array_map('intval', $approvedAnnualBallIds), true)
+                && ! in_array((int) $ballId, array_map('intval', $approvedAnnualBallIds), true)
             ) {
                 return back()->withErrors([
                     'used_ball_ids' => "{$registrationYear}年度のスタッフ承認を受けていないボールは追加できません。（SN: {$usedBall->serial_number}）",
@@ -215,7 +215,7 @@ class TournamentEntryBallController extends Controller
                 $inspectionEligibility = $this->inspectionService
                     ->tournamentEligibility($usedBall, $entry->tournament);
 
-                if (!$inspectionEligibility['allowed']) {
+                if (! $inspectionEligibility['allowed']) {
                     return back()->withErrors([
                         'used_ball_ids' => 'この大会は検量証必須です。'
                             .$inspectionEligibility['message']
@@ -256,7 +256,7 @@ class TournamentEntryBallController extends Controller
         $usedBall = UsedBall::findOrFail($data['used_ball_id']);
 
         if (
-            !$this->isStaffUser(Auth::user())
+            ! $this->isStaffUser(Auth::user())
             && Auth::check()
             && Auth::user()->pro_bowler_id
         ) {
@@ -275,7 +275,7 @@ class TournamentEntryBallController extends Controller
             ->approvedUsedBallIds((int) $entry->pro_bowler_id, $registrationYear)
             ->all();
 
-        if (!in_array((int) $usedBall->id, array_map('intval', $approvedAnnualBallIds), true)) {
+        if (! in_array((int) $usedBall->id, array_map('intval', $approvedAnnualBallIds), true)) {
             return back()->withErrors([
                 'used_ball_id' => "{$registrationYear}年度のスタッフ承認を受けていないボールは登録できません。",
             ]);
@@ -284,18 +284,18 @@ class TournamentEntryBallController extends Controller
         $alreadyLinked = $entry->balls()->where('used_ball_id', $usedBall->id)->exists();
         $inspectionRequired = (bool) ($entry->tournament?->inspection_required ?? false);
 
-        if (!$alreadyLinked && $inspectionRequired) {
+        if (! $alreadyLinked && $inspectionRequired) {
             $inspectionEligibility = $this->inspectionService
                 ->tournamentEligibility($usedBall, $entry->tournament);
 
-            if (!$inspectionEligibility['allowed']) {
+            if (! $inspectionEligibility['allowed']) {
                 return back()->withErrors([
                     'used_ball_id' => 'この大会は検量証必須です。'.$inspectionEligibility['message'],
                 ]);
             }
         }
 
-        if (!$alreadyLinked) {
+        if (! $alreadyLinked) {
             $ballLimit = $this->resolveBallRegistrationLimit($entry);
             if ($entry->balls()->count() >= $ballLimit) {
                 return back()->withErrors([
@@ -318,7 +318,7 @@ class TournamentEntryBallController extends Controller
         $user = auth()->user();
         $isAdmin = $user && (method_exists($user, 'isAdmin') ? $user->isAdmin() : (bool) ($user->is_admin ?? false));
 
-        if (!$isAdmin) {
+        if (! $isAdmin) {
             abort(403, 'この操作は許可されていません。');
         }
 
@@ -334,7 +334,7 @@ class TournamentEntryBallController extends Controller
         $userProBowlerId = (int) (Auth::user()?->pro_bowler_id ?? 0);
 
         if (
-            !$isStaff
+            ! $isStaff
             && ($userProBowlerId <= 0 || $userProBowlerId !== (int) $entry->pro_bowler_id)
         ) {
             abort(403, '自分のエントリー以外は操作できません。');
@@ -359,7 +359,7 @@ class TournamentEntryBallController extends Controller
         $bowler = ProBowler::query()->find($entry->pro_bowler_id);
         $eligibility = $this->resolveEntryEligibility($bowler, $entry->tournament()->first());
 
-        if (!$eligibility['allowed']) {
+        if (! $eligibility['allowed']) {
             return redirect()
                 ->route('tournament.entry.select')
                 ->with('error', $eligibility['message']);
@@ -370,7 +370,7 @@ class TournamentEntryBallController extends Controller
 
     private function isStaffUser($user): bool
     {
-        if (!$user) {
+        if (! $user) {
             return false;
         }
 
@@ -429,65 +429,5 @@ class TournamentEntryBallController extends Controller
         return ProBowler::query()
             ->whereKey($entry->pro_bowler_id)
             ->value('license_no');
-    }
-
-    /**
-     * registered_balls -> used_balls 同期
-     * - RegisteredBall は license_no ベース
-     * - UsedBall は pro_bowler_id を要求するので、対応する ProBowler を解決して保存
-     * - serial_number が同じものは「スキップ」ではなく更新して、本登録側の修正を反映する
-     * - expires_at は RegisteredBall 側のロジックに従う（NULL=仮登録OK）
-     */
-    private function syncFromRegisteredBalls(int $proBowlerId): void
-    {
-        $pro = ProBowler::find($proBowlerId);
-        if (!$pro || empty($pro->license_no)) {
-            return;
-        }
-
-        $registered = RegisteredBall::where('license_no', $pro->license_no)->get();
-        if ($registered->isEmpty()) {
-            return;
-        }
-
-        $existingUsedBalls = UsedBall::where('pro_bowler_id', $pro->id)
-            ->get()
-            ->keyBy(fn ($ball) => mb_strtoupper((string) $ball->serial_number));
-
-        foreach ($registered as $rb) {
-            $serialKey = mb_strtoupper((string) $rb->serial_number);
-
-            $payload = [
-                'approved_ball_id'  => $rb->approved_ball_id,
-                'serial_number'     => $rb->serial_number,
-                'inspection_number' => $rb->inspection_number,
-                'registered_at'     => $rb->registered_at,
-                'expires_at'        => $rb->expires_at,
-            ];
-
-            if ($existingUsedBalls->has($serialKey)) {
-                /** @var \App\Models\UsedBall $existing */
-                $existing = $existingUsedBalls->get($serialKey);
-
-                $needsUpdate =
-                    (int) $existing->approved_ball_id !== (int) $rb->approved_ball_id ||
-                    (string) ($existing->inspection_number ?? '') !== (string) ($rb->inspection_number ?? '') ||
-                    optional($existing->registered_at)->format('Y-m-d') !== optional($rb->registered_at)->format('Y-m-d') ||
-                    optional($existing->expires_at)->format('Y-m-d') !== optional($rb->expires_at)->format('Y-m-d');
-
-                if ($needsUpdate) {
-                    $existing->update($payload);
-                }
-
-                continue;
-            }
-
-            $created = UsedBall::create(array_merge(
-                ['pro_bowler_id' => $pro->id],
-                $payload
-            ));
-
-            $existingUsedBalls->put($serialKey, $created);
-        }
     }
 }

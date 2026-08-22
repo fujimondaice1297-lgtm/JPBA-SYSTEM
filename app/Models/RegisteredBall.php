@@ -2,9 +2,9 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 
 class RegisteredBall extends Model
 {
@@ -13,6 +13,7 @@ class RegisteredBall extends Model
     protected $table = 'registered_balls';
 
     protected $fillable = [
+        'pro_bowler_id',
         'license_no',
         'approved_ball_id',
         'serial_number',
@@ -23,7 +24,7 @@ class RegisteredBall extends Model
 
     protected $casts = [
         'registered_at' => 'date',
-        'expires_at'    => 'date',
+        'expires_at' => 'date',
     ];
 
     protected static function boot()
@@ -32,7 +33,7 @@ class RegisteredBall extends Model
 
         // 期限の自動算出：検量証がある場合のみ付与。無ければ null
         $calc = function (self $ball) {
-            if (!empty($ball->inspection_number) && !empty($ball->registered_at)) {
+            if (! empty($ball->inspection_number) && ! empty($ball->registered_at)) {
                 $ball->expires_at = Carbon::parse($ball->registered_at)->addYear()->subDay();
             } else {
                 $ball->expires_at = null;
@@ -48,6 +49,12 @@ class RegisteredBall extends Model
     {
         // registered_balls.license_no -> pro_bowlers.license_no
         return $this->belongsTo(ProBowler::class, 'license_no', 'license_no');
+    }
+
+    /** 選手（現行のID結線） */
+    public function owner()
+    {
+        return $this->belongsTo(ProBowler::class, 'pro_bowler_id');
     }
 
     /** 承認ボール */

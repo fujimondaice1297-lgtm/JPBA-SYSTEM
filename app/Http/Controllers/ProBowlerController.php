@@ -2,19 +2,19 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use App\Models\ProBowler;
 use App\Models\District;
 use App\Models\Instructor;
 use App\Models\InstructorRegistry;
-use App\Services\ProBowlerProfileNormalizer;
-use App\Services\ProBowlerPhotoService;
-use App\Services\ProBowlerSearchScopeService;
+use App\Models\ProBowler;
 use App\Services\ProBowlerMembershipClassificationService;
-use Illuminate\Support\Facades\DB;
+use App\Services\ProBowlerPhotoService;
+use App\Services\ProBowlerProfileNormalizer;
+use App\Services\ProBowlerSearchScopeService;
 use Illuminate\Database\QueryException;
-use Illuminate\Support\Facades\Storage;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 class ProBowlerController extends Controller
 {
@@ -25,7 +25,7 @@ class ProBowlerController extends Controller
     {
         $titleYear = $request->integer('title_year');
         $titleFrom = $request->integer('title_year_from');
-        $titleTo   = $request->integer('title_year_to');
+        $titleTo = $request->integer('title_year_to');
 
         $query = ProBowler::query()
             ->with(['district', 'currentInstructorRegistry'])
@@ -41,7 +41,7 @@ class ProBowlerController extends Controller
         $statusService = app(ProBowlerSearchScopeService::class);
         $playerStatus = $statusService->normalizeStatus($request->query('player_status', 'active'));
         $genderFilter = trim((string) $request->query('gender', '男性'));
-        if (!in_array($genderFilter, ['男性', '女性'], true)) {
+        if (! in_array($genderFilter, ['男性', '女性'], true)) {
             $genderFilter = '男性';
         }
 
@@ -142,7 +142,7 @@ class ProBowlerController extends Controller
 
         return view('pro_bowlers.athlete_form', [
             'districts' => $districts,
-            'bowler'    => null,
+            'bowler' => null,
         ]);
     }
 
@@ -160,16 +160,16 @@ class ProBowlerController extends Controller
         $data = $this->buildAdminPayload($request, $validated, null);
 
         if ($data['mailing_addr_same_as_org'] ?? false) {
-            $data['mailing_zip']   = $this->nullIfBlank($request->input('organization_zip'));
+            $data['mailing_zip'] = $this->nullIfBlank($request->input('organization_zip'));
             $data['mailing_addr1'] = $this->nullIfBlank($request->input('organization_addr1'));
             $data['mailing_addr2'] = $this->nullIfBlank($request->input('organization_addr2'));
         }
         if ($data['public_addr_same_as_org'] ?? false) {
-            $data['public_zip']   = $this->nullIfBlank($request->input('organization_zip'));
+            $data['public_zip'] = $this->nullIfBlank($request->input('organization_zip'));
             $data['public_addr1'] = $this->nullIfBlank($request->input('organization_addr1'));
             $data['public_addr2'] = $this->nullIfBlank($request->input('organization_addr2'));
         }
-        if (empty($data['birthdate_public']) && !empty($data['birthdate']) && !($data['birthdate_public_is_private'] ?? false)) {
+        if (empty($data['birthdate_public']) && ! empty($data['birthdate']) && ! ($data['birthdate_public_is_private'] ?? false)) {
             $data['birthdate_public'] = $data['birthdate'];
         }
 
@@ -222,6 +222,7 @@ class ProBowlerController extends Controller
                 $query->orderByDesc('awarded_on')->orderByDesc('id');
             },
             'currentInstructorRegistry',
+            'userAccount',
         ])
             ->withCount([
                 'officialTitles as official_titles_count',
@@ -268,16 +269,16 @@ class ProBowlerController extends Controller
             $data = $this->buildAdminPayload($request, $validated, $bowler);
 
             if ($data['mailing_addr_same_as_org'] ?? false) {
-                $data['mailing_zip']   = $this->nullIfBlank($request->input('organization_zip'));
+                $data['mailing_zip'] = $this->nullIfBlank($request->input('organization_zip'));
                 $data['mailing_addr1'] = $this->nullIfBlank($request->input('organization_addr1'));
                 $data['mailing_addr2'] = $this->nullIfBlank($request->input('organization_addr2'));
             }
             if ($data['public_addr_same_as_org'] ?? false) {
-                $data['public_zip']   = $this->nullIfBlank($request->input('organization_zip'));
+                $data['public_zip'] = $this->nullIfBlank($request->input('organization_zip'));
                 $data['public_addr1'] = $this->nullIfBlank($request->input('organization_addr1'));
                 $data['public_addr2'] = $this->nullIfBlank($request->input('organization_addr2'));
             }
-            if (empty($data['birthdate_public']) && !empty($data['birthdate']) && !($data['birthdate_public_is_private'] ?? false)) {
+            if (empty($data['birthdate_public']) && ! empty($data['birthdate']) && ! ($data['birthdate_public_is_private'] ?? false)) {
                 $data['birthdate_public'] = $data['birthdate'];
             }
 
@@ -389,7 +390,7 @@ class ProBowlerController extends Controller
 
         $perPage = (int) ($filters['per_page'] ?? 50);
         $allowedPerPage = [10, 25, 50, 100, 200];
-        if (!in_array($perPage, $allowedPerPage, true)) {
+        if (! in_array($perPage, $allowedPerPage, true)) {
             $perPage = 50;
         }
 
@@ -425,7 +426,7 @@ class ProBowlerController extends Controller
                 $join->on('pro_bowlers.id', '=', 'titles_agg.pro_bowler_id');
             })
             ->addSelect('pro_bowlers.*')
-            ->addSelect(DB::raw($titleCountSql . ' as titles_count'));
+            ->addSelect(DB::raw($titleCountSql.' as titles_count'));
 
         $statusService = app(ProBowlerSearchScopeService::class);
         $playerStatus = $statusService->normalizeStatus((string) ($filters['player_status'] ?? ''));
@@ -433,7 +434,7 @@ class ProBowlerController extends Controller
         $statusService->applyStatus($query, $playerStatus);
 
         $renewalStatusFilter = trim((string) ($filters['renewal_status'] ?? ''));
-        if (!$request->has('renewal_status') || $renewalStatusFilter === '') {
+        if (! $request->has('renewal_status') || $renewalStatusFilter === '') {
             $renewalStatusFilter = 'renewed';
             $filters['renewal_status'] = 'renewed';
         }
@@ -451,7 +452,7 @@ class ProBowlerController extends Controller
             $query->where('membership_type', $membershipType);
         }
 
-        if (!empty($filters['name'])) {
+        if (! empty($filters['name'])) {
             $name = trim((string) $filters['name']);
             $query->where(function ($q) use ($name) {
                 $q->where('name_kanji', 'like', "%{$name}%")
@@ -465,7 +466,7 @@ class ProBowlerController extends Controller
         }
 
         $officialTournamentEligible = trim((string) ($filters['official_tournament_eligible'] ?? ''));
-        if (!$request->has('official_tournament_eligible') || $officialTournamentEligible === '') {
+        if (! $request->has('official_tournament_eligible') || $officialTournamentEligible === '') {
             $officialTournamentEligible = '1';
             $filters['official_tournament_eligible'] = '1';
         }
@@ -476,7 +477,7 @@ class ProBowlerController extends Controller
             $query->where('can_enter_official_tournament', false);
         }
 
-        if (!empty($filters['license_no'])) {
+        if (! empty($filters['license_no'])) {
             $license = trim((string) $filters['license_no']);
             $normalizedLicense = preg_replace('/[^0-9]/', '', $license);
             if ($memberClassFilter === '' && strtoupper($license) === 'T') {
@@ -498,22 +499,22 @@ class ProBowlerController extends Controller
         $licensePrefix = strtoupper(trim((string) ($filters['license_prefix'] ?? '')));
         $licensePrefix = preg_replace('/[^A-Z0-9]/', '', $licensePrefix);
         if ($licensePrefix !== '') {
-            $query->whereRaw('upper(license_no) like ?', [$licensePrefix . '%']);
+            $query->whereRaw('upper(license_no) like ?', [$licensePrefix.'%']);
         }
 
         $start = trim((string) ($filters['id_start'] ?? ''));
-        $end   = trim((string) ($filters['id_end'] ?? ''));
+        $end = trim((string) ($filters['id_end'] ?? ''));
 
         if ($start === '' && $end === '') {
             $start = trim((string) ($filters['id_from'] ?? ''));
-            $end   = trim((string) ($filters['id_to'] ?? ''));
+            $end = trim((string) ($filters['id_to'] ?? ''));
         }
 
         if ($start !== '' || $end !== '') {
             $startIsNum = ($start !== '' && ctype_digit($start));
-            $endIsNum   = ($end !== '' && ctype_digit($end));
+            $endIsNum = ($end !== '' && ctype_digit($end));
 
-            if (($start !== '' && !$startIsNum) || ($end !== '' && !$endIsNum)) {
+            if (($start !== '' && ! $startIsNum) || ($end !== '' && ! $endIsNum)) {
                 $val = $start !== '' ? $start : $end;
                 $query->whereRaw('lower(license_no) = lower(?)', [$val]);
             } else {
@@ -526,9 +527,9 @@ class ProBowlerController extends Controller
             }
         }
 
-        if (!empty($filters['district_id'])) {
+        if (! empty($filters['district_id'])) {
             $query->where('district_id', (int) $filters['district_id']);
-        } elseif (!empty($filters['district'])) {
+        } elseif (! empty($filters['district'])) {
             $d = $filters['district'];
             if (ctype_digit((string) $d)) {
                 $query->where('district_id', (int) $d);
@@ -541,7 +542,7 @@ class ProBowlerController extends Controller
         if ($genderFilter === '' && $sexFilter !== null && $sexFilter !== '' && in_array((int) $sexFilter, [1, 2], true)) {
             $genderFilter = ((int) $sexFilter === 1) ? '男性' : '女性';
         }
-        if (!in_array($genderFilter, ['男性', '女性'], true)) {
+        if (! in_array($genderFilter, ['男性', '女性'], true)) {
             $genderFilter = '男性';
         }
         $filters['gender'] = $genderFilter;
@@ -549,36 +550,36 @@ class ProBowlerController extends Controller
 
         $query->where('sex', $genderFilter === '男性' ? 1 : 2);
 
-        if (!empty($filters['age_from']) || !empty($filters['age_to'])) {
+        if (! empty($filters['age_from']) || ! empty($filters['age_to'])) {
             $today = now();
-            if (!empty($filters['age_from'])) {
+            if (! empty($filters['age_from'])) {
                 $maxBirth = $today->copy()->subYears((int) $filters['age_from'])->endOfDay();
                 $query->where('birthdate', '<=', $maxBirth);
             }
-            if (!empty($filters['age_to'])) {
+            if (! empty($filters['age_to'])) {
                 $minBirth = $today->copy()->subYears((int) $filters['age_to'] + 1)->addDay()->startOfDay();
                 $query->where('birthdate', '>=', $minBirth);
             }
         }
 
-        if (!empty($filters['has_title'])) {
-            $query->whereRaw($titleCountSql . ' > 0');
+        if (! empty($filters['has_title'])) {
+            $query->whereRaw($titleCountSql.' > 0');
         }
-        if (!empty($filters['titles_from'])) {
-            $query->whereRaw($titleCountSql . ' >= ?', [(int) $filters['titles_from']]);
+        if (! empty($filters['titles_from'])) {
+            $query->whereRaw($titleCountSql.' >= ?', [(int) $filters['titles_from']]);
         }
-        if (!empty($filters['titles_to'])) {
-            $query->whereRaw($titleCountSql . ' <= ?', [(int) $filters['titles_to']]);
+        if (! empty($filters['titles_to'])) {
+            $query->whereRaw($titleCountSql.' <= ?', [(int) $filters['titles_to']]);
         }
 
-        if (!empty($filters['is_district_leader'])) {
+        if (! empty($filters['is_district_leader'])) {
             $query->where('is_district_leader', true);
         }
-        if (!empty($filters['has_sports_coach_license'])) {
+        if (! empty($filters['has_sports_coach_license'])) {
             $query->where('has_sports_coach_license', true);
         }
 
-        if (!empty($filters['coach_name'])) {
+        if (! empty($filters['coach_name'])) {
             $coach = trim((string) $filters['coach_name']);
             $query->where('coach', 'like', "%{$coach}%");
         }
@@ -593,26 +594,26 @@ class ProBowlerController extends Controller
         } elseif ($sort === 'name') {
             $query->orderByRaw("name_kanji {$dir} nulls last")
                 ->orderByRaw("name_kana {$dir} nulls last")
-                ->orderByRaw("license_no_num asc nulls last")
+                ->orderByRaw('license_no_num asc nulls last')
                 ->orderBy('license_no');
         } elseif ($sort === 'district') {
             $query->orderByRaw("district_id {$dir} nulls last")
-                ->orderByRaw("license_no_num asc nulls last")
+                ->orderByRaw('license_no_num asc nulls last')
                 ->orderBy('license_no');
         } elseif ($sort === 'sex') {
             $query->orderByRaw("sex {$dir} nulls last")
-                ->orderByRaw("license_no_num asc nulls last")
+                ->orderByRaw('license_no_num asc nulls last')
                 ->orderBy('license_no');
         } elseif ($sort === 'kibetsu') {
             $query->orderByRaw("kibetsu {$dir} nulls last")
-                ->orderByRaw("license_no_num asc nulls last")
+                ->orderByRaw('license_no_num asc nulls last')
                 ->orderBy('license_no');
         } elseif ($sort === 'titles') {
-            $query->orderByRaw($titleCountSql . ' ' . $dir)
-                ->orderByRaw("license_no_num asc nulls last")
+            $query->orderByRaw($titleCountSql.' '.$dir)
+                ->orderByRaw('license_no_num asc nulls last')
                 ->orderBy('license_no');
         } else {
-            $query->orderByRaw("license_no_num asc nulls last")
+            $query->orderByRaw('license_no_num asc nulls last')
                 ->orderBy('license_no');
         }
 
@@ -637,118 +638,117 @@ class ProBowlerController extends Controller
     private function adminRules(): array
     {
         return [
-            'license_no'         => 'required|string|max:255',
-            'name'               => 'required|string|max:255',
-            'furigana'           => 'nullable|string|max:255',
-            'district'           => 'required|integer|exists:districts,id',
-            'gender'             => 'required|in:男性,女性',
-            'kibetsu'            => 'nullable|integer|min:1|max:99',
-            'membership_type'    => 'nullable|string|max:255',
+            'license_no' => 'required|string|max:255',
+            'name' => 'required|string|max:255',
+            'furigana' => 'nullable|string|max:255',
+            'district' => 'required|integer|exists:districts,id',
+            'gender' => 'required|in:男性,女性',
+            'kibetsu' => 'nullable|integer|min:1|max:99',
+            'membership_type' => 'nullable|string|max:255',
             'license_issue_date' => 'nullable|date',
-            'phone_home'         => 'nullable|string|max:20',
+            'phone_home' => 'nullable|string|max:20',
 
-            'public_image_path'    => 'nullable|file|image|max:5120',
+            'public_image_path' => 'nullable|file|image|max:5120',
             'profile_image_public' => 'nullable|file|image|max:5120',
-            'qr_code_path'         => 'nullable|file|image|max:5120',
+            'qr_code_path' => 'nullable|file|image|max:5120',
 
-            'birthdate'                   => 'nullable|date',
-            'birthdate_public'            => 'nullable|date',
-            'birthdate_public_hide_year'  => 'sometimes|boolean',
+            'birthdate' => 'nullable|date',
+            'birthdate_public' => 'nullable|date',
+            'birthdate_public_hide_year' => 'sometimes|boolean',
             'birthdate_public_is_private' => 'sometimes|boolean',
-            'birthplace'                  => 'nullable|string|max:255',
-            'email'                       => 'nullable|email|max:255',
-            'work_place'                  => 'nullable|string|max:255',
-            'work_place_url'              => 'nullable|url',
-            'mailing_preference'          => 'nullable|in:1,2',
-            'pro_entry_year'              => 'nullable|integer|min:1950|max:2099',
-            'school'                      => 'nullable|string|max:255',
-            'hobby'                       => 'nullable|string|max:255',
-            'bowling_history'             => 'nullable|string|max:255',
-            'other_sports_history'        => 'nullable|string|max:1000',
-            'season_goal'                 => 'nullable|string|max:255',
-            'coach'                       => 'nullable|string|max:255',
-            'selling_point'               => 'nullable|string|max:1000',
-            'free_comment'                => 'nullable|string|max:1000',
-            'facebook'                    => 'nullable|url',
-            'twitter'                     => 'nullable|url',
-            'instagram'                   => 'nullable|url',
-            'rankseeker'                  => 'nullable|url',
-            'jbc_driller_cert'            => 'nullable|in:有,無',
-            'a_license_date'              => 'nullable|date',
-            'permanent_seed_date'         => 'nullable|date',
-            'hall_of_fame_date'           => 'nullable|date',
-            'memo'                        => 'nullable|string|max:1000',
-            'usbc_coach'                  => 'nullable|in:Bronze,Silver,Gold',
-            'is_district_leader'          => 'sometimes|boolean',
+            'birthplace' => 'nullable|string|max:255',
+            'email' => 'nullable|email|max:255',
+            'work_place' => 'nullable|string|max:255',
+            'work_place_url' => 'nullable|url',
+            'mailing_preference' => 'nullable|in:1,2',
+            'pro_entry_year' => 'nullable|integer|min:1950|max:2099',
+            'school' => 'nullable|string|max:255',
+            'hobby' => 'nullable|string|max:255',
+            'bowling_history' => 'nullable|string|max:255',
+            'other_sports_history' => 'nullable|string|max:1000',
+            'season_goal' => 'nullable|string|max:255',
+            'coach' => 'nullable|string|max:255',
+            'selling_point' => 'nullable|string|max:1000',
+            'free_comment' => 'nullable|string|max:1000',
+            'facebook' => 'nullable|url',
+            'twitter' => 'nullable|url',
+            'instagram' => 'nullable|url',
+            'rankseeker' => 'nullable|url',
+            'jbc_driller_cert' => 'nullable|in:有,無',
+            'a_license_date' => 'nullable|date',
+            'permanent_seed_date' => 'nullable|date',
+            'hall_of_fame_date' => 'nullable|date',
+            'memo' => 'nullable|string|max:1000',
+            'usbc_coach' => 'nullable|in:Bronze,Silver,Gold',
+            'is_district_leader' => 'sometimes|boolean',
 
-            'height_cm'            => 'nullable|integer|min:0|max:300',
-            'height_is_public'     => 'sometimes|boolean',
-            'weight_kg'            => 'nullable|integer|min:0|max:400',
-            'weight_is_public'     => 'sometimes|boolean',
-            'blood_type'           => 'nullable|string|max:3',
+            'height_cm' => 'nullable|integer|min:0|max:300',
+            'height_is_public' => 'sometimes|boolean',
+            'weight_kg' => 'nullable|integer|min:0|max:400',
+            'weight_is_public' => 'sometimes|boolean',
+            'blood_type' => 'nullable|string|max:3',
             'blood_type_is_public' => 'sometimes|boolean',
-            'dominant_arm'         => 'nullable|string|max:5',
-            'sponsor_a'            => 'nullable|string|max:255',
-            'sponsor_a_url'        => 'nullable|url|max:255',
-            'sponsor_b'            => 'nullable|string|max:255',
-            'sponsor_b_url'        => 'nullable|url|max:255',
-            'sponsor_c'            => 'nullable|string|max:255',
-            'sponsor_c_url'        => 'nullable|url|max:255',
-            'equipment_contract'   => 'nullable|string|max:255',
-            'coaching_history'     => 'nullable|string|max:2000',
-            'motto'                => 'nullable|string|max:255',
+            'dominant_arm' => 'nullable|string|max:5',
+            'sponsor_a' => 'nullable|string|max:255',
+            'sponsor_a_url' => 'nullable|url|max:255',
+            'sponsor_b' => 'nullable|string|max:255',
+            'sponsor_b_url' => 'nullable|url|max:255',
+            'sponsor_c' => 'nullable|string|max:255',
+            'sponsor_c_url' => 'nullable|url|max:255',
+            'equipment_contract' => 'nullable|string|max:255',
+            'coaching_history' => 'nullable|string|max:2000',
+            'motto' => 'nullable|string|max:255',
 
             'mailing_addr_same_as_org' => 'sometimes|boolean',
-            'mailing_zip'              => 'nullable|string|max:10',
-            'mailing_addr1'            => 'nullable|string|max:255',
-            'mailing_addr2'            => 'nullable|string|max:255',
-            'login_id'                 => 'nullable|string|max:255',
-            'mypage_temp_password'     => 'nullable|string|max:255',
-            'organization_name'        => 'nullable|string|max:255',
-            'organization_zip'         => 'nullable|string|max:10',
-            'organization_addr1'       => 'nullable|string|max:255',
-            'organization_addr2'       => 'nullable|string|max:255',
-            'organization_url'         => 'nullable|url|max:255',
-            'public_addr_same_as_org'  => 'sometimes|boolean',
-            'public_zip'               => 'nullable|string|max:10',
-            'public_addr1'             => 'nullable|string|max:255',
-            'public_addr2'             => 'nullable|string|max:255',
-            'password_change_status'   => 'nullable|in:0,1,2,更新済,確認中,未更新',
-            'a_license_number'         => 'nullable|integer',
+            'mailing_zip' => 'nullable|string|max:10',
+            'mailing_addr1' => 'nullable|string|max:255',
+            'mailing_addr2' => 'nullable|string|max:255',
+            'login_id' => 'nullable|string|max:255',
+            'organization_name' => 'nullable|string|max:255',
+            'organization_zip' => 'nullable|string|max:10',
+            'organization_addr1' => 'nullable|string|max:255',
+            'organization_addr2' => 'nullable|string|max:255',
+            'organization_url' => 'nullable|url|max:255',
+            'public_addr_same_as_org' => 'sometimes|boolean',
+            'public_zip' => 'nullable|string|max:10',
+            'public_addr1' => 'nullable|string|max:255',
+            'public_addr2' => 'nullable|string|max:255',
+            'password_change_status' => 'nullable|in:0,1,2,更新済,確認中,未更新',
+            'a_license_number' => 'nullable|integer',
         ];
     }
 
     private function playerRules(): array
     {
         return [
-            'height_cm'            => 'nullable|integer|min:0|max:300',
-            'height_is_public'     => 'sometimes|boolean',
-            'weight_kg'            => 'nullable|integer|min:0|max:400',
-            'weight_is_public'     => 'sometimes|boolean',
-            'blood_type'           => 'nullable|string|max:3',
+            'height_cm' => 'nullable|integer|min:0|max:300',
+            'height_is_public' => 'sometimes|boolean',
+            'weight_kg' => 'nullable|integer|min:0|max:400',
+            'weight_is_public' => 'sometimes|boolean',
+            'blood_type' => 'nullable|string|max:3',
             'blood_type_is_public' => 'sometimes|boolean',
-            'dominant_arm'         => 'nullable|string|max:5',
-            'hobby'                => 'nullable|string|max:255',
-            'bowling_history'      => 'nullable|string|max:255',
+            'dominant_arm' => 'nullable|string|max:5',
+            'hobby' => 'nullable|string|max:255',
+            'bowling_history' => 'nullable|string|max:255',
             'other_sports_history' => 'nullable|string|max:1000',
-            'season_goal'          => 'nullable|string|max:255',
-            'coach'                => 'nullable|string|max:255',
-            'sponsor_a'            => 'nullable|string|max:255',
-            'sponsor_a_url'        => 'nullable|url|max:255',
-            'sponsor_b'            => 'nullable|string|max:255',
-            'sponsor_b_url'        => 'nullable|url|max:255',
-            'sponsor_c'            => 'nullable|string|max:255',
-            'sponsor_c_url'        => 'nullable|url|max:255',
-            'equipment_contract'   => 'nullable|string|max:255',
-            'coaching_history'     => 'nullable|string|max:2000',
-            'motto'                => 'nullable|string|max:255',
-            'selling_point'        => 'nullable|string|max:1000',
-            'free_comment'         => 'nullable|string|max:1000',
-            'facebook'             => 'nullable|url',
-            'twitter'              => 'nullable|url',
-            'instagram'            => 'nullable|url',
-            'rankseeker'           => 'nullable|url',
-            'jbc_driller_cert'     => 'nullable|in:有,無',
+            'season_goal' => 'nullable|string|max:255',
+            'coach' => 'nullable|string|max:255',
+            'sponsor_a' => 'nullable|string|max:255',
+            'sponsor_a_url' => 'nullable|url|max:255',
+            'sponsor_b' => 'nullable|string|max:255',
+            'sponsor_b_url' => 'nullable|url|max:255',
+            'sponsor_c' => 'nullable|string|max:255',
+            'sponsor_c_url' => 'nullable|url|max:255',
+            'equipment_contract' => 'nullable|string|max:255',
+            'coaching_history' => 'nullable|string|max:2000',
+            'motto' => 'nullable|string|max:255',
+            'selling_point' => 'nullable|string|max:1000',
+            'free_comment' => 'nullable|string|max:1000',
+            'facebook' => 'nullable|url',
+            'twitter' => 'nullable|url',
+            'instagram' => 'nullable|url',
+            'rankseeker' => 'nullable|url',
+            'jbc_driller_cert' => 'nullable|in:有,無',
         ];
     }
 
@@ -773,9 +773,9 @@ class ProBowlerController extends Controller
     ========================== */
     private function buildAdminPayload(Request $request, array $validated, ?ProBowler $current = null): array
     {
-        $hideYear  = $request->boolean('birthdate_public_hide_year');
+        $hideYear = $request->boolean('birthdate_public_hide_year');
         $isPrivate = $request->boolean('birthdate_public_is_private');
-        $isLeader  = $request->boolean('is_district_leader');
+        $isLeader = $request->boolean('is_district_leader');
 
         $licenseNo = $validated['license_no'] ?? $current?->license_no ?? '';
         $membershipType = $validated['membership_type'] ?? $current?->membership_type;
@@ -783,104 +783,103 @@ class ProBowlerController extends Controller
         $memberClass = $this->resolveMemberClass($membershipType, $licenseNo, $current?->member_class);
 
         $data = [
-            'license_no'         => $licenseNo,
-            'name_kanji'         => $validated['name'],
-            'name_kana'          => $validated['furigana'] ?? null,
-            'sex'                => $validated['gender'] === '男性' ? 1 : 2,
-            'district_id'        => (int) $validated['district'],
-            'kibetsu'            => $validated['kibetsu'] ?? null,
-            'membership_type'    => $membershipType,
+            'license_no' => $licenseNo,
+            'name_kanji' => $validated['name'],
+            'name_kana' => $validated['furigana'] ?? null,
+            'sex' => $validated['gender'] === '男性' ? 1 : 2,
+            'district_id' => (int) $validated['district'],
+            'kibetsu' => $validated['kibetsu'] ?? null,
+            'membership_type' => $membershipType,
             'license_issue_date' => $validated['license_issue_date'] ?? null,
-            'phone_home'         => $validated['phone_home'] ?? null,
+            'phone_home' => $validated['phone_home'] ?? null,
 
-            'qr_code_path'       => $request->input('qr_code_path') ?: null,
-            'public_image_path'  => $request->input('public_image_path') ?: null,
+            'qr_code_path' => $request->input('qr_code_path') ?: null,
+            'public_image_path' => $request->input('public_image_path') ?: null,
 
-            'birthdate'                   => $this->ymd($request->input('birthdate')),
-            'birthdate_public'            => $this->ymd($request->input('birthdate_public')),
-            'birthdate_public_hide_year'  => $hideYear,
+            'birthdate' => $this->ymd($request->input('birthdate')),
+            'birthdate_public' => $this->ymd($request->input('birthdate_public')),
+            'birthdate_public_hide_year' => $hideYear,
             'birthdate_public_is_private' => $isPrivate,
-            'birthplace'                  => $validated['birthplace'] ?? null,
-            'email'                       => $validated['email'] ?? null,
-            'work_place'                  => $validated['work_place'] ?? null,
-            'work_place_url'              => $validated['work_place_url'] ?? null,
-            'mailing_preference'          => $validated['mailing_preference'] ?? null,
-            'pro_entry_year'              => $validated['pro_entry_year'] ?? null,
-            'school'                      => $validated['school'] ?? null,
-            'hobby'                       => $validated['hobby'] ?? null,
-            'bowling_history'             => $validated['bowling_history'] ?? null,
-            'other_sports_history'        => $validated['other_sports_history'] ?? null,
-            'season_goal'                 => $validated['season_goal'] ?? null,
-            'coach'                       => $validated['coach'] ?? null,
-            'selling_point'               => $validated['selling_point'] ?? null,
-            'free_comment'                => $validated['free_comment'] ?? null,
-            'facebook'                    => $validated['facebook'] ?? null,
-            'twitter'                     => $validated['twitter'] ?? null,
-            'instagram'                   => $validated['instagram'] ?? null,
-            'rankseeker'                  => $validated['rankseeker'] ?? null,
-            'jbc_driller_cert'            => $validated['jbc_driller_cert'] ?? null,
-            'a_license_date'              => $validated['a_license_date'] ?? null,
-            'permanent_seed_date'         => $validated['permanent_seed_date'] ?? null,
-            'hall_of_fame_date'           => $validated['hall_of_fame_date'] ?? null,
-            'memo'                        => $validated['memo'] ?? null,
-            'usbc_coach'                  => $validated['usbc_coach'] ?? null,
-            'is_district_leader'          => $isLeader,
+            'birthplace' => $validated['birthplace'] ?? null,
+            'email' => $validated['email'] ?? null,
+            'work_place' => $validated['work_place'] ?? null,
+            'work_place_url' => $validated['work_place_url'] ?? null,
+            'mailing_preference' => $validated['mailing_preference'] ?? null,
+            'pro_entry_year' => $validated['pro_entry_year'] ?? null,
+            'school' => $validated['school'] ?? null,
+            'hobby' => $validated['hobby'] ?? null,
+            'bowling_history' => $validated['bowling_history'] ?? null,
+            'other_sports_history' => $validated['other_sports_history'] ?? null,
+            'season_goal' => $validated['season_goal'] ?? null,
+            'coach' => $validated['coach'] ?? null,
+            'selling_point' => $validated['selling_point'] ?? null,
+            'free_comment' => $validated['free_comment'] ?? null,
+            'facebook' => $validated['facebook'] ?? null,
+            'twitter' => $validated['twitter'] ?? null,
+            'instagram' => $validated['instagram'] ?? null,
+            'rankseeker' => $validated['rankseeker'] ?? null,
+            'jbc_driller_cert' => $validated['jbc_driller_cert'] ?? null,
+            'a_license_date' => $validated['a_license_date'] ?? null,
+            'permanent_seed_date' => $validated['permanent_seed_date'] ?? null,
+            'hall_of_fame_date' => $validated['hall_of_fame_date'] ?? null,
+            'memo' => $validated['memo'] ?? null,
+            'usbc_coach' => $validated['usbc_coach'] ?? null,
+            'is_district_leader' => $isLeader,
 
-            'height_cm'            => $this->intOrNull($request->input('height_cm'), 0, 300),
-            'height_is_public'     => $request->boolean('height_is_public'),
-            'weight_kg'            => $this->intOrNull($request->input('weight_kg'), 0, 400),
-            'weight_is_public'     => $request->boolean('weight_is_public'),
-            'blood_type'           => $this->normalizeBlood($request->input('blood_type')),
+            'height_cm' => $this->intOrNull($request->input('height_cm'), 0, 300),
+            'height_is_public' => $request->boolean('height_is_public'),
+            'weight_kg' => $this->intOrNull($request->input('weight_kg'), 0, 400),
+            'weight_is_public' => $request->boolean('weight_is_public'),
+            'blood_type' => $this->normalizeBlood($request->input('blood_type')),
             'blood_type_is_public' => $request->boolean('blood_type_is_public'),
-            'dominant_arm'         => $request->input('dominant_arm') ?: null,
-            'sponsor_a'            => $this->nullIfBlank($request->input('sponsor_a')),
-            'sponsor_a_url'        => $this->nullIfBlank($request->input('sponsor_a_url')),
-            'sponsor_b'            => $this->nullIfBlank($request->input('sponsor_b')),
-            'sponsor_b_url'        => $this->nullIfBlank($request->input('sponsor_b_url')),
-            'sponsor_c'            => $this->nullIfBlank($request->input('sponsor_c')),
-            'sponsor_c_url'        => $this->nullIfBlank($request->input('sponsor_c_url')),
-            'equipment_contract'   => $this->nullIfBlank($request->input('equipment_contract')),
-            'coaching_history'     => $this->nullIfBlank($request->input('coaching_history')),
-            'motto'                => $this->nullIfBlank($request->input('motto')),
+            'dominant_arm' => $request->input('dominant_arm') ?: null,
+            'sponsor_a' => $this->nullIfBlank($request->input('sponsor_a')),
+            'sponsor_a_url' => $this->nullIfBlank($request->input('sponsor_a_url')),
+            'sponsor_b' => $this->nullIfBlank($request->input('sponsor_b')),
+            'sponsor_b_url' => $this->nullIfBlank($request->input('sponsor_b_url')),
+            'sponsor_c' => $this->nullIfBlank($request->input('sponsor_c')),
+            'sponsor_c_url' => $this->nullIfBlank($request->input('sponsor_c_url')),
+            'equipment_contract' => $this->nullIfBlank($request->input('equipment_contract')),
+            'coaching_history' => $this->nullIfBlank($request->input('coaching_history')),
+            'motto' => $this->nullIfBlank($request->input('motto')),
             'mailing_addr_same_as_org' => $request->boolean('mailing_addr_same_as_org'),
-            'mailing_zip'          => $this->nullIfBlank($request->input('mailing_zip')),
-            'mailing_addr1'        => $this->nullIfBlank($request->input('mailing_addr1')),
-            'mailing_addr2'        => $this->nullIfBlank($request->input('mailing_addr2')),
-            'login_id'             => $this->nullIfBlank($request->input('login_id')),
-            'mypage_temp_password' => $this->nullIfBlank($request->input('mypage_temp_password')),
-            'organization_name'    => $this->nullIfBlank($request->input('organization_name')),
-            'organization_zip'     => $this->nullIfBlank($request->input('organization_zip')),
-            'organization_addr1'   => $this->nullIfBlank($request->input('organization_addr1')),
-            'organization_addr2'   => $this->nullIfBlank($request->input('organization_addr2')),
-            'organization_url'     => $this->nullIfBlank($request->input('organization_url')),
+            'mailing_zip' => $this->nullIfBlank($request->input('mailing_zip')),
+            'mailing_addr1' => $this->nullIfBlank($request->input('mailing_addr1')),
+            'mailing_addr2' => $this->nullIfBlank($request->input('mailing_addr2')),
+            'login_id' => $this->nullIfBlank($request->input('login_id')),
+            'organization_name' => $this->nullIfBlank($request->input('organization_name')),
+            'organization_zip' => $this->nullIfBlank($request->input('organization_zip')),
+            'organization_addr1' => $this->nullIfBlank($request->input('organization_addr1')),
+            'organization_addr2' => $this->nullIfBlank($request->input('organization_addr2')),
+            'organization_url' => $this->nullIfBlank($request->input('organization_url')),
             'public_addr_same_as_org' => $request->boolean('public_addr_same_as_org'),
-            'public_zip'           => $this->nullIfBlank($request->input('public_zip')),
-            'public_addr1'         => $this->nullIfBlank($request->input('public_addr1')),
-            'public_addr2'         => $this->nullIfBlank($request->input('public_addr2')),
-            'a_license_number'     => $request->filled('a_license_number') ? (int) $request->input('a_license_number') : null,
+            'public_zip' => $this->nullIfBlank($request->input('public_zip')),
+            'public_addr1' => $this->nullIfBlank($request->input('public_addr1')),
+            'public_addr2' => $this->nullIfBlank($request->input('public_addr2')),
+            'a_license_number' => $request->filled('a_license_number') ? (int) $request->input('a_license_number') : null,
             'password_change_status' => $this->normalizePwdChangeStatus($request->input('password_change_status')),
 
-            'a_class_status'       => $request->input('a_class_status'),
-            'a_class_year'         => $request->input('a_class_year'),
-            'b_class_status'       => $request->input('b_class_status'),
-            'b_class_year'         => $request->input('b_class_year'),
-            'c_class_status'       => $request->input('c_class_status'),
-            'c_class_year'         => $request->input('c_class_year'),
-            'master_status'        => $request->input('master_status'),
-            'master_year'          => $request->input('master_year'),
-            'coach_4_status'       => $request->input('coach_4_status'),
-            'coach_4_year'         => $request->input('coach_4_year'),
-            'coach_3_status'       => $request->input('coach_3_status'),
-            'coach_3_year'         => $request->input('coach_3_year'),
-            'coach_1_status'       => $request->input('coach_1_status'),
-            'coach_1_year'         => $request->input('coach_1_year'),
-            'kenkou_status'        => $request->input('kenkou_status'),
-            'kenkou_year'          => $request->input('kenkou_year'),
+            'a_class_status' => $request->input('a_class_status'),
+            'a_class_year' => $request->input('a_class_year'),
+            'b_class_status' => $request->input('b_class_status'),
+            'b_class_year' => $request->input('b_class_year'),
+            'c_class_status' => $request->input('c_class_status'),
+            'c_class_year' => $request->input('c_class_year'),
+            'master_status' => $request->input('master_status'),
+            'master_year' => $request->input('master_year'),
+            'coach_4_status' => $request->input('coach_4_status'),
+            'coach_4_year' => $request->input('coach_4_year'),
+            'coach_3_status' => $request->input('coach_3_status'),
+            'coach_3_year' => $request->input('coach_3_year'),
+            'coach_1_status' => $request->input('coach_1_status'),
+            'coach_1_year' => $request->input('coach_1_year'),
+            'kenkou_status' => $request->input('kenkou_status'),
+            'kenkou_year' => $request->input('kenkou_year'),
             'school_license_status' => $request->input('school_license_status'),
-            'school_license_year'   => $request->input('school_license_year'),
+            'school_license_year' => $request->input('school_license_year'),
 
-            'is_active'                     => $derivedIsActive,
-            'member_class'                  => $memberClass,
+            'is_active' => $derivedIsActive,
+            'member_class' => $memberClass,
             'can_enter_official_tournament' => $memberClass === 'player' && $derivedIsActive,
         ];
 
@@ -895,9 +894,10 @@ class ProBowlerController extends Controller
         $grade = $this->resolveInstructorGradeFromRequest($request);
         $category = $this->resolveInstructorCategoryFromBowler($bowler);
 
-        if (!$this->hasInstructorProfileFromRequest($request, $grade, $category)) {
+        if (! $this->hasInstructorProfileFromRequest($request, $grade, $category)) {
             $this->deactivateInstructorRecords($bowler);
             $this->reactivateCertifiedCurrentRowForBowler($bowler);
+
             return;
         }
 
@@ -913,17 +913,17 @@ class ProBowlerController extends Controller
             ->first();
 
         $payload = [
-            'license_no'          => $bowler->license_no,
-            'name'                => $bowler->name_kanji,
-            'name_kana'           => $bowler->name_kana,
-            'sex'                 => ((int) ($bowler->sex ?? 0)) === 1,
-            'district_id'         => $bowler->district_id,
-            'instructor_type'     => 'pro',
-            'grade'               => $grade,
-            'is_active'           => (bool) $bowler->is_active,
-            'is_visible'          => $existing?->is_visible ?? true,
+            'license_no' => $bowler->license_no,
+            'name' => $bowler->name_kanji,
+            'name_kana' => $bowler->name_kana,
+            'sex' => ((int) ($bowler->sex ?? 0)) === 1,
+            'district_id' => $bowler->district_id,
+            'instructor_type' => 'pro',
+            'grade' => $grade,
+            'is_active' => (bool) $bowler->is_active,
+            'is_visible' => $existing?->is_visible ?? true,
             'coach_qualification' => ($bowler->school_license_status ?? $request->input('school_license_status')) === '有',
-            'pro_bowler_id'       => $category === 'pro_bowler' ? $bowler->id : null,
+            'pro_bowler_id' => $category === 'pro_bowler' ? $bowler->id : null,
         ];
 
         Instructor::updateOrCreate(
@@ -940,32 +940,32 @@ class ProBowlerController extends Controller
             ->first();
 
         $payload = [
-            'source_type'                   => $existing?->source_type ?: 'pro_bowler_csv',
-            'source_key'                    => $existing?->source_key ?: $bowler->license_no,
-            'legacy_instructor_license_no'  => $existing?->legacy_instructor_license_no ?? $bowler->license_no,
-            'pro_bowler_id'                 => $category === 'pro_bowler' ? $bowler->id : null,
-            'license_no'                    => $bowler->license_no,
-            'cert_no'                       => $existing?->cert_no,
-            'name'                          => $bowler->name_kanji ?: ($existing?->name ?? $bowler->license_no),
-            'name_kana'                     => $bowler->name_kana,
-            'sex'                           => $this->normalizeRegistrySex($bowler),
-            'district_id'                   => $bowler->district_id,
-            'instructor_category'           => $category,
-            'grade'                         => $grade,
-            'coach_qualification'           => ($bowler->school_license_status ?? $request->input('school_license_status')) === '有',
-            'is_active'                     => (bool) $bowler->is_active,
-            'is_visible'                    => $existing?->is_visible ?? true,
-            'source_registered_at'          => $bowler->license_issue_date ?: ($existing?->source_registered_at?->format('Y-m-d H:i:s') ?? null),
-            'is_current'                    => true,
-            'superseded_at'                 => null,
-            'supersede_reason'              => null,
-            'renewal_year'                  => $existing?->renewal_year ?? $this->currentRenewalYear(),
-            'renewal_due_on'                => $existing?->renewal_due_on?->format('Y-m-d') ?? $this->currentRenewalDueDate(),
-            'renewal_status'                => $existing?->renewal_status ?? 'pending',
-            'renewed_at'                    => $existing?->renewed_at?->format('Y-m-d'),
-            'renewal_note'                  => $existing?->renewal_note,
-            'last_synced_at'                => now(),
-            'notes'                         => $existing?->notes ?: 'synced from pro_bowlers form',
+            'source_type' => $existing?->source_type ?: 'pro_bowler_csv',
+            'source_key' => $existing?->source_key ?: $bowler->license_no,
+            'legacy_instructor_license_no' => $existing?->legacy_instructor_license_no ?? $bowler->license_no,
+            'pro_bowler_id' => $category === 'pro_bowler' ? $bowler->id : null,
+            'license_no' => $bowler->license_no,
+            'cert_no' => $existing?->cert_no,
+            'name' => $bowler->name_kanji ?: ($existing?->name ?? $bowler->license_no),
+            'name_kana' => $bowler->name_kana,
+            'sex' => $this->normalizeRegistrySex($bowler),
+            'district_id' => $bowler->district_id,
+            'instructor_category' => $category,
+            'grade' => $grade,
+            'coach_qualification' => ($bowler->school_license_status ?? $request->input('school_license_status')) === '有',
+            'is_active' => (bool) $bowler->is_active,
+            'is_visible' => $existing?->is_visible ?? true,
+            'source_registered_at' => $bowler->license_issue_date ?: ($existing?->source_registered_at?->format('Y-m-d H:i:s') ?? null),
+            'is_current' => true,
+            'superseded_at' => null,
+            'supersede_reason' => null,
+            'renewal_year' => $existing?->renewal_year ?? $this->currentRenewalYear(),
+            'renewal_due_on' => $existing?->renewal_due_on?->format('Y-m-d') ?? $this->currentRenewalDueDate(),
+            'renewal_status' => $existing?->renewal_status ?? 'pending',
+            'renewed_at' => $existing?->renewed_at?->format('Y-m-d'),
+            'renewal_note' => $existing?->renewal_note,
+            'last_synced_at' => now(),
+            'notes' => $existing?->notes ?: 'synced from pro_bowlers form',
         ];
 
         if ($existing) {
@@ -989,11 +989,11 @@ class ProBowlerController extends Controller
             ->where('license_no', $bowler->license_no)
             ->first();
 
-        if (!$existing) {
+        if (! $existing) {
             return;
         }
 
-        if (!$existing->is_active) {
+        if (! $existing->is_active) {
             return;
         }
 
@@ -1032,7 +1032,7 @@ class ProBowlerController extends Controller
             ->orderBy('id')
             ->first();
 
-        if (!$certified) {
+        if (! $certified) {
             return;
         }
 
@@ -1097,11 +1097,11 @@ class ProBowlerController extends Controller
     {
         return match (true) {
             $fromCategory === 'certified' && $toCategory === 'pro_instructor' => 'promoted_to_pro_instructor',
-            $fromCategory === 'certified' && $toCategory === 'pro_bowler'     => 'promoted_to_pro_bowler',
+            $fromCategory === 'certified' && $toCategory === 'pro_bowler' => 'promoted_to_pro_bowler',
             $fromCategory === 'pro_instructor' && $toCategory === 'pro_bowler' => 'promoted_to_pro_bowler',
-            $fromCategory === 'pro_bowler' && $toCategory === 'certified'     => 'downgraded_to_certified',
+            $fromCategory === 'pro_bowler' && $toCategory === 'certified' => 'downgraded_to_certified',
             $fromCategory === 'pro_instructor' && $toCategory === 'certified' => 'downgraded_to_certified',
-            default                                                           => 'category_changed',
+            default => 'category_changed',
         };
     }
 
@@ -1158,8 +1158,8 @@ class ProBowlerController extends Controller
     private function normalizeRegistrySex(ProBowler $bowler): ?bool
     {
         return match ((int) ($bowler->sex ?? 0)) {
-            1       => true,
-            2       => false,
+            1 => true,
+            2 => false,
             default => null,
         };
     }
@@ -1175,11 +1175,11 @@ class ProBowlerController extends Controller
             if ($useStorageLink) {
                 $p = $file->store($subdir, 'public');
 
-                return '/storage/' . $p;
+                return '/storage/'.$p;
             }
 
             $dir = public_path('uploads/'.$subdir);
-            if (!is_dir($dir)) {
+            if (! is_dir($dir)) {
                 @mkdir($dir, 0775, true);
             }
             $name = date('Ymd_His').'_'.bin2hex(random_bytes(4)).'.'.$file->getClientOriginalExtension();
@@ -1288,7 +1288,7 @@ class ProBowlerController extends Controller
 
     private function ymd(?string $v): ?string
     {
-        if (!$v) {
+        if (! $v) {
             return null;
         }
         try {
@@ -1322,7 +1322,7 @@ class ProBowlerController extends Controller
             return $fallback;
         }
 
-        return !in_array($value, ['死亡', '除名', '退会届'], true);
+        return ! in_array($value, ['死亡', '除名', '退会届'], true);
     }
 
     private function resolveMemberClass(?string $membershipType, string $licenseNo, ?string $fallback = null): string
