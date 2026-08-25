@@ -33,10 +33,12 @@
 
 ### P0-3 ボール検索APIの修正
 
-- [ ] `/api/approved-balls/filter` の存在しない `release_year` 参照を廃止する。
-- [ ] `approved_balls.release_date` から発売年を検索・返却する方式へ統一する。
-- [ ] 条件なし、メーカー、発売年、名称検索のHTTP 200と結果を確認する。
-- [ ] 回帰テストを追加する。
+- [x] `/api/approved-balls/filter` の存在しない `release_year` 参照を廃止する。
+- [x] `approved_balls.release_date` から発売年を検索・返却する方式へ統一する。
+- [x] 条件なし、メーカー、発売年、名称検索のHTTP 200と結果を確認する。
+- [x] 回帰テストを追加する。
+
+完了記録（2026-08-26）：4条件はいずれもHTTP 200。現DBはアブプール反映前のため `approved=true` が0件で、応答結果は仕様どおり空配列。DBの発売日916件は保持し、発売年は `release_date` から算出する。
 
 完了条件：ボール検索APIが現行スキーマだけを参照し、主要条件ですべてHTTP 200になる。
 

@@ -3,29 +3,60 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
 use App\Models\ApprovedBall;
-use Illuminate\Support\Facades\DB; // ← これを追加！
+use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 
 class ApprovedBallController extends Controller
 {
     public function filter(Request $request)
     {
-        $manufacturer = $request->input('manufacturer');
-        $releaseYear = $request->input('release_year');
+        $validated = $request->validate([
+            'manufacturer' => ['nullable', 'string', 'max:255'],
+            'release_year' => ['nullable', 'integer', 'min:1900', 'max:'.((int) now()->year + 1)],
+            'name' => ['nullable', 'string', 'max:255'],
+        ]);
 
-        $query = ApprovedBall::query();
+        $manufacturer = trim((string) ($validated['manufacturer'] ?? ''));
+        $releaseYear = (int) ($validated['release_year'] ?? 0);
+        $name = trim((string) ($validated['name'] ?? ''));
 
-        if ($manufacturer) {
-            $query->where(DB::raw('LOWER(manufacturer)'), strtolower($manufacturer));
+        $query = ApprovedBall::query()->where('approved', true);
+
+        if ($manufacturer !== '') {
+            $query->whereRaw('lower(manufacturer) = ?', [Str::lower($manufacturer)]);
         }
 
-        if ($releaseYear) {
-            $query->where('release_year', $releaseYear);
+        if ($releaseYear > 0) {
+            $query->whereYear('release_date', $releaseYear);
         }
 
-        $query->where('approved', true);
+        if ($name !== '') {
+            $keyword = '%'.Str::lower($name).'%';
+            $query->where(function ($scope) use ($keyword) {
+                $scope->whereRaw('lower(name) like ?', [$keyword])
+                    ->orWhereRaw('lower(coalesce(name_kana, \'\')) like ?', [$keyword])
+                    ->orWhereRaw('lower(coalesce(brand, \'\')) like ?', [$keyword]);
+            });
+        }
 
-        return $query->select('id', 'name', 'manufacturer', 'release_year')->get();
+        return response()->json(
+            $query
+                ->select(['id', 'name', 'name_kana', 'manufacturer', 'brand', 'release_date'])
+                ->orderBy('manufacturer')
+                ->orderBy('sort_name')
+                ->orderBy('name')
+                ->get()
+                ->map(fn (ApprovedBall $ball) => [
+                    'id' => $ball->id,
+                    'name' => $ball->name,
+                    'name_kana' => $ball->name_kana,
+                    'manufacturer' => $ball->manufacturer,
+                    'brand' => $ball->brand,
+                    'release_date' => $ball->release_date?->format('Y-m-d'),
+                    'release_year' => $ball->release_year,
+                ])
+                ->values()
+        );
     }
 }

@@ -9,6 +9,10 @@ class ApprovedBall extends Model
 {
     protected $table = 'approved_balls';
 
+    protected $appends = [
+        'release_year',
+    ];
+
     protected $fillable = [
         'id',
         'name',
@@ -99,5 +103,12 @@ class ApprovedBall extends Model
         }
 
         return $this->release_date->format('Y-m-d');
+    }
+
+    public function getReleaseYearAttribute(): ?int
+    {
+        return $this->release_date
+            ? (int) $this->release_date->format('Y')
+            : null;
     }
 }
