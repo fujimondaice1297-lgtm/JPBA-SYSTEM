@@ -6,6 +6,7 @@ use App\Services\ShootoutService;
 use App\Services\StepLadderService;
 use App\Services\TournamentResultCompletenessService;
 use PHPUnit\Framework\TestCase;
+use ReflectionMethod;
 
 final class TournamentResultCompletenessServiceTest extends TestCase
 {
@@ -64,6 +65,16 @@ final class TournamentResultCompletenessServiceTest extends TestCase
         self::assertFalse($result['is_complete']);
         self::assertContains('0～300の範囲外のゲームスコアがあります。', $result['errors']);
         self::assertContains('同一選手・同一ステージ・同一ゲームの重複スコアがあります。', $result['errors']);
+    }
+
+    public function test_zero_game_publication_row_is_valid_without_score_rows(): void
+    {
+        $method = new ReflectionMethod(TournamentResultCompletenessService::class, 'publicationTotalsMatch');
+
+        self::assertTrue($method->invoke($this->service(), null, 0, 0));
+        self::assertFalse($method->invoke($this->service(), null, 1, 0));
+        self::assertFalse($method->invoke($this->service(), null, 0, 1));
+        self::assertTrue($method->invoke($this->service(), ['games' => 2, 'total_pin' => 400], 2, 400));
     }
 
     private function service(): TournamentResultCompletenessService

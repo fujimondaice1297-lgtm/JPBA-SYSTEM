@@ -73,6 +73,10 @@
     $overviewDay2 = $overviewEndDate
         ? $overviewEndDate->format('n/j') . '（' . $overviewWeekdays[$overviewEndDate->dayOfWeek] . '）'
         : '-';
+    $overviewFinalDayLabel = $overviewStartDate && $overviewEndDate
+        && $overviewStartDate->diffInDays($overviewEndDate) > 1
+            ? '最終日'
+            : '2日目';
 @endphp
 
 <div class="standard-overview-page">
@@ -114,7 +118,7 @@
                                 上位{{ (int) ($prelimQualifierCount ?? 0) }}名を準決勝へ選出。<br>
                             </div>
                             <div class="standard-overview-day-row standard-overview-day-row-second">
-                                <span>　2日目　{{ $overviewDay2 }}</span>
+                                <span>　{{ $overviewFinalDayLabel }}　{{ $overviewDay2 }}</span>
                                 <strong>
                                     準決勝{{ (int) ($semifinalGameCount ?? 0) }}G
                                     @if ($overviewRrCount > 0)

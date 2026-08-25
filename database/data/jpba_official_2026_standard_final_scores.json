@@ -1,10 +1,10 @@
 {
   "dataset": "JPBA official 2026 standard tournament finals and frame scores",
-  "source_checked_at": "2026-07-23",
-  "event_count": 11,
-  "score_sheet_count": 29,
-  "frame_player_count": 63,
-  "frame_count": 630,
+  "source_checked_at": "2026-07-28",
+  "event_count": 12,
+  "score_sheet_count": 31,
+  "frame_player_count": 67,
+  "frame_count": 670,
   "additional_stage_score_count": 96,
   "bracket_match_count": 41,
   "bracket_score_count": 158,
@@ -12303,6 +12303,629 @@
           ]
         }
       ]
+    },
+    {
+      "key": "ooka_2026",
+      "tournament": {
+        "name": "大岡産業レディース［THE OPEN］トーナメント2026",
+        "gender": "F",
+        "start_date": "2026-07-22",
+        "end_date": "2026-07-24",
+        "year": 2026,
+        "venue_name": "アルゴボウル",
+        "competition_type": "singles",
+        "official_type": "official",
+        "counts_for_official_points": true,
+        "counts_for_average": true,
+        "counts_for_prize": true,
+        "title_scope": "official",
+        "title_category": "official",
+        "source_url": "https://www.jpba.or.jp/information/tournament/tournament2026/10_TheOpen/TheOpen_2026.html"
+      },
+      "sources": [
+        {
+          "filename": "FinalResult.pdf",
+          "sha256": "59a2915e3066c45a5f7779dcce7f7b37f6b78646dff3ebd45f0035f3dd8be7b2",
+          "url": "https://www.jpba.or.jp/information/tournament/tournament2026/10_TheOpen/Result/FinalResult.pdf"
+        }
+      ],
+      "score_sheets": [
+        {
+          "sheet_type": "step_ladder",
+          "stage_code": "ステップラダー",
+          "match_code": "SL:R1",
+          "match_label": "3位決定戦",
+          "match_order": 1,
+          "round_order": 1,
+          "lane_label": "19L / 20L",
+          "players": [
+            {
+              "identity": "P:F00000582",
+              "license_no": "F00000582",
+              "display_name": "中島 瑞葵",
+              "score": 201,
+              "frames": [
+                {
+                  "frame_no": 1,
+                  "throw1": "X",
+                  "throw2": "",
+                  "throw3": "",
+                  "frame_score": 20,
+                  "cumulative_score": 20,
+                  "display_marks": {
+                    "throw1": "X",
+                    "throw2": "",
+                    "throw3": ""
+                  }
+                },
+                {
+                  "frame_no": 2,
+                  "throw1": "9",
+                  "throw2": "/",
+                  "throw3": "",
+                  "frame_score": 20,
+                  "cumulative_score": 40,
+                  "display_marks": {
+                    "throw1": "9",
+                    "throw2": "/",
+                    "throw3": ""
+                  }
+                },
+                {
+                  "frame_no": 3,
+                  "throw1": "X",
+                  "throw2": "",
+                  "throw3": "",
+                  "frame_score": 20,
+                  "cumulative_score": 60,
+                  "display_marks": {
+                    "throw1": "X",
+                    "throw2": "",
+                    "throw3": ""
+                  }
+                },
+                {
+                  "frame_no": 4,
+                  "throw1": "9",
+                  "throw2": "/",
+                  "throw3": "",
+                  "frame_score": 18,
+                  "cumulative_score": 78,
+                  "display_marks": {
+                    "throw1": "9",
+                    "throw2": "/",
+                    "throw3": ""
+                  }
+                },
+                {
+                  "frame_no": 5,
+                  "throw1": "8",
+                  "throw2": "/",
+                  "throw3": "",
+                  "frame_score": 17,
+                  "cumulative_score": 95,
+                  "display_marks": {
+                    "throw1": "8",
+                    "throw2": "/",
+                    "throw3": ""
+                  }
+                },
+                {
+                  "frame_no": 6,
+                  "throw1": "7",
+                  "throw2": "/",
+                  "throw3": "",
+                  "frame_score": 19,
+                  "cumulative_score": 114,
+                  "display_marks": {
+                    "throw1": "7",
+                    "throw2": "/",
+                    "throw3": ""
+                  }
+                },
+                {
+                  "frame_no": 7,
+                  "throw1": "9",
+                  "throw2": "/",
+                  "throw3": "",
+                  "frame_score": 19,
+                  "cumulative_score": 133,
+                  "display_marks": {
+                    "throw1": "9",
+                    "throw2": "/",
+                    "throw3": ""
+                  }
+                },
+                {
+                  "frame_no": 8,
+                  "throw1": "9",
+                  "throw2": "/",
+                  "throw3": "",
+                  "frame_score": 19,
+                  "cumulative_score": 152,
+                  "display_marks": {
+                    "throw1": "9",
+                    "throw2": "/",
+                    "throw3": ""
+                  }
+                },
+                {
+                  "frame_no": 9,
+                  "throw1": "9",
+                  "throw2": "/",
+                  "throw3": "",
+                  "frame_score": 20,
+                  "cumulative_score": 172,
+                  "display_marks": {
+                    "throw1": "9",
+                    "throw2": "/",
+                    "throw3": ""
+                  }
+                },
+                {
+                  "frame_no": 10,
+                  "throw1": "X",
+                  "throw2": "X",
+                  "throw3": "9",
+                  "frame_score": 29,
+                  "cumulative_score": 201,
+                  "display_marks": {
+                    "throw1": "X",
+                    "throw2": "X",
+                    "throw3": "9"
+                  }
+                }
+              ],
+              "frame_candidate_count": 1,
+              "frame_cumulative_corrections": [],
+              "player_slot": "A",
+              "is_winner": false,
+              "lane_label": "19L"
+            },
+            {
+              "identity": "P:F00000599",
+              "license_no": "F00000599",
+              "display_name": "石田 万音",
+              "score": 259,
+              "frames": [
+                {
+                  "frame_no": 1,
+                  "throw1": "X",
+                  "throw2": "",
+                  "throw3": "",
+                  "frame_score": 30,
+                  "cumulative_score": 30,
+                  "display_marks": {
+                    "throw1": "X",
+                    "throw2": "",
+                    "throw3": ""
+                  }
+                },
+                {
+                  "frame_no": 2,
+                  "throw1": "X",
+                  "throw2": "",
+                  "throw3": "",
+                  "frame_score": 30,
+                  "cumulative_score": 60,
+                  "display_marks": {
+                    "throw1": "X",
+                    "throw2": "",
+                    "throw3": ""
+                  }
+                },
+                {
+                  "frame_no": 3,
+                  "throw1": "X",
+                  "throw2": "",
+                  "throw3": "",
+                  "frame_score": 30,
+                  "cumulative_score": 90,
+                  "display_marks": {
+                    "throw1": "X",
+                    "throw2": "",
+                    "throw3": ""
+                  }
+                },
+                {
+                  "frame_no": 4,
+                  "throw1": "X",
+                  "throw2": "",
+                  "throw3": "",
+                  "frame_score": 30,
+                  "cumulative_score": 120,
+                  "display_marks": {
+                    "throw1": "X",
+                    "throw2": "",
+                    "throw3": ""
+                  }
+                },
+                {
+                  "frame_no": 5,
+                  "throw1": "X",
+                  "throw2": "",
+                  "throw3": "",
+                  "frame_score": 30,
+                  "cumulative_score": 150,
+                  "display_marks": {
+                    "throw1": "X",
+                    "throw2": "",
+                    "throw3": ""
+                  }
+                },
+                {
+                  "frame_no": 6,
+                  "throw1": "X",
+                  "throw2": "",
+                  "throw3": "",
+                  "frame_score": 29,
+                  "cumulative_score": 179,
+                  "display_marks": {
+                    "throw1": "X",
+                    "throw2": "",
+                    "throw3": ""
+                  }
+                },
+                {
+                  "frame_no": 7,
+                  "throw1": "X",
+                  "throw2": "",
+                  "throw3": "",
+                  "frame_score": 20,
+                  "cumulative_score": 199,
+                  "display_marks": {
+                    "throw1": "X",
+                    "throw2": "",
+                    "throw3": ""
+                  }
+                },
+                {
+                  "frame_no": 8,
+                  "throw1": "9",
+                  "throw2": "/",
+                  "throw3": "",
+                  "frame_score": 20,
+                  "cumulative_score": 219,
+                  "display_marks": {
+                    "throw1": "9",
+                    "throw2": "/",
+                    "throw3": ""
+                  }
+                },
+                {
+                  "frame_no": 9,
+                  "throw1": "X",
+                  "throw2": "",
+                  "throw3": "",
+                  "frame_score": 20,
+                  "cumulative_score": 239,
+                  "display_marks": {
+                    "throw1": "X",
+                    "throw2": "",
+                    "throw3": ""
+                  }
+                },
+                {
+                  "frame_no": 10,
+                  "throw1": "9",
+                  "throw2": "/",
+                  "throw3": "X",
+                  "frame_score": 20,
+                  "cumulative_score": 259,
+                  "display_marks": {
+                    "throw1": "9",
+                    "throw2": "/",
+                    "throw3": "X"
+                  }
+                }
+              ],
+              "frame_candidate_count": 1,
+              "frame_cumulative_corrections": [],
+              "player_slot": "B",
+              "is_winner": true,
+              "lane_label": "20L"
+            }
+          ]
+        },
+        {
+          "sheet_type": "step_ladder",
+          "stage_code": "ステップラダー",
+          "match_code": "SL:FINAL",
+          "match_label": "優勝決定戦",
+          "match_order": 2,
+          "round_order": 2,
+          "lane_label": "19L / 20L",
+          "players": [
+            {
+              "identity": "P:F00000478",
+              "license_no": "F00000478",
+              "display_name": "小林あゆみ",
+              "score": 184,
+              "frames": [
+                {
+                  "frame_no": 1,
+                  "throw1": "7",
+                  "throw2": "2",
+                  "throw3": "",
+                  "frame_score": 9,
+                  "cumulative_score": 9,
+                  "display_marks": {
+                    "throw1": "7",
+                    "throw2": "2",
+                    "throw3": ""
+                  }
+                },
+                {
+                  "frame_no": 2,
+                  "throw1": "X",
+                  "throw2": "",
+                  "throw3": "",
+                  "frame_score": 29,
+                  "cumulative_score": 38,
+                  "display_marks": {
+                    "throw1": "X",
+                    "throw2": "",
+                    "throw3": ""
+                  }
+                },
+                {
+                  "frame_no": 3,
+                  "throw1": "X",
+                  "throw2": "",
+                  "throw3": "",
+                  "frame_score": 20,
+                  "cumulative_score": 58,
+                  "display_marks": {
+                    "throw1": "X",
+                    "throw2": "",
+                    "throw3": ""
+                  }
+                },
+                {
+                  "frame_no": 4,
+                  "throw1": "9",
+                  "throw2": "/",
+                  "throw3": "",
+                  "frame_score": 20,
+                  "cumulative_score": 78,
+                  "display_marks": {
+                    "throw1": "9",
+                    "throw2": "/",
+                    "throw3": ""
+                  }
+                },
+                {
+                  "frame_no": 5,
+                  "throw1": "X",
+                  "throw2": "",
+                  "throw3": "",
+                  "frame_score": 19,
+                  "cumulative_score": 97,
+                  "display_marks": {
+                    "throw1": "X",
+                    "throw2": "",
+                    "throw3": ""
+                  }
+                },
+                {
+                  "frame_no": 6,
+                  "throw1": "7",
+                  "throw2": "2",
+                  "throw3": "",
+                  "frame_score": 9,
+                  "cumulative_score": 106,
+                  "display_marks": {
+                    "throw1": "7",
+                    "throw2": "2",
+                    "throw3": ""
+                  }
+                },
+                {
+                  "frame_no": 7,
+                  "throw1": "X",
+                  "throw2": "",
+                  "throw3": "",
+                  "frame_score": 20,
+                  "cumulative_score": 126,
+                  "display_marks": {
+                    "throw1": "X",
+                    "throw2": "",
+                    "throw3": ""
+                  }
+                },
+                {
+                  "frame_no": 8,
+                  "throw1": "8",
+                  "throw2": "/",
+                  "throw3": "",
+                  "frame_score": 19,
+                  "cumulative_score": 145,
+                  "display_marks": {
+                    "throw1": "8",
+                    "throw2": "/",
+                    "throw3": ""
+                  }
+                },
+                {
+                  "frame_no": 9,
+                  "throw1": "9",
+                  "throw2": "/",
+                  "throw3": "",
+                  "frame_score": 20,
+                  "cumulative_score": 165,
+                  "display_marks": {
+                    "throw1": "9",
+                    "throw2": "/",
+                    "throw3": ""
+                  }
+                },
+                {
+                  "frame_no": 10,
+                  "throw1": "X",
+                  "throw2": "8",
+                  "throw3": "1",
+                  "frame_score": 19,
+                  "cumulative_score": 184,
+                  "display_marks": {
+                    "throw1": "X",
+                    "throw2": "8",
+                    "throw3": "1"
+                  }
+                }
+              ],
+              "frame_candidate_count": 1,
+              "frame_cumulative_corrections": [],
+              "player_slot": "A",
+              "is_winner": true,
+              "lane_label": "19L"
+            },
+            {
+              "identity": "P:F00000599",
+              "license_no": "F00000599",
+              "display_name": "石田 万音",
+              "score": 163,
+              "frames": [
+                {
+                  "frame_no": 1,
+                  "throw1": "X",
+                  "throw2": "",
+                  "throw3": "",
+                  "frame_score": 28,
+                  "cumulative_score": 28,
+                  "display_marks": {
+                    "throw1": "X",
+                    "throw2": "",
+                    "throw3": ""
+                  }
+                },
+                {
+                  "frame_no": 2,
+                  "throw1": "X",
+                  "throw2": "",
+                  "throw3": "",
+                  "frame_score": 19,
+                  "cumulative_score": 47,
+                  "display_marks": {
+                    "throw1": "X",
+                    "throw2": "",
+                    "throw3": ""
+                  }
+                },
+                {
+                  "frame_no": 3,
+                  "throw1": "8",
+                  "throw2": "1",
+                  "throw3": "",
+                  "frame_score": 9,
+                  "cumulative_score": 56,
+                  "display_marks": {
+                    "throw1": "8",
+                    "throw2": "1",
+                    "throw3": ""
+                  }
+                },
+                {
+                  "frame_no": 4,
+                  "throw1": "8",
+                  "throw2": "-",
+                  "throw3": "",
+                  "frame_score": 8,
+                  "cumulative_score": 64,
+                  "display_marks": {
+                    "throw1": "8",
+                    "throw2": "-",
+                    "throw3": ""
+                  }
+                },
+                {
+                  "frame_no": 5,
+                  "throw1": "8",
+                  "throw2": "1",
+                  "throw3": "",
+                  "frame_score": 9,
+                  "cumulative_score": 73,
+                  "display_marks": {
+                    "throw1": "8",
+                    "throw2": "1",
+                    "throw3": ""
+                  }
+                },
+                {
+                  "frame_no": 6,
+                  "throw1": "9",
+                  "throw2": "/",
+                  "throw3": "",
+                  "frame_score": 18,
+                  "cumulative_score": 91,
+                  "display_marks": {
+                    "throw1": "9",
+                    "throw2": "/",
+                    "throw3": ""
+                  }
+                },
+                {
+                  "frame_no": 7,
+                  "throw1": "8",
+                  "throw2": "/",
+                  "throw3": "",
+                  "frame_score": 19,
+                  "cumulative_score": 110,
+                  "display_marks": {
+                    "throw1": "8",
+                    "throw2": "/",
+                    "throw3": ""
+                  }
+                },
+                {
+                  "frame_no": 8,
+                  "throw1": "9",
+                  "throw2": "/",
+                  "throw3": "",
+                  "frame_score": 19,
+                  "cumulative_score": 129,
+                  "display_marks": {
+                    "throw1": "9",
+                    "throw2": "/",
+                    "throw3": ""
+                  }
+                },
+                {
+                  "frame_no": 9,
+                  "throw1": "9",
+                  "throw2": "/",
+                  "throw3": "",
+                  "frame_score": 19,
+                  "cumulative_score": 148,
+                  "display_marks": {
+                    "throw1": "9",
+                    "throw2": "/",
+                    "throw3": ""
+                  }
+                },
+                {
+                  "frame_no": 10,
+                  "throw1": "9",
+                  "throw2": "/",
+                  "throw3": "5",
+                  "frame_score": 15,
+                  "cumulative_score": 163,
+                  "display_marks": {
+                    "throw1": "9",
+                    "throw2": "/",
+                    "throw3": "5"
+                  }
+                }
+              ],
+              "frame_candidate_count": 1,
+              "frame_cumulative_corrections": [],
+              "player_slot": "B",
+              "is_winner": false,
+              "lane_label": "20L"
+            }
+          ]
+        }
+      ],
+      "bracket_matches": []
     }
   ]
 }

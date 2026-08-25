@@ -21,9 +21,11 @@ final class Official2026StandardDetailImportService
 
     private const AGGREGATE_MARKER = 'jpba_official_2026_results';
 
-    private const EXPECTED_EVENT_COUNT = 12;
+    private const FINAL_MARKER = 'jpba_official_2026_standard_final';
 
-    private const EXPECTED_SCORE_COUNT = 14595;
+    private const EXPECTED_EVENT_COUNT = 13;
+
+    private const EXPECTED_SCORE_COUNT = 15978;
 
     public function __construct(
         private readonly Official2026TournamentResultsImportService $officialResults,
@@ -34,9 +36,23 @@ final class Official2026StandardDetailImportService
     ) {}
 
     /** @return array<string,mixed> */
-    public function import(bool $write = false, string $adminEmail = 'yamaguchi@jpba.or.jp'): array
+    public function import(
+        bool $write = false,
+        string $adminEmail = 'yamaguchi@jpba.or.jp',
+        ?string $eventKey = null,
+        bool $deferIncompleteFinalPublication = false,
+    ): array
     {
         $detail = $this->dataset();
+        $selectedEvents = $eventKey === null
+            ? $detail['events']
+            : array_values(array_filter(
+                $detail['events'],
+                fn (array $event): bool => $event['key'] === $eventKey,
+            ));
+        if ($eventKey !== null && $selectedEvents === []) {
+            throw new RuntimeException("Standard-tournament detail event was not found: {$eventKey}");
+        }
         $aggregate = $this->officialResults->dataset();
         $aggregateEvents = collect($aggregate['events'])->keyBy('key');
         $admin = User::query()->where('email', $adminEmail)->first();
@@ -47,10 +63,14 @@ final class Official2026StandardDetailImportService
             $errors[] = "Administrator was not found: {$adminEmail}";
         }
 
-        foreach ($detail['events'] as $event) {
+        foreach ($selectedEvents as $event) {
             $aggregateEvent = $aggregateEvents->get($event['key']);
             $eventErrors = $this->validateEvent($event, $aggregateEvent, $aggregate);
-            $tournament = $this->findTournament((string) $event['key']);
+            $tournament = $this->findTournament(
+                (string) $event['key'],
+                false,
+                $aggregateEvent,
+            );
             $participantResolution = ['map' => [], 'errors' => []];
 
             if ($tournament === null) {
@@ -93,8 +113,8 @@ final class Official2026StandardDetailImportService
             'dataset' => $detail['dataset'],
             'dataset_sha256' => hash_file('sha256', database_path(self::DATASET_PATH)),
             'source_checked_at' => $detail['source_checked_at'],
-            'event_count' => count($detail['events']),
-            'expected_score_count' => array_sum(array_column($detail['events'], 'expected_score_count')),
+            'event_count' => count($selectedEvents),
+            'expected_score_count' => array_sum(array_column($selectedEvents, 'expected_score_count')),
             'admin_id' => $admin?->id,
             'events' => $events,
             'errors' => $errors,
@@ -105,9 +125,20 @@ final class Official2026StandardDetailImportService
             return $report;
         }
 
-        return DB::transaction(function () use ($detail, $aggregateEvents, $admin, $report): array {
-            foreach ($detail['events'] as $event) {
-                $tournament = $this->findTournament((string) $event['key'], true);
+        return DB::transaction(function () use (
+            $selectedEvents,
+            $aggregateEvents,
+            $admin,
+            $report,
+            $deferIncompleteFinalPublication,
+        ): array {
+            foreach ($selectedEvents as $event) {
+                $aggregateEvent = $aggregateEvents->get($event['key']);
+                $tournament = $this->findTournament(
+                    (string) $event['key'],
+                    true,
+                    $aggregateEvent,
+                );
                 if ($tournament === null) {
                     throw new RuntimeException("{$event['key']}: tournament disappeared before repair.");
                 }
@@ -151,6 +182,28 @@ final class Official2026StandardDetailImportService
                     ->firstOrFail();
                 $preview = $this->publicationService->preview($tournament->fresh(), $finalSnapshot);
                 if (! $preview['can_publish']) {
+                    if ($deferIncompleteFinalPublication
+                        && $this->canDeferFinalPublication((array) $preview['errors'])) {
+                        $report['repaired'][] = [
+                            'key' => $event['key'],
+                            'tournament_id' => (int) $tournament->id,
+                            'stage_settings' => $stageSettings,
+                            'result_outputs' => $resultOutputs,
+                            'imports' => $imports,
+                            'snapshots' => $snapshotSummary,
+                            'publication_id' => null,
+                            'publication_row_count' => 0,
+                            'publication_deferred' => true,
+                            'publication_deferred_errors' => array_values((array) $preview['errors']),
+                            'game_score_count' => DB::table('game_scores')
+                                ->where('tournament_id', $tournament->id)
+                                ->count(),
+                            'completeness' => null,
+                        ];
+
+                        continue;
+                    }
+
                     throw new RuntimeException(
                         $event['key'].': '.implode(' ', $preview['errors']),
                     );
@@ -190,6 +243,14 @@ final class Official2026StandardDetailImportService
         });
     }
 
+    /** @param array<int,string> $errors */
+    private function canDeferFinalPublication(array $errors): bool
+    {
+        return $errors === [
+            '完全性検査: ステップラダーの全試合・勝者が確定していません。',
+        ];
+    }
+
     /** @param array<string,mixed> $aggregateEvent */
     private function synchronizeTournamentAggregationFlags(
         Tournament $tournament,
@@ -213,7 +274,7 @@ final class Official2026StandardDetailImportService
 
         $payload = json_decode((string) file_get_contents($path), true, flags: JSON_THROW_ON_ERROR);
         if (count($payload['events'] ?? []) !== self::EXPECTED_EVENT_COUNT) {
-            throw new RuntimeException('Standard-tournament detail dataset must contain 12 events.');
+            throw new RuntimeException('Standard-tournament detail dataset must contain 13 events.');
         }
 
         $scoreCount = array_sum(array_map(
@@ -294,19 +355,27 @@ final class Official2026StandardDetailImportService
         return array_values(array_unique($errors));
     }
 
-    private function findTournament(string $eventKey, bool $lock = false): ?Tournament
+    private function findTournament(
+        string $eventKey,
+        bool $lock = false,
+        ?array $aggregateEvent = null,
+    ): ?Tournament
     {
         $publication = TournamentResultPublication::query()
             ->where('status', TournamentResultPublication::STATUS_CURRENT)
-            ->where('notes', self::AGGREGATE_MARKER.':'.$eventKey)
+            ->whereIn('notes', [
+                self::AGGREGATE_MARKER.':'.$eventKey,
+                self::IMPORT_MARKER.':'.$eventKey,
+                self::FINAL_MARKER.':'.$eventKey,
+            ])
             ->orderByDesc('revision')
             ->first();
 
-        if ($publication === null) {
-            return null;
-        }
-
-        $query = Tournament::query()->whereKey($publication->tournament_id);
+        $query = $publication !== null
+            ? Tournament::query()->whereKey($publication->tournament_id)
+            : Tournament::query()
+                ->where('year', 2026)
+                ->where('name', (string) ($aggregateEvent['tournament']['name'] ?? ''));
         if ($lock) {
             $query->lockForUpdate();
         }
@@ -418,7 +487,17 @@ final class Official2026StandardDetailImportService
     ): array
     {
         $expected = $this->expectedScoreMap($event, $participantLicenseMap);
-        $actualRows = DB::table('game_scores')->where('tournament_id', $tournament->id)->get();
+        $ownedStages = collect($event['stages'])
+            ->pluck('stage')
+            ->map(fn ($stage): string => trim((string) $stage))
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+        $actualRows = DB::table('game_scores')
+            ->where('tournament_id', $tournament->id)
+            ->whereIn('stage', $ownedStages)
+            ->get();
         $actual = [];
         foreach ($actualRows as $row) {
             $key = $this->scoreKey(

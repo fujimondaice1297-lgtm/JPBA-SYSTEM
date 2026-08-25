@@ -4,9 +4,9 @@ test('official 2026 standard detail dataset is internally complete', function ()
     $path = dirname(__DIR__, 2).'/database/data/jpba_official_2026_standard_detail_scores.json';
     $payload = json_decode((string) file_get_contents($path), true, flags: JSON_THROW_ON_ERROR);
 
-    expect($payload['event_count'])->toBe(12)
-        ->and($payload['events'])->toHaveCount(12)
-        ->and(array_sum(array_column($payload['events'], 'expected_score_count')))->toBe(14595);
+    expect($payload['event_count'])->toBe(13)
+        ->and($payload['events'])->toHaveCount(13)
+        ->and(array_sum(array_column($payload['events'], 'expected_score_count')))->toBe(15978);
 
     foreach ($payload['events'] as $event) {
         $scoreCount = 0;

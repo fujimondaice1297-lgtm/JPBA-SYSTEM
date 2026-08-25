@@ -10,6 +10,7 @@ class ImportOfficial2026TournamentResultsCommand extends Command
 {
     protected $signature = 'jpba:import-official-2026-results
         {--force : Create tournaments and publish the official results. Without this option, the command is dry-run only}
+        {--bootstrap-missing : Create missing tournament data and defer publication until per-game details are imported}
         {--admin-email=yamaguchi@jpba.or.jp : Administrator recorded as the result publisher}
         {--json : Output the full report as JSON}';
 
@@ -21,6 +22,7 @@ class ImportOfficial2026TournamentResultsCommand extends Command
             $report = $service->import(
                 (bool) $this->option('force'),
                 (string) $this->option('admin-email'),
+                (bool) $this->option('bootstrap-missing'),
             );
         } catch (Throwable $exception) {
             $this->error($exception->getMessage());
@@ -58,8 +60,12 @@ class ImportOfficial2026TournamentResultsCommand extends Command
 
             if ($report['mode'] === 'write' && $report['errors'] === []) {
                 $this->line(sprintf(
-                    'published=%d ranking snapshots=%d database differences=%d',
-                    count($report['tournaments']),
+                    'published=%d deferred=%d ranking snapshots=%d database differences=%d',
+                    count(array_filter(
+                        $report['tournaments'],
+                        fn (array $row): bool => ($row['publication_id'] ?? null) !== null,
+                    )),
+                    count($report['deferred_publications'] ?? []),
                     count($report['ranking_snapshots']),
                     (int) ($report['database_ranking_audit']['difference_count'] ?? -1),
                 ));

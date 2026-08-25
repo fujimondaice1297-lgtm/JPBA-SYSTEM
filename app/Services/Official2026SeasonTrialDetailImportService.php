@@ -16,7 +16,7 @@ final class Official2026SeasonTrialDetailImportService
 
     private const IMPORT_MARKER = 'jpba_official_2026_season_trial_detail';
 
-    private const EXPECTED_EVENT_COUNT = 11;
+    private const EXPECTED_EVENT_COUNT = 12;
 
     public function __construct(
         private readonly Official2026TournamentResultsImportService $officialResults,
@@ -28,9 +28,22 @@ final class Official2026SeasonTrialDetailImportService
     ) {}
 
     /** @return array<string,mixed> */
-    public function import(bool $write = false, string $adminEmail = 'yamaguchi@jpba.or.jp'): array
+    public function import(
+        bool $write = false,
+        string $adminEmail = 'yamaguchi@jpba.or.jp',
+        ?string $eventKey = null,
+    ): array
     {
         $detail = $this->dataset();
+        $selectedEvents = $eventKey === null
+            ? $detail['events']
+            : array_values(array_filter(
+                $detail['events'],
+                fn (array $event): bool => $event['key'] === $eventKey,
+            ));
+        if ($eventKey !== null && $selectedEvents === []) {
+            throw new RuntimeException("Season-trial detail event was not found: {$eventKey}");
+        }
         $aggregate = $this->officialResults->dataset();
         $aggregateEvents = collect($aggregate['events'])->keyBy('key');
         $admin = User::query()->where('email', $adminEmail)->first();
@@ -41,7 +54,7 @@ final class Official2026SeasonTrialDetailImportService
             $errors[] = "Administrator was not found: {$adminEmail}";
         }
 
-        foreach ($detail['events'] as $event) {
+        foreach ($selectedEvents as $event) {
             $aggregateEvent = $aggregateEvents->get($event['key']);
             $eventErrors = $this->validateEventAgainstAggregate($event, $aggregateEvent, $aggregate);
             $tournamentName = (string) ($aggregateEvent['existing_tournament_name'] ?? '');
@@ -90,7 +103,7 @@ final class Official2026SeasonTrialDetailImportService
             'dataset' => $detail['dataset'],
             'dataset_sha256' => hash_file('sha256', database_path(self::DATASET_PATH)),
             'source_checked_at' => $detail['source_checked_at'],
-            'event_count' => count($detail['events']),
+            'event_count' => count($selectedEvents),
             'admin_id' => $admin?->id,
             'events' => $events,
             'errors' => $errors,
@@ -101,8 +114,8 @@ final class Official2026SeasonTrialDetailImportService
             return $report;
         }
 
-        return DB::transaction(function () use ($detail, $aggregateEvents, $admin, $report): array {
-            foreach ($detail['events'] as $event) {
+        return DB::transaction(function () use ($selectedEvents, $aggregateEvents, $admin, $report): array {
+            foreach ($selectedEvents as $event) {
                 $aggregateEvent = $aggregateEvents->get($event['key']);
                 $tournament = Tournament::query()
                     ->where('year', 2026)
@@ -110,12 +123,12 @@ final class Official2026SeasonTrialDetailImportService
                     ->lockForUpdate()
                     ->firstOrFail();
 
-                $this->standardizeTournament($tournament, $event['key']);
                 $templateSetup = $this->templateSetupService->setup(
                     (int) $tournament->id,
                     true,
                     ['season_key' => $this->seasonKey($event['key'])],
                 );
+                $this->standardizeTournament($tournament, $event['key']);
 
                 $this->clearDetailData($tournament);
                 $prelimImport = $this->stageAndCommitScores(
@@ -195,7 +208,7 @@ final class Official2026SeasonTrialDetailImportService
 
         $payload = json_decode((string) file_get_contents($path), true, flags: JSON_THROW_ON_ERROR);
         if (count($payload['events'] ?? []) !== self::EXPECTED_EVENT_COUNT) {
-            throw new RuntimeException('Season-trial detail dataset must contain 11 venues.');
+            throw new RuntimeException('Season-trial detail dataset must contain 12 venues.');
         }
 
         return $payload;

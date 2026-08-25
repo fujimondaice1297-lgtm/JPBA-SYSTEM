@@ -492,9 +492,11 @@ final class TournamentResultCompletenessService
 
         foreach ($publication->rows()->orderBy('ranking')->get() as $row) {
             $actual = $this->findByAliases($totals, $this->rowAliases($row->toArray()));
-            if ($actual === null
-                || (int) $row->games !== (int) $actual['games']
-                || (int) $row->total_pin !== (int) $actual['total_pin']) {
+            if (! $this->publicationTotalsMatch(
+                $actual,
+                (int) $row->games,
+                (int) $row->total_pin,
+            )) {
                 $mismatches[] = [
                     'display_name' => (string) $row->display_name,
                     'published_games' => (int) $row->games,
@@ -506,6 +508,17 @@ final class TournamentResultCompletenessService
         }
 
         return $mismatches;
+    }
+
+    /** @param array{games:int,total_pin:int}|null $actual */
+    private function publicationTotalsMatch(?array $actual, int $publishedGames, int $publishedTotalPin): bool
+    {
+        if ($actual === null) {
+            return $publishedGames === 0 && $publishedTotalPin === 0;
+        }
+
+        return $publishedGames === (int) $actual['games']
+            && $publishedTotalPin === (int) $actual['total_pin'];
     }
 
     private function stageToken(string $resultCode): ?string

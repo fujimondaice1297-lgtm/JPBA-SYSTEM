@@ -4,10 +4,10 @@ test('official 2026 standard final dataset is internally complete', function ():
     $path = dirname(__DIR__, 2).'/database/data/jpba_official_2026_standard_final_scores.json';
     $payload = json_decode((string) file_get_contents($path), true, flags: JSON_THROW_ON_ERROR);
 
-    expect($payload['event_count'])->toBe(11)
-        ->and($payload['score_sheet_count'])->toBe(29)
-        ->and($payload['frame_player_count'])->toBe(63)
-        ->and($payload['frame_count'])->toBe(630)
+    expect($payload['event_count'])->toBe(12)
+        ->and($payload['score_sheet_count'])->toBe(31)
+        ->and($payload['frame_player_count'])->toBe(67)
+        ->and($payload['frame_count'])->toBe(670)
         ->and($payload['additional_stage_score_count'])->toBe(96)
         ->and($payload['bracket_match_count'])->toBe(41)
         ->and($payload['bracket_score_count'])->toBe(158);

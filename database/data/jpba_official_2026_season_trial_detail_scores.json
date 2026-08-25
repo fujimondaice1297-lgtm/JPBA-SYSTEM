@@ -1,6 +1,6 @@
 {
   "dataset": "JPBA official 2026 season trial per-game scores",
-  "source_checked_at": "2026-07-23",
+  "source_checked_at": "2026-07-28",
   "events": [
     {
       "key": "stw_a",
@@ -34426,6 +34426,2415 @@
         "prelim_game_scores": 588,
         "semifinal_rows": 39,
         "semifinal_game_scores": 156,
+        "shootout_game_scores": 10
+      }
+    },
+    {
+      "key": "stsu_d",
+      "source": {
+        "alias": "stsu_d_final.pdf",
+        "url": "https://www.jpba.or.jp/information/tournament/tournament2026/09_STSummer/Result/D_FinalResult.pdf",
+        "sha256": "5ce2525fca480178fac3a7606780457f4dbab7afd4561d594cdd9db6639b04bc"
+      },
+      "prelim": [
+        {
+          "rank": 1,
+          "license_no": "M00000365",
+          "display_name": "西田 久良",
+          "games": [
+            200,
+            235,
+            202,
+            214,
+            181,
+            218,
+            228,
+            203
+          ],
+          "games_count": 8,
+          "total_pin": 1681
+        },
+        {
+          "rank": 2,
+          "license_no": "M00001425",
+          "display_name": "伊吹 太陽",
+          "games": [
+            227,
+            209,
+            247,
+            172,
+            218,
+            166,
+            208,
+            219
+          ],
+          "games_count": 8,
+          "total_pin": 1666
+        },
+        {
+          "rank": 3,
+          "license_no": "M00001099",
+          "display_name": "津島 健次",
+          "games": [
+            257,
+            167,
+            169,
+            171,
+            218,
+            267,
+            194,
+            219
+          ],
+          "games_count": 8,
+          "total_pin": 1662
+        },
+        {
+          "rank": 4,
+          "license_no": "M00000905",
+          "display_name": "太田 隆昌",
+          "games": [
+            169,
+            224,
+            184,
+            175,
+            208,
+            219,
+            210,
+            201
+          ],
+          "games_count": 8,
+          "total_pin": 1590
+        },
+        {
+          "rank": 5,
+          "license_no": "M00001023",
+          "display_name": "岡野 秀幸",
+          "games": [
+            195,
+            244,
+            214,
+            190,
+            183,
+            197,
+            180,
+            187
+          ],
+          "games_count": 8,
+          "total_pin": 1590
+        },
+        {
+          "rank": 6,
+          "license_no": "M00001435",
+          "display_name": "德久 恵大",
+          "games": [
+            243,
+            234,
+            172,
+            210,
+            193,
+            200,
+            177,
+            160
+          ],
+          "games_count": 8,
+          "total_pin": 1589
+        },
+        {
+          "rank": 7,
+          "license_no": "M00001198",
+          "display_name": "小林 哲也",
+          "games": [
+            175,
+            171,
+            203,
+            234,
+            199,
+            227,
+            179,
+            172
+          ],
+          "games_count": 8,
+          "total_pin": 1560
+        },
+        {
+          "rank": 8,
+          "license_no": "M00001430",
+          "display_name": "田中 義一",
+          "games": [
+            202,
+            185,
+            279,
+            197,
+            175,
+            182,
+            178,
+            157
+          ],
+          "games_count": 8,
+          "total_pin": 1555
+        },
+        {
+          "rank": 9,
+          "license_no": "M00001344",
+          "display_name": "竹本 圭実",
+          "games": [
+            220,
+            219,
+            160,
+            180,
+            205,
+            174,
+            195,
+            193
+          ],
+          "games_count": 8,
+          "total_pin": 1546
+        },
+        {
+          "rank": 10,
+          "license_no": "M00001341",
+          "display_name": "榎 大成",
+          "games": [
+            178,
+            231,
+            167,
+            191,
+            202,
+            188,
+            173,
+            213
+          ],
+          "games_count": 8,
+          "total_pin": 1543
+        },
+        {
+          "rank": 11,
+          "license_no": "M00000988",
+          "display_name": "吉井 昌幸",
+          "games": [
+            178,
+            158,
+            225,
+            183,
+            203,
+            166,
+            184,
+            233
+          ],
+          "games_count": 8,
+          "total_pin": 1530
+        },
+        {
+          "rank": 12,
+          "license_no": "M00001343",
+          "display_name": "平岡 勇人",
+          "games": [
+            234,
+            184,
+            155,
+            223,
+            156,
+            199,
+            194,
+            178
+          ],
+          "games_count": 8,
+          "total_pin": 1523
+        },
+        {
+          "rank": 13,
+          "license_no": "M00001405",
+          "display_name": "湯浅 敬太",
+          "games": [
+            178,
+            178,
+            190,
+            220,
+            182,
+            196,
+            223,
+            149
+          ],
+          "games_count": 8,
+          "total_pin": 1516
+        },
+        {
+          "rank": 14,
+          "license_no": "M00001357",
+          "display_name": "大西 翔太",
+          "games": [
+            178,
+            189,
+            152,
+            191,
+            154,
+            222,
+            153,
+            268
+          ],
+          "games_count": 8,
+          "total_pin": 1507
+        },
+        {
+          "rank": 15,
+          "license_no": "M00001498",
+          "display_name": "吉山 将太",
+          "games": [
+            224,
+            211,
+            199,
+            185,
+            168,
+            150,
+            200,
+            170
+          ],
+          "games_count": 8,
+          "total_pin": 1507
+        },
+        {
+          "rank": 16,
+          "license_no": "M00001487",
+          "display_name": "御手洗彰彦",
+          "games": [
+            188,
+            180,
+            167,
+            174,
+            200,
+            223,
+            221,
+            151
+          ],
+          "games_count": 8,
+          "total_pin": 1504
+        },
+        {
+          "rank": 17,
+          "license_no": "M00001482",
+          "display_name": "井之上准己",
+          "games": [
+            194,
+            201,
+            189,
+            163,
+            144,
+            189,
+            177,
+            234
+          ],
+          "games_count": 8,
+          "total_pin": 1491
+        },
+        {
+          "rank": 18,
+          "license_no": "M00001272",
+          "display_name": "山上 英章",
+          "games": [
+            178,
+            162,
+            196,
+            177,
+            172,
+            181,
+            224,
+            200
+          ],
+          "games_count": 8,
+          "total_pin": 1490
+        },
+        {
+          "rank": 19,
+          "license_no": "M00001438",
+          "display_name": "藤﨑 周",
+          "games": [
+            185,
+            178,
+            195,
+            135,
+            216,
+            167,
+            215,
+            189
+          ],
+          "games_count": 8,
+          "total_pin": 1480
+        },
+        {
+          "rank": 20,
+          "license_no": "M00000368",
+          "display_name": "柴田 英徳",
+          "games": [
+            190,
+            199,
+            163,
+            163,
+            163,
+            218,
+            177,
+            189
+          ],
+          "games_count": 8,
+          "total_pin": 1462
+        },
+        {
+          "rank": 21,
+          "license_no": "M00000553",
+          "display_name": "太田 潔",
+          "games": [
+            202,
+            170,
+            155,
+            213,
+            180,
+            138,
+            217,
+            177
+          ],
+          "games_count": 8,
+          "total_pin": 1452
+        },
+        {
+          "rank": 22,
+          "license_no": "M00001074",
+          "display_name": "道菅 真",
+          "games": [
+            170,
+            181,
+            176,
+            182,
+            164,
+            213,
+            177,
+            184
+          ],
+          "games_count": 8,
+          "total_pin": 1447
+        },
+        {
+          "rank": 23,
+          "license_no": "M00001366",
+          "display_name": "嶋田 佑介",
+          "games": [
+            212,
+            200,
+            189,
+            135,
+            196,
+            169,
+            169,
+            172
+          ],
+          "games_count": 8,
+          "total_pin": 1442
+        },
+        {
+          "rank": 24,
+          "license_no": "M00001306",
+          "display_name": "別所 翼",
+          "games": [
+            146,
+            116,
+            188,
+            183,
+            181,
+            251,
+            202,
+            162
+          ],
+          "games_count": 8,
+          "total_pin": 1429
+        },
+        {
+          "rank": 25,
+          "license_no": "M00001508",
+          "display_name": "潟手 孝義",
+          "games": [
+            131,
+            177,
+            135,
+            174,
+            212,
+            170,
+            214,
+            201
+          ],
+          "games_count": 8,
+          "total_pin": 1414
+        },
+        {
+          "rank": 26,
+          "license_no": "M00001194",
+          "display_name": "深澤 健一",
+          "games": [
+            168,
+            187,
+            163,
+            180,
+            167,
+            178,
+            156,
+            212
+          ],
+          "games_count": 8,
+          "total_pin": 1411
+        },
+        {
+          "rank": 27,
+          "license_no": "M00001297",
+          "display_name": "藤川 大輔",
+          "games": [
+            149,
+            175,
+            192,
+            209,
+            172,
+            163,
+            200,
+            143
+          ],
+          "games_count": 8,
+          "total_pin": 1403
+        },
+        {
+          "rank": 28,
+          "license_no": "M00001381",
+          "display_name": "森元 洋行",
+          "games": [
+            158,
+            186,
+            157,
+            203,
+            176,
+            196,
+            141,
+            181
+          ],
+          "games_count": 8,
+          "total_pin": 1398
+        },
+        {
+          "rank": 29,
+          "license_no": "M00001255",
+          "display_name": "福永 晃生",
+          "games": [
+            143,
+            177,
+            200,
+            175,
+            224,
+            159,
+            131,
+            177
+          ],
+          "games_count": 8,
+          "total_pin": 1386
+        },
+        {
+          "rank": 30,
+          "license_no": "M00001069",
+          "display_name": "津島 悟志",
+          "games": [
+            176,
+            175,
+            174,
+            166,
+            162,
+            171,
+            169,
+            179
+          ],
+          "games_count": 8,
+          "total_pin": 1372
+        },
+        {
+          "rank": 31,
+          "license_no": "M00000498",
+          "display_name": "浜田 光博",
+          "games": [
+            199,
+            159,
+            161,
+            183,
+            126,
+            185,
+            149,
+            201
+          ],
+          "games_count": 8,
+          "total_pin": 1363
+        },
+        {
+          "rank": 32,
+          "license_no": "M00001489",
+          "display_name": "藤井 大河",
+          "games": [
+            208,
+            178,
+            231,
+            122,
+            170,
+            126,
+            152,
+            170
+          ],
+          "games_count": 8,
+          "total_pin": 1357
+        },
+        {
+          "rank": 33,
+          "license_no": "M00001258",
+          "display_name": "宮崎 大輔",
+          "games": [
+            199,
+            157,
+            171,
+            125,
+            179,
+            204,
+            146,
+            162
+          ],
+          "games_count": 8,
+          "total_pin": 1343
+        },
+        {
+          "rank": 34,
+          "license_no": "M00001485",
+          "display_name": "山﨑 陸斗",
+          "games": [
+            157,
+            138,
+            180,
+            207,
+            156,
+            209,
+            162,
+            133
+          ],
+          "games_count": 8,
+          "total_pin": 1342
+        },
+        {
+          "rank": 35,
+          "license_no": "M00000949",
+          "display_name": "砂子 明廣",
+          "games": [
+            182,
+            177,
+            188,
+            196,
+            181,
+            147,
+            125,
+            133
+          ],
+          "games_count": 8,
+          "total_pin": 1329
+        },
+        {
+          "rank": 36,
+          "license_no": "M00001408",
+          "display_name": "髙安 真司",
+          "games": [
+            180,
+            131,
+            166,
+            197,
+            163,
+            148,
+            153,
+            167
+          ],
+          "games_count": 8,
+          "total_pin": 1305
+        },
+        {
+          "rank": 37,
+          "license_no": "M00001447",
+          "display_name": "武本 真明",
+          "games": [
+            212,
+            208,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+          ],
+          "games_count": 2,
+          "total_pin": 420
+        },
+        {
+          "rank": 38,
+          "license_no": "M00000932",
+          "display_name": "ロバート･リー",
+          "games": [
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+          ],
+          "games_count": 0,
+          "total_pin": 0
+        },
+        {
+          "rank": 39,
+          "license_no": "M00001495",
+          "display_name": "竹下 和志",
+          "games": [
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+          ],
+          "games_count": 0,
+          "total_pin": 0
+        }
+      ],
+      "semifinal": [
+        {
+          "rank": 1,
+          "license_no": "M00001099",
+          "display_name": "津島 健次",
+          "games": [
+            254,
+            182,
+            239,
+            193
+          ],
+          "games_count": 4,
+          "stage_total_pin": 868,
+          "carry_total_pin": 1662,
+          "total_pin": 2530
+        },
+        {
+          "rank": 2,
+          "license_no": "M00000365",
+          "display_name": "西田 久良",
+          "games": [
+            192,
+            204,
+            214,
+            231
+          ],
+          "games_count": 4,
+          "stage_total_pin": 841,
+          "carry_total_pin": 1681,
+          "total_pin": 2522
+        },
+        {
+          "rank": 3,
+          "license_no": "M00000905",
+          "display_name": "太田 隆昌",
+          "games": [
+            194,
+            242,
+            245,
+            234
+          ],
+          "games_count": 4,
+          "stage_total_pin": 915,
+          "carry_total_pin": 1590,
+          "total_pin": 2505
+        },
+        {
+          "rank": 4,
+          "license_no": "M00001425",
+          "display_name": "伊吹 太陽",
+          "games": [
+            167,
+            201,
+            200,
+            178
+          ],
+          "games_count": 4,
+          "stage_total_pin": 746,
+          "carry_total_pin": 1666,
+          "total_pin": 2412
+        },
+        {
+          "rank": 5,
+          "license_no": "M00001198",
+          "display_name": "小林 哲也",
+          "games": [
+            234,
+            182,
+            237,
+            190
+          ],
+          "games_count": 4,
+          "stage_total_pin": 843,
+          "carry_total_pin": 1560,
+          "total_pin": 2403
+        },
+        {
+          "rank": 6,
+          "license_no": "M00001341",
+          "display_name": "榎 大成",
+          "games": [
+            196,
+            218,
+            247,
+            170
+          ],
+          "games_count": 4,
+          "stage_total_pin": 831,
+          "carry_total_pin": 1543,
+          "total_pin": 2374
+        },
+        {
+          "rank": 7,
+          "license_no": "M00000988",
+          "display_name": "吉井 昌幸",
+          "games": [
+            225,
+            233,
+            180,
+            201
+          ],
+          "games_count": 4,
+          "stage_total_pin": 839,
+          "carry_total_pin": 1530,
+          "total_pin": 2369
+        },
+        {
+          "rank": 8,
+          "license_no": "M00001344",
+          "display_name": "竹本 圭実",
+          "games": [
+            200,
+            204,
+            207,
+            187
+          ],
+          "games_count": 4,
+          "stage_total_pin": 798,
+          "carry_total_pin": 1546,
+          "total_pin": 2344
+        },
+        {
+          "rank": 9,
+          "license_no": "M00001343",
+          "display_name": "平岡 勇人",
+          "games": [
+            235,
+            204,
+            181,
+            167
+          ],
+          "games_count": 4,
+          "stage_total_pin": 787,
+          "carry_total_pin": 1523,
+          "total_pin": 2310
+        },
+        {
+          "rank": 10,
+          "license_no": "M00001435",
+          "display_name": "德久 恵大",
+          "games": [
+            158,
+            170,
+            216,
+            170
+          ],
+          "games_count": 4,
+          "stage_total_pin": 714,
+          "carry_total_pin": 1589,
+          "total_pin": 2303
+        },
+        {
+          "rank": 11,
+          "license_no": "M00001430",
+          "display_name": "田中 義一",
+          "games": [
+            179,
+            211,
+            182,
+            171
+          ],
+          "games_count": 4,
+          "stage_total_pin": 743,
+          "carry_total_pin": 1555,
+          "total_pin": 2298
+        },
+        {
+          "rank": 12,
+          "license_no": "M00001357",
+          "display_name": "大西 翔太",
+          "games": [
+            200,
+            221,
+            183,
+            184
+          ],
+          "games_count": 4,
+          "stage_total_pin": 788,
+          "carry_total_pin": 1507,
+          "total_pin": 2295
+        },
+        {
+          "rank": 13,
+          "license_no": "M00001023",
+          "display_name": "岡野 秀幸",
+          "games": [
+            162,
+            146,
+            173,
+            212
+          ],
+          "games_count": 4,
+          "stage_total_pin": 693,
+          "carry_total_pin": 1590,
+          "total_pin": 2283
+        },
+        {
+          "rank": 14,
+          "license_no": "M00001498",
+          "display_name": "吉山 将太",
+          "games": [
+            183,
+            173,
+            195,
+            184
+          ],
+          "games_count": 4,
+          "stage_total_pin": 735,
+          "carry_total_pin": 1507,
+          "total_pin": 2242
+        },
+        {
+          "rank": 15,
+          "license_no": "M00001272",
+          "display_name": "山上 英章",
+          "games": [
+            192,
+            204,
+            173,
+            178
+          ],
+          "games_count": 4,
+          "stage_total_pin": 747,
+          "carry_total_pin": 1490,
+          "total_pin": 2237
+        },
+        {
+          "rank": 16,
+          "license_no": "M00001438",
+          "display_name": "藤﨑 周",
+          "games": [
+            159,
+            155,
+            232,
+            201
+          ],
+          "games_count": 4,
+          "stage_total_pin": 747,
+          "carry_total_pin": 1480,
+          "total_pin": 2227
+        },
+        {
+          "rank": 17,
+          "license_no": "M00001487",
+          "display_name": "御手洗彰彦",
+          "games": [
+            191,
+            151,
+            212,
+            168
+          ],
+          "games_count": 4,
+          "stage_total_pin": 722,
+          "carry_total_pin": 1504,
+          "total_pin": 2226
+        },
+        {
+          "rank": 18,
+          "license_no": "M00001482",
+          "display_name": "井之上准己",
+          "games": [
+            195,
+            186,
+            168,
+            155
+          ],
+          "games_count": 4,
+          "stage_total_pin": 704,
+          "carry_total_pin": 1491,
+          "total_pin": 2195
+        },
+        {
+          "rank": 19,
+          "license_no": "M00001405",
+          "display_name": "湯浅 敬太",
+          "games": [
+            145,
+            137,
+            164,
+            145
+          ],
+          "games_count": 4,
+          "stage_total_pin": 591,
+          "carry_total_pin": 1516,
+          "total_pin": 2107
+        },
+        {
+          "rank": 20,
+          "license_no": "M00000368",
+          "display_name": "柴田 英徳",
+          "games": [
+            138,
+            137,
+            128,
+            194
+          ],
+          "games_count": 4,
+          "stage_total_pin": 597,
+          "carry_total_pin": 1462,
+          "total_pin": 2059
+        }
+      ],
+      "shootout": {
+        "rows": [
+          {
+            "entry_number": "SO:SO1:A",
+            "seed": 5,
+            "license_no": "M00001344",
+            "display_name": "竹本 圭実",
+            "score": 248,
+            "is_winner": true,
+            "frames": [
+              {
+                "frame_no": 1,
+                "throw1": "7",
+                "throw2": "2",
+                "throw3": "",
+                "frame_score": 9,
+                "cumulative_score": 9,
+                "display_marks": {
+                  "throw1": "7",
+                  "throw2": "2",
+                  "throw3": ""
+                }
+              },
+              {
+                "frame_no": 2,
+                "throw1": "9",
+                "throw2": "/",
+                "throw3": "",
+                "frame_score": 20,
+                "cumulative_score": 29,
+                "display_marks": {
+                  "throw1": "9",
+                  "throw2": "/",
+                  "throw3": ""
+                }
+              },
+              {
+                "frame_no": 3,
+                "throw1": "X",
+                "throw2": "",
+                "throw3": "",
+                "frame_score": 30,
+                "cumulative_score": 59,
+                "display_marks": {
+                  "throw1": "X",
+                  "throw2": "",
+                  "throw3": ""
+                }
+              },
+              {
+                "frame_no": 4,
+                "throw1": "X",
+                "throw2": "",
+                "throw3": "",
+                "frame_score": 30,
+                "cumulative_score": 89,
+                "display_marks": {
+                  "throw1": "X",
+                  "throw2": "",
+                  "throw3": ""
+                }
+              },
+              {
+                "frame_no": 5,
+                "throw1": "X",
+                "throw2": "",
+                "throw3": "",
+                "frame_score": 29,
+                "cumulative_score": 118,
+                "display_marks": {
+                  "throw1": "X",
+                  "throw2": "",
+                  "throw3": ""
+                }
+              },
+              {
+                "frame_no": 6,
+                "throw1": "X",
+                "throw2": "",
+                "throw3": "",
+                "frame_score": 20,
+                "cumulative_score": 138,
+                "display_marks": {
+                  "throw1": "X",
+                  "throw2": "",
+                  "throw3": ""
+                }
+              },
+              {
+                "frame_no": 7,
+                "throw1": "9",
+                "throw2": "/",
+                "throw3": "",
+                "frame_score": 20,
+                "cumulative_score": 158,
+                "display_marks": {
+                  "throw1": "9",
+                  "throw2": "/",
+                  "throw3": ""
+                }
+              },
+              {
+                "frame_no": 8,
+                "throw1": "X",
+                "throw2": "",
+                "throw3": "",
+                "frame_score": 30,
+                "cumulative_score": 188,
+                "display_marks": {
+                  "throw1": "X",
+                  "throw2": "",
+                  "throw3": ""
+                }
+              },
+              {
+                "frame_no": 9,
+                "throw1": "X",
+                "throw2": "",
+                "throw3": "",
+                "frame_score": 30,
+                "cumulative_score": 218,
+                "display_marks": {
+                  "throw1": "X",
+                  "throw2": "",
+                  "throw3": ""
+                }
+              },
+              {
+                "frame_no": 10,
+                "throw1": "X",
+                "throw2": "X",
+                "throw3": "X",
+                "frame_score": 30,
+                "cumulative_score": 248,
+                "display_marks": {
+                  "throw1": "X",
+                  "throw2": "X",
+                  "throw3": "X"
+                }
+              }
+            ],
+            "frame_candidate_count": 1,
+            "frame_cumulative_corrections": []
+          },
+          {
+            "entry_number": "SO:SO1:B",
+            "seed": 6,
+            "license_no": "M00001198",
+            "display_name": "小林 哲也",
+            "score": 247,
+            "is_winner": false,
+            "frames": [
+              {
+                "frame_no": 1,
+                "throw1": "7",
+                "throw2": "/",
+                "throw3": "",
+                "frame_score": 20,
+                "cumulative_score": 20,
+                "display_marks": {
+                  "throw1": "7",
+                  "throw2": "/",
+                  "throw3": ""
+                }
+              },
+              {
+                "frame_no": 2,
+                "throw1": "X",
+                "throw2": "",
+                "throw3": "",
+                "frame_score": 29,
+                "cumulative_score": 49,
+                "display_marks": {
+                  "throw1": "X",
+                  "throw2": "",
+                  "throw3": ""
+                }
+              },
+              {
+                "frame_no": 3,
+                "throw1": "X",
+                "throw2": "",
+                "throw3": "",
+                "frame_score": 20,
+                "cumulative_score": 69,
+                "display_marks": {
+                  "throw1": "X",
+                  "throw2": "",
+                  "throw3": ""
+                }
+              },
+              {
+                "frame_no": 4,
+                "throw1": "9",
+                "throw2": "/",
+                "throw3": "",
+                "frame_score": 20,
+                "cumulative_score": 89,
+                "display_marks": {
+                  "throw1": "9",
+                  "throw2": "/",
+                  "throw3": ""
+                }
+              },
+              {
+                "frame_no": 5,
+                "throw1": "X",
+                "throw2": "",
+                "throw3": "",
+                "frame_score": 30,
+                "cumulative_score": 119,
+                "display_marks": {
+                  "throw1": "X",
+                  "throw2": "",
+                  "throw3": ""
+                }
+              },
+              {
+                "frame_no": 6,
+                "throw1": "X",
+                "throw2": "",
+                "throw3": "",
+                "frame_score": 28,
+                "cumulative_score": 147,
+                "display_marks": {
+                  "throw1": "X",
+                  "throw2": "",
+                  "throw3": ""
+                }
+              },
+              {
+                "frame_no": 7,
+                "throw1": "X",
+                "throw2": "",
+                "throw3": "",
+                "frame_score": 20,
+                "cumulative_score": 167,
+                "display_marks": {
+                  "throw1": "X",
+                  "throw2": "",
+                  "throw3": ""
+                }
+              },
+              {
+                "frame_no": 8,
+                "throw1": "8",
+                "throw2": "/",
+                "throw3": "",
+                "frame_score": 20,
+                "cumulative_score": 187,
+                "display_marks": {
+                  "throw1": "8",
+                  "throw2": "/",
+                  "throw3": ""
+                }
+              },
+              {
+                "frame_no": 9,
+                "throw1": "X",
+                "throw2": "",
+                "throw3": "",
+                "frame_score": 30,
+                "cumulative_score": 217,
+                "display_marks": {
+                  "throw1": "X",
+                  "throw2": "",
+                  "throw3": ""
+                }
+              },
+              {
+                "frame_no": 10,
+                "throw1": "X",
+                "throw2": "X",
+                "throw3": "X",
+                "frame_score": 30,
+                "cumulative_score": 247,
+                "display_marks": {
+                  "throw1": "X",
+                  "throw2": "X",
+                  "throw3": "X"
+                }
+              }
+            ],
+            "frame_candidate_count": 1,
+            "frame_cumulative_corrections": []
+          },
+          {
+            "entry_number": "SO:SO1:C",
+            "seed": 7,
+            "license_no": "M00001341",
+            "display_name": "榎 大成",
+            "score": 166,
+            "is_winner": false,
+            "frames": [
+              {
+                "frame_no": 1,
+                "throw1": "8",
+                "throw2": "/",
+                "throw3": "",
+                "frame_score": 19,
+                "cumulative_score": 19,
+                "display_marks": {
+                  "throw1": "8",
+                  "throw2": "/",
+                  "throw3": ""
+                }
+              },
+              {
+                "frame_no": 2,
+                "throw1": "9",
+                "throw2": "/",
+                "throw3": "",
+                "frame_score": 19,
+                "cumulative_score": 38,
+                "display_marks": {
+                  "throw1": "9",
+                  "throw2": "/",
+                  "throw3": ""
+                }
+              },
+              {
+                "frame_no": 3,
+                "throw1": "9",
+                "throw2": "/",
+                "throw3": "",
+                "frame_score": 18,
+                "cumulative_score": 56,
+                "display_marks": {
+                  "throw1": "9",
+                  "throw2": "/",
+                  "throw3": ""
+                }
+              },
+              {
+                "frame_no": 4,
+                "throw1": "8",
+                "throw2": "1",
+                "throw3": "",
+                "frame_score": 9,
+                "cumulative_score": 65,
+                "display_marks": {
+                  "throw1": "8",
+                  "throw2": "1",
+                  "throw3": ""
+                }
+              },
+              {
+                "frame_no": 5,
+                "throw1": "X",
+                "throw2": "",
+                "throw3": "",
+                "frame_score": 18,
+                "cumulative_score": 83,
+                "display_marks": {
+                  "throw1": "X",
+                  "throw2": "",
+                  "throw3": ""
+                }
+              },
+              {
+                "frame_no": 6,
+                "throw1": "6",
+                "throw2": "2",
+                "throw3": "",
+                "frame_score": 8,
+                "cumulative_score": 91,
+                "display_marks": {
+                  "throw1": "6",
+                  "throw2": "2",
+                  "throw3": ""
+                }
+              },
+              {
+                "frame_no": 7,
+                "throw1": "8",
+                "throw2": "/",
+                "throw3": "",
+                "frame_score": 17,
+                "cumulative_score": 108,
+                "display_marks": {
+                  "throw1": "8",
+                  "throw2": "/",
+                  "throw3": ""
+                }
+              },
+              {
+                "frame_no": 8,
+                "throw1": "7",
+                "throw2": "/",
+                "throw3": "",
+                "frame_score": 20,
+                "cumulative_score": 128,
+                "display_marks": {
+                  "throw1": "7",
+                  "throw2": "/",
+                  "throw3": ""
+                }
+              },
+              {
+                "frame_no": 9,
+                "throw1": "X",
+                "throw2": "",
+                "throw3": "",
+                "frame_score": 20,
+                "cumulative_score": 148,
+                "display_marks": {
+                  "throw1": "X",
+                  "throw2": "",
+                  "throw3": ""
+                }
+              },
+              {
+                "frame_no": 10,
+                "throw1": "9",
+                "throw2": "/",
+                "throw3": "8",
+                "frame_score": 18,
+                "cumulative_score": 166,
+                "display_marks": {
+                  "throw1": "9",
+                  "throw2": "/",
+                  "throw3": "8"
+                }
+              }
+            ],
+            "frame_candidate_count": 1,
+            "frame_cumulative_corrections": []
+          },
+          {
+            "entry_number": "SO:SO1:D",
+            "seed": 8,
+            "license_no": "M00000988",
+            "display_name": "吉井 昌幸",
+            "score": 170,
+            "is_winner": false,
+            "frames": [
+              {
+                "frame_no": 1,
+                "throw1": "X",
+                "throw2": "",
+                "throw3": "",
+                "frame_score": 20,
+                "cumulative_score": 20,
+                "display_marks": {
+                  "throw1": "X",
+                  "throw2": "",
+                  "throw3": ""
+                }
+              },
+              {
+                "frame_no": 2,
+                "throw1": "7",
+                "throw2": "/",
+                "throw3": "",
+                "frame_score": 18,
+                "cumulative_score": 38,
+                "display_marks": {
+                  "throw1": "7",
+                  "throw2": "/",
+                  "throw3": ""
+                }
+              },
+              {
+                "frame_no": 3,
+                "throw1": "8",
+                "throw2": "/",
+                "throw3": "",
+                "frame_score": 18,
+                "cumulative_score": 56,
+                "display_marks": {
+                  "throw1": "8",
+                  "throw2": "/",
+                  "throw3": ""
+                }
+              },
+              {
+                "frame_no": 4,
+                "throw1": "8",
+                "throw2": "1",
+                "throw3": "",
+                "frame_score": 9,
+                "cumulative_score": 65,
+                "display_marks": {
+                  "throw1": "8",
+                  "throw2": "1",
+                  "throw3": ""
+                }
+              },
+              {
+                "frame_no": 5,
+                "throw1": "9",
+                "throw2": "/",
+                "throw3": "",
+                "frame_score": 20,
+                "cumulative_score": 85,
+                "display_marks": {
+                  "throw1": "9",
+                  "throw2": "/",
+                  "throw3": ""
+                }
+              },
+              {
+                "frame_no": 6,
+                "throw1": "X",
+                "throw2": "",
+                "throw3": "",
+                "frame_score": 20,
+                "cumulative_score": 105,
+                "display_marks": {
+                  "throw1": "X",
+                  "throw2": "",
+                  "throw3": ""
+                }
+              },
+              {
+                "frame_no": 7,
+                "throw1": "8",
+                "throw2": "/",
+                "throw3": "",
+                "frame_score": 18,
+                "cumulative_score": 123,
+                "display_marks": {
+                  "throw1": "8",
+                  "throw2": "/",
+                  "throw3": ""
+                }
+              },
+              {
+                "frame_no": 8,
+                "throw1": "8",
+                "throw2": "/",
+                "throw3": "",
+                "frame_score": 19,
+                "cumulative_score": 142,
+                "display_marks": {
+                  "throw1": "8",
+                  "throw2": "/",
+                  "throw3": ""
+                }
+              },
+              {
+                "frame_no": 9,
+                "throw1": "9",
+                "throw2": "/",
+                "throw3": "",
+                "frame_score": 19,
+                "cumulative_score": 161,
+                "display_marks": {
+                  "throw1": "9",
+                  "throw2": "/",
+                  "throw3": ""
+                }
+              },
+              {
+                "frame_no": 10,
+                "throw1": "9",
+                "throw2": "-",
+                "throw3": "",
+                "frame_score": 9,
+                "cumulative_score": 170,
+                "display_marks": {
+                  "throw1": "9",
+                  "throw2": "-",
+                  "throw3": ""
+                }
+              }
+            ],
+            "frame_candidate_count": 1,
+            "frame_cumulative_corrections": []
+          },
+          {
+            "entry_number": "SO:SO2:A",
+            "seed": 2,
+            "license_no": "M00000365",
+            "display_name": "西田 久良",
+            "score": 181,
+            "is_winner": false,
+            "frames": [
+              {
+                "frame_no": 1,
+                "throw1": "8",
+                "throw2": "/",
+                "throw3": "",
+                "frame_score": 20,
+                "cumulative_score": 20,
+                "display_marks": {
+                  "throw1": "8",
+                  "throw2": "/",
+                  "throw3": ""
+                }
+              },
+              {
+                "frame_no": 2,
+                "throw1": "X",
+                "throw2": "",
+                "throw3": "",
+                "frame_score": 20,
+                "cumulative_score": 40,
+                "display_marks": {
+                  "throw1": "X",
+                  "throw2": "",
+                  "throw3": ""
+                }
+              },
+              {
+                "frame_no": 3,
+                "throw1": "8",
+                "throw2": "/",
+                "throw3": "",
+                "frame_score": 17,
+                "cumulative_score": 57,
+                "display_marks": {
+                  "throw1": "8",
+                  "throw2": "/",
+                  "throw3": ""
+                }
+              },
+              {
+                "frame_no": 4,
+                "throw1": "7",
+                "throw2": "2",
+                "throw3": "",
+                "frame_score": 9,
+                "cumulative_score": 66,
+                "display_marks": {
+                  "throw1": "7",
+                  "throw2": "2",
+                  "throw3": ""
+                }
+              },
+              {
+                "frame_no": 5,
+                "throw1": "X",
+                "throw2": "",
+                "throw3": "",
+                "frame_score": 27,
+                "cumulative_score": 93,
+                "display_marks": {
+                  "throw1": "X",
+                  "throw2": "",
+                  "throw3": ""
+                }
+              },
+              {
+                "frame_no": 6,
+                "throw1": "X",
+                "throw2": "",
+                "throw3": "",
+                "frame_score": 19,
+                "cumulative_score": 112,
+                "display_marks": {
+                  "throw1": "X",
+                  "throw2": "",
+                  "throw3": ""
+                }
+              },
+              {
+                "frame_no": 7,
+                "throw1": "7",
+                "throw2": "2",
+                "throw3": "",
+                "frame_score": 9,
+                "cumulative_score": 121,
+                "display_marks": {
+                  "throw1": "7",
+                  "throw2": "2",
+                  "throw3": ""
+                }
+              },
+              {
+                "frame_no": 8,
+                "throw1": "X",
+                "throw2": "",
+                "throw3": "",
+                "frame_score": 20,
+                "cumulative_score": 141,
+                "display_marks": {
+                  "throw1": "X",
+                  "throw2": "",
+                  "throw3": ""
+                }
+              },
+              {
+                "frame_no": 9,
+                "throw1": "8",
+                "throw2": "/",
+                "throw3": "",
+                "frame_score": 20,
+                "cumulative_score": 161,
+                "display_marks": {
+                  "throw1": "8",
+                  "throw2": "/",
+                  "throw3": ""
+                }
+              },
+              {
+                "frame_no": 10,
+                "throw1": "X",
+                "throw2": "8",
+                "throw3": "/",
+                "frame_score": 20,
+                "cumulative_score": 181,
+                "display_marks": {
+                  "throw1": "X",
+                  "throw2": "8",
+                  "throw3": "/"
+                }
+              }
+            ],
+            "frame_candidate_count": 1,
+            "frame_cumulative_corrections": []
+          },
+          {
+            "entry_number": "SO:SO2:B",
+            "seed": 3,
+            "license_no": "M00000905",
+            "display_name": "太田 隆昌",
+            "score": 222,
+            "is_winner": true,
+            "frames": [
+              {
+                "frame_no": 1,
+                "throw1": "9",
+                "throw2": "/",
+                "throw3": "",
+                "frame_score": 20,
+                "cumulative_score": 20,
+                "display_marks": {
+                  "throw1": "9",
+                  "throw2": "/",
+                  "throw3": ""
+                }
+              },
+              {
+                "frame_no": 2,
+                "throw1": "X",
+                "throw2": "",
+                "throw3": "",
+                "frame_score": 20,
+                "cumulative_score": 40,
+                "display_marks": {
+                  "throw1": "X",
+                  "throw2": "",
+                  "throw3": ""
+                }
+              },
+              {
+                "frame_no": 3,
+                "throw1": "9",
+                "throw2": "/",
+                "throw3": "",
+                "frame_score": 19,
+                "cumulative_score": 59,
+                "display_marks": {
+                  "throw1": "9",
+                  "throw2": "/",
+                  "throw3": ""
+                }
+              },
+              {
+                "frame_no": 4,
+                "throw1": "9",
+                "throw2": "/",
+                "throw3": "",
+                "frame_score": 20,
+                "cumulative_score": 79,
+                "display_marks": {
+                  "throw1": "9",
+                  "throw2": "/",
+                  "throw3": ""
+                }
+              },
+              {
+                "frame_no": 5,
+                "throw1": "X",
+                "throw2": "",
+                "throw3": "",
+                "frame_score": 26,
+                "cumulative_score": 105,
+                "display_marks": {
+                  "throw1": "X",
+                  "throw2": "",
+                  "throw3": ""
+                }
+              },
+              {
+                "frame_no": 6,
+                "throw1": "X",
+                "throw2": "",
+                "throw3": "",
+                "frame_score": 19,
+                "cumulative_score": 124,
+                "display_marks": {
+                  "throw1": "X",
+                  "throw2": "",
+                  "throw3": ""
+                }
+              },
+              {
+                "frame_no": 7,
+                "throw1": "6",
+                "throw2": "3",
+                "throw3": "",
+                "frame_score": 9,
+                "cumulative_score": 133,
+                "display_marks": {
+                  "throw1": "6",
+                  "throw2": "3",
+                  "throw3": ""
+                }
+              },
+              {
+                "frame_no": 8,
+                "throw1": "X",
+                "throw2": "",
+                "throw3": "",
+                "frame_score": 30,
+                "cumulative_score": 163,
+                "display_marks": {
+                  "throw1": "X",
+                  "throw2": "",
+                  "throw3": ""
+                }
+              },
+              {
+                "frame_no": 9,
+                "throw1": "X",
+                "throw2": "",
+                "throw3": "",
+                "frame_score": 30,
+                "cumulative_score": 193,
+                "display_marks": {
+                  "throw1": "X",
+                  "throw2": "",
+                  "throw3": ""
+                }
+              },
+              {
+                "frame_no": 10,
+                "throw1": "X",
+                "throw2": "X",
+                "throw3": "9",
+                "frame_score": 29,
+                "cumulative_score": 222,
+                "display_marks": {
+                  "throw1": "X",
+                  "throw2": "X",
+                  "throw3": "9"
+                }
+              }
+            ],
+            "frame_candidate_count": 1,
+            "frame_cumulative_corrections": []
+          },
+          {
+            "entry_number": "SO:SO2:C",
+            "seed": 4,
+            "license_no": "M00001425",
+            "display_name": "伊吹 太陽",
+            "score": 189,
+            "is_winner": false,
+            "frames": [
+              {
+                "frame_no": 1,
+                "throw1": "5",
+                "throw2": "2",
+                "throw3": "",
+                "frame_score": 7,
+                "cumulative_score": 7,
+                "display_marks": {
+                  "throw1": "5",
+                  "throw2": "2",
+                  "throw3": ""
+                }
+              },
+              {
+                "frame_no": 2,
+                "throw1": "9",
+                "throw2": "/",
+                "throw3": "",
+                "frame_score": 19,
+                "cumulative_score": 26,
+                "display_marks": {
+                  "throw1": "9",
+                  "throw2": "/",
+                  "throw3": ""
+                }
+              },
+              {
+                "frame_no": 3,
+                "throw1": "9",
+                "throw2": "/",
+                "throw3": "",
+                "frame_score": 18,
+                "cumulative_score": 44,
+                "display_marks": {
+                  "throw1": "9",
+                  "throw2": "/",
+                  "throw3": ""
+                }
+              },
+              {
+                "frame_no": 4,
+                "throw1": "8",
+                "throw2": "/",
+                "throw3": "",
+                "frame_score": 19,
+                "cumulative_score": 63,
+                "display_marks": {
+                  "throw1": "8",
+                  "throw2": "/",
+                  "throw3": ""
+                }
+              },
+              {
+                "frame_no": 5,
+                "throw1": "9",
+                "throw2": "/",
+                "throw3": "",
+                "frame_score": 19,
+                "cumulative_score": 82,
+                "display_marks": {
+                  "throw1": "9",
+                  "throw2": "/",
+                  "throw3": ""
+                }
+              },
+              {
+                "frame_no": 6,
+                "throw1": "9",
+                "throw2": "/",
+                "throw3": "",
+                "frame_score": 19,
+                "cumulative_score": 101,
+                "display_marks": {
+                  "throw1": "9",
+                  "throw2": "/",
+                  "throw3": ""
+                }
+              },
+              {
+                "frame_no": 7,
+                "throw1": "9",
+                "throw2": "/",
+                "throw3": "",
+                "frame_score": 19,
+                "cumulative_score": 120,
+                "display_marks": {
+                  "throw1": "9",
+                  "throw2": "/",
+                  "throw3": ""
+                }
+              },
+              {
+                "frame_no": 8,
+                "throw1": "9",
+                "throw2": "/",
+                "throw3": "",
+                "frame_score": 20,
+                "cumulative_score": 140,
+                "display_marks": {
+                  "throw1": "9",
+                  "throw2": "/",
+                  "throw3": ""
+                }
+              },
+              {
+                "frame_no": 9,
+                "throw1": "X",
+                "throw2": "",
+                "throw3": "",
+                "frame_score": 29,
+                "cumulative_score": 169,
+                "display_marks": {
+                  "throw1": "X",
+                  "throw2": "",
+                  "throw3": ""
+                }
+              },
+              {
+                "frame_no": 10,
+                "throw1": "X",
+                "throw2": "9",
+                "throw3": "/",
+                "frame_score": 20,
+                "cumulative_score": 189,
+                "display_marks": {
+                  "throw1": "X",
+                  "throw2": "9",
+                  "throw3": "/"
+                }
+              }
+            ],
+            "frame_candidate_count": 1,
+            "frame_cumulative_corrections": []
+          },
+          {
+            "entry_number": "SO:SO2:D",
+            "seed": 5,
+            "license_no": "M00001344",
+            "display_name": "竹本 圭実",
+            "score": 204,
+            "is_winner": false,
+            "frames": [
+              {
+                "frame_no": 1,
+                "throw1": "X",
+                "throw2": "",
+                "throw3": "",
+                "frame_score": 20,
+                "cumulative_score": 20,
+                "display_marks": {
+                  "throw1": "X",
+                  "throw2": "",
+                  "throw3": ""
+                }
+              },
+              {
+                "frame_no": 2,
+                "throw1": "9",
+                "throw2": "/",
+                "throw3": "",
+                "frame_score": 19,
+                "cumulative_score": 39,
+                "display_marks": {
+                  "throw1": "9",
+                  "throw2": "/",
+                  "throw3": ""
+                }
+              },
+              {
+                "frame_no": 3,
+                "throw1": "9",
+                "throw2": "/",
+                "throw3": "",
+                "frame_score": 20,
+                "cumulative_score": 59,
+                "display_marks": {
+                  "throw1": "9",
+                  "throw2": "/",
+                  "throw3": ""
+                }
+              },
+              {
+                "frame_no": 4,
+                "throw1": "X",
+                "throw2": "",
+                "throw3": "",
+                "frame_score": 20,
+                "cumulative_score": 79,
+                "display_marks": {
+                  "throw1": "X",
+                  "throw2": "",
+                  "throw3": ""
+                }
+              },
+              {
+                "frame_no": 5,
+                "throw1": "8",
+                "throw2": "/",
+                "throw3": "",
+                "frame_score": 20,
+                "cumulative_score": 99,
+                "display_marks": {
+                  "throw1": "8",
+                  "throw2": "/",
+                  "throw3": ""
+                }
+              },
+              {
+                "frame_no": 6,
+                "throw1": "9",
+                "throw2": "/",
+                "throw3": "",
+                "frame_score": 19,
+                "cumulative_score": 118,
+                "display_marks": {
+                  "throw1": "9",
+                  "throw2": "/",
+                  "throw3": ""
+                }
+              },
+              {
+                "frame_no": 7,
+                "throw1": "X",
+                "throw2": "",
+                "throw3": "",
+                "frame_score": 29,
+                "cumulative_score": 147,
+                "display_marks": {
+                  "throw1": "X",
+                  "throw2": "",
+                  "throw3": ""
+                }
+              },
+              {
+                "frame_no": 8,
+                "throw1": "X",
+                "throw2": "",
+                "throw3": "",
+                "frame_score": 20,
+                "cumulative_score": 167,
+                "display_marks": {
+                  "throw1": "X",
+                  "throw2": "",
+                  "throw3": ""
+                }
+              },
+              {
+                "frame_no": 9,
+                "throw1": "9",
+                "throw2": "/",
+                "throw3": "",
+                "frame_score": 17,
+                "cumulative_score": 184,
+                "display_marks": {
+                  "throw1": "9",
+                  "throw2": "/",
+                  "throw3": ""
+                }
+              },
+              {
+                "frame_no": 10,
+                "throw1": "7",
+                "throw2": "/",
+                "throw3": "X",
+                "frame_score": 20,
+                "cumulative_score": 204,
+                "display_marks": {
+                  "throw1": "7",
+                  "throw2": "/",
+                  "throw3": "X"
+                }
+              }
+            ],
+            "frame_candidate_count": 1,
+            "frame_cumulative_corrections": []
+          },
+          {
+            "entry_number": "SO:SO3:A",
+            "seed": 1,
+            "license_no": "M00001099",
+            "display_name": "津島 健次",
+            "score": 202,
+            "is_winner": false,
+            "frames": [
+              {
+                "frame_no": 1,
+                "throw1": "X",
+                "throw2": "",
+                "throw3": "",
+                "frame_score": 29,
+                "cumulative_score": 29,
+                "display_marks": {
+                  "throw1": "X",
+                  "throw2": "",
+                  "throw3": ""
+                }
+              },
+              {
+                "frame_no": 2,
+                "throw1": "X",
+                "throw2": "",
+                "throw3": "",
+                "frame_score": 20,
+                "cumulative_score": 49,
+                "display_marks": {
+                  "throw1": "X",
+                  "throw2": "",
+                  "throw3": ""
+                }
+              },
+              {
+                "frame_no": 3,
+                "throw1": "9",
+                "throw2": "/",
+                "throw3": "",
+                "frame_score": 17,
+                "cumulative_score": 66,
+                "display_marks": {
+                  "throw1": "9",
+                  "throw2": "/",
+                  "throw3": ""
+                }
+              },
+              {
+                "frame_no": 4,
+                "throw1": "7",
+                "throw2": "2",
+                "throw3": "",
+                "frame_score": 9,
+                "cumulative_score": 75,
+                "display_marks": {
+                  "throw1": "7",
+                  "throw2": "2",
+                  "throw3": ""
+                }
+              },
+              {
+                "frame_no": 5,
+                "throw1": "X",
+                "throw2": "",
+                "throw3": "",
+                "frame_score": 28,
+                "cumulative_score": 103,
+                "display_marks": {
+                  "throw1": "X",
+                  "throw2": "",
+                  "throw3": ""
+                }
+              },
+              {
+                "frame_no": 6,
+                "throw1": "X",
+                "throw2": "",
+                "throw3": "",
+                "frame_score": 20,
+                "cumulative_score": 123,
+                "display_marks": {
+                  "throw1": "X",
+                  "throw2": "",
+                  "throw3": ""
+                }
+              },
+              {
+                "frame_no": 7,
+                "throw1": "8",
+                "throw2": "/",
+                "throw3": "",
+                "frame_score": 20,
+                "cumulative_score": 143,
+                "display_marks": {
+                  "throw1": "8",
+                  "throw2": "/",
+                  "throw3": ""
+                }
+              },
+              {
+                "frame_no": 8,
+                "throw1": "X",
+                "throw2": "",
+                "throw3": "",
+                "frame_score": 20,
+                "cumulative_score": 163,
+                "display_marks": {
+                  "throw1": "X",
+                  "throw2": "",
+                  "throw3": ""
+                }
+              },
+              {
+                "frame_no": 9,
+                "throw1": "9",
+                "throw2": "/",
+                "throw3": "",
+                "frame_score": 19,
+                "cumulative_score": 182,
+                "display_marks": {
+                  "throw1": "9",
+                  "throw2": "/",
+                  "throw3": ""
+                }
+              },
+              {
+                "frame_no": 10,
+                "throw1": "9",
+                "throw2": "/",
+                "throw3": "X",
+                "frame_score": 20,
+                "cumulative_score": 202,
+                "display_marks": {
+                  "throw1": "9",
+                  "throw2": "/",
+                  "throw3": "X"
+                }
+              }
+            ],
+            "frame_candidate_count": 1,
+            "frame_cumulative_corrections": []
+          },
+          {
+            "entry_number": "SO:SO3:B",
+            "seed": 3,
+            "license_no": "M00000905",
+            "display_name": "太田 隆昌",
+            "score": 203,
+            "is_winner": true,
+            "frames": [
+              {
+                "frame_no": 1,
+                "throw1": "9",
+                "throw2": "/",
+                "throw3": "",
+                "frame_score": 20,
+                "cumulative_score": 20,
+                "display_marks": {
+                  "throw1": "9",
+                  "throw2": "/",
+                  "throw3": ""
+                }
+              },
+              {
+                "frame_no": 2,
+                "throw1": "X",
+                "throw2": "",
+                "throw3": "",
+                "frame_score": 29,
+                "cumulative_score": 49,
+                "display_marks": {
+                  "throw1": "X",
+                  "throw2": "",
+                  "throw3": ""
+                }
+              },
+              {
+                "frame_no": 3,
+                "throw1": "X",
+                "throw2": "",
+                "throw3": "",
+                "frame_score": 20,
+                "cumulative_score": 69,
+                "display_marks": {
+                  "throw1": "X",
+                  "throw2": "",
+                  "throw3": ""
+                }
+              },
+              {
+                "frame_no": 4,
+                "throw1": "9",
+                "throw2": "/",
+                "throw3": "",
+                "frame_score": 19,
+                "cumulative_score": 88,
+                "display_marks": {
+                  "throw1": "9",
+                  "throw2": "/",
+                  "throw3": ""
+                }
+              },
+              {
+                "frame_no": 5,
+                "throw1": "9",
+                "throw2": "/",
+                "throw3": "",
+                "frame_score": 20,
+                "cumulative_score": 108,
+                "display_marks": {
+                  "throw1": "9",
+                  "throw2": "/",
+                  "throw3": ""
+                }
+              },
+              {
+                "frame_no": 6,
+                "throw1": "X",
+                "throw2": "",
+                "throw3": "",
+                "frame_score": 28,
+                "cumulative_score": 136,
+                "display_marks": {
+                  "throw1": "X",
+                  "throw2": "",
+                  "throw3": ""
+                }
+              },
+              {
+                "frame_no": 7,
+                "throw1": "X",
+                "throw2": "",
+                "throw3": "",
+                "frame_score": 19,
+                "cumulative_score": 155,
+                "display_marks": {
+                  "throw1": "X",
+                  "throw2": "",
+                  "throw3": ""
+                }
+              },
+              {
+                "frame_no": 8,
+                "throw1": "8",
+                "throw2": "1",
+                "throw3": "",
+                "frame_score": 9,
+                "cumulative_score": 164,
+                "display_marks": {
+                  "throw1": "8",
+                  "throw2": "1",
+                  "throw3": ""
+                }
+              },
+              {
+                "frame_no": 9,
+                "throw1": "9",
+                "throw2": "/",
+                "throw3": "",
+                "frame_score": 19,
+                "cumulative_score": 183,
+                "display_marks": {
+                  "throw1": "9",
+                  "throw2": "/",
+                  "throw3": ""
+                }
+              },
+              {
+                "frame_no": 10,
+                "throw1": "9",
+                "throw2": "/",
+                "throw3": "X",
+                "frame_score": 20,
+                "cumulative_score": 203,
+                "display_marks": {
+                  "throw1": "9",
+                  "throw2": "/",
+                  "throw3": "X"
+                }
+              }
+            ],
+            "frame_candidate_count": 1,
+            "frame_cumulative_corrections": []
+          }
+        ],
+        "winner_license_no": "M00000905",
+        "winner_name": "太田 隆昌",
+        "completed_match_count": 3
+      },
+      "validation": {
+        "prelim_rows": 39,
+        "prelim_game_scores": 290,
+        "semifinal_rows": 20,
+        "semifinal_game_scores": 80,
         "shootout_game_scores": 10
       }
     }

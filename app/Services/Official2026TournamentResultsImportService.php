@@ -19,13 +19,17 @@ final class Official2026TournamentResultsImportService
 {
     private const DATASET_PATH = 'data/jpba_official_2026_results.json';
 
-    private const EXPECTED_EVENT_COUNT = 23;
+    private const EXPECTED_EVENT_COUNT = 25;
 
-    private const EXPECTED_SNAPSHOT_COUNT = 70;
+    private const EXPECTED_SNAPSHOT_COUNT = 77;
 
     private const IMPORT_MARKER = 'jpba_official_2026_results';
 
-    private const PRESERVED_EVENT_KEY = 'stsu_b';
+    private const SEASON_DETAIL_MARKER = 'jpba_official_2026_season_trial_detail';
+
+    private const STANDARD_DETAIL_MARKER = 'jpba_official_2026_standard_detail';
+
+    private const STANDARD_FINAL_MARKER = 'jpba_official_2026_standard_final';
 
     /**
      * Existing profile titles whose official-site wording differs from the
@@ -73,7 +77,11 @@ final class Official2026TournamentResultsImportService
     }
 
     /** @return array<string,mixed> */
-    public function import(bool $write = false, string $adminEmail = 'yamaguchi@jpba.or.jp'): array
+    public function import(
+        bool $write = false,
+        string $adminEmail = 'yamaguchi@jpba.or.jp',
+        bool $deferIncompletePublications = false,
+    ): array
     {
         $payload = $this->dataset();
         $admin = User::query()->where('email', $adminEmail)->first();
@@ -132,6 +140,8 @@ final class Official2026TournamentResultsImportService
             'existing_publication_count' => count($existingPublicationIds),
             'errors' => $errors,
             'tournaments' => [],
+            'deferred_publications' => [],
+            'bootstrap_mode' => $deferIncompletePublications,
             'ranking_snapshots' => [],
             'database_ranking_audit' => count($existingPublicationIds) === self::EXPECTED_EVENT_COUNT
                 ? $this->auditPublishedRankings($payload, $existingPublicationIds)
@@ -148,6 +158,7 @@ final class Official2026TournamentResultsImportService
             $bowlerResolution,
             $venueResolution,
             $report,
+            $deferIncompletePublications,
         ): array {
             $publicationIds = [];
             $tournamentIds = [];
@@ -186,6 +197,27 @@ final class Official2026TournamentResultsImportService
 
                 $preview = $this->publicationService->preview($tournament->fresh(), $finalSnapshot);
                 if (! $preview['can_publish']) {
+                    if ($deferIncompletePublications && ! $preserved) {
+                        $tournamentIds[] = (int) $tournament->id;
+                        $report['deferred_publications'][] = [
+                            'key' => $event['key'],
+                            'tournament_id' => (int) $tournament->id,
+                            'name' => $tournament->name,
+                            'errors' => $preview['errors'],
+                        ];
+                        $report['tournaments'][] = [
+                            'key' => $event['key'],
+                            'tournament_id' => (int) $tournament->id,
+                            'name' => $tournament->name,
+                            'preserved_existing_scores' => false,
+                            'publication_id' => null,
+                            'publication_deferred' => true,
+                            'title_alias_reconciliation' => $titleAliasReconciliation,
+                        ];
+
+                        continue;
+                    }
+
                     throw new RuntimeException(
                         $event['key'].': '.implode(' ', $preview['errors']),
                     );
@@ -217,6 +249,13 @@ final class Official2026TournamentResultsImportService
                 ];
             }
 
+            if ($report['deferred_publications'] !== []) {
+                $report['published_tournament_ids'] = $tournamentIds;
+                $report['published_publication_ids'] = $publicationIds;
+
+                return $report;
+            }
+
             $report['ranking_snapshots'] = $this->persistOfficialRankings(
                 $payload,
                 $bowlerResolution['map'],
@@ -246,7 +285,7 @@ final class Official2026TournamentResultsImportService
             }
         }
         if (count($payload['events']) !== self::EXPECTED_EVENT_COUNT) {
-            throw new RuntimeException('Official result dataset must contain 23 completed event publications.');
+            throw new RuntimeException('Official result dataset must contain 25 completed event publications.');
         }
 
         $snapshotCount = 0;
@@ -267,14 +306,14 @@ final class Official2026TournamentResultsImportService
             }
         }
         if ($snapshotCount !== self::EXPECTED_SNAPSHOT_COUNT) {
-            throw new RuntimeException('Official result dataset must contain 70 snapshots.');
+            throw new RuntimeException('Official result dataset must contain 77 snapshots.');
         }
 
         $rankingCounts = [];
         foreach ($payload['official_rankings'] as $ranking) {
             $rankingCounts[$ranking['gender']] = count($ranking['rows']);
         }
-        if (($rankingCounts['M'] ?? 0) !== 327 || ($rankingCounts['F'] ?? 0) !== 212) {
+        if (($rankingCounts['M'] ?? 0) !== 328 || ($rankingCounts['F'] ?? 0) !== 212) {
             throw new RuntimeException('Official ranking row counts are invalid.');
         }
     }
@@ -556,6 +595,9 @@ final class Official2026TournamentResultsImportService
         if (array_key_exists('pdf_assets', $source)) {
             $templateSnapshot['pdf_assets'] = $source['pdf_assets'];
         }
+        if (array_key_exists('round_robin_pairings', $source)) {
+            $templateSnapshot['round_robin_pairings'] = array_values($source['round_robin_pairings']);
+        }
 
         $attributes = [
             'name' => $source['name'],
@@ -624,8 +666,25 @@ final class Official2026TournamentResultsImportService
     /** @param array<string,mixed> $event */
     private function shouldPreserveExistingResults(array $event, Tournament $tournament): bool
     {
-        return $event['key'] === self::PRESERVED_EVENT_KEY
-            && TournamentResultSnapshot::query()->where('tournament_id', $tournament->id)->exists();
+        $hasImportedPublication = TournamentResultPublication::query()
+            ->where('tournament_id', $tournament->id)
+            ->whereIn('notes', [
+                self::IMPORT_MARKER.':'.$event['key'],
+                self::SEASON_DETAIL_MARKER.':'.$event['key'],
+                self::STANDARD_DETAIL_MARKER.':'.$event['key'],
+                self::STANDARD_FINAL_MARKER.':'.$event['key'],
+            ])
+            ->exists();
+        $hasCurrentFinalSnapshot = TournamentResultSnapshot::query()
+            ->where('tournament_id', $tournament->id)
+            ->where('is_current', true)
+            ->where('is_final', true)
+            ->exists();
+        $hasPublishedRows = DB::table('tournament_results')
+            ->where('tournament_id', $tournament->id)
+            ->exists();
+
+        return $hasImportedPublication && $hasCurrentFinalSnapshot && $hasPublishedRows;
     }
 
     /**

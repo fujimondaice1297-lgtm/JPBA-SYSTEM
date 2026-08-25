@@ -19,7 +19,8 @@ final class Official2026RankingReconciliationService
             ->where('tournaments.year', 2026)
             ->where(function ($query): void {
                 $query
-                    ->where('publications.notes', 'like', 'jpba_official_2026_season_trial_detail:%')
+                    ->where('publications.notes', 'like', 'jpba_official_2026_results:%')
+                    ->orWhere('publications.notes', 'like', 'jpba_official_2026_season_trial_detail:%')
                     ->orWhere('publications.notes', 'like', 'jpba_official_2026_standard_detail:%')
                     ->orWhere('publications.notes', 'like', 'jpba_official_2026_standard_final:%')
                     ->orWhere('publications.notes', 'jpba_official_2026_seahorse_selection');
@@ -118,7 +119,7 @@ final class Official2026RankingReconciliationService
         }
 
         return [
-            'is_complete' => $publications->count() === 24 && $differences === [],
+            'is_complete' => $publications->count() === 26 && $differences === [],
             'publication_count' => $publications->count(),
             'publication_ids' => $publications->pluck('id')->map(fn ($id): int => (int) $id)->all(),
             'tournament_ids' => $publications->pluck('tournament_id')->map(fn ($id): int => (int) $id)->all(),

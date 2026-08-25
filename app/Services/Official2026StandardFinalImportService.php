@@ -19,13 +19,13 @@ final class Official2026StandardFinalImportService
 
     private const DETAIL_MARKER = 'jpba_official_2026_standard_detail';
 
-    private const EXPECTED_EVENT_COUNT = 11;
+    private const EXPECTED_EVENT_COUNT = 12;
 
-    private const EXPECTED_SCORE_SHEET_COUNT = 29;
+    private const EXPECTED_SCORE_SHEET_COUNT = 31;
 
-    private const EXPECTED_FRAME_PLAYER_COUNT = 63;
+    private const EXPECTED_FRAME_PLAYER_COUNT = 67;
 
-    private const EXPECTED_FRAME_COUNT = 630;
+    private const EXPECTED_FRAME_COUNT = 670;
 
     private const EXPECTED_ADDITIONAL_STAGE_SCORE_COUNT = 96;
 
@@ -318,7 +318,22 @@ final class Official2026StandardFinalImportService
             ->orderByDesc('revision')
             ->first();
         if ($publication === null) {
-            return null;
+            $snapshot = TournamentResultSnapshot::query()
+                ->where('is_current', true)
+                ->where('notes', 'like', '%'.self::DETAIL_MARKER.'%')
+                ->where('calculation_definition->detail_event_key', $eventKey)
+                ->orderByDesc('id')
+                ->first();
+            if ($snapshot === null) {
+                return null;
+            }
+
+            $query = Tournament::query()->whereKey($snapshot->tournament_id);
+            if ($lock) {
+                $query->lockForUpdate();
+            }
+
+            return $query->first();
         }
 
         $query = Tournament::query()->whereKey($publication->tournament_id);

@@ -64,7 +64,8 @@ final class RoundRobinService
             ];
         }
 
-        $preRounds = $this->buildCircleRounds(array_keys($players));
+        $preRounds = $this->configuredRounds($tournament, $players)
+            ?? $this->buildCircleRounds(array_keys($players));
         $roundScores = $this->loadRoundRobinScores($tournamentId, $players, $gender, $shift, $uptoGame);
 
         $interim = $this->applyRounds(
@@ -410,6 +411,64 @@ final class RoundRobinService
             $moved = array_pop($slots);
             array_unshift($slots, $fixed);
             array_splice($slots, 1, 0, [$moved]);
+        }
+
+        return $rounds;
+    }
+
+    /** @param array<int,array<string,mixed>> $players */
+    private function configuredRounds(Tournament $tournament, array $players): ?array
+    {
+        $configured = data_get($tournament->template_snapshot, 'round_robin_pairings');
+        if (! is_array($configured) || $configured === []) {
+            return null;
+        }
+
+        $seedByLicense = [];
+        foreach ($players as $player) {
+            $license = strtoupper(trim((string) ($player['license_no'] ?? '')));
+            if ($license !== '') {
+                $seedByLicense[$license] = (int) $player['seed'];
+            }
+        }
+
+        $rounds = [];
+        $expectedGameNumber = 1;
+        foreach ($configured as $round) {
+            $gameNumber = (int) ($round['game_number'] ?? 0);
+            if ($gameNumber !== $expectedGameNumber) {
+                throw new \RuntimeException('大会別ラウンドロビン対戦順のゲーム番号が連続していません。');
+            }
+
+            $pairs = [];
+            $seenSeeds = [];
+            foreach ((array) ($round['pairs'] ?? []) as $pair) {
+                $leftLicense = strtoupper(trim((string) ($pair['left_license'] ?? '')));
+                $rightLicense = strtoupper(trim((string) ($pair['right_license'] ?? '')));
+                $leftSeed = $seedByLicense[$leftLicense] ?? null;
+                $rightSeed = $seedByLicense[$rightLicense] ?? null;
+                if ($leftSeed === null || $rightSeed === null || $leftSeed === $rightSeed
+                    || isset($seenSeeds[$leftSeed]) || isset($seenSeeds[$rightSeed])) {
+                    throw new \RuntimeException('大会別ラウンドロビン対戦順に不明または重複した選手があります。');
+                }
+
+                $seenSeeds[$leftSeed] = true;
+                $seenSeeds[$rightSeed] = true;
+                $pairs[] = [
+                    'game_number' => $gameNumber,
+                    'left_seed' => $leftSeed,
+                    'right_seed' => $rightSeed,
+                    'label' => $gameNumber.'G',
+                    'lane_pair_label' => null,
+                ];
+            }
+
+            if (count($seenSeeds) !== count($players)) {
+                throw new \RuntimeException('大会別ラウンドロビン対戦順の選手数が進出者数と一致しません。');
+            }
+
+            $rounds[] = $pairs;
+            $expectedGameNumber++;
         }
 
         return $rounds;
