@@ -2,31 +2,38 @@
 
 namespace App\Console\Commands;
 
+use App\Services\BallRegistrationRetentionAuditService;
 use Illuminate\Console\Command;
+use Illuminate\Support\Carbon;
+use Throwable;
 
 class DeleteExpiredUsedBalls extends Command
 {
-    /**
-     * The name and signature of the console command.
-     *
-     * @var string
-     */
-    protected $signature = 'app:delete-expired-used-balls';
+    protected $signature = 'usedballs:delete-expired {--date= : 判定日（YYYY-MM-DD）}';
 
-    /**
-     * The console command description.
-     *
-     * @var string
-     */
-    protected $description = 'Command description';
+    protected $aliases = ['app:delete-expired-used-balls'];
 
-    /**
-     * Execute the console command.
-     */
-    public function handle()
+    protected $description = '【廃止済み】期限切れマイボールを削除せず件数確認する';
+
+    public function handle(BallRegistrationRetentionAuditService $service): int
     {
-        $count = \App\Models\UsedBall::where('expires_at', '<', now())->delete();
-        $this->info("$count 件の期限切れボールを削除しました。");
-    }
+        try {
+            $asOf = $this->option('date')
+                ? Carbon::createFromFormat('Y-m-d', (string) $this->option('date'))->startOfDay()
+                : null;
+        } catch (Throwable) {
+            $this->error('--date は YYYY-MM-DD 形式で指定してください。');
 
+            return self::INVALID;
+        }
+
+        $report = $service->build($asOf);
+
+        $this->warn('この削除コマンドは廃止済みです。大会登録履歴を保全するためデータは削除しません。');
+        $this->line('期限切れマイボール: '.$report['used_balls']['expired'].'件');
+        $this->line('うち大会履歴あり: '.$report['used_balls']['expired_with_tournament_history'].'件');
+        $this->line('削除件数: 0件');
+
+        return self::SUCCESS;
+    }
 }

@@ -11,22 +11,10 @@ class Kernel extends ConsoleKernel
         \App\Console\Commands\ImportProBowlers::class,
     ];
 
-    protected function schedule(Schedule $schedule)
+    protected function schedule(Schedule $schedule): void
     {
-        $schedule->command('usedballs:delete-expired')->daily();
-
-        $schedule->call(function () {
-            \App\Models\RegisteredBall::whereNull('certificate_number')
-                ->whereDate('registered_at', '<=', \Carbon\Carbon::now()->endOfYear())
-                ->delete();
-        })->yearlyOn(12, 31, '00:00');
-
-        // 次年度に期限が切れる会員へ、送信履歴で重複を防ぎながら前年度中に1回案内する。
-        $schedule->command('training:notify')->dailyAt('08:00')->withoutOverlapping();
-
-        $schedule->command('tournament:send-draw-reminders')->dailyAt('09:00');
-
-        $schedule->command('tournament:auto-draw-pending')->hourly()->withoutOverlapping();
+        // Laravel 12の定期処理は routes/console.php に集約する。
+        // この旧Kernelへは重複実行や履歴削除につながる処理を登録しない。
     }
 
     protected function commands(): void

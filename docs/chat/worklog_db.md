@@ -9800,3 +9800,14 @@ User::where('email','domaine-d@i.softbank.jp')->exists(); // true
 - 応答には正本の `release_date` と、互換表示用に同日付から算出した `release_year` を返す。画面側で参照しているモデル属性も同じ算出方法へ統一した。
 - ローカルHTTPで4条件すべて200を確認した。現物DBはカタログ916件・発売日916件だが、アブプール反映前のため `approved=true` は0件であり、現在の検索結果は安全に空配列となる。
 - PHP構文、APIルート、Bladeキャッシュ、回帰テスト1件11 assertionsに成功した。DB構造と登録データは変更していない。
+
+---
+
+## 2026-08-26 定期処理のLaravel 12統合とボール履歴保持
+
+- 旧 `app/Console/Kernel.php` ではなく、Laravel 12が実際に読む `routes/console.php` へ未抽選DM（毎日09:00）と締切後自動抽選（毎時）を登録した。
+- 両処理と年末ボール監査へ `Asia/Tokyo`、`withoutOverlapping(120)`、個別出力ログを設定した。通知は既存の `dispatch_key`、抽選は既存の大会運用ログでも追跡できる。
+- 検量証未登録・期限切れ・過去大会使用ボールを物理削除しない `balls:audit-retention` を追加し、年末処理を削除から件数監査へ変更した。
+- 旧 `balls:delete-without-certificate`、`usedballs:delete-expired`、別名 `app:delete-expired-used-balls` は入口を残しつつ、削除件数0を表示する非破壊処理へ変更した。
+- `schedule:list` で全6処理を確認し、通知・抽選のdry-runと新旧ボール監査を実行した。前後で本登録1件、マイボール1件、大会ボール紐付け1件、通知ログ0件、自動抽選ログ0件が一致した。
+- 変更PHP7ファイルは構文エラー0、回帰テスト1件14 assertionsに成功した。DB構造と登録データは変更していない。詳細は `docs/chat/scheduled_operations_guide_20260826.md` を参照。
