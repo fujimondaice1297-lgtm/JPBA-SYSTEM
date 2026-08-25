@@ -9811,3 +9811,16 @@ User::where('email','domaine-d@i.softbank.jp')->exists(); // true
 - 旧 `balls:delete-without-certificate`、`usedballs:delete-expired`、別名 `app:delete-expired-used-balls` は入口を残しつつ、削除件数0を表示する非破壊処理へ変更した。
 - `schedule:list` で全6処理を確認し、通知・抽選のdry-runと新旧ボール監査を実行した。前後で本登録1件、マイボール1件、大会ボール紐付け1件、通知ログ0件、自動抽選ログ0件が一致した。
 - 変更PHP7ファイルは構文エラー0、回帰テスト1件14 assertionsに成功した。DB構造と登録データは変更していない。詳細は `docs/chat/scheduled_operations_guide_20260826.md` を参照。
+
+---
+
+## 2026-08-26 AES-256自動バックアップと別環境復元試験
+
+- `jpba:backup` と `jpba:backup-verify` を追加し、PostgreSQL、公開ストレージ、非公開ストレージを暗号化・世代管理・検証・実復元できるようにした。
+- payload ZIP全体をAES-256で暗号化し、内部ファイル名も平文で露出させない。暗号鍵はGit、公開領域、archive、manifestへ入れない。完了済み14世代を保持し、既存の手動チェックポイントは自動削除対象外とした。
+- 日次01:15のスケジュール、コマンド単体ロック、スケジューラー重複防止、専用実行ログを設定した。
+- 初回世代 `backup_20260826_004934` を作成。DB archive 15,115,208 bytes、公開archive 487,268,563 bytes、非公開archive 85,744,718 bytes。3件ともSHA-256一致、正しい鍵で読込成功、誤った鍵を拒否した。
+- 別DB `jpba_restore_20260826_005224` と別フォルダへ全復元し、選手2,286、大会25、カタログ916、ゲームスコア23,246、最終成績2,053、ユーザー1をmanifestと一致確認した。
+- 公開3,157ファイル／501,709,525 bytes、非公開4,807ファイル／921,023,999 bytes、選手写真2,180ファイル／84,560,110 bytesが一致し、復元画像200×267 JPEGを読込成功した。
+- 復元試験後は専用DBとフォルダだけを削除し、`jpba_restore_` DB残存0、現行DB `jpba_main` の選手2,286を確認した。トップ、選手一覧、プロフィール、写真、年間予定表はHTTP 200。
+- DB構造と現行登録データは変更していない。詳細は `docs/chat/backup_restore_guide_20260826.md` を参照。

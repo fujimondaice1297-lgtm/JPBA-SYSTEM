@@ -48,3 +48,11 @@ Schedule::command('balls:audit-retention')
     ->name('ball-registration-retention-audit')
     ->withoutOverlapping(120)
     ->appendOutputTo(storage_path('logs/scheduled-ball-retention-audit.log'));
+
+// DB・公開／非公開ファイルを暗号化し、完了済み14世代を保持する。
+Schedule::command('jpba:backup --isolated')
+    ->dailyAt('01:15')
+    ->timezone('Asia/Tokyo')
+    ->name('jpba-encrypted-backup')
+    ->withoutOverlapping(720)
+    ->appendOutputTo(storage_path('logs/scheduled-jpba-backup.log'));
