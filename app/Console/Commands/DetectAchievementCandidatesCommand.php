@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Models\GameScore;
 use App\Models\Tournament;
+use App\Models\TournamentMatchScoreSheet;
 use App\Services\AchievementDetectionService;
 use Illuminate\Console\Command;
 
@@ -13,7 +14,7 @@ class DetectAchievementCandidatesCommand extends Command
         {--tournament-id=* : Scan only the specified tournament ID(s)}
         {--json : Output a machine-readable report}';
 
-    protected $description = 'Detect perfect games and eligible exact-three-game 800 series from stored scores.';
+    protected $description = 'Detect perfect games, exact-three-game 800 series, and frame-confirmed 7-10 conversions.';
 
     public function handle(AchievementDetectionService $detection): int
     {
@@ -24,7 +25,14 @@ class DetectAchievementCandidatesCommand extends Command
             ->values();
 
         $query = Tournament::query()
-            ->whereIn('id', GameScore::query()->select('tournament_id')->distinct())
+            ->where(function ($query): void {
+                $query
+                    ->whereIn('id', GameScore::query()->select('tournament_id')->distinct())
+                    ->orWhereIn(
+                        'id',
+                        TournamentMatchScoreSheet::query()->select('tournament_id')->distinct()
+                    );
+            })
             ->orderBy('id');
 
         if ($requestedIds->isNotEmpty()) {
@@ -35,6 +43,7 @@ class DetectAchievementCandidatesCommand extends Command
             'tournaments_scanned' => 0,
             'perfect_candidates_created' => 0,
             'eight_hundred_candidates_created' => 0,
+            'seven_ten_candidates_created' => 0,
             'tournaments' => [],
         ];
 
@@ -43,6 +52,7 @@ class DetectAchievementCandidatesCommand extends Command
             $report['tournaments_scanned']++;
             $report['perfect_candidates_created'] += $summary['perfect_candidates'];
             $report['eight_hundred_candidates_created'] += $summary['eight_hundred_candidates'];
+            $report['seven_ten_candidates_created'] += $summary['seven_ten_candidates'];
             $report['tournaments'][] = [
                 'id' => $tournament->id,
                 'name' => $tournament->name,
@@ -54,9 +64,10 @@ class DetectAchievementCandidatesCommand extends Command
             $this->line(json_encode($report, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
         } else {
             $this->info('公認記録の候補検出が完了しました。');
-            $this->line('対象大会: ' . $report['tournaments_scanned']);
-            $this->line('パーフェクト候補（新規）: ' . $report['perfect_candidates_created']);
-            $this->line('800シリーズ候補（新規）: ' . $report['eight_hundred_candidates_created']);
+            $this->line('対象大会: '.$report['tournaments_scanned']);
+            $this->line('パーフェクト候補（新規）: '.$report['perfect_candidates_created']);
+            $this->line('800シリーズ候補（新規）: '.$report['eight_hundred_candidates_created']);
+            $this->line('7－10メイド候補（新規）: '.$report['seven_ten_candidates_created']);
         }
 
         return self::SUCCESS;

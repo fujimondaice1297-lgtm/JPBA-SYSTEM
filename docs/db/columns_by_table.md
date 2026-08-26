@@ -1,7 +1,7 @@
 # Columns by table (generated)
 
 - Source: `docs/db/columns_public.csv`
-- Generated: 2026-08-13 17:57:40
+- Generated: 2026-08-27 01:05:08
 
 > ⚠️ このファイルは自動生成です。手で編集しないでください。
 
@@ -1271,7 +1271,7 @@
 | 8 | created_at | timestamp without time zone | YES |
 | 9 | updated_at | timestamp without time zone | YES |
 
-## record_types (35 columns)
+## record_types (36 columns)
 
 | # | column | type | nullable |
 |---:|---|---|---|
@@ -1310,6 +1310,7 @@
 | 33 | count_applied_at | timestamp without time zone | YES |
 | 34 | certification_number_value | bigint | YES |
 | 35 | notes | text | YES |
+| 36 | source_match_score_frame_id | bigint | YES |
 
 ## registered_balls (10 columns)
 

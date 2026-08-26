@@ -5,6 +5,8 @@ use App\Models\ProBowler;
 use App\Models\RecordCertificationSequence;
 use App\Models\RecordType;
 use App\Models\ScoreSeriesDefinition;
+use App\Models\TournamentMatchScoreSheet;
+use App\Services\AchievementDetectionService;
 use App\Services\AchievementRecordService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -131,4 +133,107 @@ it('never removes a confirmed count when its source score is corrected', functio
     expect($record->status)->toBe(RecordType::STATUS_CONFIRMED)
         ->and($record->warning)->not->toBeNull()
         ->and(ProBowler::query()->findOrFail(1)->perfect_count)->toBe(26);
+});
+
+it('creates a seven ten candidate only from an exact confirmed frame and keeps a confirmed count after correction', function () {
+    config(['achievements.cutover_date' => '2026-01-01']);
+
+    $sheet = TournamentMatchScoreSheet::query()->create([
+        'tournament_id' => 1,
+        'sheet_type' => 'step_ladder',
+        'stage_code' => 'ステップラダー',
+        'match_label' => '優勝決定戦',
+        'game_number' => 1,
+        'confirmed_at' => now(),
+    ]);
+    $player = $sheet->players()->create([
+        'sort_order' => 1,
+        'player_slot' => 'A',
+        'pro_bowler_id' => 1,
+        'pro_bowler_license_no' => 'M00001219',
+        'display_name' => '川添奨太',
+        'final_score' => 200,
+    ]);
+    $frame = $player->frames()->create([
+        'frame_no' => 7,
+        'throw1' => '8',
+        'throw2' => '/',
+        'remaining_pins' => [7, 10],
+    ]);
+
+    $summary = app(AchievementDetectionService::class)->scanTournament(1);
+    $record = RecordType::query()
+        ->where('record_type', 'seven_ten')
+        ->where('source_type', 'frame_auto')
+        ->firstOrFail();
+
+    expect($summary['seven_ten_candidates'])->toBe(1)
+        ->and($record->status)->toBe(RecordType::STATUS_CANDIDATE)
+        ->and($record->source_match_score_frame_id)->toBe($frame->id)
+        ->and($record->game_numbers)->toBe('ステップラダー 優勝決定戦 1G目')
+        ->and($record->frame_number)->toBe('7フレーム目')
+        ->and($record->registration_mode)->toBe(RecordType::MODE_NEW);
+
+    app(AchievementRecordService::class)->confirm($record);
+    expect(ProBowler::query()->findOrFail(1)->seven_ten_count)->toBe(4);
+
+    $frame->update(['throw2' => '1']);
+    app(AchievementDetectionService::class)->scanTournament(1);
+
+    $record->refresh();
+    expect($record->status)->toBe(RecordType::STATUS_CONFIRMED)
+        ->and($record->warning)->not->toBeNull()
+        ->and(ProBowler::query()->findOrFail(1)->seven_ten_count)->toBe(4);
+
+    $frame->update(['throw2' => '/']);
+    app(AchievementDetectionService::class)->scanTournament(1);
+
+    expect($record->refresh()->warning)->toBeNull()
+        ->and(ProBowler::query()->findOrFail(1)->seven_ten_count)->toBe(4)
+        ->and(RecordType::query()->where('record_type', 'seven_ten')->count())->toBe(1);
+});
+
+it('rejects incomplete seven ten evidence and supports the tenth frame after a strike', function () {
+    $sheet = TournamentMatchScoreSheet::query()->create([
+        'tournament_id' => 1,
+        'sheet_type' => 'step_ladder',
+        'stage_code' => 'ステップラダー',
+        'game_number' => 1,
+        'confirmed_at' => now(),
+    ]);
+    $player = $sheet->players()->create([
+        'sort_order' => 1,
+        'player_slot' => 'A',
+        'pro_bowler_id' => 1,
+        'pro_bowler_license_no' => 'M00001219',
+        'display_name' => '川添奨太',
+        'final_score' => 200,
+    ]);
+
+    $player->frames()->create([
+        'frame_no' => 1,
+        'throw1' => '8',
+        'throw2' => '1',
+        'remaining_pins' => [7, 10],
+    ]);
+    $player->frames()->create([
+        'frame_no' => 2,
+        'throw1' => '5',
+        'throw2' => '/',
+        'remaining_pins' => [4, 6, 7, 9, 10],
+    ]);
+    $tenth = $player->frames()->create([
+        'frame_no' => 10,
+        'throw1' => 'X',
+        'throw2' => '8',
+        'throw3' => '/',
+        'remaining_pins' => [7, 10],
+    ]);
+
+    $summary = app(AchievementDetectionService::class)->scanTournament(1);
+
+    expect($summary['seven_ten_candidates'])->toBe(1)
+        ->and(RecordType::query()->where('record_type', 'seven_ten')->count())->toBe(1)
+        ->and(RecordType::query()->where('record_type', 'seven_ten')->value('source_match_score_frame_id'))
+        ->toBe($tenth->id);
 });

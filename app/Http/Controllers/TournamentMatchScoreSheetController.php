@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\ProBowler;
 use App\Models\Tournament;
 use App\Models\TournamentMatchScoreSheet;
+use App\Services\AchievementDetectionService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -97,10 +98,10 @@ class TournamentMatchScoreSheetController extends Controller
             'players.*.frames.*.remaining_pins' => ['nullable', 'string', 'max:80'],
         ]);
 
-        return DB::transaction(function () use ($validated, $tournament, $scoreSheet) {
+        $savedSheet = DB::transaction(function () use ($validated, $tournament, $scoreSheet) {
             $this->saveShootoutWinnerNote($tournament, $validated['winner_note'] ?? null);
 
-            $sheet = $scoreSheet ?: new TournamentMatchScoreSheet();
+            $sheet = $scoreSheet ?: new TournamentMatchScoreSheet;
 
             $sheet->fill([
                 'tournament_id' => $tournament->id,
@@ -112,7 +113,7 @@ class TournamentMatchScoreSheetController extends Controller
                 'game_number' => (int) ($validated['game_number'] ?? 1),
                 'lane_label' => $validated['lane_label'] ?? null,
                 'is_published' => (bool) ($validated['is_published'] ?? true),
-                'confirmed_at' => !empty($validated['confirmed']) ? now() : null,
+                'confirmed_at' => ! empty($validated['confirmed']) ? now() : null,
                 'notes' => $validated['notes'] ?? null,
             ]);
 
@@ -216,6 +217,10 @@ class TournamentMatchScoreSheetController extends Controller
 
             return $sheet->fresh(['players.frames']);
         });
+
+        app(AchievementDetectionService::class)->scanTournament((int) $tournament->id);
+
+        return $savedSheet;
     }
 
     private function saveShootoutWinnerNote(Tournament $tournament, mixed $value): void
@@ -227,7 +232,7 @@ class TournamentMatchScoreSheetController extends Controller
             $settings = is_array($decoded) ? $decoded : [];
         }
 
-        if (!is_array($settings)) {
+        if (! is_array($settings)) {
             $settings = [];
         }
 
@@ -265,7 +270,7 @@ class TournamentMatchScoreSheetController extends Controller
     }
 
     /**
-     * @param array<int,array{throw1:mixed,throw2:mixed,throw3:mixed}> $frames
+     * @param  array<int,array{throw1:mixed,throw2:mixed,throw3:mixed}>  $frames
      * @return array{total:int,rolls:array<int,int>,frames:array<int,array<string,mixed>>}
      */
     private function calculateBowlingScore(array $frames): array
@@ -305,6 +310,7 @@ class TournamentMatchScoreSheetController extends Controller
 
                 if ($throw1 === 'X') {
                     $rolls[] = 10;
+
                     continue;
                 }
 
@@ -472,11 +478,11 @@ class TournamentMatchScoreSheetController extends Controller
     }
 
     /**
-     * @param array<string,mixed> $playerInput
+     * @param  array<string,mixed>  $playerInput
      */
     private function resolveBowler(array $playerInput): ?ProBowler
     {
-        if (!empty($playerInput['pro_bowler_id'])) {
+        if (! empty($playerInput['pro_bowler_id'])) {
             return ProBowler::find((int) $playerInput['pro_bowler_id']);
         }
 
@@ -496,7 +502,7 @@ class TournamentMatchScoreSheetController extends Controller
     }
 
     /**
-     * @param array<int|string, mixed> $frames
+     * @param  array<int|string, mixed>  $frames
      * @return array<int, array{throw1:mixed, throw2:mixed, throw3:mixed}>
      */
     private function normalizeFramesForCalculator(array $frames): array
@@ -517,7 +523,6 @@ class TournamentMatchScoreSheetController extends Controller
     }
 
     /**
-     * @param mixed $value
      * @return array<int,int>
      */
     private function normalizeRemainingPins(mixed $value): array
@@ -534,7 +539,7 @@ class TournamentMatchScoreSheetController extends Controller
                 : preg_split('/[^0-9]+/', $value, -1, PREG_SPLIT_NO_EMPTY);
         }
 
-        if (!is_array($value)) {
+        if (! is_array($value)) {
             return [];
         }
 

@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict PsT2NYSTJ7kS51BmKfLJncRjy7L4XyBcT4PWPyybkUWpt7EqlI6hK8AoCGOQ3T5
+\restrict JPBA20260827
 
 -- Dumped from database version 18.2
 -- Dumped by pg_dump version 18.2
@@ -3583,6 +3583,7 @@ CREATE TABLE public.record_types (
     count_applied_at timestamp(0) without time zone,
     certification_number_value bigint,
     notes text,
+    source_match_score_frame_id bigint,
     CONSTRAINT record_types_record_type_check CHECK (((record_type)::text = ANY ((ARRAY['perfect'::character varying, 'seven_ten'::character varying, 'eight_hundred'::character varying])::text[]))),
     CONSTRAINT record_types_registration_mode_check CHECK (((registration_mode)::text = ANY ((ARRAY['historical_backfill'::character varying, 'new_achievement'::character varying])::text[]))),
     CONSTRAINT record_types_status_check CHECK (((status)::text = ANY ((ARRAY['candidate'::character varying, 'confirmed'::character varying, 'rejected'::character varying, 'void'::character varying])::text[])))
@@ -10194,6 +10195,14 @@ ALTER TABLE ONLY public.record_types
 
 
 --
+-- Name: record_types record_types_source_match_score_frame_id_foreign; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.record_types
+    ADD CONSTRAINT record_types_source_match_score_frame_id_foreign FOREIGN KEY (source_match_score_frame_id) REFERENCES public.tournament_match_score_frames(id) ON DELETE SET NULL;
+
+
+--
 -- Name: record_types record_types_tournament_id_foreign; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -10989,5 +10998,5 @@ ALTER TABLE ONLY public.users
 -- PostgreSQL database dump complete
 --
 
-\unrestrict PsT2NYSTJ7kS51BmKfLJncRjy7L4XyBcT4PWPyybkUWpt7EqlI6hK8AoCGOQ3T5
+\unrestrict JPBA20260827
 

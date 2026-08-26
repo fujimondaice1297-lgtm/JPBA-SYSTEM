@@ -8,6 +8,7 @@ use App\Models\RecordType;
 use App\Models\ScoreSeriesDefinition;
 use App\Models\StageSetting;
 use App\Models\Tournament;
+use App\Models\TournamentMatchScoreFrame;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Schema;
 
@@ -79,6 +80,7 @@ class AchievementDetectionService
         $summary = [
             'perfect_candidates' => 0,
             'eight_hundred_candidates' => 0,
+            'seven_ten_candidates' => 0,
         ];
 
         if (! $this->canDetect()) {
@@ -208,7 +210,179 @@ class AchievementDetectionService
             }
         }
 
+        if ($this->canDetectSevenTen()) {
+            $this->scanSevenTenFrames($tournamentId, $summary);
+        }
+
         return $summary;
+    }
+
+    /**
+     * @param  array{perfect_candidates:int,eight_hundred_candidates:int,seven_ten_candidates:int}  $summary
+     */
+    private function scanSevenTenFrames(int $tournamentId, array &$summary): void
+    {
+        $seenKeys = [];
+
+        TournamentMatchScoreFrame::query()
+            ->whereHas(
+                'player.scoreSheet',
+                fn (Builder $query) => $query->where('tournament_id', $tournamentId)
+            )
+            ->with(['player.proBowler', 'player.scoreSheet.tournament'])
+            ->orderBy('id')
+            ->each(function (TournamentMatchScoreFrame $frame) use (&$seenKeys, &$summary): void {
+                $detectionKey = $this->sevenTenDetectionKey($frame);
+                if ($detectionKey === null) {
+                    return;
+                }
+
+                $seenKeys[] = $detectionKey;
+                $before = RecordType::query()->where('detection_key', $detectionKey)->exists();
+                $this->scanSevenTenFrame($frame, $detectionKey);
+
+                if (! $before && RecordType::query()->where('detection_key', $detectionKey)->exists()) {
+                    $summary['seven_ten_candidates']++;
+                }
+            });
+
+        RecordType::query()
+            ->where('tournament_id', $tournamentId)
+            ->where('record_type', 'seven_ten')
+            ->where('source_type', 'frame_auto')
+            ->when(
+                $seenKeys !== [],
+                fn (Builder $query) => $query->whereNotIn('detection_key', $seenKeys)
+            )
+            ->each(function (RecordType $record): void {
+                $this->invalidateCandidate(
+                    (string) $record->detection_key,
+                    '根拠となるフレームまたは選手情報が削除・変更されています。'
+                );
+            });
+    }
+
+    private function canDetectSevenTen(): bool
+    {
+        return Schema::hasTable('tournament_match_score_frames')
+            && Schema::hasTable('tournament_match_score_sheet_players')
+            && Schema::hasTable('tournament_match_score_sheets')
+            && Schema::hasColumn('record_types', 'source_match_score_frame_id');
+    }
+
+    private function scanSevenTenFrame(TournamentMatchScoreFrame $frame, string $detectionKey): void
+    {
+        $player = $frame->player;
+        $scoreSheet = $player?->scoreSheet;
+        $tournament = $scoreSheet?->tournament;
+        $bowler = $player?->proBowler;
+
+        if (! $player || ! $scoreSheet || ! $tournament || ! $bowler) {
+            $this->invalidateCandidate($detectionKey, '選手または大会との紐付けを確認できません。');
+
+            return;
+        }
+
+        if ($scoreSheet->confirmed_at === null) {
+            $this->invalidateCandidate($detectionKey, 'スコアシートの確定が解除されています。');
+
+            return;
+        }
+
+        if (! $this->isSevenTenMade($frame)) {
+            $this->invalidateCandidate(
+                $detectionKey,
+                '7番・10番だけが残り、次投球で両方を倒した条件ではなくなりました。'
+            );
+
+            return;
+        }
+
+        $stage = $this->nullableString($scoreSheet->stage_code)
+            ?? $this->nullableString($scoreSheet->match_label)
+            ?? $this->nullableString($scoreSheet->sheet_type);
+        $matchLabel = $this->nullableString($scoreSheet->match_label);
+        $gameNumber = max(1, (int) $scoreSheet->game_number);
+        $gameLabel = trim(implode(' ', array_filter([
+            $stage,
+            $matchLabel !== $stage ? $matchLabel : null,
+            $gameNumber.'G目',
+        ])));
+
+        $this->upsertCandidate($detectionKey, [
+            'record_type' => 'seven_ten',
+            'pro_bowler_id' => $bowler->id,
+            'tournament_id' => $tournament->id,
+            'source_match_score_frame_id' => $frame->id,
+            'tournament_name' => $tournament->name,
+            'stage' => $stage,
+            'gender' => $this->genderForBowler($bowler),
+            'game_numbers' => $gameLabel,
+            'frame_number' => $frame->frame_no.'フレーム目',
+            'awarded_on' => $tournament->start_date?->format('Y-m-d'),
+            'registration_mode' => $this->registrationModeFor($tournament),
+            'source_type' => 'frame_auto',
+            'source_label' => 'フレーム残ピン入力から自動検出',
+            'evidence_text' => sprintf(
+                '%s / %s / %dフレーム目 / 残りピン7・10 / 次投球スペア',
+                $tournament->name,
+                $gameLabel,
+                $frame->frame_no
+            ),
+            'warning' => null,
+            'detected_at' => now(),
+        ]);
+    }
+
+    private function isSevenTenMade(TournamentMatchScoreFrame $frame): bool
+    {
+        $pins = collect($frame->remaining_pins ?? [])
+            ->map(fn ($pin) => filter_var($pin, FILTER_VALIDATE_INT))
+            ->filter(fn ($pin) => $pin !== false && $pin >= 1 && $pin <= 10)
+            ->unique()
+            ->sort()
+            ->values()
+            ->all();
+
+        if ($pins !== [7, 10]) {
+            return false;
+        }
+
+        $throw1 = strtoupper(trim((string) $frame->throw1));
+        $throw2 = strtoupper(trim((string) $frame->throw2));
+        $throw3 = strtoupper(trim((string) $frame->throw3));
+
+        if ((int) $frame->frame_no < 10) {
+            return $throw1 === '8' && $throw2 === '/';
+        }
+
+        if ($throw1 === 'X') {
+            return $throw2 === '8' && $throw3 === '/';
+        }
+
+        return $throw1 === '8' && $throw2 === '/';
+    }
+
+    private function sevenTenDetectionKey(TournamentMatchScoreFrame $frame): ?string
+    {
+        $player = $frame->player;
+        $scoreSheet = $player?->scoreSheet;
+        $bowler = $player?->proBowler;
+
+        if (! $player || ! $scoreSheet || ! $bowler) {
+            return null;
+        }
+
+        $slot = $this->nullableString($player->player_slot) ?? (string) $player->sort_order;
+
+        return implode(':', [
+            'frame',
+            'seven_ten',
+            $scoreSheet->id,
+            $bowler->id,
+            $slot,
+            $frame->frame_no,
+        ]);
     }
 
     public function reconcileSeriesDefinition(ScoreSeriesDefinition $definition): void
@@ -501,6 +675,11 @@ class AchievementDetectionService
             return $gender;
         }
 
+        return $this->genderForBowler($bowler);
+    }
+
+    private function genderForBowler(ProBowler $bowler): ?string
+    {
         $prefix = strtoupper(substr((string) $bowler->license_no, 0, 1));
 
         return in_array($prefix, ['M', 'F'], true) ? $prefix : null;

@@ -583,6 +583,7 @@ USBC公式Approved Ball Listの取得単位を保存する同期スナップシ�
 - pro_bowler_id
 - tournament_id
 - source_game_score_id
+- source_match_score_frame_id
 - score_series_definition_id
 - tournament_name
 - awarded_on
@@ -601,6 +602,7 @@ USBC公式Approved Ball Listの取得単位を保存する同期スナップシ�
 - historical_backfill は既存総数の内訳を補完するため、確認しても総数へ加算しない。
 - new_achievement は確認時に一度だけ総数へ加算し、`count_applied_at` で二重加算を防止する。
 - 確認済み明細の根拠スコアが訂正・削除されても自動削除・総数減算を行わず、`warning` を記録する。
+- 7－10メイドは確定スコアシートで残りピンが7番・10番だけ、かつ次投球がスペアのときだけ確認待ち候補にし、自動確定しない。
 - 表示総数 = max（新システム総数, 確認済み明細数）。
 - その他過去達成数 = 表示総数 - 確認済み明細数。
 
@@ -608,6 +610,7 @@ USBC公式Approved Ball Listの取得単位を保存する同期スナップシ�
 - pro_bowler_id -> pro_bowlers.id
 - tournament_id -> tournaments.id（ON DELETE SET NULL）
 - source_game_score_id -> game_scores.id（ON DELETE SET NULL）
+- source_match_score_frame_id -> tournament_match_score_frames.id（ON DELETE SET NULL）
 - score_series_definition_id -> score_series_definitions.id（ON DELETE SET NULL）
 - confirmed_by -> users.id（ON DELETE SET NULL）
 

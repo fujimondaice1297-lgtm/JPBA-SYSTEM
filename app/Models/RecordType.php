@@ -7,11 +7,15 @@ use Illuminate\Database\Eloquent\Model;
 class RecordType extends Model
 {
     public const STATUS_CANDIDATE = 'candidate';
+
     public const STATUS_CONFIRMED = 'confirmed';
+
     public const STATUS_REJECTED = 'rejected';
+
     public const STATUS_VOID = 'void';
 
     public const MODE_HISTORICAL = 'historical_backfill';
+
     public const MODE_NEW = 'new_achievement';
 
     protected $fillable = [
@@ -19,6 +23,7 @@ class RecordType extends Model
         'pro_bowler_id',
         'tournament_id',
         'source_game_score_id',
+        'source_match_score_frame_id',
         'score_series_definition_id',
         'tournament_name',
         'game_numbers',
@@ -74,6 +79,11 @@ class RecordType extends Model
     public function sourceGameScore()
     {
         return $this->belongsTo(GameScore::class, 'source_game_score_id');
+    }
+
+    public function sourceMatchScoreFrame()
+    {
+        return $this->belongsTo(TournamentMatchScoreFrame::class, 'source_match_score_frame_id');
     }
 
     public function scoreSeriesDefinition()

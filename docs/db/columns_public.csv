@@ -915,6 +915,7 @@ record_types,32,confirmed_by,bigint,YES
 record_types,33,count_applied_at,timestamp without time zone,YES
 record_types,34,certification_number_value,bigint,YES
 record_types,35,notes,text,YES
+record_types,36,source_match_score_frame_id,bigint,YES
 registered_balls,1,id,bigint,NO
 registered_balls,2,license_no,character varying,NO
 registered_balls,3,approved_ball_id,bigint,NO

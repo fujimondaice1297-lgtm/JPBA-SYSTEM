@@ -172,7 +172,8 @@
 
                 <div class="alert alert-info small">
                     入力記号：ストライクは <strong>X</strong>、スペアは <strong>/</strong>、ミスは <strong>-</strong>、ファールは <strong>F</strong>、ピン数は <strong>0〜9</strong> で入力してください。保存時にサーバー側でも再計算します。<br>
-                    残りピンは、各フレーム下のピン配置図から残ったピンをクリックしてください。PDFでは <strong>3.5.6</strong> のように表示します。
+                    残りピンは、各フレーム下のピン配置図からメイド直前に残ったピンをクリックしてください。PDFでは <strong>3.5.6</strong> のように表示します。<br>
+                    <strong>7番・10番だけ</strong>を選択し、次投球を <strong>/</strong> で入力してスコアシートを「確定」すると、公認7－10メイドの確認待ち候補になります。公認番号と件数はスタッフが確認した時点で反映します。
                 </div>
 
                 <style>
