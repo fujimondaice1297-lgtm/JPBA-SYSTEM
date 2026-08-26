@@ -49,6 +49,7 @@ class ManagedPublicPageAndTrainingWorkflowSourceTest extends TestCase
         $officialImport = file_get_contents(app_path('Services/TrainingOfficialListImportService.php'));
         $entry = file_get_contents(app_path('Services/TournamentEntryEligibilityService.php'));
         $consoleRoutes = file_get_contents(base_path('routes/console.php'));
+        $audit = file_get_contents(app_path('Console/Commands/AuditTrainingWorkflow.php'));
 
         $this->assertStringContainsString('addMonthsNoOverflow', $compliance);
         $this->assertStringContainsString('subDay()', $compliance);
@@ -58,8 +59,12 @@ class ManagedPublicPageAndTrainingWorkflowSourceTest extends TestCase
         $this->assertStringContainsString('expiredOfficialListEvidenceAt', $compliance);
         $this->assertStringNotContainsString('暫定的に出場可', $compliance);
         $this->assertStringContainsString('entryDecision', $entry);
-        $this->assertStringContainsString("training:notify", $consoleRoutes);
+        $this->assertStringContainsString('training:notify', $consoleRoutes);
         $this->assertStringContainsString("dailyAt('08:00')", $consoleRoutes);
+        $this->assertStringContainsString('jpba:audit-training-workflow', $audit);
+        $this->assertStringContainsString('DB::rollBack()', $audit);
+        $this->assertStringContainsString('countCandidatesForExpiryYear', $audit);
+        $this->assertStringNotContainsString('sendForExpiryYear', $audit);
     }
 
     public function test_player_edit_uses_tp_training_decision_instead_of_instructor_renewal_status(): void
