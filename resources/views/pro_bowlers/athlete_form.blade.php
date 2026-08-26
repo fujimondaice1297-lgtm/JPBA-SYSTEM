@@ -322,7 +322,7 @@
           <div class="card-header d-flex justify-content-between align-items-center">
             <strong>新システム 選手アカウント</strong>
             <span class="badge {{ $memberAccount ? 'bg-success' : 'bg-secondary' }}">
-              {{ $memberAccount ? '発行済み' : '未発行' }}
+              {{ $memberAccount ? $memberAccount->account_status_label : '未発行' }}
             </span>
           </div>
           <div class="card-body">
@@ -338,6 +338,9 @@
               <p class="mb-1">この選手には、ボール登録に使用する会員アカウントがまだ発行されていません。</p>
               <small class="text-muted">下の旧ログインIDは旧プロフィール由来の参照値です。新システムのアカウント発行後は、選手IDでマイボール・年度申請・大会登録へ連動します。</small>
             @endif
+            <div class="mt-3">
+              <a href="{{ route('admin.player_accounts.show', $bowler) }}" class="btn btn-sm btn-outline-primary">アカウント管理</a>
+            </div>
           </div>
         </div>
       </div>

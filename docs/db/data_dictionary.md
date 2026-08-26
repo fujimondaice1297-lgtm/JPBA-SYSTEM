@@ -3186,12 +3186,38 @@ JPBA公式ページのような「予選前半成績」「予選通算成績」�
 ### 主要カラム
 - pro_bowler_id（紐付け：nullable）
 - email / password 等
+- account_status（active / suspended / closed）
+- setup_link_sent_at / password_set_at
+- suspended_at / closed_at
+- account_status_note
 
 ### 外部キー（FK）
 - pro_bowler_id -> pro_bowlers.id
 
 - users は pro_bowler_id を正規の紐付け軸とする（FK: users.pro_bowler_id -> pro_bowlers.id）。
 - users.pro_bowler_license_no / users.license_no は互換・移行用の文字列として残す（当面は削除しない）。
+- 停止・終了は認証だけを無効にし、選手・大会・ボール等の業務履歴を削除しない。
+
+---
+
+## user_account_status_logs
+
+### 役割
+選手アカウントの発行、利用中、利用停止、終了、再開の状態変更履歴を保持する。
+
+### 主キー
+- id (bigint)
+
+### 主要カラム
+- user_id
+- from_status / to_status
+- reason
+- changed_by（操作した管理者、nullable）
+- created_at / updated_at
+
+### 外部キー（FK）
+- user_id -> users.id（ON DELETE CASCADE）
+- changed_by -> users.id（ON DELETE SET NULL）
 
 ---
 

@@ -1,7 +1,7 @@
 # Columns by table (generated)
 
 - Source: `docs/db/columns_public.csv`
-- Generated: 2026-08-27 01:05:08
+- Generated: 2026-08-27 01:23:39
 
 > ⚠️ このファイルは自動生成です。手で編集しないでください。
 
@@ -2336,7 +2336,20 @@
 | 8 | created_at | timestamp without time zone | YES |
 | 9 | updated_at | timestamp without time zone | YES |
 
-## users (13 columns)
+## user_account_status_logs (8 columns)
+
+| # | column | type | nullable |
+|---:|---|---|---|
+| 1 | id | bigint | NO |
+| 2 | user_id | bigint | NO |
+| 3 | from_status | character varying | YES |
+| 4 | to_status | character varying | NO |
+| 5 | reason | text | YES |
+| 6 | changed_by | bigint | YES |
+| 7 | created_at | timestamp without time zone | YES |
+| 8 | updated_at | timestamp without time zone | YES |
+
+## users (19 columns)
 
 | # | column | type | nullable |
 |---:|---|---|---|
@@ -2353,6 +2366,12 @@
 | 11 | pro_bowler_license_no | character varying | YES |
 | 12 | pro_bowler_id | bigint | YES |
 | 13 | license_no | character varying | YES |
+| 14 | account_status | character varying | NO |
+| 15 | setup_link_sent_at | timestamp without time zone | YES |
+| 16 | password_set_at | timestamp without time zone | YES |
+| 17 | suspended_at | timestamp without time zone | YES |
+| 18 | closed_at | timestamp without time zone | YES |
+| 19 | account_status_note | text | YES |
 
 ## venues (19 columns)
 

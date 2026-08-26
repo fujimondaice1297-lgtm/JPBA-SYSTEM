@@ -1,35 +1,68 @@
 <?php
 
 // ===== 先頭へ移動（理由：PHPのuseは冒頭のみ有効。途中配置は構文上不可） =====
-use Illuminate\Support\Facades\Route;
-use App\Http\Kernel as HttpKernel;
-use App\Models\ProBowler;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
-use Illuminate\Support\Facades\Artisan;
-
 use App\Http\Controllers\Admin\AdminHomeController;
 use App\Http\Controllers\Admin\InformationAdminController;
 use App\Http\Controllers\Admin\ManagedPublicPageController;
+use App\Http\Controllers\Admin\PlayerAccountAdminController;
+use App\Http\Controllers\AnnualScheduleController;
+use App\Http\Controllers\ApprovedBallController;
+use App\Http\Controllers\ApprovedBallImportController;
+use App\Http\Controllers\Auth\ChangePasswordController;
 use App\Http\Controllers\Auth\ForgotPasswordController;
 use App\Http\Controllers\Auth\RegisterController;
-use App\Http\Controllers\Auth\ChangePasswordController;
+use App\Http\Controllers\AuthController;
+use App\Http\Controllers\AuthInstructorImportController;
+use App\Http\Controllers\BallAnnualRegistrationController;
+use App\Http\Controllers\BulkTrainingController;
+use App\Http\Controllers\CalendarController;
+use App\Http\Controllers\CalendarEventController;
+use App\Http\Controllers\CertificateController;
+use App\Http\Controllers\ComplianceController;
+use App\Http\Controllers\DrawController;
+use App\Http\Controllers\EligibilityController;
+use App\Http\Controllers\FlashNewsController;
+use App\Http\Controllers\FlashNewsPublicController;
+use App\Http\Controllers\HofController;
+use App\Http\Controllers\HofManageController;
+use App\Http\Controllers\InformationController;
+use App\Http\Controllers\InstructorController;
+use App\Http\Controllers\MemberDashboardController;
+use App\Http\Controllers\PerfectRecordController;
+use App\Http\Controllers\PointDistributionController;
+use App\Http\Controllers\PrizeDistributionController;
+use App\Http\Controllers\ProBowlerController;
+use App\Http\Controllers\ProBowlerImportController;
+use App\Http\Controllers\ProBowlerTitleController;
+use App\Http\Controllers\ProBowlerTrainingController;
+use App\Http\Controllers\ProGroupController;
+use App\Http\Controllers\PublicHomeController;
+use App\Http\Controllers\PublicInstructorController;
+use App\Http\Controllers\PublicPageController;
+use App\Http\Controllers\PublicPlayerController;
+use App\Http\Controllers\PublicProfileController;
+use App\Http\Controllers\PublicTournamentController;
+use App\Http\Controllers\RankingController;
+use App\Http\Controllers\RecordCertificationSequenceController;
+use App\Http\Controllers\RecordTypeController;
+use App\Http\Controllers\RegisteredBallController;
+use App\Http\Controllers\ScoreController;
+use App\Http\Controllers\ScoreSeriesDefinitionController;
+use App\Http\Controllers\TournamentController;
+use App\Http\Controllers\TournamentEntryBallController;
+use App\Http\Controllers\TournamentEntryController;
+use App\Http\Controllers\TournamentProController;
+use App\Http\Controllers\TournamentResultController;
+use App\Http\Controllers\TpRegistrationController;
+use App\Http\Controllers\TrainingReportController;
+use App\Http\Controllers\UsedBallController;
 use App\Http\Controllers\VenuePageController;
-
-use App\Http\Controllers\{
-    ProBowlerController, TournamentController, TournamentResultController, RecordTypeController,
-    RecordCertificationSequenceController, ScoreSeriesDefinitionController,
-    InstructorController, PrizeDistributionController, PointDistributionController,
-    ApprovedBallController, ApprovedBallImportController, UsedBallController,
-    TournamentProController, TpRegistrationController, RankingController, PerfectRecordController,
-    ProGroupController, CertificateController, RegisteredBallController, ComplianceController,
-    ProBowlerTrainingController, BulkTrainingController, TrainingReportController,
-    CalendarController, CalendarEventController, AnnualScheduleController, ProBowlerTitleController,
-    MemberDashboardController, InformationController, TournamentEntryBallController, BallAnnualRegistrationController,
-    TournamentEntryController, DrawController, ProBowlerImportController, AuthInstructorImportController, HofController, HofManageController,
-    AuthController, ScoreController, EligibilityController, PublicHomeController, PublicInstructorController, PublicPageController, PublicPlayerController, PublicProfileController, PublicTournamentController, FlashNewsController,
-    FlashNewsPublicController
-};
+use App\Http\Kernel as HttpKernel;
+use App\Models\ProBowler;
+use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Schema;
 
 // ★LOCAL ONLY: ルート/設定キャッシュ & DB可視化 & ストレージ公開（診断用）BEGIN
 if (app()->environment('local')) {
@@ -40,48 +73,53 @@ if (app()->environment('local')) {
         Artisan::call('config:clear');
         Artisan::call('cache:clear');
         Artisan::call('view:clear');
+
         return response()->json(['ok' => true, 'msg' => 'routes/config/cache/view cleared']);
     });
 
     // 2) テーブル一覧
     Route::get('/_dev/tables', function () {
-        $schema = DB::selectOne("SELECT current_schema() AS s")->s ?? 'public';
+        $schema = DB::selectOne('SELECT current_schema() AS s')->s ?? 'public';
         $rows = DB::select(
-            "SELECT table_name FROM information_schema.tables
+            'SELECT table_name FROM information_schema.tables
              WHERE table_schema = current_schema()
-             ORDER BY table_name"
+             ORDER BY table_name'
         );
+
         return response()->json([
             'schema' => $schema,
-            'tables' => array_map(fn($r) => $r->table_name, $rows),
+            'tables' => array_map(fn ($r) => $r->table_name, $rows),
         ]);
     });
 
     // 3) カラム一覧
     Route::get('/_dev/columns/{table}', function (string $table) {
-        if (!Schema::hasTable($table)) {
+        if (! Schema::hasTable($table)) {
             return response()->json(['error' => "table '{$table}' not found in current schema"], 404);
         }
         $cols = DB::select(
-            "SELECT column_name, data_type
+            'SELECT column_name, data_type
                FROM information_schema.columns
               WHERE table_schema = current_schema()
                 AND table_name = ?
-              ORDER BY ordinal_position",
+              ORDER BY ordinal_position',
             [$table]
         );
+
         return response()->json(['table' => $table, 'columns' => $cols]);
     });
 
     // 4) storage:link を試す（成功すれば /public/storage はシンボリックリンク）
     Route::get('/_dev/storage/link', function () {
-        $ok = false; $err = null;
+        $ok = false;
+        $err = null;
         try {
             Artisan::call('storage:link');
             $ok = true;
         } catch (\Throwable $e) {
             $err = $e->getMessage();
         }
+
         return response()->json([
             'ok' => $ok,
             'exists' => is_link(public_path('storage')) || is_dir(public_path('storage')),
@@ -96,23 +134,27 @@ if (app()->environment('local')) {
         $src = storage_path('app/public');
         $dst = public_path('storage');
 
-        if (!is_dir($src)) {
-            return response()->json(['ok'=>false,'error'=>"source not found: {$src}"], 500);
+        if (! is_dir($src)) {
+            return response()->json(['ok' => false, 'error' => "source not found: {$src}"], 500);
         }
-        if (!is_dir($dst)) {
+        if (! is_dir($dst)) {
             @mkdir($dst, 0775, true);
         }
 
-        $copied = 0; $dirs = 0;
+        $copied = 0;
+        $dirs = 0;
         $it = new \RecursiveIteratorIterator(
             new \RecursiveDirectoryIterator($src, \FilesystemIterator::SKIP_DOTS),
             \RecursiveIteratorIterator::SELF_FIRST
         );
         foreach ($it as $item) {
-            $rel = str_replace('\\','/', substr($item->getPathname(), strlen($src) + 1));
-            $to  = $dst . DIRECTORY_SEPARATOR . $rel;
+            $rel = str_replace('\\', '/', substr($item->getPathname(), strlen($src) + 1));
+            $to = $dst.DIRECTORY_SEPARATOR.$rel;
             if ($item->isDir()) {
-                if (!is_dir($to)) { @mkdir($to, 0775, true); $dirs++; }
+                if (! is_dir($to)) {
+                    @mkdir($to, 0775, true);
+                    $dirs++;
+                }
             } else {
                 @copy($item->getPathname(), $to);
                 $copied++;
@@ -120,13 +162,13 @@ if (app()->environment('local')) {
         }
 
         return response()->json([
-            'ok'=>true,
-            'mode'=>'copy',
-            'public_storage_path'=>$dst,
-            'disk_root'=>$src,
-            'copied_files'=>$copied,
-            'created_dirs'=>$dirs,
-            'note'=>'Windows/OneDrive等で symlink が作れない場合の暫定公開。ファイル追加後は再実行して同期。'
+            'ok' => true,
+            'mode' => 'copy',
+            'public_storage_path' => $dst,
+            'disk_root' => $src,
+            'copied_files' => $copied,
+            'created_dirs' => $dirs,
+            'note' => 'Windows/OneDrive等で symlink が作れない場合の暫定公開。ファイル追加後は再実行して同期。',
         ]);
     });
 
@@ -134,9 +176,9 @@ if (app()->environment('local')) {
     Route::get('/_dev/storage/status', function () {
         return response()->json([
             'public_storage_exists' => is_link(public_path('storage')) || is_dir(public_path('storage')),
-            'public_storage_path'   => public_path('storage'),
-            'disk_root'             => storage_path('app/public'),
-            'public_url_prefix'     => url('/storage'),
+            'public_storage_path' => public_path('storage'),
+            'disk_root' => storage_path('app/public'),
+            'public_url_prefix' => url('/storage'),
         ]);
     });
 }
@@ -151,17 +193,19 @@ if (app()->environment('local')) {
         $ref = new \ReflectionClass($k);
         $prop = $ref->getProperty('middlewareAliases');
         $prop->setAccessible(true);
+
         return response()->json($prop->getValue($k));
     });
-    Route::get('/__debug/router', fn() => response()->json(app('router')->getMiddleware()));
+    Route::get('/__debug/router', fn () => response()->json(app('router')->getMiddleware()));
     // 認証済みの自分を確認
     Route::middleware('auth')->get('/__debug/me', function () {
         $u = auth()->user();
-        return response()->json(['id'=>$u?->id,'email'=>$u?->email,'role'=>$u?->role]);
+
+        return response()->json(['id' => $u?->id, 'email' => $u?->email, 'role' => $u?->role]);
     });
     // RoleMiddleware が通るかワンピン
-    Route::middleware(['auth','role:member,editor,admin'])
-        ->get('/__debug/ping', fn() => 'role-ok');
+    Route::middleware(['auth', 'role:member,editor,admin'])
+        ->get('/__debug/ping', fn () => 'role-ok');
 }
 
 /* ========================
@@ -233,9 +277,9 @@ Route::post('/reset-password', [ForgotPasswordController::class, 'reset'])->name
 /* ========================
    公開INFORMATION
 ======================== */
-Route::get('/info', [InformationController::class,'index'])->name('informations.index');
-Route::get('/info/{information}', [InformationController::class,'show'])->name('informations.show');
-Route::get('/info/files/{informationFile}', [InformationController::class,'downloadFile'])->name('information_files.download');
+Route::get('/info', [InformationController::class, 'index'])->name('informations.index');
+Route::get('/info/{information}', [InformationController::class, 'show'])->name('informations.show');
+Route::get('/info/files/{informationFile}', [InformationController::class, 'downloadFile'])->name('information_files.download');
 Route::get('/ball-catalog/images/{approved_ball}', [ApprovedBallController::class, 'image'])
     ->whereNumber('approved_ball')
     ->name('approved_balls.image');
@@ -243,10 +287,10 @@ Route::get('/ball-catalog/images/{approved_ball}', [ApprovedBallController::clas
 /* =======================================================================
    会員・編集者・管理者 共通（閲覧/自分の操作）  auth + role:member,editor,admin
 ======================================================================= */
-Route::middleware(['auth','role:member,editor,admin'])->group(function () {
+Route::middleware(['auth', 'role:member,editor,admin'])->group(function () {
 
     // マイページ・自分のプロフィール
-    Route::get('/member', [MemberDashboardController::class,'index'])->name('member.dashboard');
+    Route::get('/member', [MemberDashboardController::class, 'index'])->name('member.dashboard');
     Route::get('/password/change', [ChangePasswordController::class, 'showForm'])->name('password.change.form');
     Route::post('/password/change', [ChangePasswordController::class, 'update'])->name('password.update.self');
     Route::get('/athlete', [ProBowlerController::class, 'editSelf'])->name('athlete.edit');
@@ -266,7 +310,7 @@ Route::middleware(['auth','role:member,editor,admin'])->group(function () {
     Route::post('/member/entries/{entry}/shift-draw', [DrawController::class, 'shift'])->name('member.entries.shift.draw');
     Route::post('/member/entries/{entry}/lane-draw', [DrawController::class, 'lane'])->name('member.entries.lane.draw');
     Route::post('/member/entries/{entry}/check-in', [TournamentEntryController::class, 'checkIn'])->name('member.entries.check_in');
-    
+
     // 大会エントリー関連の公開一覧（会員向け）
     Route::get('/member/tournaments/{tournament}/entries', [\App\Http\Controllers\TournamentEntryPublicController::class, 'index'])
         ->name('member.tournaments.entries.index');
@@ -274,8 +318,8 @@ Route::middleware(['auth','role:member,editor,admin'])->group(function () {
         ->name('member.tournaments.draws.index');
 
     // 使用ボール / 登録ボール（※ Controller 側で member は自分の分だけに絞り込み済み）
-    Route::resource('used_balls', UsedBallController::class)->except(['show','destroy']);
-    Route::resource('registered_balls', RegisteredBallController::class)->except(['show','destroy']);
+    Route::resource('used_balls', UsedBallController::class)->except(['show', 'destroy']);
+    Route::resource('registered_balls', RegisteredBallController::class)->except(['show', 'destroy']);
 
     // 選手単位の年度ボール申請・スタッフ一括承認
     Route::get('/ball-annual-registration', [BallAnnualRegistrationController::class, 'edit'])
@@ -300,34 +344,35 @@ Route::middleware(['auth','role:member,editor,admin'])->group(function () {
     Route::get('/perfect_records', [PerfectRecordController::class, 'index'])->name('perfect_records.index');
     Route::get('/pro_groups', [ProGroupController::class, 'index'])->name('pro_groups.index');
     Route::get('/certificates', [CertificateController::class, 'index'])->name('certificates.index');
-    Route::get('/member/info', [InformationController::class,'member'])->name('informations.member');
-    Route::get('/member/info/{information}', [InformationController::class,'show'])->name('informations.member.show');
+    Route::get('/member/info', [InformationController::class, 'member'])->name('informations.member');
+    Route::get('/member/info/{information}', [InformationController::class, 'show'])->name('informations.member.show');
 
     // 添付ファイルDL
-    Route::get('/member/info/files/{informationFile}', [InformationController::class,'downloadFile'])->name('information_files.member.download');
+    Route::get('/member/info/files/{informationFile}', [InformationController::class, 'downloadFile'])->name('information_files.member.download');
 
     // 大会成績（閲覧）
     Route::get('/tournament_results', [TournamentResultController::class, 'list'])->name('tournament_results.index');
     Route::get('/tournament_results/rankings', [TournamentResultController::class, 'rankings'])->name('tournament_results.rankings');
     Route::get('/tournament_results/pdf', [TournamentResultController::class, 'exportPdf'])->name('tournament_results.pdf');
     Route::get('/tournaments/{tournament}/result-snapshots/{snapshot}', [\App\Http\Controllers\TournamentResultSnapshotController::class, 'show'])
-    ->name('tournaments.result_snapshots.show');
+        ->name('tournaments.result_snapshots.show');
     Route::get('/tournaments/{tournament}/result-snapshots/{snapshot}/pdf', [TournamentResultController::class, 'exportSnapshotPdf'])
         ->name('tournaments.result_snapshots.pdf');
 
     // カレンダー（閲覧）
-    Route::get('/calendar/{year?}', [CalendarController::class,'annual'])->whereNumber('year')->name('calendar.annual');
-    Route::get('/calendar/{year}/{month}', [CalendarController::class,'monthly'])->whereNumber('year')->whereNumber('month')->name('calendar.monthly');
-    Route::get('/calendar/{year}/pdf', [CalendarController::class,'annualPdf'])->whereNumber('year')->name('calendar.annual.pdf');
-    Route::get('/calendar/{year}/{month}/pdf', [CalendarController::class,'monthlyPdf'])->whereNumber('year')->name('calendar.monthly.pdf');
+    Route::get('/calendar/{year?}', [CalendarController::class, 'annual'])->whereNumber('year')->name('calendar.annual');
+    Route::get('/calendar/{year}/{month}', [CalendarController::class, 'monthly'])->whereNumber('year')->whereNumber('month')->name('calendar.monthly');
+    Route::get('/calendar/{year}/pdf', [CalendarController::class, 'annualPdf'])->whereNumber('year')->name('calendar.annual.pdf');
+    Route::get('/calendar/{year}/{month}/pdf', [CalendarController::class, 'monthlyPdf'])->whereNumber('year')->name('calendar.monthly.pdf');
 
     Route::get('/flash-news/{id}', [FlashNewsPublicController::class, 'show'])
         ->whereNumber('id')
         ->name('flash_news.public');
-    
+
     // API（会員以上のみで使う想定：route:list のエントリと一致）
     Route::get('/api/pro-bowler-by-license/{licenseNo}', function ($licenseNo) {
         $bowler = ProBowler::where('license_no', $licenseNo)->firstOrFail();
+
         return response()->json([
             'id' => $bowler->id,
             'name_kanji' => $bowler->name_kanji,
@@ -339,7 +384,7 @@ Route::middleware(['auth','role:member,editor,admin'])->group(function () {
 /* =======================================================================
    編集者 + 管理者（作成/更新は可、削除は不可） auth + role:editor,admin
 ======================================================================= */
-Route::middleware(['auth','role:editor,admin'])->group(function () {
+Route::middleware(['auth', 'role:editor,admin'])->group(function () {
 
     Route::get('/management', [AdminHomeController::class, 'index'])
         ->name('management.home');
@@ -395,10 +440,10 @@ Route::middleware(['auth','role:editor,admin'])->group(function () {
     Route::post('/scores/update-one', [ScoreController::class, 'updateOne']);
     Route::post('/scores/delete-one', [ScoreController::class, 'deleteOne']);
     Route::post('/scores/tournament-photos', [\App\Http\Controllers\TournamentPhotoController::class, 'store'])
-    ->name('scores.tournament_photos.store');
+        ->name('scores.tournament_photos.store');
 
     Route::get('/tournaments/{tournament}/match-score-sheets', [\App\Http\Controllers\TournamentMatchScoreSheetController::class, 'index'])
-    ->name('tournaments.match_score_sheets.index');
+        ->name('tournaments.match_score_sheets.index');
     Route::post('/tournaments/{tournament}/match-score-sheets', [\App\Http\Controllers\TournamentMatchScoreSheetController::class, 'store'])
         ->name('tournaments.match_score_sheets.store');
     Route::get('/tournaments/{tournament}/match-score-sheets/{scoreSheet}/edit', [\App\Http\Controllers\TournamentMatchScoreSheetController::class, 'edit'])
@@ -408,12 +453,12 @@ Route::middleware(['auth','role:editor,admin'])->group(function () {
 
     Route::resource('organizations', \App\Http\Controllers\OrganizationMasterController::class)->except(['show']);
 
-    Route::get('/api/organizations/search', [\App\Http\Controllers\OrganizationMasterController::class,'search'])
+    Route::get('/api/organizations/search', [\App\Http\Controllers\OrganizationMasterController::class, 'search'])
         ->name('api.organizations.search');
-    Route::get('/api/organizations/{id}', [\App\Http\Controllers\OrganizationMasterController::class,'show'])
+    Route::get('/api/organizations/{id}', [\App\Http\Controllers\OrganizationMasterController::class, 'show'])
         ->name('api.organizations.show');
 
-    Route::get('/tournaments/{tournament}/clone', [\App\Http\Controllers\TournamentController::class,'clone'])
+    Route::get('/tournaments/{tournament}/clone', [\App\Http\Controllers\TournamentController::class, 'clone'])
         ->name('tournaments.clone');
 
     Route::get('/tournament-templates', [\App\Http\Controllers\TournamentTemplateController::class, 'index'])
@@ -433,9 +478,9 @@ Route::middleware(['auth','role:editor,admin'])->group(function () {
         ->name('tournament_result_formats.versions.store');
     Route::get('/tournament-result-format-versions/{version}/download', [\App\Http\Controllers\TournamentResultFormatController::class, 'download'])
         ->name('tournament_result_format_versions.download');
-    
+
     Route::resource('tournaments', TournamentController::class)->except(['destroy']);
-    
+
     // 大会エントリー後続（管理）
     Route::get('/tournaments/{tournament}/entries', [\App\Http\Controllers\TournamentEntryAdminController::class, 'index'])
         ->name('tournaments.entries.index');
@@ -509,7 +554,7 @@ Route::middleware(['auth','role:editor,admin'])->group(function () {
     Route::resource('venues', VenuePageController::class)->except(['show']);
 
     Route::resource('tournaments.results', TournamentResultController::class)
-        ->only(['index','create','store','edit','update'])
+        ->only(['index', 'create', 'store', 'edit', 'update'])
         ->shallow();
 
     Route::get('/tournaments/{tournament}/results/create', [TournamentResultController::class, 'create'])
@@ -594,10 +639,10 @@ Route::middleware(['auth','role:editor,admin'])->group(function () {
     })->name('instructors.edit.legacy');
     Route::get('/certified_instructors/{license_no}/edit', [InstructorController::class, 'edit'])->name('certified_instructors.edit');
 
-    Route::get('/admin/trainings/bulk',  [BulkTrainingController::class, 'create'])->name('trainings.bulk');
+    Route::get('/admin/trainings/bulk', [BulkTrainingController::class, 'create'])->name('trainings.bulk');
     Route::post('/admin/trainings/bulk', [BulkTrainingController::class, 'store'])->name('trainings.bulk.store');
     Route::get('/admin/trainings/reports/{scope?}', [TrainingReportController::class, 'index'])
-        ->whereIn('scope', ['compliant','missing','expired','expiring'])
+        ->whereIn('scope', ['compliant', 'missing', 'expired', 'expiring'])
         ->name('trainings.reports');
 
     Route::get('/tp-registration', [TpRegistrationController::class, 'index'])->name('tp_registration.index');
@@ -610,13 +655,13 @@ Route::middleware(['auth','role:editor,admin'])->group(function () {
     Route::redirect('/tp_registration', '/tp-registration', 301);
 
     Route::prefix('calendar-events')->name('calendar_events.')->group(function () {
-        Route::get('', [CalendarEventController::class,'index'])->name('index');
-        Route::get('create', [CalendarEventController::class,'create'])->name('create');
-        Route::post('', [CalendarEventController::class,'store'])->name('store');
-        Route::get('{event}/edit', [CalendarEventController::class,'edit'])->name('edit');
-        Route::put('{event}', [CalendarEventController::class,'update'])->name('update');
-        Route::get('import', [CalendarEventController::class,'importForm'])->name('importForm');
-        Route::post('import', [CalendarEventController::class,'import'])->name('import');
+        Route::get('', [CalendarEventController::class, 'index'])->name('index');
+        Route::get('create', [CalendarEventController::class, 'create'])->name('create');
+        Route::post('', [CalendarEventController::class, 'store'])->name('store');
+        Route::get('{event}/edit', [CalendarEventController::class, 'edit'])->name('edit');
+        Route::put('{event}', [CalendarEventController::class, 'update'])->name('update');
+        Route::get('import', [CalendarEventController::class, 'importForm'])->name('importForm');
+        Route::post('import', [CalendarEventController::class, 'import'])->name('import');
     });
 
     Route::prefix('record_types')->name('record_types.')->group(function () {
@@ -648,29 +693,29 @@ Route::middleware(['auth','role:editor,admin'])->group(function () {
     Route::post('/instructors/import/auth', [AuthInstructorImportController::class, 'import'])->name('instructors.import_auth');
 
     Route::resource('pro_groups', \App\Http\Controllers\ProGroupController::class)
-        ->only(['index','show','create','store','edit','update']);
-    Route::post('pro_groups/{pro_group}/rebuild', [\App\Http\Controllers\ProGroupController::class,'rebuild'])
+        ->only(['index', 'show', 'create', 'store', 'edit', 'update']);
+    Route::post('pro_groups/{pro_group}/rebuild', [\App\Http\Controllers\ProGroupController::class, 'rebuild'])
         ->name('pro_groups.rebuild');
-    Route::get('pro_groups/{pro_group}/export-csv', [\App\Http\Controllers\ProGroupController::class,'exportCsv'])
+    Route::get('pro_groups/{pro_group}/export-csv', [\App\Http\Controllers\ProGroupController::class, 'exportCsv'])
         ->name('pro_groups.export_csv');
-    
+
     Route::post('tournaments/{tournament}/participant-group',
         [\App\Http\Controllers\ProGroupController::class, 'quickCreateTournamentGroup']
     )->name('tournaments.participant_group.create');
 
-    Route::get('pro_groups/{group}/mail/create', [\App\Http\Controllers\GroupMailController::class,'create'])
+    Route::get('pro_groups/{group}/mail/create', [\App\Http\Controllers\GroupMailController::class, 'create'])
         ->name('pro_groups.mail.create');
-    Route::post('pro_groups/{group}/mail', [\App\Http\Controllers\GroupMailController::class,'store'])
+    Route::post('pro_groups/{group}/mail', [\App\Http\Controllers\GroupMailController::class, 'store'])
         ->name('pro_groups.mail.store');
-    Route::get('pro_groups/{group}/mail/{mailout}', [\App\Http\Controllers\GroupMailController::class,'show'])
+    Route::get('pro_groups/{group}/mail/{mailout}', [\App\Http\Controllers\GroupMailController::class, 'show'])
         ->name('pro_groups.mail.show');
-    
+
     Route::get('/hof/create', [HofManageController::class, 'create'])->name('hof.create');
-    Route::post('/hof',       [HofManageController::class, 'store'])->name('hof.store');
+    Route::post('/hof', [HofManageController::class, 'store'])->name('hof.store');
 
     Route::get('/hof/{id}/edit', [HofManageController::class, 'edit'])
         ->whereNumber('id')->name('hof.edit');
-    Route::put('/hof/{id}',      [HofManageController::class, 'update'])
+    Route::put('/hof/{id}', [HofManageController::class, 'update'])
         ->whereNumber('id')->name('hof.update');
 
     Route::post('/hof/{id}/photos/upload', [HofManageController::class, 'uploadPhoto'])
@@ -683,18 +728,22 @@ Route::middleware(['auth','role:editor,admin'])->group(function () {
         ->name('hof.show');
 
     Route::get('/hof/{slug}/manage', function (string $slug) {
-        $T   = env('JPBA_PROFILES_TABLE');
-        $CID = env('JPBA_PROFILES_ID_COL','id');
-        $CSL = env('JPBA_PROFILES_SLUG_COL','slug');
+        $T = env('JPBA_PROFILES_TABLE');
+        $CID = env('JPBA_PROFILES_ID_COL', 'id');
+        $CSL = env('JPBA_PROFILES_SLUG_COL', 'slug');
 
-        $pro = DB::table($T)->where($CSL,$slug)->first([$CID.' as id']);
-        if (!$pro) abort(404);
+        $pro = DB::table($T)->where($CSL, $slug)->first([$CID.' as id']);
+        if (! $pro) {
+            abort(404);
+        }
 
-        $hof = DB::table('hof_inductions')->where('pro_id',$pro->id)->first(['id']);
-        if (!$hof) abort(404);
+        $hof = DB::table('hof_inductions')->where('pro_id', $pro->id)->first(['id']);
+        if (! $hof) {
+            abort(404);
+        }
 
-        return redirect()->route('hof.edit',['id'=>$hof->id]);
-    })->where('slug','^(?!create$)[A-Za-z0-9\-_]+$')->name('hof.manage.by_slug');
+        return redirect()->route('hof.edit', ['id' => $hof->id]);
+    })->where('slug', '^(?!create$)[A-Za-z0-9\-_]+$')->name('hof.manage.by_slug');
 
     Route::prefix('eligibility')->name('eligibility.')->group(function () {
         Route::get('/evergreen', [EligibilityController::class, 'evergreen'])
@@ -720,7 +769,7 @@ Route::middleware(['auth','role:editor,admin'])->group(function () {
    管理者のみ（削除・設定・通知） auth + role:admin
 ======================================================================= */
 Route::prefix('admin')->name('admin.')
-    ->middleware(['auth','role:admin'])
+    ->middleware(['auth', 'role:admin'])
     ->group(function () {
         Route::get('/', [AdminHomeController::class, 'index'])->name('home');
 
@@ -736,68 +785,75 @@ Route::prefix('admin')->name('admin.')
         Route::get('/public-pages/{publicPage}/edit', [ManagedPublicPageController::class, 'edit'])->name('public_pages.edit');
         Route::put('/public-pages/{publicPage}', [ManagedPublicPageController::class, 'update'])->name('public_pages.update');
 
+        Route::get('/pro-bowlers/{bowler}/account', [PlayerAccountAdminController::class, 'show'])->name('player_accounts.show');
+        Route::post('/pro-bowlers/{bowler}/account/issue', [PlayerAccountAdminController::class, 'issue'])->name('player_accounts.issue');
+        Route::post('/pro-bowlers/{bowler}/account/setup-link', [PlayerAccountAdminController::class, 'sendSetupLink'])->name('player_accounts.setup_link');
+        Route::post('/pro-bowlers/{bowler}/account/status', [PlayerAccountAdminController::class, 'updateStatus'])->name('player_accounts.status');
+
         Route::delete('/hof/photos/{photo}', [HofManageController::class, 'destroyPhoto'])
-        ->whereNumber('photo')
-        ->name('hof.photos.destroy');
+            ->whereNumber('photo')
+            ->name('hof.photos.destroy');
 
         Route::delete('/hof/{id}', [HofManageController::class, 'destroy'])
             ->whereNumber('id')
             ->name('hof.destroy');
-        
+
         Route::get('/tournaments/{tournament}/draw-settings', [DrawController::class, 'settings'])->name('tournaments.draw.settings');
         Route::post('/tournaments/{tournament}/draw-settings', [DrawController::class, 'saveSettings'])->name('tournaments.draw.settings.save');
 
-        Route::get('/compliance', [ComplianceController::class,'index'])->name('compliance.index');
-        Route::post('/compliance/sync-official-list', [ComplianceController::class,'syncOfficialList'])->name('compliance.sync_official_list');
-        Route::post('/compliance/notify', [ComplianceController::class,'notify'])->name('compliance.notify');
-        Route::post('/compliance/reconcile', [ComplianceController::class,'reconcile'])->name('compliance.reconcile');
-        Route::get('/compliance/export', [ComplianceController::class,'export'])->name('compliance.export');
+        Route::get('/compliance', [ComplianceController::class, 'index'])->name('compliance.index');
+        Route::post('/compliance/sync-official-list', [ComplianceController::class, 'syncOfficialList'])->name('compliance.sync_official_list');
+        Route::post('/compliance/notify', [ComplianceController::class, 'notify'])->name('compliance.notify');
+        Route::post('/compliance/reconcile', [ComplianceController::class, 'reconcile'])->name('compliance.reconcile');
+        Route::get('/compliance/export', [ComplianceController::class, 'export'])->name('compliance.export');
 
-        Route::delete('/tournaments/{tournament}', [TournamentController::class,'destroy'])->name('tournaments.destroy');
-        Route::delete('/tournaments/{tournament}/results/{result}', [TournamentResultController::class,'destroy'])->name('tournaments.results.destroy');
-        Route::delete('/tournaments/{tournament}/prize_distributions/{prize_distribution}', [PrizeDistributionController::class,'destroy'])
+        Route::delete('/tournaments/{tournament}', [TournamentController::class, 'destroy'])->name('tournaments.destroy');
+        Route::delete('/tournaments/{tournament}/results/{result}', [TournamentResultController::class, 'destroy'])->name('tournaments.results.destroy');
+        Route::delete('/tournaments/{tournament}/prize_distributions/{prize_distribution}', [PrizeDistributionController::class, 'destroy'])
             ->name('tournaments.prize_distributions.destroy');
-        Route::delete('/tournaments/{tournament}/point_distributions/{point_distribution}', [PointDistributionController::class,'destroy'])
+        Route::delete('/tournaments/{tournament}/point_distributions/{point_distribution}', [PointDistributionController::class, 'destroy'])
             ->name('tournaments.point_distributions.destroy');
 
-        Route::delete('/approved_balls/{approved_ball}', [ApprovedBallController::class,'destroy'])->name('approved_balls.destroy');
-        Route::delete('/registered_balls/{registered_balls}', [RegisteredBallController::class,'destroy'])->name('registered_balls.destroy');
-        Route::delete('/used_balls/{used_ball}', [UsedBallController::class,'destroy'])->name('used_balls.destroy');
+        Route::delete('/approved_balls/{approved_ball}', [ApprovedBallController::class, 'destroy'])->name('approved_balls.destroy');
+        Route::delete('/registered_balls/{registered_balls}', [RegisteredBallController::class, 'destroy'])->name('registered_balls.destroy');
+        Route::delete('/used_balls/{used_ball}', [UsedBallController::class, 'destroy'])->name('used_balls.destroy');
 
-        Route::delete('/instructors/{instructor}', [InstructorController::class,'destroy'])->name('instructors.destroy');
-        Route::delete('/calendar-events/{event}', [CalendarEventController::class,'destroy'])->name('calendar_events.destroy');
-        Route::delete('/record_types/{record_type}', [RecordTypeController::class,'destroy'])->name('record_types.destroy');
+        Route::delete('/instructors/{instructor}', [InstructorController::class, 'destroy'])->name('instructors.destroy');
+        Route::delete('/calendar-events/{event}', [CalendarEventController::class, 'destroy'])->name('calendar_events.destroy');
+        Route::delete('/record_types/{record_type}', [RecordTypeController::class, 'destroy'])->name('record_types.destroy');
 
         Route::delete('pro_groups/{pro_group}', [\App\Http\Controllers\ProGroupController::class, 'destroy'])
-            ->middleware(['auth','role:admin'])
+            ->middleware(['auth', 'role:admin'])
             ->name('pro_groups.destroy');
 
         Route::delete('/pro_bowlers/{bowler}/titles/{title}', [ProBowlerTitleController::class, 'destroy'])->name('pro_bowler_titles.destroy');
-        
+
         Route::get('/tools/db/tables', function () {
-            $tables = DB::select("SELECT table_name
+            $tables = DB::select('SELECT table_name
                                 FROM information_schema.tables
                                 WHERE table_schema = current_schema()
-                                ORDER BY table_name");
+                                ORDER BY table_name');
+
             return response()->json([
-                'schema' => DB::selectOne("SELECT current_schema() AS s")->s ?? 'public',
-                'tables' => array_map(fn($r) => $r->table_name, $tables),
+                'schema' => DB::selectOne('SELECT current_schema() AS s')->s ?? 'public',
+                'tables' => array_map(fn ($r) => $r->table_name, $tables),
             ]);
-        })->middleware(['auth','role:admin'])->name('tools.db.tables');
+        })->middleware(['auth', 'role:admin'])->name('tools.db.tables');
 
         Route::get('/tools/db/columns/{table}', function (string $table) {
-            if (!Schema::hasTable($table)) {
+            if (! Schema::hasTable($table)) {
                 return response()->json(['error' => "table '{$table}' not found in current schema"], 404);
             }
-            $cols = DB::select("SELECT column_name, data_type
+            $cols = DB::select('SELECT column_name, data_type
                                 FROM information_schema.columns
                                 WHERE table_schema = current_schema()
                                 AND table_name = ?
-                                ORDER BY ordinal_position", [$table]);
+                                ORDER BY ordinal_position', [$table]);
+
             return response()->json([
                 'table' => $table,
                 'columns' => $cols,
             ]);
-        })->middleware(['auth','role:admin'])->name('tools.db.columns');
-    
+        })->middleware(['auth', 'role:admin'])->name('tools.db.columns');
+
     });

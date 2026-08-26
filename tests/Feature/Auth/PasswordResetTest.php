@@ -55,6 +55,21 @@ test('password can be reset with valid token', function () {
             ->assertSessionHasNoErrors()
             ->assertRedirect(route('login'));
 
+        expect($user->refresh()->password_set_at)->not->toBeNull();
+
         return true;
     });
+});
+
+test('suspended account does not receive a reset link', function () {
+    Notification::fake();
+    $user = User::factory()->create([
+        'account_status' => User::STATUS_SUSPENDED,
+        'suspended_at' => now(),
+    ]);
+
+    $this->post('/forgot-password', ['email' => $user->email])
+        ->assertSessionHas('status');
+
+    Notification::assertNothingSent();
 });

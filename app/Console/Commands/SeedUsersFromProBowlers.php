@@ -3,10 +3,9 @@
 namespace App\Console\Commands;
 
 use App\Models\ProBowler;
-use App\Models\User;
+use App\Services\PlayerAccountService;
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Password;
 
 class SeedUsersFromProBowlers extends Command
 {
@@ -14,11 +13,12 @@ class SeedUsersFromProBowlers extends Command
         {--bowler-id=* : 発行対象のpro_bowlers.id（複数指定可）}
         {--license=* : 発行対象のライセンス番号（複数指定可）}
         {--all : 全選手を対象にする}
-        {--dry-run : DBを変更せず対象と処理内容だけ確認する}';
+        {--dry-run : DBを変更せず対象と処理内容だけ確認する}
+        {--send-setup-link : 発行・更新後に初回パスワード設定メールを送信する}';
 
     protected $description = '選手プロフィールから会員アカウントを段階発行し、選手IDとライセンス番号を結線する';
 
-    public function handle(): int
+    public function handle(PlayerAccountService $accounts): int
     {
         $bowlerIds = collect($this->option('bowler-id'))
             ->map(fn ($value) => (int) $value)
@@ -32,6 +32,7 @@ class SeedUsersFromProBowlers extends Command
             ->values();
         $all = (bool) $this->option('all');
         $dryRun = (bool) $this->option('dry-run');
+        $sendSetupLink = (bool) $this->option('send-setup-link');
 
         if (! $all && $bowlerIds->isEmpty() && $licenses->isEmpty()) {
             $this->error('安全のため対象指定が必要です。--bowler-id、--license、または --all を指定してください。');
@@ -41,6 +42,11 @@ class SeedUsersFromProBowlers extends Command
 
         if ($all && ($bowlerIds->isNotEmpty() || $licenses->isNotEmpty())) {
             $this->error('--all と個別の対象指定は同時に使えません。');
+
+            return self::FAILURE;
+        }
+        if ($all && $sendSetupLink) {
+            $this->error('安全のため --all と --send-setup-link は同時に使えません。');
 
             return self::FAILURE;
         }
@@ -61,101 +67,56 @@ class SeedUsersFromProBowlers extends Command
         $created = 0;
         $updated = 0;
         $skipped = 0;
+        $mailSent = 0;
+        $mailFailed = 0;
 
-        $query->chunkById(200, function ($bowlers) use ($dryRun, &$created, &$updated, &$skipped) {
+        $query->chunkById(200, function ($bowlers) use (
+            $accounts,
+            $dryRun,
+            $sendSetupLink,
+            &$created,
+            &$updated,
+            &$skipped,
+            &$mailSent,
+            &$mailFailed
+        ): void {
             foreach ($bowlers as $bowler) {
-                $result = $this->issueAccount($bowler, $dryRun);
-                match ($result) {
+                $result = $accounts->issue($bowler, $dryRun);
+                $this->{$result['status'] === 'skipped' ? 'warn' : 'line'}($result['message']);
+                match ($result['status']) {
                     'created' => $created++,
                     'updated' => $updated++,
                     default => $skipped++,
                 };
+
+                if (! $sendSetupLink || $result['status'] === 'skipped') {
+                    continue;
+                }
+                if ($dryRun) {
+                    $this->comment('送信予定: '.$bowler->email);
+
+                    continue;
+                }
+
+                $status = $accounts->sendSetupLink($result['user']);
+                if ($status === Password::RESET_LINK_SENT) {
+                    $mailSent++;
+                } else {
+                    $mailFailed++;
+                    $this->warn('初期設定メール送信失敗: '.$bowler->license_no.' / '.__($status));
+                }
             }
         });
 
         $mode = $dryRun ? 'DRY-RUN' : '確定';
         $this->info("{$mode}: 新規 {$created}件 / 更新 {$updated}件 / 見送り {$skipped}件");
+        if ($sendSetupLink) {
+            $this->info("初期設定メール: 送信 {$mailSent}件 / 失敗 {$mailFailed}件");
+        }
         if ($dryRun) {
             $this->comment('DBは変更していません。');
         }
 
-        return self::SUCCESS;
-    }
-
-    private function issueAccount(ProBowler $bowler, bool $dryRun): string
-    {
-        $licenseNo = mb_strtoupper(trim((string) $bowler->license_no));
-        $email = mb_strtolower(trim((string) $bowler->email));
-
-        if ($licenseNo === '') {
-            $this->warn("見送り: 選手ID {$bowler->id} はライセンス番号がありません。");
-
-            return 'skipped';
-        }
-
-        if (! filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            $this->warn("見送り: {$licenseNo} は有効なメールアドレスがありません。");
-
-            return 'skipped';
-        }
-
-        $account = User::query()
-            ->where('pro_bowler_id', $bowler->id)
-            ->orWhere('pro_bowler_license_no', $licenseNo)
-            ->orWhere('license_no', $licenseNo)
-            ->first();
-
-        $emailOwner = User::query()
-            ->whereRaw('lower(email) = ?', [$email])
-            ->when($account, fn ($query) => $query->whereKeyNot($account->id))
-            ->first();
-        if ($emailOwner) {
-            $this->warn("見送り: {$licenseNo} のメールアドレスは別アカウントで使用中です。");
-
-            return 'skipped';
-        }
-
-        if ($account && $account->pro_bowler_id && (int) $account->pro_bowler_id !== (int) $bowler->id) {
-            $this->warn("見送り: {$licenseNo} の既存アカウントは別の選手IDに結線されています。");
-
-            return 'skipped';
-        }
-
-        $displayName = $bowler->name_kanji ?: $bowler->name_kana ?: $licenseNo;
-        $role = $account && in_array($account->role, ['admin', 'editor'], true)
-            ? $account->role
-            : 'member';
-        $payload = [
-            'name' => $displayName,
-            'email' => $account?->email ?: $email,
-            'role' => $role,
-            'pro_bowler_id' => $bowler->id,
-            'pro_bowler_license_no' => $licenseNo,
-            'license_no' => $licenseNo,
-        ];
-
-        if ($dryRun) {
-            $action = $account ? '更新予定' : '新規予定';
-            $this->line("{$action}: {$licenseNo} {$displayName} / 選手ID {$bowler->id}");
-
-            return $account ? 'updated' : 'created';
-        }
-
-        if ($account) {
-            $account->update($payload);
-            $this->line("更新: {$licenseNo} {$displayName}");
-
-            return 'updated';
-        }
-
-        User::create(array_merge($payload, [
-            // 本人は「パスワードを忘れた方」から初期設定する。共通初期パスワードは使わない。
-            'password' => Hash::make(Str::random(48)),
-            'is_admin' => false,
-        ]));
-        $bowler->forceFill(['password_change_status' => 2])->saveQuietly();
-        $this->line("新規: {$licenseNo} {$displayName}");
-
-        return 'created';
+        return $mailFailed === 0 ? self::SUCCESS : self::FAILURE;
     }
 }

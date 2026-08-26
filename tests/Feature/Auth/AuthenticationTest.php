@@ -54,3 +54,17 @@ test('users can authenticate using their professional license number', function 
     $this->assertAuthenticatedAs($user);
     $response->assertRedirect(route('member.dashboard', absolute: false));
 });
+
+test('suspended users cannot authenticate', function () {
+    $user = User::factory()->create([
+        'account_status' => User::STATUS_SUSPENDED,
+        'suspended_at' => now(),
+    ]);
+
+    $this->post('/login', [
+        'login' => $user->email,
+        'password' => 'password',
+    ])->assertSessionHasErrors('login');
+
+    $this->assertGuest();
+});

@@ -1,5 +1,5 @@
 // Auto-generated from docs/db/data_dictionary.md
-// Generated at: 2026-08-27T01:05:08+09:00
+// Generated at: 2026-08-27T01:23:39+09:00
 
 Project JPBA_SYSTEM {
   database_type: 'PostgreSQL'
@@ -409,6 +409,10 @@ Table used_balls {
   // columns omitted (see docs/db/columns_by_table.md)
 }
 
+Table user_account_status_logs {
+  // columns omitted (see docs/db/columns_by_table.md)
+}
+
 Table users {
   // columns omitted (see docs/db/columns_by_table.md)
 }
@@ -596,4 +600,6 @@ Ref: training_sessions.updated_by_user_id > users.id
 Ref: usbc_approved_ball_entries.list_id > usbc_approved_ball_lists.id
 Ref: used_balls.approved_ball_id > approved_balls.id
 Ref: used_balls.pro_bowler_id > pro_bowlers.id
+Ref: user_account_status_logs.changed_by > users.id
+Ref: user_account_status_logs.user_id > users.id
 Ref: users.pro_bowler_id > pro_bowlers.id

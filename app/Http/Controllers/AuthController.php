@@ -2,11 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ProBowler;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
-use App\Models\ProBowler;
-use App\Models\User;
 
 class AuthController extends Controller
 {
@@ -16,17 +16,18 @@ class AuthController extends Controller
         if (Auth::check()) {
             return redirect()->route('member.dashboard');
         }
+
         return view('auth.login');
     }
 
     public function login(Request $request)
     {
         $request->validate([
-            'login'    => ['required', 'string'],  // email または ライセンスNo
+            'login' => ['required', 'string'],  // email または ライセンスNo
             'password' => ['required', 'string'],
         ]);
 
-        $login    = trim($request->string('login'));
+        $login = trim($request->string('login'));
         $password = $request->input('password');
         $remember = $request->boolean('remember');
 
@@ -38,9 +39,15 @@ class AuthController extends Controller
 
         $user = $this->findUserForLogin($emailOrLicense, $isEmail);
 
-        if (!$user || !Hash::check($password, $user->password)) {
+        if (! $user || ! Hash::check($password, $user->password)) {
             return back()->withErrors([
                 'login' => 'メールアドレス / ライセンスNo またはパスワードが違います。',
+            ])->withInput(['login' => $request->input('login')]);
+        }
+
+        if (! $user->isAccountActive()) {
+            return back()->withErrors([
+                'login' => 'このアカウントは現在利用できません。事務局へお問い合わせください。',
             ])->withInput(['login' => $request->input('login')]);
         }
 
@@ -93,6 +100,7 @@ class AuthController extends Controller
         Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
+
         return redirect()->route('login');
     }
 }

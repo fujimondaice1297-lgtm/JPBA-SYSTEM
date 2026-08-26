@@ -9,6 +9,7 @@ class PlayerAccountBallLinkageSourceTest extends TestCase
     public function test_account_issuance_always_links_the_member_to_the_player_id(): void
     {
         $command = file_get_contents(app_path('Console/Commands/SeedUsersFromProBowlers.php'));
+        $service = file_get_contents(app_path('Services/PlayerAccountService.php'));
         $registration = file_get_contents(app_path('Http/Controllers/Auth/RegisterController.php'));
         $forgotPassword = file_get_contents(app_path('Http/Controllers/Auth/ForgotPasswordController.php'));
         $middleware = file_get_contents(app_path('Http/Middleware/RoleMiddleware.php'));
@@ -16,11 +17,17 @@ class PlayerAccountBallLinkageSourceTest extends TestCase
         $this->assertIsString($command);
         $this->assertStringContainsString('{--bowler-id=*', $command);
         $this->assertStringContainsString('{--dry-run', $command);
-        $this->assertStringContainsString("'role' => \$role", $command);
-        $this->assertStringContainsString("'pro_bowler_id' => \$bowler->id", $command);
-        $this->assertStringContainsString("'license_no' => \$licenseNo", $command);
-        $this->assertStringContainsString('Str::random(48)', $command);
+        $this->assertStringContainsString('{--send-setup-link', $command);
+        $this->assertStringContainsString('PlayerAccountService', $command);
         $this->assertStringNotContainsString("Hash::make('changeme')", $command);
+
+        $this->assertIsString($service);
+        $this->assertStringContainsString("'role' => 'member'", $service);
+        $this->assertStringContainsString("in_array(\$account->role, ['admin', 'editor'], true)", $service);
+        $this->assertStringContainsString("'pro_bowler_id' => \$bowler->id", $service);
+        $this->assertStringContainsString("'license_no' => \$licenseNo", $service);
+        $this->assertStringContainsString('Str::random(48)', $service);
+        $this->assertStringContainsString('changeStatus(', $service);
 
         $this->assertIsString($registration);
         $this->assertStringContainsString("'role'", $registration);
@@ -28,13 +35,13 @@ class PlayerAccountBallLinkageSourceTest extends TestCase
         $this->assertStringContainsString("'pro_bowler_license_no'", $registration);
 
         $this->assertIsString($forgotPassword);
-        $this->assertStringContainsString("\$user->role = 'member'", $forgotPassword);
-        $this->assertStringContainsString('$user->pro_bowler_id = $pb->id', $forgotPassword);
-        $this->assertStringContainsString('$user->pro_bowler_license_no = $pb->license_no', $forgotPassword);
+        $this->assertStringContainsString('$user?->isAccountActive()', $forgotPassword);
+        $this->assertStringNotContainsString('new User()', $forgotPassword);
 
         $this->assertIsString($middleware);
         $this->assertStringContainsString("\$actual === 'bowler'", $middleware);
         $this->assertStringContainsString("\$actual = 'member'", $middleware);
+        $this->assertStringContainsString('isAccountActive()', $middleware);
     }
 
     public function test_registered_ball_and_tournament_flows_share_the_player_id_linkage_service(): void
@@ -74,6 +81,7 @@ class PlayerAccountBallLinkageSourceTest extends TestCase
         $this->assertStringContainsString('選手ID結線', $form);
         $this->assertStringContainsString('暗号化保存のため表示できません', $form);
         $this->assertStringContainsString('旧サイトログインID', $form);
+        $this->assertStringContainsString('admin.player_accounts.show', $form);
         $this->assertStringNotContainsString('name="mypage_temp_password"', $form);
     }
 

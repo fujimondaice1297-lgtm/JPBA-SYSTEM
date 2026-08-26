@@ -23,6 +23,7 @@ class ChangePasswordController extends Controller
 
         $user = Auth::user();
         $user->password = Hash::make($request->new_password);
+        $user->password_set_at = now();
         $user->save();
 
         // ★ 表示名の取り方をちゃんとやる（優先: 漢字 → name → email）

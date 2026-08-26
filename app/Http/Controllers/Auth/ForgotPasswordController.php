@@ -20,8 +20,8 @@ class ForgotPasswordController extends Controller
     /**
      * 初期パスワード設定（リセットリンク送信）
      * - 入力 email を users.email と照合
-     * - users に無ければ pro_bowlers.email と照合して 1件一致なら users を自動作成
-     * - その上で Password::sendResetLink() を 1回だけ実行（ログも正しい status を出す）
+     * - 発行済みかつ利用中の users だけを対象にする
+     * - 未発行選手のアカウントを再設定画面から自動作成しない
      *
      * セキュリティ：存在しない場合でも同じメッセージを返す（列挙対策）
      */
@@ -36,57 +36,22 @@ class ForgotPasswordController extends Controller
             'email' => $email,
         ]);
 
-        $created = false;
-
-        // 既に users に存在するなら、そのまま通常のリセットを許可
         $user = User::whereRaw('LOWER(email) = ?', [$email])->first();
 
-        // users に居ない場合だけ、pro_bowlers 側から救済（自動作成）
-        if (!$user) {
-            // 同一メールが複数 pro_bowlers に紐付く場合は危険なので自動紐付けしない
-            $candidates = ProBowler::query()
-                ->whereNotNull('email')
-                ->whereRaw('LOWER(email) = ?', [$email])
-                ->limit(2)
-                ->get();
-
-            if ($candidates->count() === 1) {
-                $pb = $candidates->first();
-
-                $user = new User();
-                $user->email = $email;
-
-                // 初期はランダム（本人がリセットで設定する前提）
-                $user->password = Hash::make(Str::random(32));
-
-                // 既存カラムに合わせて紐付け（存在しないカラムがあればその行だけ削除でOK）
-                $user->name = $pb->name_kanji ?? $pb->name_kana ?? ($pb->license_no ?? 'member');
-                $user->role = 'member';
-                $user->is_admin = false;
-                $user->pro_bowler_id = $pb->id;
-                $user->pro_bowler_license_no = $pb->license_no ?? null;
-                $user->license_no = $pb->license_no ?? null;
-
-                $user->save();
-                $created = true;
-            }
-        }
-
         // users が存在する時だけ送る（存在しない場合も同じメッセージで返す：列挙対策）
-        if ($user) {
+        if ($user?->isAccountActive()) {
             $status = Password::sendResetLink(['email' => $user->email]);
 
             \Log::debug('ForgotPasswordController@sendResetLinkEmail status', [
-                'email'    => $email,
-                'status'   => $status,
-                'created'  => $created,
-                'user_id'  => $user->id,
+                'email' => $email,
+                'status' => $status,
+                'user_id' => $user->id,
             ]);
         } else {
             \Log::debug('ForgotPasswordController@sendResetLinkEmail status', [
-                'email'   => $email,
-                'status'  => 'skipped(no-user)',
-                'created' => $created,
+                'email' => $email,
+                'status' => 'skipped(no-user)',
+                'account_status' => $user?->account_status,
             ]);
         }
 
@@ -115,7 +80,7 @@ class ForgotPasswordController extends Controller
     {
         \Log::debug('ForgotPasswordController@reset hit', [
             'email' => $request->input('email'),
-            'has_token' => (bool)$request->input('token'),
+            'has_token' => (bool) $request->input('token'),
         ]);
 
         // ※スペース事故を防ぐため、パスワードは「空白なし」を強制（超おすすめ）
@@ -126,6 +91,10 @@ class ForgotPasswordController extends Controller
         ]);
 
         $email = mb_strtolower(trim($request->input('email')));
+        $resetUser = User::query()->whereRaw('LOWER(email) = ?', [$email])->first();
+        if (! $resetUser?->isAccountActive()) {
+            return back()->withErrors(['email' => __(Password::INVALID_USER)]);
+        }
 
         $status = Password::reset(
             [
@@ -137,6 +106,7 @@ class ForgotPasswordController extends Controller
             function ($user, $password) {
                 $user->password = Hash::make($password);
                 $user->setRememberToken(Str::random(60));
+                $user->password_set_at = now();
                 $user->save();
 
                 \Log::debug('ForgotPasswordController@reset updated user', [
@@ -145,7 +115,7 @@ class ForgotPasswordController extends Controller
                 ]);
 
                 // pro_bowlers 側に「更新済」を記録（カラムがあれば）
-                if (!empty($user->pro_bowler_id)) {
+                if (! empty($user->pro_bowler_id)) {
                     try {
                         ProBowler::where('id', $user->pro_bowler_id)
                             ->update(['password_change_status' => 0]);

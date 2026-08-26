@@ -11,6 +11,12 @@ class User extends Authenticatable
 {
     use HasApiTokens, HasFactory, Notifiable;
 
+    public const STATUS_ACTIVE = 'active';
+
+    public const STATUS_SUSPENDED = 'suspended';
+
+    public const STATUS_CLOSED = 'closed';
+
     protected $fillable = [
         'name',
         'email',
@@ -20,6 +26,12 @@ class User extends Authenticatable
         'pro_bowler_id',
         'pro_bowler_license_no',
         'license_no',
+        'account_status',
+        'setup_link_sent_at',
+        'password_set_at',
+        'suspended_at',
+        'closed_at',
+        'account_status_note',
     ];
 
     protected $hidden = ['password', 'remember_token'];
@@ -30,6 +42,10 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'is_admin' => 'boolean', // ← これは残しても動作には問題なし
+            'setup_link_sent_at' => 'datetime',
+            'password_set_at' => 'datetime',
+            'suspended_at' => 'datetime',
+            'closed_at' => 'datetime',
         ];
     }
 
@@ -53,6 +69,26 @@ class User extends Authenticatable
             'pro_bowler_license_no',
             'id'
         )->withPivot('year')->withTimestamps();
+    }
+
+    public function accountStatusLogs()
+    {
+        return $this->hasMany(UserAccountStatusLog::class)->latest('id');
+    }
+
+    public function isAccountActive(): bool
+    {
+        return ($this->account_status ?: self::STATUS_ACTIVE) === self::STATUS_ACTIVE;
+    }
+
+    public function getAccountStatusLabelAttribute(): string
+    {
+        return match ($this->account_status ?: self::STATUS_ACTIVE) {
+            self::STATUS_ACTIVE => '利用中',
+            self::STATUS_SUSPENDED => '利用停止',
+            self::STATUS_CLOSED => '終了',
+            default => (string) $this->account_status,
+        };
     }
 
     // === ロール判定 ===

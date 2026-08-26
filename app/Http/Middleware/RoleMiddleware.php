@@ -15,6 +15,16 @@ class RoleMiddleware
             abort(401);
         }
 
+        if (! $user->isAccountActive()) {
+            Auth::logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+
+            return redirect()->route('login')->withErrors([
+                'login' => 'このアカウントは現在利用できません。事務局へお問い合わせください。',
+            ]);
+        }
+
         // "admin,editor" / "admin|editor" どちらでもOK
         if (count($roles) === 1) {
             $roles = str_contains($roles[0], ',')

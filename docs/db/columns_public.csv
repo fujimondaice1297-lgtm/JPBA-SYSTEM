@@ -1675,6 +1675,14 @@ used_balls,6,registered_at,date,NO
 used_balls,7,expires_at,date,YES
 used_balls,8,created_at,timestamp without time zone,YES
 used_balls,9,updated_at,timestamp without time zone,YES
+user_account_status_logs,1,id,bigint,NO
+user_account_status_logs,2,user_id,bigint,NO
+user_account_status_logs,3,from_status,character varying,YES
+user_account_status_logs,4,to_status,character varying,NO
+user_account_status_logs,5,reason,text,YES
+user_account_status_logs,6,changed_by,bigint,YES
+user_account_status_logs,7,created_at,timestamp without time zone,YES
+user_account_status_logs,8,updated_at,timestamp without time zone,YES
 users,1,id,bigint,NO
 users,2,name,character varying,NO
 users,3,email,character varying,NO
@@ -1688,6 +1696,12 @@ users,10,is_admin,boolean,NO
 users,11,pro_bowler_license_no,character varying,YES
 users,12,pro_bowler_id,bigint,YES
 users,13,license_no,character varying,YES
+users,14,account_status,character varying,NO
+users,15,setup_link_sent_at,timestamp without time zone,YES
+users,16,password_set_at,timestamp without time zone,YES
+users,17,suspended_at,timestamp without time zone,YES
+users,18,closed_at,timestamp without time zone,YES
+users,19,account_status_note,text,YES
 venues,1,id,bigint,NO
 venues,2,name,character varying,NO
 venues,3,address,character varying,YES

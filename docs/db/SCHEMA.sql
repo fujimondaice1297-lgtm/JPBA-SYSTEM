@@ -5968,6 +5968,41 @@ ALTER SEQUENCE public.used_balls_id_seq OWNED BY public.used_balls.id;
 
 
 --
+-- Name: user_account_status_logs; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.user_account_status_logs (
+    id bigint NOT NULL,
+    user_id bigint NOT NULL,
+    from_status character varying(255),
+    to_status character varying(255) NOT NULL,
+    reason text,
+    changed_by bigint,
+    created_at timestamp(0) without time zone,
+    updated_at timestamp(0) without time zone
+);
+
+
+--
+-- Name: user_account_status_logs_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.user_account_status_logs_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: user_account_status_logs_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.user_account_status_logs_id_seq OWNED BY public.user_account_status_logs.id;
+
+
+--
 -- Name: users; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -5984,7 +6019,14 @@ CREATE TABLE public.users (
     is_admin boolean DEFAULT false NOT NULL,
     pro_bowler_license_no character varying(255),
     pro_bowler_id bigint,
-    license_no character varying(255)
+    license_no character varying(255),
+    account_status character varying(255) DEFAULT 'active'::character varying NOT NULL,
+    setup_link_sent_at timestamp(0) without time zone,
+    password_set_at timestamp(0) without time zone,
+    suspended_at timestamp(0) without time zone,
+    closed_at timestamp(0) without time zone,
+    account_status_note text,
+    CONSTRAINT users_account_status_check CHECK (((account_status)::text = ANY ((ARRAY['active'::character varying, 'suspended'::character varying, 'closed'::character varying])::text[])))
 );
 
 
@@ -6919,6 +6961,13 @@ ALTER TABLE ONLY public.usbc_approved_ball_lists ALTER COLUMN id SET DEFAULT nex
 --
 
 ALTER TABLE ONLY public.used_balls ALTER COLUMN id SET DEFAULT nextval('public.used_balls_id_seq'::regclass);
+
+
+--
+-- Name: user_account_status_logs id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.user_account_status_logs ALTER COLUMN id SET DEFAULT nextval('public.user_account_status_logs_id_seq'::regclass);
 
 
 --
@@ -8464,6 +8513,14 @@ ALTER TABLE ONLY public.used_balls
 
 
 --
+-- Name: user_account_status_logs user_account_status_logs_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.user_account_status_logs
+    ADD CONSTRAINT user_account_status_logs_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: users users_email_unique; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -9692,6 +9749,20 @@ CREATE INDEX usbc_ball_entries_name_index ON public.usbc_approved_ball_entries U
 --
 
 CREATE INDEX usbc_ball_lists_updated_status_index ON public.usbc_approved_ball_lists USING btree (official_updated_on, status);
+
+
+--
+-- Name: user_account_status_logs_user_created_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX user_account_status_logs_user_created_idx ON public.user_account_status_logs USING btree (user_id, created_at);
+
+
+--
+-- Name: users_account_status_index; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX users_account_status_index ON public.users USING btree (account_status);
 
 
 --
@@ -10984,6 +11055,22 @@ ALTER TABLE ONLY public.training_sessions
 
 ALTER TABLE ONLY public.usbc_approved_ball_entries
     ADD CONSTRAINT usbc_approved_ball_entries_list_id_foreign FOREIGN KEY (list_id) REFERENCES public.usbc_approved_ball_lists(id) ON DELETE CASCADE;
+
+
+--
+-- Name: user_account_status_logs user_account_status_logs_changed_by_foreign; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.user_account_status_logs
+    ADD CONSTRAINT user_account_status_logs_changed_by_foreign FOREIGN KEY (changed_by) REFERENCES public.users(id) ON DELETE SET NULL;
+
+
+--
+-- Name: user_account_status_logs user_account_status_logs_user_id_foreign; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.user_account_status_logs
+    ADD CONSTRAINT user_account_status_logs_user_id_foreign FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
 
 
 --

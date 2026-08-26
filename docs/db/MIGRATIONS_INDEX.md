@@ -156,3 +156,4 @@ Source: `database/migrations`
 - `2026_08_14_000001_add_canonical_pro_bowler_membership_types.php`
 - `2026_08_22_000001_internalize_media_public_document_links.php`
 - `2026_08_27_000001_link_record_types_to_match_score_frames.php`
+- `2026_08_27_000002_add_lifecycle_to_users.php`
