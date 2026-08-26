@@ -9853,3 +9853,36 @@ User::where('email','domaine-d@i.softbank.jp')->exists(); // true
 - 関連テスト9件10,598 assertionsに成功した。
 - DBのカラム・制約変更はないため、DB定義5点セットの再生成は不要。
 - 詳細は `docs/chat/official_2026_late_july_import_20260826.md` を参照。
+
+---
+
+## 2026-08-27 PostgreSQL完全自動テスト・CI環境
+
+### 専用テストDB
+
+- `phpunit.xml` をSQLiteメモリDBからPostgreSQLの `jpba_test` 固定へ変更した。`DB_CONNECTION`、`DB_URL`、`DB_DATABASE` は `force="true"` とし、シェル環境の誤設定で `jpba_main` を参照しない。
+- `jpba:test-database-prepare` を追加した。英数字・アンダースコアだけで `_test` で終わるDB名に限定し、存在しない場合だけ作成する。DROP、初期化、既存DB変更は行わない。
+- `composer test` はconfigクリア、テストDB準備、全テストの順で実行する。
+- ローカルに `jpba_test` を作成し、全migrationが空DBから完走することを確認した。
+
+### fresh migrationとテストの整理
+
+- `2025_09_02_000051_backfill_users_pro_bowler_id_from_license_columns.php` は、当該時点でまだ存在しない `users.license_no` を無条件参照していた。2つの旧ライセンス列を個別の `Schema::hasColumn` で保護し、既存DBの挙動を変えずfresh migrationを可能にした。
+- SQLite専用の簡易テーブルを作っていた公認記録テストと会場マスタ取込テストを、実migration・実PostgreSQLスキーマへ移行した。
+- Laravel初期雛形のメール確認、汎用プロフィール削除、標準パスワード確認テストを、現行JPBAのメール／ライセンスログイン、選手照合付き登録、パスワード変更、選手本人プロフィール編集へ置換した。
+- 六甲クイーンズの旧変数名期待値を現行の `matchScoreSheetImageService` に合わせた。
+
+### 公認800シリーズ修正
+
+- これまでSQLite拡張不足でskipされていたテストを実行した結果、`game_scores.gender` が空の場合に、選手ライセンス由来の `M/F` でスコアを絞り込み、3ゲームが揃わない扱いになる不具合を確認した。
+- シリーズ定義・スコアの性別が未指定ならNULL同士で集計し、候補確認時の公認番号性別は従来どおり選手ライセンスから補完するようにした。
+- 300・250・251の3ゲーム合計801を800シリーズ候補1件、別ゲーム300をパーフェクト候補として検出することを確認した。
+
+### CIと最終検証
+
+- `.github/workflows/tests.yml` を追加し、PostgreSQL 18、PHP 8.4、Composer install、全migration、Unit、Feature、Blade、fixture PDF回帰をpush・pull requestで実行する。
+- 全169テスト・13,034 assertionsは失敗0・skip 0。
+- fixture PDFは標準45,860 bytes、シュートアウト398,643 bytes、シングルエリミネーション112,194 bytesで全件OK。
+- `_test` で終わらない `jpba_main` 指定は安全停止し、現行DBは `jpba_main`、選手2,286名のまま不変。
+- 現行DBのカラム・制約変更はないため、DB定義5点セットの再生成は不要。
+- 詳細は `docs/operations/automated_testing_guide_20260827.md` を参照。

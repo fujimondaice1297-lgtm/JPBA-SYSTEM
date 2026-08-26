@@ -93,12 +93,14 @@
 
 ### P1-3 完全な自動テスト環境
 
-- [ ] テスト用PHPへ `pdo_sqlite` を追加するか、PostgreSQL専用テストDBへ統一する。
-- [ ] 認証・選手プロフィールを含む全テストを実行する。
-- [ ] 現在のソースとずれた旧期待値テストを整理する。
-- [ ] CIでmigration、Unit、Feature、主要PDF回帰を実行する。
+- [x] テスト用PHPへ `pdo_sqlite` を追加するか、PostgreSQL専用テストDBへ統一する。
+- [x] 認証・選手プロフィールを含む全テストを実行する。
+- [x] 現在のソースとずれた旧期待値テストを整理する。
+- [x] CIでmigration、Unit、Feature、主要PDF回帰を実行する。
 
-完了条件：環境不足による失敗・skipがなく、全テストの結果を本番判定に利用できる。
+完了記録（2026-08-27）：本番と同じPostgreSQLの専用 `jpba_test` へ統一し、DB名の安全固定、作成専用コマンド、GitHub Actionsを追加した。全169テスト・13,034 assertionsは失敗0・skip 0。Bladeコンパイルと3方式のfixture PDFも成功し、現行 `jpba_main` の選手2,286名が不変であることを確認した。SQLiteで未実行だったテストから、性別未指定スコアの800シリーズ候補漏れも発見・修正した。
+
+完了条件：達成済み。運用手順は `docs/operations/automated_testing_guide_20260827.md` を参照する。
 
 ### P2-1 公認7－10メイドの自動検出
 

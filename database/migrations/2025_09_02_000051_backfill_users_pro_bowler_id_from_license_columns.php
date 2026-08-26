@@ -8,16 +8,17 @@ return new class extends Migration
 {
     public function up(): void
     {
-        if (!Schema::hasTable('users')) {
+        if (! Schema::hasTable('users')) {
             return;
         }
-        if (!Schema::hasColumn('users', 'pro_bowler_id')) {
+        if (! Schema::hasColumn('users', 'pro_bowler_id')) {
             return;
         }
 
         // 1) pro_bowler_id が NULL の users を、license列から埋める（非破壊）
         // 優先順位：pro_bowler_license_no -> license_no
-        DB::statement(<<<'SQL'
+        if (Schema::hasColumn('users', 'pro_bowler_license_no')) {
+            DB::statement(<<<'SQL'
 UPDATE users u
 SET pro_bowler_id = (
   SELECT pb.id
@@ -34,8 +35,10 @@ WHERE u.pro_bowler_id IS NULL
     WHERE pb.license_no = u.pro_bowler_license_no
   );
 SQL);
+        }
 
-        DB::statement(<<<'SQL'
+        if (Schema::hasColumn('users', 'license_no')) {
+            DB::statement(<<<'SQL'
 UPDATE users u
 SET pro_bowler_id = (
   SELECT pb.id
@@ -52,6 +55,7 @@ WHERE u.pro_bowler_id IS NULL
     WHERE pb.license_no = u.license_no
   );
 SQL);
+        }
 
         // 2) index（存在しても落ちない）
         DB::statement('CREATE INDEX IF NOT EXISTS users_pro_bowler_id_idx ON users (pro_bowler_id)');

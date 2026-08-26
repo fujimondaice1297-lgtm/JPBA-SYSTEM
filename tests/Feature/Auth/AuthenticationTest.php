@@ -12,19 +12,19 @@ test('users can authenticate using the login screen', function () {
     $user = User::factory()->create();
 
     $response = $this->post('/login', [
-        'email' => $user->email,
+        'login' => strtoupper($user->email),
         'password' => 'password',
     ]);
 
     $this->assertAuthenticated();
-    $response->assertRedirect(route('dashboard', absolute: false));
+    $response->assertRedirect(route('member.dashboard', absolute: false));
 });
 
 test('users can not authenticate with invalid password', function () {
     $user = User::factory()->create();
 
     $this->post('/login', [
-        'email' => $user->email,
+        'login' => $user->email,
         'password' => 'wrong-password',
     ]);
 
@@ -37,5 +37,20 @@ test('users can logout', function () {
     $response = $this->actingAs($user)->post('/logout');
 
     $this->assertGuest();
-    $response->assertRedirect('/');
+    $response->assertRedirect(route('login', absolute: false));
+});
+
+test('users can authenticate using their professional license number', function () {
+    $user = User::factory()->create([
+        'pro_bowler_license_no' => 'M00001219',
+        'role' => 'member',
+    ]);
+
+    $response = $this->post('/login', [
+        'login' => 'm00001219',
+        'password' => 'password',
+    ]);
+
+    $this->assertAuthenticatedAs($user);
+    $response->assertRedirect(route('member.dashboard', absolute: false));
 });

@@ -43,7 +43,7 @@ class AchievementDetectionService
                 $definition,
                 $proBowler,
                 $this->nullableString($score->shift),
-                $this->genderFor($score, $proBowler)
+                $this->nullableString($score->gender)
             );
         }
     }
@@ -55,7 +55,7 @@ class AchievementDetectionService
         }
 
         $this->invalidateCandidate(
-            'score:perfect:' . $score->id,
+            'score:perfect:'.$score->id,
             '元スコアが削除されました。'
         );
 
@@ -69,7 +69,7 @@ class AchievementDetectionService
                 $definition,
                 $proBowler,
                 $this->nullableString($score->shift),
-                $this->genderFor($score, $proBowler)
+                $this->nullableString($score->gender)
             );
         }
     }
@@ -110,7 +110,7 @@ class AchievementDetectionService
             ->orderBy('id')
             ->each(function (GameScore $score) use (&$summary): void {
                 $before = RecordType::query()
-                    ->where('detection_key', 'score:perfect:' . $score->id)
+                    ->where('detection_key', 'score:perfect:'.$score->id)
                     ->exists();
                 $this->scanGameScore($score);
                 if (! $before) {
@@ -133,7 +133,7 @@ class AchievementDetectionService
                         'end_game' => 3,
                     ],
                     [
-                        'label' => $setting->stage . ' 3Gシリーズ',
+                        'label' => $setting->stage.' 3Gシリーズ',
                         'is_800_eligible' => true,
                         'is_enabled' => true,
                         'source' => 'stage_setting_auto',
@@ -193,14 +193,14 @@ class AchievementDetectionService
                     $definition,
                     $bowler->id,
                     $this->nullableString($row->shift),
-                    $this->genderFor($row, $bowler)
+                    $this->nullableString($row->gender)
                 );
                 $before = RecordType::query()->where('detection_key', $key)->exists();
                 $this->scanSeriesDefinition(
                     $definition,
                     $bowler,
                     $this->nullableString($row->shift),
-                    $this->genderFor($row, $bowler)
+                    $this->nullableString($row->gender)
                 );
                 if (! $before && RecordType::query()->where('detection_key', $key)->exists()) {
                     $summary['eight_hundred_candidates']++;
@@ -240,7 +240,7 @@ class AchievementDetectionService
 
     private function scanPerfect(GameScore $score, ProBowler $bowler, Tournament $tournament): void
     {
-        $detectionKey = 'score:perfect:' . $score->id;
+        $detectionKey = 'score:perfect:'.$score->id;
         if ((int) $score->score !== 300) {
             $this->invalidateCandidate($detectionKey, 'スコアが300ではなくなりました。');
 
@@ -256,7 +256,7 @@ class AchievementDetectionService
             'stage' => $score->stage,
             'shift' => $this->nullableString($score->shift),
             'gender' => $this->genderFor($score, $bowler),
-            'game_numbers' => trim($score->stage . ' ' . $score->game_number . 'G目'),
+            'game_numbers' => trim($score->stage.' '.$score->game_number.'G目'),
             'awarded_on' => $tournament->start_date?->format('Y-m-d'),
             'registration_mode' => $this->registrationModeFor($tournament),
             'source_type' => 'score_auto',
@@ -354,7 +354,7 @@ class AchievementDetectionService
             'registration_mode' => $this->registrationModeFor($tournament),
             'source_type' => 'score_auto',
             'source_label' => '成績入力から自動検出',
-            'evidence_text' => implode('・', array_column($scoreValues, 'score')) . '＝' . $total,
+            'evidence_text' => implode('・', array_column($scoreValues, 'score')).'＝'.$total,
             'warning' => null,
             'detected_at' => now(),
         ]);
@@ -410,7 +410,7 @@ class AchievementDetectionService
                     'end_game' => 3,
                 ],
                 [
-                    'label' => $score->stage . ' 3Gシリーズ',
+                    'label' => $score->stage.' 3Gシリーズ',
                     'is_800_eligible' => true,
                     'is_enabled' => true,
                     'source' => 'stage_setting_auto',

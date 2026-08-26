@@ -1,85 +1,68 @@
 <?php
 
+use App\Models\ProBowler;
 use App\Models\User;
 
-test('profile page is displayed', function () {
-    $user = User::factory()->create();
-
-    $response = $this
-        ->actingAs($user)
-        ->get('/profile');
-
-    $response->assertOk();
+beforeEach(function () {
+    $this->bowler = ProBowler::query()->create([
+        'license_no' => 'M00001219',
+        'name_kanji' => '川添奨太',
+        'sex' => 1,
+        'email' => 'player@example.com',
+    ]);
+    $this->user = User::factory()->create([
+        'role' => 'member',
+        'pro_bowler_id' => $this->bowler->id,
+        'pro_bowler_license_no' => $this->bowler->license_no,
+    ]);
 });
 
-test('profile information can be updated', function () {
-    $user = User::factory()->create();
+test('linked player profile page is displayed', function () {
+    $response = $this->actingAs($this->user)->get(route('athlete.edit'));
 
-    $response = $this
-        ->actingAs($user)
-        ->patch('/profile', [
-            'name' => 'Test User',
-            'email' => 'test@example.com',
-        ]);
+    $response->assertOk()->assertSee('川添奨太');
+});
+
+test('player can update only their editable profile fields', function () {
+    $response = $this->actingAs($this->user)->put(
+        route('athlete.update', $this->bowler),
+        [
+            'height_cm' => 180,
+            'height_is_public' => '1',
+            'dominant_arm' => '右',
+            'hobby' => '読書',
+            'season_goal' => '優勝',
+        ],
+    );
 
     $response
         ->assertSessionHasNoErrors()
-        ->assertRedirect('/profile');
+        ->assertRedirect(route('athlete.index', absolute: false));
 
-    $user->refresh();
-
-    $this->assertSame('Test User', $user->name);
-    $this->assertSame('test@example.com', $user->email);
-    $this->assertNull($user->email_verified_at);
+    $this->bowler->refresh();
+    expect($this->bowler->height_cm)->toBe(180)
+        ->and($this->bowler->height_is_public)->toBeTrue()
+        ->and($this->bowler->dominant_arm)->toBe('右')
+        ->and($this->bowler->hobby)->toBe('読書')
+        ->and($this->bowler->season_goal)->toBe('優勝');
 });
 
-test('email verification status is unchanged when the email address is unchanged', function () {
-    $user = User::factory()->create();
+test('player cannot update another player profile', function () {
+    $other = ProBowler::query()->create([
+        'license_no' => 'M00001220',
+        'name_kanji' => '別選手',
+        'sex' => 1,
+    ]);
 
-    $response = $this
-        ->actingAs($user)
-        ->patch('/profile', [
-            'name' => 'Test User',
-            'email' => $user->email,
-        ]);
+    $this->actingAs($this->user)
+        ->put(route('athlete.update', $other), ['hobby' => '変更不可'])
+        ->assertForbidden();
 
-    $response
-        ->assertSessionHasNoErrors()
-        ->assertRedirect('/profile');
-
-    $this->assertNotNull($user->refresh()->email_verified_at);
+    expect($other->fresh()->hobby)->toBeNull();
 });
 
-test('user can delete their account', function () {
-    $user = User::factory()->create();
+test('unlinked member cannot open a player profile editor', function () {
+    $unlinked = User::factory()->create(['role' => 'member']);
 
-    $response = $this
-        ->actingAs($user)
-        ->delete('/profile', [
-            'password' => 'password',
-        ]);
-
-    $response
-        ->assertSessionHasNoErrors()
-        ->assertRedirect('/');
-
-    $this->assertGuest();
-    $this->assertNull($user->fresh());
-});
-
-test('correct password must be provided to delete account', function () {
-    $user = User::factory()->create();
-
-    $response = $this
-        ->actingAs($user)
-        ->from('/profile')
-        ->delete('/profile', [
-            'password' => 'wrong-password',
-        ]);
-
-    $response
-        ->assertSessionHasErrorsIn('userDeletion', 'password')
-        ->assertRedirect('/profile');
-
-    $this->assertNotNull($user->fresh());
+    $this->actingAs($unlinked)->get(route('athlete.edit'))->assertForbidden();
 });

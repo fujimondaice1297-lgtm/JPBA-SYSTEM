@@ -67,7 +67,7 @@ test('rokko winner image source is the player profile and official pdf image is 
     expect($service)
         ->toContain('$winner->public_image_path')
         ->toContain('$winner->image_path')
-        ->toContain('matchScoreSheetImages')
+        ->toContain('matchScoreSheetImageService')
         ->toContain("getSheetByName('年度設定')")
         ->toContain('templateOverride')
         ->not->toContain('FInalResult.pdf')

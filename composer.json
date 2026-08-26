@@ -62,6 +62,7 @@
         ],
         "test": [
             "@php artisan config:clear --ansi",
+            "@php artisan jpba:test-database-prepare --database=jpba_test --ansi",
             "@php artisan test"
         ]
     },
