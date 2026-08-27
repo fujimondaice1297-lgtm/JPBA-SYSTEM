@@ -10,6 +10,7 @@ test('phpunit always uses the isolated postgres test database', function () {
         ->toContain('name="DB_DATABASE" value="jpba_test" force="true"')
         ->toContain('name="DB_URL" value="" force="true"');
     expect($composer)
+        ->toContain('@php artisan optimize:clear --ansi')
         ->toContain('jpba:test-database-prepare --database=jpba_test')
         ->toContain('@php artisan test');
 });
@@ -26,15 +27,43 @@ test('test database preparation is create only and safety guarded', function () 
         ->not->toContain('DROP DATABASE');
 });
 
-test('continuous integration runs postgres tests blade and pdf regression', function () {
+test('laravel test bootstrap refuses cached production or non test database configuration', function () {
+    $basePath = dirname(__DIR__, 2);
+    $testCase = file_get_contents($basePath.'/tests/TestCase.php');
+
+    expect($testCase)
+        ->toContain("environment('testing')")
+        ->toContain("preg_match('/_test\\z/i', \$database)")
+        ->toContain('automated tests may only run in APP_ENV=testing on a database ending in _test');
+});
+
+test('continuous integration runs dependency audits postgres tests blade build and pdf regression', function () {
     $basePath = dirname(__DIR__, 2);
     $workflow = file_get_contents($basePath.'/.github/workflows/tests.yml');
 
     expect($workflow)
         ->toContain('image: postgres:18')
+        ->toContain('composer audit --locked --no-interaction')
+        ->toContain('npm audit --omit=dev')
+        ->toContain('run: npm run build')
         ->toContain('run: composer test')
         ->toContain('run: php artisan view:cache')
         ->toContain('run: php artisan tournament:pdf-regression');
+});
+
+test('production environment template keeps secure release gates explicit', function () {
+    $basePath = dirname(__DIR__, 2);
+    $environment = file_get_contents($basePath.'/.env.production.example');
+
+    expect($environment)
+        ->toContain('APP_ENV=production')
+        ->toContain('APP_DEBUG=false')
+        ->toContain('APP_TIMEZONE=Asia/Tokyo')
+        ->toContain('APP_LOCALE=ja')
+        ->toContain('SESSION_SECURE_COOKIE=true')
+        ->toContain('MAIL_MAILER=smtp')
+        ->toContain('JPBA_ACHIEVEMENT_CUTOVER_DATE=')
+        ->toContain('JPBA_BACKUP_KEY_PATH=');
 });
 
 test('fresh migration guards both historical user license columns', function () {

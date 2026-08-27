@@ -9964,3 +9964,61 @@ User::where('email','domaine-d@i.softbank.jp')->exists(); // true
 - 専用Feature・既存関連Unitの7テスト116 assertionsに成功した。
 - 全182テスト13,122 assertionsとBladeキャッシュに成功した。
 - 実開催回、実在受講者、本番メール送信は未実施。詳細は `docs/operations/training_session_pilot_guide_20260827.md` を参照。
+
+---
+
+## 2026-08-27 本番公開・旧サイト切替の安全準備
+
+### 設定と自動監査
+
+- `config/app.php` の既定名をJPBA、timezoneを `Asia/Tokyo`、localeを `ja` へ変更した。
+- 開発用 `.env.example` を日本向け既定値へそろえ、秘密情報なしの `.env.production.example` を追加した。
+- `jpba:release-readiness` を追加した。通常は本番設備未設定をWARN、本番モードはNG・終了コード1として判定する。
+- APP_KEY、未適用migration、主要9表、旧サイト依存、storage実書込、本番環境、HTTPS、locale、secure cookie、メール、queue、cache、session、PostgreSQL、Vite本番資産、公認記録切替日を検査対象とした。
+- GitHub Actionsへ `composer audit --locked`、`npm audit --omit=dev`、`npm run build` を追加した。
+
+### 公開・公式差分監査
+
+- `public:parity-audit` は公開12ページすべてHTTP 200、必要ラベルOK、欠落アセット0。
+- 実ブラウザでトップ、年間予定、選手、大会、ログイン、お知らせを確認した。画像欠落0、旧JPBAサイトリンク0、コンソールエラー0。
+- 2026-08-27の公式更新履歴と大会一覧を確認し、取込済み7月28日大会・男女ランキング以後の完了大会、ランキング、公認記録の追加がないことを確認した。
+
+### 運用資料と保留事項
+
+- `docs/operations/production_cutover_runbook_20260827.md` に本番配置、依存監査、暗号化バックアップ、権限別スモーク、監視、切戻しを記録した。
+- `docs/chat/final_release_audit_20260827.md` に現時点の判定と公式差分を保存した。
+- 本番ドメイン、HTTPS、SMTP、queue/scheduler常駐、協力選手、公開日、公認記録切替日、当日最終差分、問い合わせ担当は実環境と担当確定後に実施する。
+
+### 最終検証
+
+- 全184テスト・13,133 assertions、失敗0。
+- `npm audit --omit=dev` は脆弱性0件、`npm run build` は成功。
+- `php artisan optimize`、Blade、391ルート、scheduler 7処理を確認した。
+- 隔離PostgreSQL `jpba_test` を明示固定し、標準45,860 bytes、シュートアウト398,643 bytes、シングルエリミネーション112,194 bytesのfixture PDFを生成した。
+- 通常readinessはNG 0、本番モードは本番未設定7項目をNGとして終了コード1で安全停止した。
+- ローカルにComposer実行ファイルがないため、Composer監査はGitHub Actionsと本番配置手順へ組み込んだ。
+
+---
+
+## 2026-08-27 設定キャッシュ誤接続からのDB復旧とテスト強制ガード
+
+### 発生原因と隔離
+
+- `php artisan optimize` 後の設定キャッシュを残したまま全テストを直接起動し、PHPUnitの環境変数よりキャッシュ済み `jpba_main` 接続が優先された。`RefreshDatabase` により主要業務テーブルが初期化された時点で停止した。
+- 初期化されたDBは削除せず、`jpba_main_empty_20260827_120000` へ名称変更して隔離した。復旧元・復旧先のDBを同時に上書きする処理は行っていない。
+
+### 復旧
+
+- 暗号化世代 `backup_20260826_004934` を別DB `jpba_restore_20260827_114815` へ復元し、DB・公開・非公開archiveのSHA-256、正鍵読込、誤鍵拒否、manifest件数、写真を検証した。
+- 検証済み復元DBを `jpba_main` へ切り替え、当該バックアップ後のmigration 2件だけを適用した。
+- 大岡産業レディース、シーズントライアルサマーD、男女7月末ランキングを公式正本から再投入した。大会ID119/189の完全性監査、公式ランキング540名、3種類の再ドライランはいずれも差分0。
+- 復旧後の主要件数は選手2,286、大会26、ボール916、ゲームスコア25,013、最終成績2,192、ユーザー1。
+- 新世代 `backup_20260827_174244` を作成し、DB・公開・非公開archiveのハッシュ、鍵、主要件数を検証した。全テスト後にも同じ件数を確認した。
+
+### 再発防止と検証
+
+- `tests/TestCase.php` が `APP_ENV=testing` かつ解決済みDB名 `_test` 終端を満たさない場合、テーブル操作前に例外で停止する。
+- `composer test` は `optimize:clear`、`jpba_test` の作成専用準備、全テストの順に固定した。運用ガイドと本番切替手順に直接 `php artisan test` を起動しない注意を追記した。
+- 存在しない `jpba_guard_probe` をキャッシュ済みDB名としてFeatureテストを起動し、DB接続前の安全停止、終了コード2、想定メッセージを確認後にキャッシュを消去した。
+- 隔離PostgreSQL `jpba_test` で全186テスト・13,148 assertions、失敗0。標準45,860 bytes、シュートアウト398,643 bytes、シングルエリミネーション112,194 bytesのfixture PDFは全件OK。
+- 通常readinessはOK 13、WARN 7、NG 0。公開12ページはHTTP 200、欠落アセット0。
