@@ -51,6 +51,15 @@ test('admin can issue a single linked account and send its setup link', function
     expect($account->refresh()->setup_link_sent_at)->not->toBeNull();
 });
 
+test('admin can render the player editor with title counters and account navigation', function () {
+    $this->actingAs($this->admin)
+        ->get(route('pro_bowlers.edit', $this->bowler))
+        ->assertOk()
+        ->assertSee('公式タイトル数')
+        ->assertSee('シーズントライアル優勝回数')
+        ->assertSee('アカウント管理');
+});
+
 test('dry run and repeat issuance never create duplicate accounts', function () {
     $service = app(PlayerAccountService::class);
 

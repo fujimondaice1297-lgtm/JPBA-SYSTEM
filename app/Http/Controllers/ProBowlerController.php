@@ -242,12 +242,44 @@ class ProBowlerController extends Controller
         ));
         $bowler->setAttribute('titles_count', (int) ($bowler->official_titles_count ?? 0));
 
+        $allTitles = collect($bowler->titles);
+        $isSeasonTrialTitle = function ($title): bool {
+            $titleName = (string) ($title->title_name ?? '');
+            $tournamentName = (string) ($title->tournament_name ?? '');
+            $source = (string) ($title->source ?? '');
+            $category = (string) (optional($title->tournament)->title_category ?? '');
+
+            return $category === 'season_trial'
+                || $source === 'sync_from_results_season_trial'
+                || str_contains($titleName, 'シーズントライアル')
+                || str_contains($tournamentName, 'シーズントライアル');
+        };
+        $seasonTrialTitles = $allTitles->filter($isSeasonTrialTitle)->values();
+        $officialTitles = $allTitles->reject($isSeasonTrialTitle)->values();
+        $officialTitleCount = max(
+            $officialTitles->count(),
+            (int) ($bowler->official_titles_count ?? 0),
+            (int) ($bowler->official_win_count ?? $bowler->titles_count ?? 0)
+        );
+        $seasonTrialTitleCount = max(
+            $seasonTrialTitles->count(),
+            (int) ($bowler->season_trial_titles_count ?? 0),
+            (int) ($bowler->season_trial_win_count ?? 0)
+        );
+
         $order = ['北海道', '東北', '北関東', '埼玉', '千葉', '城東', '城南', '城西', '三多摩', '神奈川・東', '神奈川・西', '静岡', '甲信越', '東海', '北陸', '関西・東', '関西・西', '関西・南', '中国四国', '九州・北', '九州・南／沖縄', '九州･南／沖縄', '海外'];
         $districts = District::all()
             ->sortBy(fn ($d) => array_search($d->label, $order))
             ->pluck('label', 'id');
 
-        return view('pro_bowlers.athlete_form', compact('bowler', 'districts'));
+        return view('pro_bowlers.athlete_form', compact(
+            'bowler',
+            'districts',
+            'officialTitles',
+            'seasonTrialTitles',
+            'officialTitleCount',
+            'seasonTrialTitleCount'
+        ));
     }
 
     /* =========================

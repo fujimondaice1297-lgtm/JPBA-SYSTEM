@@ -380,32 +380,10 @@
 
       @if(isset($bowler))
         @php
-          $allTitles = collect($bowler->titles ?? []);
-
-          $isSeasonTrialTitle = function ($title) {
-              $titleName = (string) ($title->title_name ?? '');
-              $tournamentName = (string) ($title->tournament_name ?? '');
-              $source = (string) ($title->source ?? '');
-              $category = (string) (optional($title->tournament)->title_category ?? '');
-
-              return $category === 'season_trial'
-                  || $source === 'sync_from_results_season_trial'
-                  || str_contains($titleName, 'シーズントライアル')
-                  || str_contains($tournamentName, 'シーズントライアル');
-          };
-
-          $seasonTrialTitles = $allTitles->filter($isSeasonTrialTitle)->values();
-          $officialTitles = $allTitles->reject($isSeasonTrialTitle)->values();
-          $officialTitleCount = max(
-              $officialTitles->count(),
-              (int) ($bowler->official_titles_count ?? 0),
-              (int) ($bowler->official_win_count ?? $bowler->titles_count ?? 0)
-          );
-          $seasonTrialTitleCount = max(
-              $seasonTrialTitles->count(),
-              (int) ($bowler->season_trial_titles_count ?? 0),
-              (int) ($bowler->season_trial_win_count ?? 0)
-          );
+          $officialTitles = collect($officialTitles ?? []);
+          $seasonTrialTitles = collect($seasonTrialTitles ?? []);
+          $officialTitleCount = (int) ($officialTitleCount ?? $bowler->official_win_count ?? $bowler->titles_count ?? 0);
+          $seasonTrialTitleCount = (int) ($seasonTrialTitleCount ?? $bowler->season_trial_win_count ?? 0);
         @endphp
 
         <div class="col-12">
