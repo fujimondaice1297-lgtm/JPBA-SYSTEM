@@ -79,7 +79,7 @@
             <tr>
                 <th style="min-width:110px;">ライセンス番号</th>
                 <th style="min-width:120px;">名前</th>
-                <th style="min-width:140px;">メーカー</th>
+                <th style="min-width:140px;">ブランド</th>
                 <th>ボール名</th>
                 <th style="min-width:120px;">シリアル番号</th>
                 <th style="min-width:170px;">検量証番号</th>
@@ -111,7 +111,7 @@
                 <tr>
                     <td>{{ $ball->proBowler?->license_no ?? '未登録' }}</td>
                     <td>{{ $ball->proBowler?->name_kanji ?? '未登録' }}</td>
-                    <td>{{ $ball->approvedBall?->manufacturer ?? $ball->approvedBall?->brand ?? '―' }}</td>
+                    <td>{{ $ball->approvedBall?->brand ?? $ball->approvedBall?->manufacturer ?? '―' }}</td>
                     <td>{{ $ball->approvedBall?->name ?? $ball->approvedBall?->model_name ?? '' }}</td>
                     <td>{{ $ball->serial_number }}</td>
 

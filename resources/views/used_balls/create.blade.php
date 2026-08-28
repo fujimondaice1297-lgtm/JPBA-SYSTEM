@@ -3,7 +3,7 @@
 @section('content')
 @php
     $selectedLicenseNo = $fixedLicenseNo ?? old('license_no', $prefillLicenseNo ?? request('license_no'));
-    $selectedManufacturer = old('manufacturer', $manufacturer ?? request('manufacturer'));
+    $selectedBrand = old('brand', $brand ?? request('brand'));
     $selectedApprovedBallId = (string) old('approved_ball_id');
     $selectedInspectionNumber = old('inspection_number', '');
     $selectedRegisteredAt = old('registered_at', now()->toDateString());
@@ -79,17 +79,17 @@
             </div>
 
             <div class="col-md-6">
-                <label for="manufacturer" class="form-label">メーカーで絞り込み</label>
+                <label for="brand" class="form-label">ブランドで絞り込み</label>
                 <select
-                    name="manufacturer"
-                    id="manufacturer"
+                    name="brand"
+                    id="brand"
                     class="form-select"
-                    onchange="location.href='{{ route('used_balls.create') }}?manufacturer=' + encodeURIComponent(this.value) + '&license_no=' + encodeURIComponent(document.getElementById('license_no').value) + '&return_to=' + encodeURIComponent('{{ $returnTo }}') + '&entry_id=' + encodeURIComponent('{{ $entryId }}')"
+                    onchange="location.href='{{ route('used_balls.create') }}?brand=' + encodeURIComponent(this.value) + '&license_no=' + encodeURIComponent(document.getElementById('license_no').value) + '&return_to=' + encodeURIComponent('{{ $returnTo }}') + '&entry_id=' + encodeURIComponent('{{ $entryId }}')"
                 >
                     <option value="">選択してください</option>
-                    @foreach($manufacturers as $manufacturerOption)
-                        <option value="{{ $manufacturerOption }}" {{ (string) $selectedManufacturer === (string) $manufacturerOption ? 'selected' : '' }}>
-                            {{ $manufacturerOption }}
+                    @foreach($brands as $brandOption)
+                        <option value="{{ $brandOption }}" {{ (string) $selectedBrand === (string) $brandOption ? 'selected' : '' }}>
+                            {{ $brandOption }}
                         </option>
                     @endforeach
                 </select>
@@ -105,11 +105,11 @@
                             data-usbc-status="{{ $ball->usbc_match_status ?? 'unchecked' }}"
                             {{ $selectedApprovedBallId === (string) $ball->id ? 'selected' : '' }}
                         >
-                            {{ $ball->manufacturer }} - {{ $ball->name }}
+                            {{ $ball->brand ?: $ball->manufacturer }} - {{ $ball->name }}
                         </option>
                     @endforeach
                 </select>
-                <div class="form-text">メーカー絞り込み後にボールを選択します。</div>
+                <div class="form-text">ブランドで絞り込んでボールを選択します。</div>
                 <div id="usbc_ball_warning" class="alert alert-danger mt-2 mb-0 d-none" role="alert"></div>
             </div>
 

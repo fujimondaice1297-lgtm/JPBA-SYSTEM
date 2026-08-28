@@ -56,7 +56,7 @@
     </div>
 
     <div class="col-md-2">
-      <label class="form-label">表示元</label>
+      <label class="form-label">登録区分</label>
       <select name="source" class="form-select">
         <option value="">すべて</option>
         <option value="registered" @selected(request('source') === 'registered')>本登録のみ</option>
@@ -90,10 +90,10 @@
       <thead class="table-dark">
         <tr>
           <th>ID</th>
-          <th>表示元</th>
+          <th>登録区分</th>
           <th>プロライセンス</th>
           <th>プロ名</th>
-          <th>メーカー名</th>
+          <th>ブランド名</th>
           <th>ボール名</th>
           <th>シリアルNo</th>
           <th>検量日／登録日</th>
@@ -108,13 +108,13 @@
           <tr>
             <td>{{ $row['id'] }}</td>
             <td>
-              <span class="badge bg-{{ $row['source'] === 'registered' ? 'primary' : 'warning text-dark' }}">
+              <span class="badge bg-{{ $row['source_label'] === '本登録' ? 'primary' : 'warning text-dark' }}">
                 {{ $row['source_label'] }}
               </span>
             </td>
             <td>{{ $row['license_no'] ?? '―' }}</td>
             <td>{{ $row['name_kanji'] ?? '―' }}</td>
-            <td>{{ $row['manufacturer'] ?: '―' }}</td>
+            <td>{{ $row['brand'] ?: '―' }}</td>
             <td>{{ $row['ball_name'] ?: '―' }}</td>
             <td>{{ $row['serial_number'] }}</td>
             <td>{{ optional($row['registered_at'])->format('Y-m-d') }}</td>
@@ -144,7 +144,9 @@
             </td>
             <td>
               @if($row['source'] === 'used')
-                <span class="text-muted">本登録へ移してください</span>
+                <span class="text-muted">
+                  {{ !empty($row['mirrored_registered_ball']) ? '検量証番号を入力してください' : '本登録へ移してください' }}
+                </span>
               @elseif($row['status_key'] === 'provisional')
                 <span class="text-muted">検量証番号を入力してください</span>
               @elseif($row['status_key'] === 'expired')
@@ -170,17 +172,23 @@
                   </form>
                 @endif
               @else
-                <a
-                  href="{{ route('registered_balls.create', [
-                        'license_no'       => $row['license_no'],
-                        'approved_ball_id' => optional($row['_model']->approvedBall)->id,
-                        'serial_number'    => $row['serial_number'],
-                        'registered_at'    => optional($row['registered_at'])->format('Y-m-d'),
-                  ]) }}"
-                  class="btn btn-sm btn-primary"
-                >
-                  本登録へ
-                </a>
+                @if(!empty($row['mirrored_registered_ball']))
+                  <a href="{{ route('registered_balls.edit', $row['mirrored_registered_ball']->id) }}" class="btn btn-sm btn-primary">
+                    検量証登録
+                  </a>
+                @else
+                  <a
+                    href="{{ route('registered_balls.create', [
+                          'license_no'       => $row['license_no'],
+                          'approved_ball_id' => optional($row['_model']->approvedBall)->id,
+                          'serial_number'    => $row['serial_number'],
+                          'registered_at'    => optional($row['registered_at'])->format('Y-m-d'),
+                    ]) }}"
+                    class="btn btn-sm btn-primary"
+                  >
+                    本登録へ
+                  </a>
+                @endif
                 <a href="{{ route('used_balls.edit', $row['_model']->id) }}" class="btn btn-sm btn-outline-secondary">仮登録更新</a>
               @endif
             </td>

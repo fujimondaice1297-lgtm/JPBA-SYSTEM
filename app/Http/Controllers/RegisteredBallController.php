@@ -57,14 +57,15 @@ class RegisteredBallController extends Controller
 
         $regs = $regQ->get()->map(function (RegisteredBall $rb) {
             $status = $this->buildStatusMeta($rb->inspection_number, $rb->expires_at);
+            $licenseNo = $rb->license_no ?: optional($rb->proBowler)->license_no;
 
             return [
                 'source' => 'registered',
-                'source_label' => '本登録',
+                'source_label' => $status['key'] === 'provisional' ? '仮登録' : '本登録',
                 'id' => $rb->id,
-                'license_no' => $rb->license_no ?: optional($rb->proBowler)->license_no,
+                'license_no' => $licenseNo,
                 'name_kanji' => optional($rb->proBowler)->name_kanji,
-                'manufacturer' => $rb->approvedBall->manufacturer ?? $rb->approvedBall->brand ?? '',
+                'brand' => $rb->approvedBall->brand ?? $rb->approvedBall->manufacturer ?? '',
                 'ball_name' => $rb->approvedBall->name ?? $rb->approvedBall->model_name ?? '',
                 'serial_number' => $rb->serial_number,
                 'registered_at' => $rb->registered_at,
@@ -74,6 +75,11 @@ class RegisteredBallController extends Controller
                 'status_label' => $status['label'],
                 'status_badge' => $status['badge'],
                 'days_to_expire' => $status['days_to_expire'],
+                'logical_key' => $this->logicalBallKey(
+                    (int) ($rb->pro_bowler_id ?? optional($rb->proBowler)->id),
+                    $licenseNo,
+                    (string) $rb->serial_number
+                ),
                 '_model' => $rb,
             ];
         });
@@ -111,14 +117,15 @@ class RegisteredBallController extends Controller
 
         $useds = $usedQ->get()->map(function (UsedBall $ub) {
             $status = $this->buildStatusMeta($ub->inspection_number, $ub->expires_at);
+            $licenseNo = optional($ub->proBowler)->license_no;
 
             return [
                 'source' => 'used',
                 'source_label' => '仮登録',
                 'id' => $ub->id,
-                'license_no' => optional($ub->proBowler)->license_no,
+                'license_no' => $licenseNo,
                 'name_kanji' => optional($ub->proBowler)->name_kanji,
-                'manufacturer' => $ub->approvedBall->manufacturer ?? $ub->approvedBall->brand ?? '',
+                'brand' => $ub->approvedBall->brand ?? $ub->approvedBall->manufacturer ?? '',
                 'ball_name' => $ub->approvedBall->name ?? $ub->approvedBall->model_name ?? '',
                 'serial_number' => $ub->serial_number,
                 'registered_at' => $ub->registered_at,
@@ -128,20 +135,44 @@ class RegisteredBallController extends Controller
                 'status_label' => $status['label'],
                 'status_badge' => $status['badge'],
                 'days_to_expire' => $status['days_to_expire'],
+                'logical_key' => $this->logicalBallKey(
+                    (int) $ub->pro_bowler_id,
+                    $licenseNo,
+                    (string) $ub->serial_number
+                ),
                 '_model' => $ub,
             ];
         });
 
+        // 本登録データからマイボールへ同期した同一実物は、保存上は2テーブルに存在する。
+        // 検量証待ちの間は仮登録（used_balls）だけを表示し、利用者には1件として見せる。
+        $mirroredRegisteredBalls = $regs
+            ->where('status_key', 'provisional')
+            ->keyBy('logical_key');
+        $useds = $useds->map(function (array $row) use ($mirroredRegisteredBalls): array {
+            $row['mirrored_registered_ball'] = $mirroredRegisteredBalls
+                ->get($row['logical_key'])['_model'] ?? null;
+
+            return $row;
+        });
+        $mirroredProvisionalBalls = $useds->keyBy('logical_key');
+        $regs = $regs->reject(
+            fn (array $row): bool => $row['status_key'] === 'provisional'
+                && $mirroredProvisionalBalls->has($row['logical_key'])
+        )->values();
+
         $all = $regs->concat($useds);
 
-        if (in_array($source, ['registered', 'used'], true)) {
-            $all = $all->where('source', $source)->values();
+        if ($source === 'registered') {
+            $all = $all->reject(fn (array $row): bool => $row['status_key'] === 'provisional')->values();
+        } elseif ($source === 'used') {
+            $all = $all->where('status_key', 'provisional')->values();
         }
 
         $summary = [
             'total' => $all->count(),
-            'registered' => $all->where('source', 'registered')->count(),
-            'used' => $all->where('source', 'used')->count(),
+            'registered' => $all->where('status_key', '!=', 'provisional')->count(),
+            'used' => $all->where('status_key', 'provisional')->count(),
             'provisional' => $all->where('status_key', 'provisional')->count(),
             'valid' => $all->where('status_key', 'valid')->count(),
             'expiring_soon' => $all->where('status_key', 'expiring_soon')->count(),
@@ -173,16 +204,18 @@ class RegisteredBallController extends Controller
     public function create(Request $request)
     {
         $approvedBalls = ApprovedBall::query()
-            ->orderBy('manufacturer')
+            ->orderBy('brand')
             ->orderBy('sort_name')
             ->orderBy('name')
             ->get();
         $proBowlers = ProBowler::all();
 
-        $manufacturers = [
-            'ABS', '900Global', 'Pro-am', 'MOTIV', 'HI-SP', 'STORM', 'ROTOGRIP',
-            'Hammer', 'EBONITE', 'Track', 'Columbia300', 'Brunswick', 'Radical', 'DV8',
-        ];
+        $brands = ApprovedBall::query()
+            ->whereNotNull('brand')
+            ->where('brand', '<>', '')
+            ->distinct()
+            ->orderBy('brand')
+            ->pluck('brand');
 
         $fixedLicenseNo = null;
         if (! $this->isPrivilegedUser($request->user())) {
@@ -192,7 +225,7 @@ class RegisteredBallController extends Controller
             }
         }
 
-        return view('registered_balls.create', compact('approvedBalls', 'proBowlers', 'manufacturers', 'fixedLicenseNo'));
+        return view('registered_balls.create', compact('approvedBalls', 'proBowlers', 'brands', 'fixedLicenseNo'));
     }
 
     public function store(Request $request)
@@ -262,7 +295,7 @@ class RegisteredBallController extends Controller
         $this->authorizeRegisteredBallAccess($request->user(), $registeredBall);
 
         $approvedBalls = ApprovedBall::query()
-            ->orderBy('manufacturer')
+            ->orderBy('brand')
             ->orderBy('sort_name')
             ->orderBy('name')
             ->get();
@@ -420,6 +453,15 @@ class RegisteredBallController extends Controller
             'badge' => 'success',
             'days_to_expire' => $days,
         ];
+    }
+
+    private function logicalBallKey(int $proBowlerId, ?string $licenseNo, string $serialNumber): string
+    {
+        $ownerKey = $proBowlerId > 0
+            ? 'id:'.$proBowlerId
+            : 'license:'.mb_strtoupper(trim((string) $licenseNo));
+
+        return $ownerKey.'|serial:'.mb_strtoupper(trim($serialNumber));
     }
 
     private function authorizeRegisteredBallAccess($user, RegisteredBall $registeredBall): void

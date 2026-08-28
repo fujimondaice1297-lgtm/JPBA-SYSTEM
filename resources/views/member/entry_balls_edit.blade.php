@@ -189,8 +189,8 @@
 
                 <td>
                   <div class="fw-bold">{{ $approvedBallName }}</div>
-                  @if (data_get($usedBall, 'approvedBall.manufacturer'))
-                    <div class="small text-muted">{{ data_get($usedBall, 'approvedBall.manufacturer') }}</div>
+                  @if (data_get($usedBall, 'approvedBall.brand') || data_get($usedBall, 'approvedBall.manufacturer'))
+                    <div class="small text-muted">{{ data_get($usedBall, 'approvedBall.brand') ?: data_get($usedBall, 'approvedBall.manufacturer') }}</div>
                   @endif
                   @if($isAnnualApproved)
                     <span class="badge bg-success mt-1">{{ $registrationYear }}年度承認済み</span>

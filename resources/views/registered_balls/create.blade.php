@@ -8,7 +8,7 @@
     $selectedRegisteredAt = old('registered_at', request('registered_at', now()->format('Y-m-d')));
     $selectedInspectionNumber = old('inspection_number', request('inspection_number', ''));
     $selectedBall = collect($approvedBalls ?? [])->firstWhere('id', (int) $selectedApprovedBallId);
-    $selectedManufacturer = old('manufacturer_filter', $selectedBall->manufacturer ?? '');
+    $selectedBrand = old('brand_filter', $selectedBall->brand ?? '');
     $selectedReleaseYear = old('release_year_filter', $selectedBall->release_year ?? '');
     $selectedBowler = collect($proBowlers ?? [])->firstWhere('license_no', $selectedLicenseNo);
     $returnTo = old('return_to', request('return_to'));
@@ -87,11 +87,11 @@
                 <label class="form-label">絞り込み補助</label>
                 <div class="row g-2">
                     <div class="col-md-6">
-                        <select id="manufacturer_filter" name="manufacturer_filter" class="form-select">
-                            <option value="">メーカーで絞り込み</option>
-                            @foreach ($manufacturers as $manufacturer)
-                                <option value="{{ $manufacturer }}" {{ (string) $selectedManufacturer === (string) $manufacturer ? 'selected' : '' }}>
-                                    {{ $manufacturer }}
+                        <select id="brand_filter" name="brand_filter" class="form-select">
+                            <option value="">ブランドで絞り込み</option>
+                            @foreach ($brands as $brand)
+                                <option value="{{ $brand }}" {{ (string) $selectedBrand === (string) $brand ? 'selected' : '' }}>
+                                    {{ $brand }}
                                 </option>
                             @endforeach
                         </select>
@@ -116,12 +116,12 @@
                     @foreach($approvedBalls as $ball)
                         <option
                             value="{{ $ball->id }}"
-                            data-manufacturer="{{ $ball->manufacturer }}"
+                            data-brand="{{ $ball->brand }}"
                             data-release-year="{{ $ball->release_year }}"
                             data-usbc-status="{{ $ball->usbc_match_status ?? 'unchecked' }}"
                             {{ $selectedApprovedBallId === (string) $ball->id ? 'selected' : '' }}
                         >
-                            {{ $ball->manufacturer }} - {{ $ball->name }}@if($ball->release_year)（{{ $ball->release_year }}年）@endif
+                            {{ $ball->brand ?: $ball->manufacturer }} - {{ $ball->name }}@if($ball->release_year)（{{ $ball->release_year }}年）@endif
                         </option>
                     @endforeach
                 </select>
@@ -197,7 +197,7 @@
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-    const manufacturerFilter = document.getElementById('manufacturer_filter');
+    const brandFilter = document.getElementById('brand_filter');
     const releaseYearFilter = document.getElementById('release_year_filter');
     const approvedBallSelect = document.getElementById('approved_ball_id');
     const inspectionInput = document.getElementById('inspection_number');
@@ -212,7 +212,7 @@ document.addEventListener('DOMContentLoaded', () => {
         .map(option => ({
             value: option.value,
             text: option.textContent,
-            manufacturer: option.dataset.manufacturer || '',
+            brand: option.dataset.brand || '',
             releaseYear: option.dataset.releaseYear || '',
             usbcStatus: option.dataset.usbcStatus || 'unchecked',
             selected: option.selected,
@@ -220,20 +220,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function rebuildApprovedBallOptions() {
         const currentValue = approvedBallSelect.value;
-        const manufacturer = manufacturerFilter.value;
+        const brand = brandFilter.value;
         const releaseYear = releaseYearFilter.value;
 
         approvedBallSelect.innerHTML = '<option value="">選択してください</option>';
 
         originalOptions.forEach(option => {
-            const hitManufacturer = !manufacturer || option.manufacturer === manufacturer;
+            const hitBrand = !brand || option.brand === brand;
             const hitReleaseYear = !releaseYear || String(option.releaseYear) === String(releaseYear);
 
-            if (hitManufacturer && hitReleaseYear) {
+            if (hitBrand && hitReleaseYear) {
                 const el = document.createElement('option');
                 el.value = option.value;
                 el.textContent = option.text;
-                el.dataset.manufacturer = option.manufacturer;
+                el.dataset.brand = option.brand;
                 el.dataset.releaseYear = option.releaseYear;
                 el.dataset.usbcStatus = option.usbcStatus;
                 if (currentValue && currentValue === option.value) {
@@ -249,7 +249,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const el = document.createElement('option');
                 el.value = fallback.value;
                 el.textContent = fallback.text + '（現在選択中）';
-                el.dataset.manufacturer = fallback.manufacturer;
+                el.dataset.brand = fallback.brand;
                 el.dataset.releaseYear = fallback.releaseYear;
                 el.dataset.usbcStatus = fallback.usbcStatus;
                 el.selected = true;
@@ -310,7 +310,7 @@ document.addEventListener('DOMContentLoaded', () => {
         expiresPreview.value = `${y}-${m}-${d}`;
     }
 
-    manufacturerFilter.addEventListener('change', rebuildApprovedBallOptions);
+    brandFilter.addEventListener('change', rebuildApprovedBallOptions);
     releaseYearFilter.addEventListener('change', rebuildApprovedBallOptions);
     approvedBallSelect.addEventListener('change', updateUsbcWarning);
     inspectionInput.addEventListener('input', calcExpire);

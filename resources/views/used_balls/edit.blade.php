@@ -41,7 +41,7 @@
                 </div>
                 <div class="col-md-3">
                     <div class="text-muted">ボール名</div>
-                    <div>{{ $usedBall->approvedBall?->manufacturer ?? '' }} {{ $usedBall->approvedBall?->name ?? '' }}</div>
+                    <div>{{ $usedBall->approvedBall?->brand ?? $usedBall->approvedBall?->manufacturer ?? '' }} {{ $usedBall->approvedBall?->name ?? '' }}</div>
                 </div>
                 <div class="col-md-3">
                     <div class="text-muted">シリアルナンバー</div>

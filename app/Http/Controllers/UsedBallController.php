@@ -89,7 +89,10 @@ class UsedBallController extends Controller
     public function create(Request $request)
     {
         $user = $request->user();
-        $manufacturer = (string) $request->query('manufacturer', '');
+        $brand = (string) $request->query(
+            'brand',
+            $request->query('manufacturer', '')
+        );
         $requestedLicenseNo = trim((string) $request->query('license_no', ''));
         $fixedLicenseNo = null;
 
@@ -104,25 +107,26 @@ class UsedBallController extends Controller
         }
 
         $query = ApprovedBall::query();
-        if ($manufacturer !== '') {
-            $query->where('manufacturer', $manufacturer);
+        if ($brand !== '') {
+            $query->where('brand', $brand);
         }
 
         $balls = $query
-            ->orderBy('manufacturer')
+            ->orderBy('brand')
             ->orderBy('name')
             ->get();
 
-        $manufacturers = ApprovedBall::query()
-            ->whereNotNull('manufacturer')
+        $brands = ApprovedBall::query()
+            ->whereNotNull('brand')
+            ->where('brand', '<>', '')
             ->distinct()
-            ->orderBy('manufacturer')
-            ->pluck('manufacturer');
+            ->orderBy('brand')
+            ->pluck('brand');
 
         return view('used_balls.create', compact(
             'balls',
-            'manufacturers',
-            'manufacturer',
+            'brands',
+            'brand',
             'prefillLicenseNo',
             'fixedLicenseNo'
         ));

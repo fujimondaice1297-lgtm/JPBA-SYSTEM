@@ -12,9 +12,9 @@ class AuthController extends Controller
 {
     public function showLogin()
     {
-        // 既にログイン済みならマイページへ
+        // 既にログイン済みなら、権限に合った開始画面へ
         if (Auth::check()) {
-            return redirect()->route('member.dashboard');
+            return redirect()->route($this->homeRoute(Auth::user()));
         }
 
         return view('auth.login');
@@ -54,8 +54,16 @@ class AuthController extends Controller
         Auth::login($user, $remember);
         $request->session()->regenerate();
 
-        // ここもマイページに統一
-        return redirect()->intended(route('member.dashboard'));
+        // 以前開こうとした管理URLをセッションに保持していても、
+        // 正会員は必ずマイページ、管理者・編集者は管理ホームから開始する。
+        return redirect()->route($this->homeRoute($user));
+    }
+
+    private function homeRoute(User $user): string
+    {
+        return $user->isAdmin() || $user->isEditor()
+            ? 'management.home'
+            : 'member.dashboard';
     }
 
     private function findUserForLogin(string $login, bool $isEmail): ?User

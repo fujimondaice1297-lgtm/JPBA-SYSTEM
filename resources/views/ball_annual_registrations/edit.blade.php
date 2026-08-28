@@ -116,7 +116,7 @@
                         <tr>
                             <th class="text-center" style="width:70px;">申請</th>
                             <th style="width:90px;">写真</th>
-                            <th>メーカー / ボール名</th>
+                            <th>ブランド / ボール名</th>
                             <th style="min-width:130px;">シリアル番号</th>
                             <th style="min-width:130px;">検量証状態</th>
                             <th style="min-width:150px;">アブプール照合</th>
@@ -126,9 +126,8 @@
                         @foreach($usedBalls as $ball)
                             @php
                                 $approvedBall = $ball->approvedBall;
-                                $manufacturer = $approvedBall?->catalogManufacturer?->name
+                                $brand = $approvedBall?->brand
                                     ?? $approvedBall?->manufacturer
-                                    ?? $approvedBall?->brand
                                     ?? '-';
                                 $ballName = $approvedBall?->name ?? $approvedBall?->model_name ?? '-';
                                 $isExpired = $ball->expires_at && $ball->expires_at->lt(today());
@@ -157,7 +156,7 @@
                                     @endif
                                 </td>
                                 <td>
-                                    <div class="small text-muted">{{ $manufacturer }}</div>
+                                    <div class="small text-muted">{{ $brand }}</div>
                                     <div class="fw-bold">{{ $ballName }}</div>
                                 </td>
                                 <td>{{ $ball->serial_number }}</td>

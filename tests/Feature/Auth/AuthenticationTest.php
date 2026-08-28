@@ -55,6 +55,37 @@ test('users can authenticate using their professional license number', function 
     $response->assertRedirect(route('member.dashboard', absolute: false));
 });
 
+test('member login ignores a stale intended management url and starts at my page', function () {
+    $user = User::factory()->create([
+        'role' => 'member',
+    ]);
+
+    $response = $this
+        ->withSession(['url.intended' => route('management.home', absolute: false)])
+        ->post('/login', [
+            'login' => $user->email,
+            'password' => 'password',
+        ]);
+
+    $this->assertAuthenticatedAs($user);
+    $response->assertRedirect(route('member.dashboard', absolute: false));
+});
+
+test('admin login starts at management home', function () {
+    $user = User::factory()->create([
+        'role' => 'admin',
+        'is_admin' => true,
+    ]);
+
+    $response = $this->post('/login', [
+        'login' => $user->email,
+        'password' => 'password',
+    ]);
+
+    $this->assertAuthenticatedAs($user);
+    $response->assertRedirect(route('management.home', absolute: false));
+});
+
 test('suspended users cannot authenticate', function () {
     $user = User::factory()->create([
         'account_status' => User::STATUS_SUSPENDED,
