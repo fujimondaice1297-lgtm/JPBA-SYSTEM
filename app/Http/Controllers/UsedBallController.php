@@ -106,22 +106,28 @@ class UsedBallController extends Controller
             $prefillLicenseNo = $fixedLicenseNo;
         }
 
-        $query = ApprovedBall::query();
-        if ($brand !== '') {
-            $query->where('brand', $brand);
-        }
-
-        $balls = $query
-            ->orderBy('brand')
-            ->orderBy('name')
-            ->get();
-
-        $brands = ApprovedBall::query()
-            ->whereNotNull('brand')
-            ->where('brand', '<>', '')
-            ->distinct()
-            ->orderBy('brand')
-            ->pluck('brand');
+        $catalogBalls = ApprovedBall::query()
+            ->where('catalog_status', '<>', 'hidden')
+            ->get()
+            ->sortBy(
+                fn (ApprovedBall $ball): string => mb_strtolower(
+                    $ball->registration_brand.'|'.$ball->name,
+                    'UTF-8'
+                ),
+                SORT_NATURAL | SORT_FLAG_CASE
+            )
+            ->values();
+        $balls = $brand === ''
+            ? $catalogBalls
+            : $catalogBalls
+                ->filter(fn (ApprovedBall $ball): bool => $ball->registration_brand === $brand)
+                ->values();
+        $brands = $catalogBalls
+            ->pluck('registration_brand')
+            ->filter()
+            ->unique()
+            ->sort(SORT_NATURAL | SORT_FLAG_CASE)
+            ->values();
 
         return view('used_balls.create', compact(
             'balls',

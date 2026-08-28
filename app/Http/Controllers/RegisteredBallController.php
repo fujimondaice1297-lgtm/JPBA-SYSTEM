@@ -65,7 +65,7 @@ class RegisteredBallController extends Controller
                 'id' => $rb->id,
                 'license_no' => $licenseNo,
                 'name_kanji' => optional($rb->proBowler)->name_kanji,
-                'brand' => $rb->approvedBall->brand ?? $rb->approvedBall->manufacturer ?? '',
+                'brand' => $rb->approvedBall?->registration_brand ?? '',
                 'ball_name' => $rb->approvedBall->name ?? $rb->approvedBall->model_name ?? '',
                 'serial_number' => $rb->serial_number,
                 'registered_at' => $rb->registered_at,
@@ -125,7 +125,7 @@ class RegisteredBallController extends Controller
                 'id' => $ub->id,
                 'license_no' => $licenseNo,
                 'name_kanji' => optional($ub->proBowler)->name_kanji,
-                'brand' => $ub->approvedBall->brand ?? $ub->approvedBall->manufacturer ?? '',
+                'brand' => $ub->approvedBall?->registration_brand ?? '',
                 'ball_name' => $ub->approvedBall->name ?? $ub->approvedBall->model_name ?? '',
                 'serial_number' => $ub->serial_number,
                 'registered_at' => $ub->registered_at,
@@ -203,19 +203,8 @@ class RegisteredBallController extends Controller
 
     public function create(Request $request)
     {
-        $approvedBalls = ApprovedBall::query()
-            ->orderBy('brand')
-            ->orderBy('sort_name')
-            ->orderBy('name')
-            ->get();
+        [$approvedBalls, $brands, $years] = $this->registrationCatalogData();
         $proBowlers = ProBowler::all();
-
-        $brands = ApprovedBall::query()
-            ->whereNotNull('brand')
-            ->where('brand', '<>', '')
-            ->distinct()
-            ->orderBy('brand')
-            ->pluck('brand');
 
         $fixedLicenseNo = null;
         if (! $this->isPrivilegedUser($request->user())) {
@@ -225,7 +214,13 @@ class RegisteredBallController extends Controller
             }
         }
 
-        return view('registered_balls.create', compact('approvedBalls', 'proBowlers', 'brands', 'fixedLicenseNo'));
+        return view('registered_balls.create', compact(
+            'approvedBalls',
+            'proBowlers',
+            'brands',
+            'years',
+            'fixedLicenseNo'
+        ));
     }
 
     public function store(Request $request)
@@ -294,11 +289,7 @@ class RegisteredBallController extends Controller
     {
         $this->authorizeRegisteredBallAccess($request->user(), $registeredBall);
 
-        $approvedBalls = ApprovedBall::query()
-            ->orderBy('brand')
-            ->orderBy('sort_name')
-            ->orderBy('name')
-            ->get();
+        [$approvedBalls, $brands, $years] = $this->registrationCatalogData();
         $proBowlers = ProBowler::all();
         $fixedLicenseNo = null;
 
@@ -306,7 +297,14 @@ class RegisteredBallController extends Controller
             $fixedLicenseNo = $registeredBall->license_no;
         }
 
-        return view('registered_balls.edit', compact('registeredBall', 'approvedBalls', 'proBowlers', 'fixedLicenseNo'));
+        return view('registered_balls.edit', compact(
+            'registeredBall',
+            'approvedBalls',
+            'proBowlers',
+            'brands',
+            'years',
+            'fixedLicenseNo'
+        ));
     }
 
     public function update(Request $request, RegisteredBall $registeredBall)
@@ -540,5 +538,38 @@ class RegisteredBallController extends Controller
             'unchecked' => 'アブプールリストとの照合が未実施のボールです。',
             default => 'アブプールリストに記載のないボールです',
         };
+    }
+
+    /**
+     * @return array{0:\Illuminate\Support\Collection,1:\Illuminate\Support\Collection,2:\Illuminate\Support\Collection}
+     */
+    private function registrationCatalogData(): array
+    {
+        $balls = ApprovedBall::query()
+            ->where('catalog_status', '<>', 'hidden')
+            ->get()
+            ->sortBy(
+                fn (ApprovedBall $ball): string => mb_strtolower(
+                    $ball->registration_brand.'|'.($ball->sort_name ?: $ball->name),
+                    'UTF-8'
+                ),
+                SORT_NATURAL | SORT_FLAG_CASE
+            )
+            ->values();
+
+        $brands = $balls
+            ->pluck('registration_brand')
+            ->filter()
+            ->unique()
+            ->sort(SORT_NATURAL | SORT_FLAG_CASE)
+            ->values();
+        $years = $balls
+            ->pluck('release_year')
+            ->filter()
+            ->unique()
+            ->sortDesc()
+            ->values();
+
+        return [$balls, $brands, $years];
     }
 }

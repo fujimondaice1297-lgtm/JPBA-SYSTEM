@@ -35,7 +35,11 @@ class ApprovedBallController extends Controller
             $query->where('manufacturer', $request->string('manufacturer')->toString());
         }
         if ($request->filled('brand')) {
-            $query->where('brand', $request->string('brand')->toString());
+            $brand = $request->string('brand')->toString();
+            $query->whereRaw(
+                "coalesce(nullif(usbc_matched_brand, ''), nullif(brand, ''), manufacturer) = ?",
+                [$brand]
+            );
         }
         if ($request->filled('catalog_status')) {
             $query->where(
@@ -49,13 +53,14 @@ class ApprovedBallController extends Controller
                 $subQuery
                     ->where('name', 'like', '%'.$keyword.'%')
                     ->orWhere('name_kana', 'like', '%'.$keyword.'%')
-                    ->orWhere('brand', 'like', '%'.$keyword.'%');
+                    ->orWhere('brand', 'like', '%'.$keyword.'%')
+                    ->orWhere('usbc_matched_brand', 'like', '%'.$keyword.'%');
             });
         }
 
         $balls = $query
             ->orderBy('manufacturer')
-            ->orderBy('brand')
+            ->orderByRaw("COALESCE(NULLIF(usbc_matched_brand, ''), NULLIF(brand, ''), manufacturer)")
             ->orderByRaw('COALESCE(sort_name, name)')
             ->orderBy('id')
             ->paginate(50)
@@ -66,7 +71,7 @@ class ApprovedBallController extends Controller
             ->distinct()
             ->orderBy('manufacturer')
             ->pluck('manufacturer');
-        $brandsQuery = ApprovedBall::query()->whereNotNull('brand');
+        $brandsQuery = ApprovedBall::query();
         if ($request->filled('manufacturer')) {
             $brandsQuery->where(
                 'manufacturer',
@@ -74,9 +79,12 @@ class ApprovedBallController extends Controller
             );
         }
         $brands = $brandsQuery
-            ->distinct()
-            ->orderBy('brand')
-            ->pluck('brand');
+            ->get()
+            ->pluck('registration_brand')
+            ->filter()
+            ->unique()
+            ->sort(SORT_NATURAL | SORT_FLAG_CASE)
+            ->values();
         $catalogSummary = BallManufacturer::query()
             ->withCount([
                 'approvedBalls',

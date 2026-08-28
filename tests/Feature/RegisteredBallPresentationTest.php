@@ -21,6 +21,8 @@ beforeEach(function () {
         'name' => 'VENGEANCE TEST',
         'manufacturer' => 'ABS',
         'brand' => '900GLOBAL',
+        'usbc_match_status' => 'matched',
+        'usbc_matched_brand' => '900 Global',
         'approved' => true,
         'catalog_status' => 'listed',
         'release_date' => '2026-01-01',
@@ -29,6 +31,8 @@ beforeEach(function () {
         'name' => 'NANODESU TEST',
         'manufacturer' => 'ABS',
         'brand' => 'NANODESU',
+        'usbc_match_status' => 'matched',
+        'usbc_matched_brand' => 'ABS',
         'approved' => true,
         'catalog_status' => 'listed',
         'release_date' => '2026-01-01',
@@ -77,13 +81,13 @@ test('ball registration choices use product brands instead of catalog distributo
         ->get(route('registered_balls.create'))
         ->assertOk()
         ->assertSee('ブランドで絞り込み')
-        ->assertSee('data-brand="900GLOBAL"', false)
-        ->assertSee('900GLOBAL - VENGEANCE TEST')
+        ->assertSee('data-brand="900 Global"', false)
+        ->assertSee('900 Global - VENGEANCE TEST')
         ->assertDontSee('ABS - VENGEANCE TEST');
 
     $this->actingAs($this->member)
-        ->get(route('used_balls.create', ['brand' => '900GLOBAL']))
+        ->get(route('used_balls.create', ['brand' => '900 Global']))
         ->assertOk()
-        ->assertSee('900GLOBAL - VENGEANCE TEST')
-        ->assertDontSee('NANODESU - NANODESU TEST');
+        ->assertSee('900 Global - VENGEANCE TEST')
+        ->assertDontSee('ABS - NANODESU TEST');
 });

@@ -79,7 +79,39 @@ class ApprovedBall extends Model
             return route('approved_balls.image', ['approved_ball' => $this->getKey()]);
         }
 
+        $payload = (array) $this->source_payload;
+        if (
+            (($payload['source_type'] ?? null) === 'usbc_approved_list')
+            && filter_var($this->source_image_url, FILTER_VALIDATE_URL)
+        ) {
+            return (string) $this->source_image_url;
+        }
+
         return asset('images/ball-no-image.svg');
+    }
+
+    public function getRegistrationBrandAttribute(): string
+    {
+        $officialBrand = trim((string) $this->usbc_matched_brand);
+        if ($this->usbc_match_status === 'matched' && $officialBrand !== '') {
+            return $officialBrand;
+        }
+
+        return trim((string) ($this->brand ?: $this->manufacturer));
+    }
+
+    public function getRegistrationPeriodLabelAttribute(): string
+    {
+        if (! $this->release_date) {
+            return '';
+        }
+
+        $payload = (array) $this->source_payload;
+        if (($payload['release_date_basis'] ?? null) === 'usbc_approved_on') {
+            return 'USBC承認 '.$this->release_date->format('Y-m-d');
+        }
+
+        return '発売 '.$this->release_date->format('Y').'年';
     }
 
     public function getReleaseDisplayAttribute(): string
@@ -100,6 +132,10 @@ class ApprovedBall extends Model
                 (int) $this->release_date->format('Y'),
                 (int) $this->release_date->format('n')
             );
+        }
+
+        if (($payload['release_date_basis'] ?? null) === 'usbc_approved_on') {
+            return 'USBC承認 '.$this->release_date->format('Y-m-d');
         }
 
         return $this->release_date->format('Y-m-d');

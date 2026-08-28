@@ -8,7 +8,7 @@
     $selectedRegisteredAt = old('registered_at', request('registered_at', now()->format('Y-m-d')));
     $selectedInspectionNumber = old('inspection_number', request('inspection_number', ''));
     $selectedBall = collect($approvedBalls ?? [])->firstWhere('id', (int) $selectedApprovedBallId);
-    $selectedBrand = old('brand_filter', $selectedBall->brand ?? '');
+    $selectedBrand = old('brand_filter', $selectedBall?->registration_brand ?? '');
     $selectedReleaseYear = old('release_year_filter', $selectedBall->release_year ?? '');
     $selectedBowler = collect($proBowlers ?? [])->firstWhere('license_no', $selectedLicenseNo);
     $returnTo = old('return_to', request('return_to'));
@@ -98,12 +98,12 @@
                     </div>
                     <div class="col-md-6">
                         <select id="release_year_filter" name="release_year_filter" class="form-select">
-                            <option value="">発売年で絞り込み</option>
-                            @for ($year = date('Y'); $year >= 2000; $year--)
+                            <option value="">発売／USBC承認年で絞り込み</option>
+                            @foreach ($years as $year)
                                 <option value="{{ $year }}" {{ (string) $selectedReleaseYear === (string) $year ? 'selected' : '' }}>
                                     {{ $year }}
                                 </option>
-                            @endfor
+                            @endforeach
                         </select>
                     </div>
                 </div>
@@ -116,12 +116,12 @@
                     @foreach($approvedBalls as $ball)
                         <option
                             value="{{ $ball->id }}"
-                            data-brand="{{ $ball->brand }}"
+                            data-brand="{{ $ball->registration_brand }}"
                             data-release-year="{{ $ball->release_year }}"
                             data-usbc-status="{{ $ball->usbc_match_status ?? 'unchecked' }}"
                             {{ $selectedApprovedBallId === (string) $ball->id ? 'selected' : '' }}
                         >
-                            {{ $ball->brand ?: $ball->manufacturer }} - {{ $ball->name }}@if($ball->release_year)（{{ $ball->release_year }}年）@endif
+                            {{ $ball->registration_brand }} - {{ $ball->name }}@if($ball->registration_period_label)（{{ $ball->registration_period_label }}）@endif
                         </option>
                     @endforeach
                 </select>

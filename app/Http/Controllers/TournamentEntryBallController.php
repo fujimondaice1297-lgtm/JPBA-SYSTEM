@@ -129,11 +129,7 @@ class TournamentEntryBallController extends Controller
             ->with('approvedBall.catalogManufacturer')
             ->get()
             ->sortBy(function (UsedBall $ball): string {
-                $brand = (string) (
-                    $ball->approvedBall?->brand
-                    ?? $ball->approvedBall?->manufacturer
-                    ?? ''
-                );
+                $brand = (string) ($ball->approvedBall?->registration_brand ?? '');
                 $name = (string) ($ball->approvedBall?->name ?? '');
 
                 return mb_strtolower($brand.'|'.$name.'|'.(string) $ball->id);

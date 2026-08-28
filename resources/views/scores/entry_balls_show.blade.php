@@ -69,7 +69,7 @@
                         ?? $catalogBall?->manufacturer
                         ?? ''
                     ));
-                    $brand = trim((string) ($catalogBall?->brand ?? ''));
+                    $brand = trim((string) ($catalogBall?->registration_brand ?? ''));
                 @endphp
                 <div class="col-12">
                     <div class="card h-100">

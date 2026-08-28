@@ -5,7 +5,7 @@
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
         <div>
             <h2 class="mb-1">ボールカタログ</h2>
-            <p class="text-muted mb-0">メーカー公式サイト掲載品を、メーカー・ブランド・五十音順で表示します。</p>
+            <p class="text-muted mb-0">国内メーカー掲載品とUSBC公式承認リスト全件を、取得元・ブランド・名称順で表示します。</p>
         </div>
         <div class="d-flex flex-wrap gap-2">
             <a href="{{ route('approved_balls.create') }}" class="btn btn-success">+ 手動登録</a>
@@ -86,7 +86,7 @@
                     <th style="width:88px">写真</th>
                     <th>メーカー / ブランド</th>
                     <th>ボール名</th>
-                    <th>発売時期</th>
+                    <th>発売時期 / USBC承認日</th>
                     <th>掲載状態</th>
                     <th>大会選択</th>
                     <th style="width:150px">操作</th>
@@ -103,7 +103,7 @@
                     </td>
                     <td>
                         <div class="fw-semibold">{{ $ball->manufacturer }}</div>
-                        <div class="small text-muted">{{ $ball->brand ?: 'ブランド未設定' }}</div>
+                        <div class="small text-muted">{{ $ball->registration_brand ?: 'ブランド未設定' }}</div>
                     </td>
                     <td>
                         <div class="fw-semibold">{{ $ball->name }}</div>

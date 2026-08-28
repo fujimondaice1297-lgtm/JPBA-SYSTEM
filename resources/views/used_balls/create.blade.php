@@ -105,7 +105,7 @@
                             data-usbc-status="{{ $ball->usbc_match_status ?? 'unchecked' }}"
                             {{ $selectedApprovedBallId === (string) $ball->id ? 'selected' : '' }}
                         >
-                            {{ $ball->brand ?: $ball->manufacturer }} - {{ $ball->name }}
+                            {{ $ball->registration_brand }} - {{ $ball->name }}@if($ball->registration_period_label)（{{ $ball->registration_period_label }}）@endif
                         </option>
                     @endforeach
                 </select>

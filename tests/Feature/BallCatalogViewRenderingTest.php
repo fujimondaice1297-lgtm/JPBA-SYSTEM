@@ -53,7 +53,7 @@ class BallCatalogViewRenderingTest extends TestCase
         ))->render();
 
         $this->assertStringContainsString('ボールカタログ', $html);
-        $this->assertStringContainsString('メーカー・ブランド・五十音順', $html);
+        $this->assertStringContainsString('USBC公式承認リスト全件', $html);
         $this->assertStringContainsString('写真159件', $html);
         $this->assertStringContainsString('ACCU TEST', $html);
         $this->assertStringContainsString('アキュ・テスト', $html);

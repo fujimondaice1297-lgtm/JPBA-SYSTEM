@@ -3,7 +3,7 @@
 @section('content')
 @php
     $selectedBall = collect($approvedBalls ?? [])->firstWhere('id', (int) old('approved_ball_id', $registeredBall->approved_ball_id));
-    $selectedBrand = old('brand_filter', $selectedBall->brand ?? '');
+    $selectedBrand = old('brand_filter', $selectedBall?->registration_brand ?? '');
     $selectedReleaseYear = old('release_year_filter', $selectedBall->release_year ?? '');
     $currentInspection = old('inspection_number', $registeredBall->inspection_number);
     $isTemporary = blank($currentInspection);
@@ -113,7 +113,7 @@
                     <div class="col-md-6">
                         <select id="brand_filter" name="brand_filter" class="form-select">
                             <option value="">ブランドで絞り込み</option>
-                            @foreach (collect($approvedBalls)->pluck('brand')->filter()->unique()->sort()->values() as $brand)
+                            @foreach ($brands as $brand)
                                 <option value="{{ $brand }}" {{ (string) $selectedBrand === (string) $brand ? 'selected' : '' }}>
                                     {{ $brand }}
                                 </option>
@@ -122,8 +122,8 @@
                     </div>
                     <div class="col-md-6">
                         <select id="release_year_filter" name="release_year_filter" class="form-select">
-                            <option value="">発売年で絞り込み</option>
-                            @foreach (collect($approvedBalls)->pluck('release_year')->filter()->unique()->sortDesc()->values() as $year)
+                            <option value="">発売／USBC承認年で絞り込み</option>
+                            @foreach ($years as $year)
                                 <option value="{{ $year }}" {{ (string) $selectedReleaseYear === (string) $year ? 'selected' : '' }}>
                                     {{ $year }}
                                 </option>
@@ -140,12 +140,12 @@
                     @foreach($approvedBalls as $ball)
                         <option
                             value="{{ $ball->id }}"
-                            data-brand="{{ $ball->brand }}"
+                            data-brand="{{ $ball->registration_brand }}"
                             data-release-year="{{ $ball->release_year }}"
                             data-usbc-status="{{ $ball->usbc_match_status ?? 'unchecked' }}"
                             {{ (string) old('approved_ball_id', $registeredBall->approved_ball_id) === (string) $ball->id ? 'selected' : '' }}
                         >
-                            {{ $ball->brand ?: $ball->manufacturer }} - {{ $ball->name }}@if($ball->release_year)（{{ $ball->release_year }}年）@endif
+                            {{ $ball->registration_brand }} - {{ $ball->name }}@if($ball->registration_period_label)（{{ $ball->registration_period_label }}）@endif
                         </option>
                     @endforeach
                 </select>

@@ -126,9 +126,7 @@
                         @foreach($usedBalls as $ball)
                             @php
                                 $approvedBall = $ball->approvedBall;
-                                $brand = $approvedBall?->brand
-                                    ?? $approvedBall?->manufacturer
-                                    ?? '-';
+                                $brand = $approvedBall?->registration_brand ?? '-';
                                 $ballName = $approvedBall?->name ?? $approvedBall?->model_name ?? '-';
                                 $isExpired = $ball->expires_at && $ball->expires_at->lt(today());
                                 $isProvisional = blank($ball->inspection_number) || !$ball->expires_at;
@@ -149,7 +147,7 @@
                                 <td>
                                     @if($approvedBall)
                                         <img
-                                            src="{{ route('approved_balls.image', $approvedBall->id) }}"
+                                            src="{{ $approvedBall->image_url }}"
                                             alt="{{ $ballName }}"
                                             style="width:64px;height:64px;object-fit:contain;"
                                         >

@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Models\ApprovedBall;
+use App\Models\BallManufacturer;
 use App\Models\UsbcApprovedBallEntry;
 use App\Models\UsbcApprovedBallList;
 use App\Services\UsbcApprovedBallSyncService;
@@ -54,6 +55,10 @@ class SyncUsbcApprovedBallsCommand extends Command
                 'name',
                 'source_url',
                 'release_date',
+                'source_key',
+                'source_fingerprint',
+                'source_payload',
+                'catalog_status',
             ])
             ->orderBy('id')
             ->get();
@@ -71,6 +76,12 @@ class SyncUsbcApprovedBallsCommand extends Command
             $summary[$match['status']]++;
         }
 
+        $catalogPlan = $this->buildCatalogSyncPlan(
+            $snapshot['entries'],
+            $catalogBalls,
+            $matches
+        );
+
         $report = [
             'mode' => $force ? 'executed' : 'dry-run',
             'official_updated_on' => $snapshot['official_updated_on'],
@@ -84,6 +95,10 @@ class SyncUsbcApprovedBallsCommand extends Command
             'matched_catalog_count' => $summary['matched'],
             'ambiguous_catalog_count' => $summary['ambiguous'],
             'unlisted_catalog_count' => $summary['not_listed'],
+            'official_catalog_existing_count' => $catalogPlan['existing_count'],
+            'official_catalog_create_count' => count($catalogPlan['create']),
+            'official_catalog_update_count' => count($catalogPlan['update']),
+            'official_catalog_archive_count' => count($catalogPlan['archive_ids']),
             'ambiguous' => $this->reportRows($catalogBalls, $matches, 'ambiguous'),
             'not_listed' => $this->reportRows($catalogBalls, $matches, 'not_listed'),
         ];
@@ -95,6 +110,7 @@ class SyncUsbcApprovedBallsCommand extends Command
                     $report,
                     $catalogBalls,
                     $matches,
+                    $catalogPlan,
                     $useLatest
                 ): void {
                     $list = UsbcApprovedBallList::query()->updateOrCreate(
@@ -134,6 +150,13 @@ class SyncUsbcApprovedBallsCommand extends Command
                     foreach ($catalogBalls as $ball) {
                         $match = $matches[$ball->id];
                         $matched = $match['matched'];
+                        $sourcePayload = array_merge(
+                            (array) $ball->source_payload,
+                            array_filter([
+                                'usbc_source_fingerprint' => $matched['source_fingerprint'] ?? null,
+                                'usbc_approved_date_text' => $matched['approved_date_text'] ?? null,
+                            ], static fn (mixed $value): bool => $value !== null && $value !== '')
+                        );
                         ApprovedBall::query()
                             ->whereKey($ball->id)
                             ->update([
@@ -145,8 +168,11 @@ class SyncUsbcApprovedBallsCommand extends Command
                                     $match['candidates']
                                 ),
                                 'usbc_checked_at' => now(),
+                                'source_payload' => $sourcePayload,
                             ]);
                     }
+
+                    $this->applyCatalogSyncPlan($catalogPlan, $snapshot);
 
                     $list->update([
                         'status' => 'completed',
@@ -185,12 +211,250 @@ class SyncUsbcApprovedBallsCommand extends Command
                 number_format($summary['ambiguous']),
                 number_format($summary['not_listed'])
             ));
+            $this->line(sprintf(
+                '公式全件補完：既存 %s件 / 追加 %s件 / 更新 %s件 / 旧版化 %s件',
+                number_format($catalogPlan['existing_count']),
+                number_format(count($catalogPlan['create'])),
+                number_format(count($catalogPlan['update'])),
+                number_format(count($catalogPlan['archive_ids']))
+            ));
             if (! $force) {
                 $this->comment('保存するには --force を付けて再実行してください。');
             }
         }
 
         return self::SUCCESS;
+    }
+
+    /**
+     * @param array<int,array<string,mixed>> $entries
+     * @param iterable<int,ApprovedBall> $catalogBalls
+     * @param array<int,array<string,mixed>> $matches
+     * @return array{
+     *   existing_count:int,
+     *   create:array<int,array<string,mixed>>,
+     *   update:array<int,array{ball_id:int,entry:array<string,mixed>}>,
+     *   archive_ids:array<int,int>
+     * }
+     */
+    private function buildCatalogSyncPlan(
+        array $entries,
+        iterable $catalogBalls,
+        array $matches
+    ): array {
+        $officialByFingerprint = [];
+        foreach ($entries as $entry) {
+            $fingerprint = trim((string) ($entry['source_fingerprint'] ?? ''));
+            if ($fingerprint !== '') {
+                $officialByFingerprint[$fingerprint] = $entry;
+            }
+        }
+
+        $represented = [];
+        $mirrors = [];
+        foreach ($catalogBalls as $ball) {
+            $payload = (array) $ball->source_payload;
+            if (($payload['source_type'] ?? null) === 'usbc_approved_list') {
+                $fingerprint = trim((string) (
+                    $payload['usbc_source_fingerprint']
+                    ?? $ball->source_fingerprint
+                    ?? ''
+                ));
+                if ($fingerprint !== '') {
+                    $mirrors[$fingerprint][] = $ball;
+                }
+                continue;
+            }
+
+            $match = $matches[$ball->id] ?? null;
+            $fingerprint = trim((string) (
+                $match['matched']['source_fingerprint']
+                ?? ''
+            ));
+            if (($match['status'] ?? null) === 'matched' && $fingerprint !== '') {
+                $represented[$fingerprint] = true;
+            }
+        }
+
+        $create = [];
+        $update = [];
+        $archiveIds = [];
+        foreach ($officialByFingerprint as $fingerprint => $entry) {
+            if (isset($represented[$fingerprint])) {
+                foreach ($mirrors[$fingerprint] ?? [] as $duplicateMirror) {
+                    $archiveIds[] = (int) $duplicateMirror->id;
+                }
+                continue;
+            }
+
+            $existingMirrors = $mirrors[$fingerprint] ?? [];
+            if ($existingMirrors === []) {
+                $create[] = $entry;
+                continue;
+            }
+
+            $primaryMirror = array_shift($existingMirrors);
+            $update[] = [
+                'ball_id' => (int) $primaryMirror->id,
+                'entry' => $entry,
+            ];
+            foreach ($existingMirrors as $duplicateMirror) {
+                $archiveIds[] = (int) $duplicateMirror->id;
+            }
+        }
+
+        foreach ($mirrors as $fingerprint => $existingMirrors) {
+            if (isset($officialByFingerprint[$fingerprint])) {
+                continue;
+            }
+            foreach ($existingMirrors as $staleMirror) {
+                $archiveIds[] = (int) $staleMirror->id;
+            }
+        }
+
+        return [
+            'existing_count' => count($officialByFingerprint) - count($create),
+            'create' => $create,
+            'update' => $update,
+            'archive_ids' => array_values(array_unique($archiveIds)),
+        ];
+    }
+
+    /**
+     * @param array<string,mixed> $plan
+     * @param array<string,mixed> $snapshot
+     */
+    private function applyCatalogSyncPlan(array $plan, array $snapshot): void
+    {
+        $manufacturer = BallManufacturer::query()->updateOrCreate(
+            ['name' => 'USBC'],
+            [
+                'slug' => 'usbc',
+                'base_url' => 'https://bowl.com/',
+                'catalog_url' => (string) $snapshot['source_page_url'],
+                'is_active' => true,
+                'sort_order' => 40,
+            ]
+        );
+
+        $now = now();
+        $rows = [];
+        foreach ($plan['create'] as $entry) {
+            $rows[] = $this->officialCatalogRow(
+                $entry,
+                $snapshot,
+                (int) $manufacturer->id,
+                $now,
+                $now
+            );
+        }
+        foreach ($plan['update'] as $item) {
+            $existing = ApprovedBall::query()->find($item['ball_id']);
+            $rows[] = $this->officialCatalogRow(
+                $item['entry'],
+                $snapshot,
+                (int) $manufacturer->id,
+                $existing?->first_seen_at ?? $now,
+                $now
+            );
+        }
+
+        foreach (array_chunk($rows, 500) as $chunk) {
+            DB::table('approved_balls')->upsert(
+                $chunk,
+                ['source_key'],
+                [
+                    'name',
+                    'manufacturer',
+                    'manufacturer_id',
+                    'brand',
+                    'sort_name',
+                    'usbc_match_status',
+                    'usbc_match_method',
+                    'usbc_matched_brand',
+                    'usbc_matched_name',
+                    'usbc_match_candidates',
+                    'usbc_checked_at',
+                    'release_date',
+                    'source_url',
+                    'source_image_url',
+                    'catalog_status',
+                    'source_payload',
+                    'source_fingerprint',
+                    'last_seen_at',
+                    'imported_at',
+                    'updated_at',
+                ]
+            );
+        }
+
+        if ($plan['archive_ids'] !== []) {
+            ApprovedBall::query()
+                ->whereIn('id', $plan['archive_ids'])
+                ->update([
+                    'catalog_status' => 'archive',
+                    'usbc_match_status' => 'not_listed',
+                    'usbc_match_method' => 'official_source_missing',
+                    'usbc_checked_at' => $now,
+                    'updated_at' => $now,
+                ]);
+        }
+    }
+
+    /**
+     * @param array<string,mixed> $entry
+     * @param array<string,mixed> $snapshot
+     * @return array<string,mixed>
+     */
+    private function officialCatalogRow(
+        array $entry,
+        array $snapshot,
+        int $manufacturerId,
+        mixed $firstSeenAt,
+        mixed $now
+    ): array {
+        $fingerprint = (string) $entry['source_fingerprint'];
+        $payload = [
+            'source_type' => 'usbc_approved_list',
+            'usbc_source_fingerprint' => $fingerprint,
+            'usbc_approved_date_text' => $entry['approved_date_text'] ?? null,
+            'official_updated_on' => $snapshot['official_updated_on'] ?? null,
+            'release_date_basis' => 'usbc_approved_on',
+        ];
+
+        return [
+            'name' => (string) $entry['name'],
+            'name_kana' => null,
+            'manufacturer' => 'USBC',
+            'manufacturer_id' => $manufacturerId,
+            'brand' => (string) $entry['brand'],
+            'sort_name' => mb_strtoupper((string) $entry['name'], 'UTF-8'),
+            'approved' => false,
+            'usbc_match_status' => 'matched',
+            'usbc_match_method' => 'official_source',
+            'usbc_matched_brand' => (string) $entry['brand'],
+            'usbc_matched_name' => (string) $entry['name'],
+            'usbc_match_candidates' => json_encode([], JSON_UNESCAPED_UNICODE),
+            'usbc_checked_at' => $now,
+            'release_date' => $entry['approved_on'] ?? null,
+            'source_key' => hash('sha256', 'usbc-approved-ball|'.$fingerprint),
+            'source_url' => (string) $snapshot['source_page_url'],
+            'source_image_url' => $entry['image_url'] ?? null,
+            'image_path' => null,
+            'image_sha256' => null,
+            'catalog_status' => 'listed',
+            'source_payload' => json_encode(
+                $payload,
+                JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES
+            ),
+            'source_fingerprint' => $fingerprint,
+            'first_seen_at' => $firstSeenAt,
+            'last_seen_at' => $now,
+            'imported_at' => $now,
+            'image_imported_at' => null,
+            'created_at' => $now,
+            'updated_at' => $now,
+        ];
     }
 
     /**
