@@ -37,6 +37,17 @@ beforeEach(function () {
         'catalog_status' => 'listed',
         'release_date' => '2026-01-01',
     ]);
+    $this->officialTrackBall = ApprovedBall::query()->create([
+        'name' => 'TRACK OFFICIAL TEST',
+        'manufacturer' => 'USBC',
+        'brand' => 'TRACK BOWLING',
+        'usbc_match_status' => 'matched',
+        'usbc_matched_brand' => 'Track Inc.',
+        'approved' => true,
+        'catalog_status' => 'listed',
+        'release_date' => '2018-01-01',
+        'source_payload' => ['source_type' => 'usbc_approved_list'],
+    ]);
 });
 
 test('a provisional mirrored ball is presented as one logical registration', function () {
@@ -76,15 +87,23 @@ test('a provisional mirrored ball is presented as one logical registration', fun
     ))->toBe(1);
 });
 
-test('ball registration choices use product brands instead of catalog distributors', function () {
-    $this->actingAs($this->member)
+test('ball registration choices use product brands and prioritize distributor brands', function () {
+    $response = $this->actingAs($this->member)
         ->get(route('registered_balls.create'))
         ->assertOk()
         ->assertSee('ブランドで絞り込み')
         ->assertSee('data-brand="900GLOBAL"', false)
         ->assertSee('900GLOBAL - VENGEANCE TEST')
         ->assertSee('NANODESU - NANODESU TEST')
+        ->assertSee('TRACK BOWLING - TRACK OFFICIAL TEST')
         ->assertDontSee('ABS - VENGEANCE TEST');
+
+    $response->assertSeeInOrder([
+        'value="900GLOBAL"',
+        'value="NANODESU"',
+        '<option value="" disabled>------</option>',
+        'value="TRACK BOWLING"',
+    ], false);
 
     $this->actingAs($this->member)
         ->get(route('used_balls.create', ['brand' => '900GLOBAL']))

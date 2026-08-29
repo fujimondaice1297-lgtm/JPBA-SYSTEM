@@ -89,7 +89,15 @@
                     <div class="col-md-6">
                         <select id="brand_filter" name="brand_filter" class="form-select">
                             <option value="">ブランドで絞り込み</option>
-                            @foreach ($brands as $brand)
+                            @foreach ($distributorBrands as $brand)
+                                <option value="{{ $brand }}" {{ (string) $selectedBrand === (string) $brand ? 'selected' : '' }}>
+                                    {{ $brand }}
+                                </option>
+                            @endforeach
+                            @if($distributorBrands->isNotEmpty() && $usbcOnlyBrands->isNotEmpty())
+                                <option value="" disabled>------</option>
+                            @endif
+                            @foreach ($usbcOnlyBrands as $brand)
                                 <option value="{{ $brand }}" {{ (string) $selectedBrand === (string) $brand ? 'selected' : '' }}>
                                     {{ $brand }}
                                 </option>

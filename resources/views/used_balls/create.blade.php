@@ -87,7 +87,15 @@
                     onchange="location.href='{{ route('used_balls.create') }}?brand=' + encodeURIComponent(this.value) + '&license_no=' + encodeURIComponent(document.getElementById('license_no').value) + '&return_to=' + encodeURIComponent('{{ $returnTo }}') + '&entry_id=' + encodeURIComponent('{{ $entryId }}')"
                 >
                     <option value="">選択してください</option>
-                    @foreach($brands as $brandOption)
+                    @foreach($distributorBrands as $brandOption)
+                        <option value="{{ $brandOption }}" {{ (string) $selectedBrand === (string) $brandOption ? 'selected' : '' }}>
+                            {{ $brandOption }}
+                        </option>
+                    @endforeach
+                    @if($distributorBrands->isNotEmpty() && $usbcOnlyBrands->isNotEmpty())
+                        <option value="" disabled>------</option>
+                    @endif
+                    @foreach($usbcOnlyBrands as $brandOption)
                         <option value="{{ $brandOption }}" {{ (string) $selectedBrand === (string) $brandOption ? 'selected' : '' }}>
                             {{ $brandOption }}
                         </option>

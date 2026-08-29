@@ -6,6 +6,7 @@ use App\Models\ApprovedBall;
 use App\Models\ProBowler;
 use App\Models\RegisteredBall;
 use App\Models\UsedBall;
+use App\Services\BallCatalogBrandService;
 use App\Services\RegisteredBallLinkageService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -15,7 +16,8 @@ use Illuminate\Validation\Rule;
 class RegisteredBallController extends Controller
 {
     public function __construct(
-        private readonly RegisteredBallLinkageService $linkageService
+        private readonly RegisteredBallLinkageService $linkageService,
+        private readonly BallCatalogBrandService $brandService
     ) {}
 
     public function index(Request $request)
@@ -203,7 +205,7 @@ class RegisteredBallController extends Controller
 
     public function create(Request $request)
     {
-        [$approvedBalls, $brands, $years] = $this->registrationCatalogData();
+        [$approvedBalls, $distributorBrands, $usbcOnlyBrands, $years] = $this->registrationCatalogData();
         $proBowlers = ProBowler::all();
 
         $fixedLicenseNo = null;
@@ -217,7 +219,8 @@ class RegisteredBallController extends Controller
         return view('registered_balls.create', compact(
             'approvedBalls',
             'proBowlers',
-            'brands',
+            'distributorBrands',
+            'usbcOnlyBrands',
             'years',
             'fixedLicenseNo'
         ));
@@ -289,7 +292,7 @@ class RegisteredBallController extends Controller
     {
         $this->authorizeRegisteredBallAccess($request->user(), $registeredBall);
 
-        [$approvedBalls, $brands, $years] = $this->registrationCatalogData();
+        [$approvedBalls, $distributorBrands, $usbcOnlyBrands, $years] = $this->registrationCatalogData();
         $proBowlers = ProBowler::all();
         $fixedLicenseNo = null;
 
@@ -301,7 +304,8 @@ class RegisteredBallController extends Controller
             'registeredBall',
             'approvedBalls',
             'proBowlers',
-            'brands',
+            'distributorBrands',
+            'usbcOnlyBrands',
             'years',
             'fixedLicenseNo'
         ));
@@ -541,7 +545,7 @@ class RegisteredBallController extends Controller
     }
 
     /**
-     * @return array{0:\Illuminate\Support\Collection,1:\Illuminate\Support\Collection,2:\Illuminate\Support\Collection}
+     * @return array{0:\Illuminate\Support\Collection,1:\Illuminate\Support\Collection,2:\Illuminate\Support\Collection,3:\Illuminate\Support\Collection}
      */
     private function registrationCatalogData(): array
     {
@@ -557,12 +561,8 @@ class RegisteredBallController extends Controller
             )
             ->values();
 
-        $brands = $balls
-            ->pluck('registration_brand')
-            ->filter()
-            ->unique()
-            ->sort(SORT_NATURAL | SORT_FLAG_CASE)
-            ->values();
+        [$distributorBrands, $usbcOnlyBrands] = $this->brandService
+            ->registrationBrandGroups($balls);
         $years = $balls
             ->pluck('release_year')
             ->filter()
@@ -570,6 +570,6 @@ class RegisteredBallController extends Controller
             ->sortDesc()
             ->values();
 
-        return [$balls, $brands, $years];
+        return [$balls, $distributorBrands, $usbcOnlyBrands, $years];
     }
 }

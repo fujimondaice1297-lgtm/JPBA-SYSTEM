@@ -50,7 +50,15 @@
                 <label for="brand" class="form-label">ブランド</label>
                 <select id="brand" name="brand" class="form-select">
                     <option value="">すべて</option>
-                    @foreach($brands as $brand)
+                    @foreach($distributorBrands as $brand)
+                        <option value="{{ $brand }}" @selected(request('brand') === $brand)>
+                            {{ $brand }}
+                        </option>
+                    @endforeach
+                    @if($distributorBrands->isNotEmpty() && $usbcOnlyBrands->isNotEmpty())
+                        <option value="" disabled>------</option>
+                    @endif
+                    @foreach($usbcOnlyBrands as $brand)
                         <option value="{{ $brand }}" @selected(request('brand') === $brand)>
                             {{ $brand }}
                         </option>

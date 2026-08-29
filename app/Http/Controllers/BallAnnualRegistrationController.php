@@ -274,6 +274,12 @@ class BallAnnualRegistrationController extends Controller
             ->values();
 
         $registration = DB::transaction(function () use ($request, $proBowler, $year, $ballIds, $submit) {
+            // 同じ選手の初回申請同士も直列化するため、必ず存在する選手行を先にロックする。
+            ProBowler::query()
+                ->whereKey($proBowler->id)
+                ->lockForUpdate()
+                ->firstOrFail(['id']);
+
             $working = BallAnnualRegistration::query()
                 ->where('pro_bowler_id', $proBowler->id)
                 ->where('registration_year', $year)
@@ -296,7 +302,6 @@ class BallAnnualRegistrationController extends Controller
                 $lastRevision = (int) BallAnnualRegistration::query()
                     ->where('pro_bowler_id', $proBowler->id)
                     ->where('registration_year', $year)
-                    ->lockForUpdate()
                     ->max('revision');
 
                 $working = BallAnnualRegistration::create([

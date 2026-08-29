@@ -6,6 +6,7 @@ use App\Models\UsedBall;
 use App\Models\RegisteredBall;
 use App\Models\ProBowler;
 use App\Models\ApprovedBall;
+use App\Services\BallCatalogBrandService;
 use App\Services\BallInspectionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -13,7 +14,8 @@ use Illuminate\Support\Facades\DB;
 class UsedBallController extends Controller
 {
     public function __construct(
-        private readonly BallInspectionService $inspectionService
+        private readonly BallInspectionService $inspectionService,
+        private readonly BallCatalogBrandService $brandService
     ) {
     }
 
@@ -122,16 +124,13 @@ class UsedBallController extends Controller
             : $catalogBalls
                 ->filter(fn (ApprovedBall $ball): bool => $ball->registration_brand === $brand)
                 ->values();
-        $brands = $catalogBalls
-            ->pluck('registration_brand')
-            ->filter()
-            ->unique()
-            ->sort(SORT_NATURAL | SORT_FLAG_CASE)
-            ->values();
+        [$distributorBrands, $usbcOnlyBrands] = $this->brandService
+            ->registrationBrandGroups($catalogBalls);
 
         return view('used_balls.create', compact(
             'balls',
-            'brands',
+            'distributorBrands',
+            'usbcOnlyBrands',
             'brand',
             'prefillLicenseNo',
             'fixedLicenseNo'

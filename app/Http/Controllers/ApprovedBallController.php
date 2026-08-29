@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\ApprovedBall;
 use App\Models\BallManufacturer;
+use App\Services\BallCatalogBrandService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -75,13 +76,8 @@ class ApprovedBallController extends Controller
                 $request->string('manufacturer')->toString()
             );
         }
-        $brands = $brandsQuery
-            ->get()
-            ->pluck('registration_brand')
-            ->filter()
-            ->unique()
-            ->sort(SORT_NATURAL | SORT_FLAG_CASE)
-            ->values();
+        [$distributorBrands, $usbcOnlyBrands] = app(BallCatalogBrandService::class)
+            ->registrationBrandGroups($brandsQuery->get());
         $catalogSummary = BallManufacturer::query()
             ->withCount([
                 'approvedBalls',
@@ -94,7 +90,8 @@ class ApprovedBallController extends Controller
         return view('approved_balls.index', compact(
             'balls',
             'manufacturers',
-            'brands',
+            'distributorBrands',
+            'usbcOnlyBrands',
             'catalogSummary'
         ));
     }

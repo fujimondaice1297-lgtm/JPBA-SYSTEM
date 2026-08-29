@@ -3,9 +3,30 @@
 namespace App\Services;
 
 use App\Models\ApprovedBall;
+use Illuminate\Support\Collection;
 
 class BallCatalogBrandService
 {
+    /**
+     * 国内代理店カタログのブランドを先頭にし、USBCだけにあるブランドを分離する。
+     *
+     * @param  Collection<int, ApprovedBall>  $balls
+     * @return array{0: Collection<int, string>, 1: Collection<int, string>}
+     */
+    public function registrationBrandGroups(Collection $balls): array
+    {
+        $distributorBrands = $this->sortedUniqueBrands(
+            $balls->reject(fn (ApprovedBall $ball): bool => $this->isUsbcOnlyBall($ball))
+        );
+        $usbcOnlyBrands = $this->sortedUniqueBrands(
+            $balls->filter(fn (ApprovedBall $ball): bool => $this->isUsbcOnlyBall($ball))
+        )->reject(
+            fn (string $brand): bool => $distributorBrands->containsStrict($brand)
+        )->values();
+
+        return [$distributorBrands, $usbcOnlyBrands];
+    }
+
     /**
      * 国内代理店掲載品は代理店サイトのブランド区分を優先する。
      */
@@ -56,5 +77,26 @@ class BallCatalogBrandService
             'TRACKINC' => 'TRACK BOWLING',
             default => trim($officialBrand),
         };
+    }
+
+    /**
+     * @param  Collection<int, ApprovedBall>  $balls
+     * @return Collection<int, string>
+     */
+    private function sortedUniqueBrands(Collection $balls): Collection
+    {
+        return $balls
+            ->map(fn (ApprovedBall $ball): string => trim($ball->registration_brand))
+            ->filter()
+            ->unique()
+            ->sort(SORT_NATURAL | SORT_FLAG_CASE)
+            ->values();
+    }
+
+    private function isUsbcOnlyBall(ApprovedBall $ball): bool
+    {
+        $payload = (array) $ball->source_payload;
+
+        return ($payload['source_type'] ?? null) === 'usbc_approved_list';
     }
 }

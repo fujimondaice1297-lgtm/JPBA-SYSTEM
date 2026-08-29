@@ -45,13 +45,15 @@ class BallCatalogViewRenderingTest extends TestCase
         $manufacturer->setAttribute('image_count', 159);
         $catalogSummary = collect([$manufacturer]);
         $manufacturers = collect(['ABS']);
-        $brands = collect(['NANODESU']);
+        $distributorBrands = collect(['NANODESU']);
+        $usbcOnlyBrands = collect(['TRACK BOWLING']);
 
         $html = view('approved_balls.index', compact(
             'balls',
             'catalogSummary',
             'manufacturers',
-            'brands'
+            'distributorBrands',
+            'usbcOnlyBrands'
         ))->render();
 
         $this->assertStringContainsString('ボールカタログ', $html);
@@ -60,6 +62,12 @@ class BallCatalogViewRenderingTest extends TestCase
         $this->assertStringContainsString('ACCU TEST', $html);
         $this->assertStringContainsString('アキュ・テスト', $html);
         $this->assertStringContainsString('NANODESU', $html);
+        $this->assertStringContainsString('<option value="" disabled>------</option>', $html);
+        $this->assertStringContainsString('TRACK BOWLING', $html);
+        $this->assertLessThan(
+            strpos($html, 'TRACK BOWLING'),
+            strpos($html, 'NANODESU')
+        );
         $this->assertStringContainsString('USBC承認 2026-07-15', $html);
         $this->assertStringContainsString('images/ball-no-image.svg', $html);
         $this->assertStringContainsString('未設定', $html);
