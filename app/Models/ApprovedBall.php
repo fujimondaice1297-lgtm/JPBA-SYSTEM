@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\BallCatalogBrandService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Storage;
 
@@ -79,72 +80,46 @@ class ApprovedBall extends Model
             return route('approved_balls.image', ['approved_ball' => $this->getKey()]);
         }
 
-        $payload = (array) $this->source_payload;
-        if (
-            (($payload['source_type'] ?? null) === 'usbc_approved_list')
-            && filter_var($this->source_image_url, FILTER_VALIDATE_URL)
-        ) {
-            return (string) $this->source_image_url;
-        }
-
         return asset('images/ball-no-image.svg');
     }
 
     public function getRegistrationBrandAttribute(): string
     {
-        $officialBrand = trim((string) $this->usbc_matched_brand);
-        if ($this->usbc_match_status === 'matched' && $officialBrand !== '') {
-            return $officialBrand;
-        }
-
-        return trim((string) ($this->brand ?: $this->manufacturer));
+        return app(BallCatalogBrandService::class)->registrationBrand($this);
     }
 
     public function getRegistrationPeriodLabelAttribute(): string
     {
-        if (! $this->release_date) {
-            return '';
+        if ($this->usbc_match_status === 'matched' && $this->release_date) {
+            return 'USBC承認 '.$this->usbcApprovalDateLabel();
         }
 
-        $payload = (array) $this->source_payload;
-        if (($payload['release_date_basis'] ?? null) === 'usbc_approved_on') {
-            return 'USBC承認 '.$this->release_date->format('Y-m-d');
-        }
-
-        return '発売 '.$this->release_date->format('Y').'年';
+        return $this->usbc_match_status === 'matched'
+            ? 'USBC承認日不明'
+            : 'USBC未確認';
     }
 
     public function getReleaseDisplayAttribute(): string
     {
-        $payload = (array) $this->source_payload;
-        $releaseText = trim((string) ($payload['release_text'] ?? ''));
-        if ($releaseText !== '') {
-            return $releaseText;
-        }
-
-        if (! $this->release_date) {
-            return '―';
-        }
-
-        if (($payload['release_date_basis'] ?? null) === 'official_publish_date') {
-            return sprintf(
-                '%d年%d月発売',
-                (int) $this->release_date->format('Y'),
-                (int) $this->release_date->format('n')
-            );
-        }
-
-        if (($payload['release_date_basis'] ?? null) === 'usbc_approved_on') {
-            return 'USBC承認 '.$this->release_date->format('Y-m-d');
-        }
-
-        return $this->release_date->format('Y-m-d');
+        return $this->registration_period_label;
     }
 
     public function getReleaseYearAttribute(): ?int
     {
-        return $this->release_date
+        return $this->usbc_match_status === 'matched' && $this->release_date
             ? (int) $this->release_date->format('Y')
             : null;
+    }
+
+    private function usbcApprovalDateLabel(): string
+    {
+        $payload = (array) $this->source_payload;
+        $original = trim((string) ($payload['usbc_approved_date_text'] ?? ''));
+        $monthOnly = preg_match(
+            '/^[A-Za-z]{3,9}\s*(?:-\s*)?\'?[0-9]{2,4}$/',
+            $original
+        ) === 1;
+
+        return $this->release_date->format($monthOnly ? 'Y-m' : 'Y-m-d');
     }
 }

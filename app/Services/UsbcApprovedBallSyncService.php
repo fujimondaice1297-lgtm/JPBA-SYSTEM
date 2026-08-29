@@ -124,7 +124,7 @@ class UsbcApprovedBallSyncService
     }
 
     /**
-     * @param array<int,array<string,mixed>> $entries
+     * @param  array<int,array<string,mixed>>  $entries
      * @return array<string,array<string,array<int,array<string,mixed>>>>
      */
     public function buildIndexes(array $entries): array
@@ -152,8 +152,8 @@ class UsbcApprovedBallSyncService
     }
 
     /**
-     * @param array<string,mixed> $catalogBall
-     * @param array<string,array<string,array<int,array<string,mixed>>>> $indexes
+     * @param  array<string,mixed>  $catalogBall
+     * @param  array<string,array<string,array<int,array<string,mixed>>>>  $indexes
      * @return array{
      *   status:string,
      *   method:?string,
@@ -215,8 +215,7 @@ class UsbcApprovedBallSyncService
             }
             foreach ($brandCandidates as $brand) {
                 foreach (
-                    $indexes['by_brand_name'][$brand] ?? []
-                    as $entries
+                    $indexes['by_brand_name'][$brand] ?? [] as $entries
                 ) {
                     foreach ($entries as $entry) {
                         $officialTokens = $this->tokenParts(
@@ -257,8 +256,7 @@ class UsbcApprovedBallSyncService
             }
             foreach ($brandCandidates as $brand) {
                 foreach (
-                    $indexes['by_brand_name'][$brand] ?? []
-                    as $officialName => $entries
+                    $indexes['by_brand_name'][$brand] ?? [] as $officialName => $entries
                 ) {
                     if (
                         ! str_starts_with($officialName, $catalogName)
@@ -517,7 +515,7 @@ class UsbcApprovedBallSyncService
             ->retry(3, 400);
     }
 
-    private function parseApprovedDate(string $value): ?string
+    public function parseApprovedDate(string $value): ?string
     {
         $value = trim($value);
         if ($value === '') {
@@ -531,9 +529,14 @@ class UsbcApprovedBallSyncService
             }
         }
 
-        if (preg_match('/^([A-Za-z]{3,9})-\'?([0-9]{2})$/', $value, $match)) {
+        if (preg_match(
+            '/^([A-Za-z]{3,9})\s*(?:-\s*)?\'?([0-9]{2}|[0-9]{4})$/',
+            $value,
+            $match
+        )) {
+            $yearFormat = strlen($match[2]) === 4 ? 'Y' : 'y';
             $date = DateTimeImmutable::createFromFormat(
-                '!M-y',
+                '!M-'.$yearFormat,
                 substr($match[1], 0, 3).'-'.$match[2]
             );
             if ($date !== false) {
@@ -666,10 +669,9 @@ class UsbcApprovedBallSyncService
     }
 
     /**
-     * @param array<int,array{raw:string,normalized:string,method:string}> $nameCandidates
-     * @param array<int,string> $brandCandidates
-     * @param array<string,array<string,array<int,array<string,mixed>>>> $byBrandName
-     * @param int|null $catalogReleaseYear
+     * @param  array<int,array{raw:string,normalized:string,method:string}>  $nameCandidates
+     * @param  array<int,string>  $brandCandidates
+     * @param  array<string,array<string,array<int,array<string,mixed>>>>  $byBrandName
      * @return array<int,array<string,mixed>>
      */
     private function fuzzySuggestions(
@@ -719,8 +721,7 @@ class UsbcApprovedBallSyncService
 
         uasort(
             $suggestions,
-            static fn (array $left, array $right): int =>
-                ($right['similarity'] ?? 0) <=> ($left['similarity'] ?? 0)
+            static fn (array $left, array $right): int => ($right['similarity'] ?? 0) <=> ($left['similarity'] ?? 0)
         );
 
         return array_slice(array_values($suggestions), 0, 5);

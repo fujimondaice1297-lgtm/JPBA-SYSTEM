@@ -18,7 +18,7 @@
 
         <div class="row g-3">
             <div class="col-md-4">
-                <label for="release_date" class="form-label">発売日</label>
+                <label for="release_date" class="form-label">USBC承認日</label>
                 <input id="release_date" type="date" name="release_date" class="form-control"
                        value="{{ old('release_date', optional($ball->release_date)->format('Y-m-d')) }}">
             </div>

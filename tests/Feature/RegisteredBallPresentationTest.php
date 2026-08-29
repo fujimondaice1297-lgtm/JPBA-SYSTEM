@@ -81,13 +81,14 @@ test('ball registration choices use product brands instead of catalog distributo
         ->get(route('registered_balls.create'))
         ->assertOk()
         ->assertSee('ブランドで絞り込み')
-        ->assertSee('data-brand="900 Global"', false)
-        ->assertSee('900 Global - VENGEANCE TEST')
+        ->assertSee('data-brand="900GLOBAL"', false)
+        ->assertSee('900GLOBAL - VENGEANCE TEST')
+        ->assertSee('NANODESU - NANODESU TEST')
         ->assertDontSee('ABS - VENGEANCE TEST');
 
     $this->actingAs($this->member)
-        ->get(route('used_balls.create', ['brand' => '900 Global']))
+        ->get(route('used_balls.create', ['brand' => '900GLOBAL']))
         ->assertOk()
-        ->assertSee('900 Global - VENGEANCE TEST')
+        ->assertSee('900GLOBAL - VENGEANCE TEST')
         ->assertDontSee('ABS - NANODESU TEST');
 });

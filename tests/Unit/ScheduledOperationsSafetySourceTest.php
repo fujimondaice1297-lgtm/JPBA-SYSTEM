@@ -16,6 +16,14 @@ class ScheduledOperationsSafetySourceTest extends TestCase
         $this->assertStringContainsString("Schedule::command('tournament:send-draw-reminders')", $schedule);
         $this->assertStringContainsString("Schedule::command('tournament:auto-draw-pending')", $schedule);
         $this->assertStringContainsString("Schedule::command('balls:audit-retention')", $schedule);
+        $this->assertStringContainsString("Schedule::command('balls:sync-catalog --manufacturer=all --force')", $schedule);
+        $this->assertStringContainsString("Schedule::command('balls:sync-usbc-approved --force')", $schedule);
+        $this->assertLessThan(
+            strpos($schedule, "Schedule::command('balls:sync-usbc-approved --force')"),
+            strpos($schedule, "Schedule::command('balls:sync-catalog --manufacturer=all --force')")
+        );
+        $this->assertStringContainsString('scheduled-ball-catalog-sync.log', $schedule);
+        $this->assertStringContainsString('scheduled-usbc-approved-ball-sync.log', $schedule);
         $this->assertGreaterThanOrEqual(3, substr_count($schedule, 'withoutOverlapping(120)'));
         $this->assertGreaterThanOrEqual(3, substr_count($schedule, 'appendOutputTo'));
         $this->assertStringNotContainsString("Schedule::command('usedballs:delete-expired')", $schedule);

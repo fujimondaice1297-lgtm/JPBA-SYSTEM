@@ -9,6 +9,16 @@ use Tests\TestCase;
 
 class UsbcApprovedBallSyncServiceTest extends TestCase
 {
+    public function test_it_parses_month_only_usbc_approval_notations(): void
+    {
+        $service = app(UsbcApprovedBallSyncService::class);
+
+        $this->assertSame('2000-03-01', $service->parseApprovedDate("Mar'00"));
+        $this->assertSame('2012-03-01', $service->parseApprovedDate('Mar - 12'));
+        $this->assertSame('2012-05-01', $service->parseApprovedDate('May-2012'));
+        $this->assertSame('2025-02-04', $service->parseApprovedDate('February 04, 2025'));
+    }
+
     public function test_it_fetches_every_brand_from_the_public_usbc_api(): void
     {
         $page = <<<'HTML'

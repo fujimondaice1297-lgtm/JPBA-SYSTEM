@@ -36,10 +36,7 @@ class ApprovedBallController extends Controller
         }
         if ($request->filled('brand')) {
             $brand = $request->string('brand')->toString();
-            $query->whereRaw(
-                "coalesce(nullif(usbc_matched_brand, ''), nullif(brand, ''), manufacturer) = ?",
-                [$brand]
-            );
+            $query->where('brand', $brand);
         }
         if ($request->filled('catalog_status')) {
             $query->where(
@@ -60,7 +57,7 @@ class ApprovedBallController extends Controller
 
         $balls = $query
             ->orderBy('manufacturer')
-            ->orderByRaw("COALESCE(NULLIF(usbc_matched_brand, ''), NULLIF(brand, ''), manufacturer)")
+            ->orderByRaw("COALESCE(NULLIF(brand, ''), manufacturer)")
             ->orderByRaw('COALESCE(sort_name, name)')
             ->orderBy('id')
             ->paginate(50)

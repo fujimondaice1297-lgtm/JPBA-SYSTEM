@@ -57,9 +57,9 @@
                             placeholder="例：ギャラクシーブラック" value="{{ old("balls.$i.name_kana") }}">
                     </div>
 
-                    {{-- 発売年度 --}}
+                    {{-- USBC承認年度 --}}
                     <div class="col-md-2">
-                        <label>発売年度</label>
+                        <label>USBC承認年度</label>
                         <select name="balls[{{ $i }}][release_year]" class="form-control">
                             <option value="">選択してください</option>
                             @foreach($years as $year)

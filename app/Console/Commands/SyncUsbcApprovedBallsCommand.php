@@ -6,6 +6,7 @@ use App\Models\ApprovedBall;
 use App\Models\BallManufacturer;
 use App\Models\UsbcApprovedBallEntry;
 use App\Models\UsbcApprovedBallList;
+use App\Services\BallCatalogBrandService;
 use App\Services\UsbcApprovedBallSyncService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
@@ -21,8 +22,13 @@ class SyncUsbcApprovedBallsCommand extends Command
 
     protected $description = 'Synchronize the weekly USBC approved ball list and match it to the JPBA catalog.';
 
-    public function handle(UsbcApprovedBallSyncService $service): int
-    {
+    public function handle(
+        UsbcApprovedBallSyncService $service,
+        BallCatalogBrandService $brandService
+    ): int {
+        // 公式約8,000件と国内カタログを同時に索引化する定期処理専用の上限。
+        ini_set('memory_limit', '512M');
+
         $force = (bool) $this->option('force');
         $useLatest = (bool) $this->option('use-latest');
         $sleepMs = max(0, (int) $this->option('sleep-ms'));
@@ -38,7 +44,7 @@ class SyncUsbcApprovedBallsCommand extends Command
 
         try {
             $snapshot = $useLatest
-                ? $this->latestSnapshot()
+                ? $this->latestSnapshot($service)
                 : $service->fetchSnapshot($sleepMs);
         } catch (Throwable $error) {
             $this->error('USBC一覧の取得に失敗しました：'.$error->getMessage());
@@ -91,6 +97,9 @@ class SyncUsbcApprovedBallsCommand extends Command
             'source_sha256' => $snapshot['source_sha256'],
             'brand_count' => $snapshot['brand_count'],
             'official_entry_count' => $snapshot['entry_count'],
+            'official_approval_date_backfill_count' => count(
+                $snapshot['approved_date_backfills'] ?? []
+            ),
             'catalog_count' => $catalogBalls->count(),
             'matched_catalog_count' => $summary['matched'],
             'ambiguous_catalog_count' => $summary['ambiguous'],
@@ -98,6 +107,7 @@ class SyncUsbcApprovedBallsCommand extends Command
             'official_catalog_existing_count' => $catalogPlan['existing_count'],
             'official_catalog_create_count' => count($catalogPlan['create']),
             'official_catalog_update_count' => count($catalogPlan['update']),
+            'official_catalog_hidden_count' => count($catalogPlan['hide_ids']),
             'official_catalog_archive_count' => count($catalogPlan['archive_ids']),
             'ambiguous' => $this->reportRows($catalogBalls, $matches, 'ambiguous'),
             'not_listed' => $this->reportRows($catalogBalls, $matches, 'not_listed'),
@@ -111,7 +121,8 @@ class SyncUsbcApprovedBallsCommand extends Command
                     $catalogBalls,
                     $matches,
                     $catalogPlan,
-                    $useLatest
+                    $useLatest,
+                    $brandService
                 ): void {
                     $list = UsbcApprovedBallList::query()->updateOrCreate(
                         ['source_sha256' => $snapshot['source_sha256']],
@@ -145,34 +156,68 @@ class SyncUsbcApprovedBallsCommand extends Command
                                 $chunk
                             ));
                         }
+                    } else {
+                        foreach ($snapshot['approved_date_backfills'] ?? [] as $backfill) {
+                            UsbcApprovedBallEntry::query()
+                                ->where('list_id', $list->id)
+                                ->where('source_fingerprint', $backfill['source_fingerprint'])
+                                ->whereNull('approved_on')
+                                ->update(['approved_on' => $backfill['approved_on']]);
+                        }
                     }
 
                     foreach ($catalogBalls as $ball) {
                         $match = $matches[$ball->id];
                         $matched = $match['matched'];
-                        $sourcePayload = array_merge(
-                            (array) $ball->source_payload,
-                            array_filter([
-                                'usbc_source_fingerprint' => $matched['source_fingerprint'] ?? null,
-                                'usbc_approved_date_text' => $matched['approved_date_text'] ?? null,
-                            ], static fn (mixed $value): bool => $value !== null && $value !== '')
-                        );
-                        ApprovedBall::query()
-                            ->whereKey($ball->id)
-                            ->update([
-                                'usbc_match_status' => $match['status'],
-                                'usbc_match_method' => $match['method'],
-                                'usbc_matched_brand' => $matched['brand'] ?? null,
-                                'usbc_matched_name' => $matched['name'] ?? null,
-                                'usbc_match_candidates' => $this->compactCandidates(
-                                    $match['candidates']
-                                ),
-                                'usbc_checked_at' => now(),
-                                'source_payload' => $sourcePayload,
-                            ]);
+                        $sourcePayload = (array) $ball->source_payload;
+                        $isOfficialMirror = ($sourcePayload['source_type'] ?? null)
+                            === 'usbc_approved_list';
+
+                        if (! $isOfficialMirror) {
+                            if (! array_key_exists('domestic_release_date', $sourcePayload)) {
+                                $sourcePayload['domestic_release_date'] = $ball->release_date
+                                    ? $ball->release_date->format('Y-m-d')
+                                    : null;
+                            }
+                            if (
+                                ! array_key_exists('domestic_release_text', $sourcePayload)
+                                && array_key_exists('release_text', $sourcePayload)
+                            ) {
+                                $sourcePayload['domestic_release_text'] = $sourcePayload['release_text'];
+                            }
+                            if (! array_key_exists('domestic_release_date_basis', $sourcePayload)) {
+                                $sourcePayload['domestic_release_date_basis'] =
+                                    $sourcePayload['release_date_basis'] ?? null;
+                            }
+                        }
+
+                        $sourcePayload = array_merge($sourcePayload, [
+                            'usbc_source_fingerprint' => $matched['source_fingerprint'] ?? null,
+                            'usbc_official_brand' => $matched['brand'] ?? null,
+                            'usbc_approved_date_text' => $matched['approved_date_text'] ?? null,
+                            'usbc_approved_on' => $matched['approved_on'] ?? null,
+                            'release_date_basis' => $match['status'] === 'matched'
+                                ? 'usbc_approved_on'
+                                : 'usbc_unconfirmed',
+                        ]);
+
+                        $ball->forceFill([
+                            'usbc_match_status' => $match['status'],
+                            'usbc_match_method' => $match['method'],
+                            'usbc_matched_brand' => $matched['brand'] ?? null,
+                            'usbc_matched_name' => $matched['name'] ?? null,
+                            'usbc_match_candidates' => $this->compactCandidates(
+                                $match['candidates']
+                            ),
+                            'usbc_checked_at' => now(),
+                            'release_date' => $match['status'] === 'matched'
+                                ? ($matched['approved_on'] ?? null)
+                                : null,
+                            'source_payload' => $sourcePayload,
+                        ])->save();
                     }
 
-                    $this->applyCatalogSyncPlan($catalogPlan, $snapshot);
+                    $this->applyCatalogSyncPlan($catalogPlan, $snapshot, $brandService);
 
                     $list->update([
                         'status' => 'completed',
@@ -212,10 +257,11 @@ class SyncUsbcApprovedBallsCommand extends Command
                 number_format($summary['not_listed'])
             ));
             $this->line(sprintf(
-                '公式全件補完：既存 %s件 / 追加 %s件 / 更新 %s件 / 旧版化 %s件',
+                '公式全件補完：既存 %s件 / 追加 %s件 / 更新 %s件 / 非表示 %s件 / 旧版化 %s件',
                 number_format($catalogPlan['existing_count']),
                 number_format(count($catalogPlan['create'])),
                 number_format(count($catalogPlan['update'])),
+                number_format(count($catalogPlan['hide_ids'])),
                 number_format(count($catalogPlan['archive_ids']))
             ));
             if (! $force) {
@@ -227,13 +273,14 @@ class SyncUsbcApprovedBallsCommand extends Command
     }
 
     /**
-     * @param array<int,array<string,mixed>> $entries
-     * @param iterable<int,ApprovedBall> $catalogBalls
-     * @param array<int,array<string,mixed>> $matches
+     * @param  array<int,array<string,mixed>>  $entries
+     * @param  iterable<int,ApprovedBall>  $catalogBalls
+     * @param  array<int,array<string,mixed>>  $matches
      * @return array{
      *   existing_count:int,
      *   create:array<int,array<string,mixed>>,
      *   update:array<int,array{ball_id:int,entry:array<string,mixed>}>,
+     *   hide_ids:array<int,int>,
      *   archive_ids:array<int,int>
      * }
      */
@@ -263,6 +310,7 @@ class SyncUsbcApprovedBallsCommand extends Command
                 if ($fingerprint !== '') {
                     $mirrors[$fingerprint][] = $ball;
                 }
+
                 continue;
             }
 
@@ -278,18 +326,21 @@ class SyncUsbcApprovedBallsCommand extends Command
 
         $create = [];
         $update = [];
+        $hideIds = [];
         $archiveIds = [];
         foreach ($officialByFingerprint as $fingerprint => $entry) {
             if (isset($represented[$fingerprint])) {
                 foreach ($mirrors[$fingerprint] ?? [] as $duplicateMirror) {
-                    $archiveIds[] = (int) $duplicateMirror->id;
+                    $hideIds[] = (int) $duplicateMirror->id;
                 }
+
                 continue;
             }
 
             $existingMirrors = $mirrors[$fingerprint] ?? [];
             if ($existingMirrors === []) {
                 $create[] = $entry;
+
                 continue;
             }
 
@@ -299,7 +350,7 @@ class SyncUsbcApprovedBallsCommand extends Command
                 'entry' => $entry,
             ];
             foreach ($existingMirrors as $duplicateMirror) {
-                $archiveIds[] = (int) $duplicateMirror->id;
+                $hideIds[] = (int) $duplicateMirror->id;
             }
         }
 
@@ -316,16 +367,20 @@ class SyncUsbcApprovedBallsCommand extends Command
             'existing_count' => count($officialByFingerprint) - count($create),
             'create' => $create,
             'update' => $update,
+            'hide_ids' => array_values(array_unique($hideIds)),
             'archive_ids' => array_values(array_unique($archiveIds)),
         ];
     }
 
     /**
-     * @param array<string,mixed> $plan
-     * @param array<string,mixed> $snapshot
+     * @param  array<string,mixed>  $plan
+     * @param  array<string,mixed>  $snapshot
      */
-    private function applyCatalogSyncPlan(array $plan, array $snapshot): void
-    {
+    private function applyCatalogSyncPlan(
+        array $plan,
+        array $snapshot,
+        BallCatalogBrandService $brandService
+    ): void {
         $manufacturer = BallManufacturer::query()->updateOrCreate(
             ['name' => 'USBC'],
             [
@@ -345,7 +400,8 @@ class SyncUsbcApprovedBallsCommand extends Command
                 $snapshot,
                 (int) $manufacturer->id,
                 $now,
-                $now
+                $now,
+                $brandService
             );
         }
         foreach ($plan['update'] as $item) {
@@ -355,7 +411,8 @@ class SyncUsbcApprovedBallsCommand extends Command
                 $snapshot,
                 (int) $manufacturer->id,
                 $existing?->first_seen_at ?? $now,
-                $now
+                $now,
+                $brandService
             );
         }
 
@@ -388,6 +445,18 @@ class SyncUsbcApprovedBallsCommand extends Command
             );
         }
 
+        if ($plan['hide_ids'] !== []) {
+            ApprovedBall::query()
+                ->whereIn('id', $plan['hide_ids'])
+                ->update([
+                    'catalog_status' => 'hidden',
+                    'usbc_match_status' => 'matched',
+                    'usbc_match_method' => 'official_source_replaced_by_distributor',
+                    'usbc_checked_at' => $now,
+                    'updated_at' => $now,
+                ]);
+        }
+
         if ($plan['archive_ids'] !== []) {
             ApprovedBall::query()
                 ->whereIn('id', $plan['archive_ids'])
@@ -402,8 +471,8 @@ class SyncUsbcApprovedBallsCommand extends Command
     }
 
     /**
-     * @param array<string,mixed> $entry
-     * @param array<string,mixed> $snapshot
+     * @param  array<string,mixed>  $entry
+     * @param  array<string,mixed>  $snapshot
      * @return array<string,mixed>
      */
     private function officialCatalogRow(
@@ -411,13 +480,16 @@ class SyncUsbcApprovedBallsCommand extends Command
         array $snapshot,
         int $manufacturerId,
         mixed $firstSeenAt,
-        mixed $now
+        mixed $now,
+        BallCatalogBrandService $brandService
     ): array {
         $fingerprint = (string) $entry['source_fingerprint'];
         $payload = [
             'source_type' => 'usbc_approved_list',
             'usbc_source_fingerprint' => $fingerprint,
+            'usbc_official_brand' => $entry['brand'] ?? null,
             'usbc_approved_date_text' => $entry['approved_date_text'] ?? null,
+            'usbc_approved_on' => $entry['approved_on'] ?? null,
             'official_updated_on' => $snapshot['official_updated_on'] ?? null,
             'release_date_basis' => 'usbc_approved_on',
         ];
@@ -427,7 +499,10 @@ class SyncUsbcApprovedBallsCommand extends Command
             'name_kana' => null,
             'manufacturer' => 'USBC',
             'manufacturer_id' => $manufacturerId,
-            'brand' => (string) $entry['brand'],
+            'brand' => $brandService->officialCatalogBrand(
+                (string) $entry['brand'],
+                (string) $entry['name']
+            ),
             'sort_name' => mb_strtoupper((string) $entry['name'], 'UTF-8'),
             'approved' => false,
             'usbc_match_status' => 'matched',
@@ -460,7 +535,7 @@ class SyncUsbcApprovedBallsCommand extends Command
     /**
      * @return array<string,mixed>
      */
-    private function latestSnapshot(): array
+    private function latestSnapshot(UsbcApprovedBallSyncService $service): array
     {
         $list = UsbcApprovedBallList::query()
             ->where('status', 'completed')
@@ -473,6 +548,18 @@ class SyncUsbcApprovedBallsCommand extends Command
             throw new \RuntimeException('保存済みのUSBC公式一覧がありません。');
         }
 
+        $approvedDateBackfills = $list->entries
+            ->filter(fn ($entry): bool => $entry->approved_on === null)
+            ->map(fn ($entry): array => [
+                'source_fingerprint' => $entry->source_fingerprint,
+                'approved_on' => $service->parseApprovedDate(
+                    (string) $entry->approved_date_text
+                ),
+            ])
+            ->filter(fn (array $entry): bool => $entry['approved_on'] !== null)
+            ->values()
+            ->all();
+
         return [
             'official_updated_on' => $list->official_updated_on?->format('Y-m-d'),
             'source_page_url' => $list->source_page_url,
@@ -481,11 +568,15 @@ class SyncUsbcApprovedBallsCommand extends Command
             'brand_count' => $list->brand_count,
             'entry_count' => $list->entry_count,
             'source_sha256' => $list->source_sha256,
+            'approved_date_backfills' => $approvedDateBackfills,
             'entries' => $list->entries->map(fn ($entry): array => [
                 'brand' => $entry->brand,
                 'name' => $entry->name,
                 'approved_date_text' => $entry->approved_date_text,
-                'approved_on' => $entry->approved_on?->format('Y-m-d'),
+                'approved_on' => $entry->approved_on?->format('Y-m-d')
+                    ?? $service->parseApprovedDate(
+                        (string) $entry->approved_date_text
+                    ),
                 'image_url' => $entry->image_url,
                 'normalized_brand' => $entry->normalized_brand,
                 'normalized_name' => $entry->normalized_name,
@@ -495,8 +586,8 @@ class SyncUsbcApprovedBallsCommand extends Command
     }
 
     /**
-     * @param iterable<int,ApprovedBall> $balls
-     * @param array<int,array<string,mixed>> $matches
+     * @param  iterable<int,ApprovedBall>  $balls
+     * @param  array<int,array<string,mixed>>  $matches
      * @return array<int,array<string,mixed>>
      */
     private function reportRows(iterable $balls, array $matches, string $status): array
@@ -523,7 +614,7 @@ class SyncUsbcApprovedBallsCommand extends Command
     }
 
     /**
-     * @param array<int,array<string,mixed>> $candidates
+     * @param  array<int,array<string,mixed>>  $candidates
      * @return array<int,array<string,mixed>>
      */
     private function compactCandidates(array $candidates): array

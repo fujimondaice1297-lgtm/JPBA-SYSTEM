@@ -86,7 +86,7 @@
                     <th style="width:88px">写真</th>
                     <th>メーカー / ブランド</th>
                     <th>ボール名</th>
-                    <th>発売時期 / USBC承認日</th>
+                    <th>USBC承認日</th>
                     <th>掲載状態</th>
                     <th>大会選択</th>
                     <th style="width:150px">操作</th>

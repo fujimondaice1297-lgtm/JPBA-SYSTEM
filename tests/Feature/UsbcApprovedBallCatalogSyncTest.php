@@ -32,13 +32,13 @@ test('the saved USBC snapshot fills every missing official ball into the registr
     ]);
     UsbcApprovedBallEntry::query()->create([
         'list_id' => $list->id,
-        'brand' => 'Track Inc.',
-        'name' => 'Missing 2018 Ball',
-        'approved_date_text' => 'March 08, 2018',
-        'approved_on' => '2018-03-08',
+        'brand' => 'ABS',
+        'name' => 'PRO-am Missing 2018 Ball',
+        'approved_date_text' => "Mar'18",
+        'approved_on' => null,
         'image_url' => 'https://images.example.test/missing-2018-ball.png',
-        'normalized_brand' => 'TRACKINC',
-        'normalized_name' => 'MISSING2018BALL',
+        'normalized_brand' => 'ABS',
+        'normalized_name' => 'PROAMMISSING2018BALL',
         'source_fingerprint' => $missingFingerprint,
     ]);
 
@@ -47,6 +47,11 @@ test('the saved USBC snapshot fills every missing official ball into the registr
         'manufacturer' => 'ABS',
         'brand' => '900GLOBAL',
         'catalog_status' => 'listed',
+        'release_date' => '2026-04-01',
+        'source_payload' => [
+            'release_text' => '2026年4月発売',
+            'release_date_basis' => 'official_publish_date',
+        ],
     ]);
 
     $this->artisan('balls:sync-usbc-approved', [
@@ -55,16 +60,29 @@ test('the saved USBC snapshot fills every missing official ball into the registr
     ])->assertSuccessful();
 
     expect(ApprovedBall::query()->count())->toBe(2)
-        ->and($existing->fresh()->usbc_matched_brand)->toBe('900 Global');
+        ->and($existing->fresh()->usbc_matched_brand)->toBe('900 Global')
+        ->and($existing->fresh()->registration_brand)->toBe('900GLOBAL')
+        ->and($existing->fresh()->release_date->format('Y-m-d'))->toBe('2020-01-10')
+        ->and($existing->fresh()->source_payload['domestic_release_date'])->toBe('2026-04-01')
+        ->and($existing->fresh()->source_payload['domestic_release_text'])->toBe('2026年4月発売')
+        ->and($existing->fresh()->registration_period_label)->toBe('USBC承認 2020-01-10');
     $imported = ApprovedBall::query()
         ->where('source_fingerprint', $missingFingerprint)
         ->firstOrFail();
     expect($imported->manufacturer)->toBe('USBC')
-        ->and($imported->registration_brand)->toBe('Track Inc.')
-        ->and($imported->release_date->format('Y-m-d'))->toBe('2018-03-08')
-        ->and($imported->registration_period_label)->toBe('USBC承認 2018-03-08')
+        ->and($imported->brand)->toBe('PRO-am')
+        ->and($imported->registration_brand)->toBe('PRO-am')
+        ->and($imported->release_date->format('Y-m-d'))->toBe('2018-03-01')
+        ->and($imported->registration_period_label)->toBe('USBC承認 2018-03')
         ->and($imported->usbc_match_status)->toBe('matched')
-        ->and($imported->source_payload['source_type'])->toBe('usbc_approved_list');
+        ->and($imported->source_payload['source_type'])->toBe('usbc_approved_list')
+        ->and($imported->source_payload['usbc_official_brand'])->toBe('ABS')
+        ->and($imported->image_url)->toContain('images/ball-no-image.svg');
+    expect(UsbcApprovedBallEntry::query()
+        ->where('source_fingerprint', $missingFingerprint)
+        ->firstOrFail()
+        ->approved_on
+        ->format('Y-m-d'))->toBe('2018-03-01');
 
     $this->artisan('balls:sync-usbc-approved', [
         '--use-latest' => true,

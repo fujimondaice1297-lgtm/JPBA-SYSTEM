@@ -8,10 +8,20 @@ Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
 
+// 国内代理店のブランド区分と画像を先に更新し、その後USBC承認一覧で名称・承認日を確定する。
+Schedule::command('balls:sync-catalog --manufacturer=all --force')
+    ->weeklyOn(2, '01:30')
+    ->timezone('Asia/Tokyo')
+    ->name('ball-manufacturer-catalog-sync')
+    ->withoutOverlapping(240)
+    ->appendOutputTo(storage_path('logs/scheduled-ball-catalog-sync.log'));
+
 Schedule::command('balls:sync-usbc-approved --force')
     ->weeklyOn(2, '03:15')
     ->timezone('Asia/Tokyo')
-    ->withoutOverlapping();
+    ->name('usbc-approved-ball-sync')
+    ->withoutOverlapping(120)
+    ->appendOutputTo(storage_path('logs/scheduled-usbc-approved-ball-sync.log'));
 
 // 次年度に期限が切れる会員へ、通知履歴で重複を防ぎながら前年度中に1回案内する。
 Schedule::command('training:notify')

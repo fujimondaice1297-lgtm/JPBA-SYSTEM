@@ -7,7 +7,7 @@
   @auth
     @if(auth()->user()?->isEditor() || auth()->user()?->isAdmin())
       <div class="alert alert-light border d-flex flex-wrap justify-content-between align-items-center gap-2">
-        <span>メーカー公式掲載品は、写真・発売時期付きのボールカタログから確認できます。</span>
+        <span>メーカー公式掲載品は、写真・USBC承認日付きのボールカタログから確認できます。</span>
         <a href="{{ route('approved_balls.index') }}" class="btn btn-sm btn-outline-primary">
           ボールカタログリストを見る
         </a>

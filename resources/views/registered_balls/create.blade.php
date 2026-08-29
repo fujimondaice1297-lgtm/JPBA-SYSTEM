@@ -98,7 +98,7 @@
                     </div>
                     <div class="col-md-6">
                         <select id="release_year_filter" name="release_year_filter" class="form-select">
-                            <option value="">発売／USBC承認年で絞り込み</option>
+                            <option value="">USBC承認年で絞り込み</option>
                             @foreach ($years as $year)
                                 <option value="{{ $year }}" {{ (string) $selectedReleaseYear === (string) $year ? 'selected' : '' }}>
                                     {{ $year }}

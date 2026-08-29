@@ -20,10 +20,12 @@ class BallCatalogViewRenderingTest extends TestCase
             'brand' => 'NANODESU',
             'catalog_status' => 'listed',
             'approved' => false,
-            'release_date' => '2026-07-01',
+            'usbc_match_status' => 'matched',
+            'release_date' => '2026-07-15',
             'source_payload' => [
                 'release_text' => '2026年7月中旬',
-                'release_date_basis' => 'official_release_text',
+                'usbc_approved_date_text' => 'July 15, 2026',
+                'release_date_basis' => 'usbc_approved_on',
             ],
             'source_url' => 'https://www.absbowling.co.jp/product/accu-test/',
         ]);
@@ -58,7 +60,7 @@ class BallCatalogViewRenderingTest extends TestCase
         $this->assertStringContainsString('ACCU TEST', $html);
         $this->assertStringContainsString('アキュ・テスト', $html);
         $this->assertStringContainsString('NANODESU', $html);
-        $this->assertStringContainsString('2026年7月中旬', $html);
+        $this->assertStringContainsString('USBC承認 2026-07-15', $html);
         $this->assertStringContainsString('images/ball-no-image.svg', $html);
         $this->assertStringContainsString('未設定', $html);
         $this->assertStringNotContainsString('選択可</span>', $html);
