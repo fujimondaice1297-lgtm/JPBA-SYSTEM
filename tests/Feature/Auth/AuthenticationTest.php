@@ -1,11 +1,31 @@
 <?php
 
 use App\Models\User;
+use Illuminate\Contracts\Debug\ExceptionHandler;
+use Illuminate\Http\Request;
+use Illuminate\Session\TokenMismatchException;
 
 test('login screen can be rendered', function () {
     $response = $this->get('/login');
 
-    $response->assertStatus(200);
+    $response
+        ->assertStatus(200)
+        ->assertHeader('Pragma', 'no-cache');
+
+    expect($response->headers->get('Cache-Control'))->toContain('no-store');
+});
+
+test('expired login form returns to a fresh login screen instead of showing 419', function () {
+    $request = Request::create('/login', 'POST');
+    $request->setLaravelSession(app('session')->driver());
+
+    $response = app(ExceptionHandler::class)->render(
+        $request,
+        new TokenMismatchException('CSRF token mismatch.')
+    );
+
+    expect($response->getStatusCode())->toBe(302)
+        ->and($response->headers->get('Location'))->toBe(route('login'));
 });
 
 test('users can authenticate using the login screen', function () {

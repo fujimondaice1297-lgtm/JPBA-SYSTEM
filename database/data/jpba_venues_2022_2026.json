@@ -1,6 +1,6 @@
 {
   "dataset": "JPBA公式大会ページ 2022～2026年 国内現役会場",
-  "generated_on": "2026-07-22",
+  "generated_on": "2026-08-30",
   "source_index_url": "https://www.jpba.or.jp/information/tournament/tournament.html",
   "excluded_closed_venues": [
     {
@@ -21,6 +21,22 @@
     "仮設レーン"
   ],
   "venues": [
+    {
+      "first_source_year": 2026,
+      "last_source_year": 2026,
+      "source_url": "https://www.jpba.or.jp/information/tournament/tournament2026/ST_Autumn/STautumn2026.html",
+      "name": "ハマボール",
+      "postal_code": "220-0004",
+      "address": "神奈川県横浜市西区北幸2-2-1 ハマボールビルディング",
+      "tel": "045-311-6700",
+      "fax": "045-311-6712",
+      "website_url": "https://www.hamabowl.com/",
+      "aliases": [],
+      "canonical_key": "ハマボール",
+      "is_active": true,
+      "source_checked_at": "2026-08-30",
+      "note": "JPBA公式2026年オータムシリーズ大会ページで使用を確認。"
+    },
     {
       "name": "MKボウル上賀茂",
       "postal_code": "603-8036",

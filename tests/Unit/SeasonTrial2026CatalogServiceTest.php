@@ -16,10 +16,10 @@ class SeasonTrial2026CatalogServiceTest extends TestCase
         $this->assertSame(2026, $catalog['year']);
         $this->assertSame('jpba-season-trial', $catalog['series_code']);
         $this->assertSame('season-trial-standard', $catalog['template_code']);
-        $this->assertSame(['winter', 'spring', 'summer'], $editions->keys()->all());
-        $this->assertCount(12, $events);
+        $this->assertSame(['winter', 'spring', 'summer', 'autumn'], $editions->keys()->all());
+        $this->assertCount(16, $events);
         $this->assertCount(12, $events->whereNotNull('final_result_url'));
-        $this->assertCount(0, $events->whereNull('final_result_url'));
+        $this->assertCount(4, $events->whereNull('final_result_url'));
 
         foreach ($editions as $seasonKey => $edition) {
             $this->assertCount(4, $edition['events']);
@@ -48,5 +48,22 @@ class SeasonTrial2026CatalogServiceTest extends TestCase
             'https://www.jpba.or.jp/information/tournament/tournament2026/ST_Summer/Result/D_FinalResult.pdf',
             $summerD['final_result_url'],
         );
+
+        $autumn = $editions['autumn'];
+        $this->assertSame('scheduled', $autumn['status']);
+        $this->assertSame('2026-09-29', $autumn['start_date']);
+        $this->assertSame('2026-10-21', $autumn['end_date']);
+        $this->assertSame(
+            [
+                ['A', '2026-09-29', '宇都宮第二トーヨーボウル'],
+                ['B', '2026-10-21', 'ハマボール'],
+                ['C', '2026-09-29', '稲沢グランドボウル'],
+                ['D', '2026-10-16', 'メリーランドタケオボウル'],
+            ],
+            collect($autumn['events'])
+                ->map(fn (array $event): array => [$event['venue_code'], $event['date'], $event['venue_name']])
+                ->all(),
+        );
+        $this->assertCount(4, collect($autumn['events'])->whereNull('final_result_url'));
     }
 }

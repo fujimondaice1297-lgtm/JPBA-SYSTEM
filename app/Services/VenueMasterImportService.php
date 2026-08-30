@@ -106,8 +106,8 @@ class VenueMasterImportService
         $payload = json_decode((string) file_get_contents($path), true, flags: JSON_THROW_ON_ERROR);
         $venues = $payload['venues'] ?? null;
 
-        if (! is_array($venues) || count($venues) !== 58) {
-            throw new RuntimeException('Venue dataset must contain exactly 58 active domestic venues.');
+        if (! is_array($venues) || count($venues) !== 59) {
+            throw new RuntimeException('Venue dataset must contain exactly 59 active domestic venues.');
         }
 
         $keys = [];

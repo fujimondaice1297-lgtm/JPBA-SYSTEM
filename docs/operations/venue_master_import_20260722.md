@@ -7,7 +7,7 @@
 ## 初回データの範囲
 
 - 根拠: JPBA公式大会一覧と2022～2026年の個別大会ページ127件
-- 登録: 国内現役58会場
+- 登録: 国内現役59会場（2026-08-30にハマボールを追加）
 - 除外: スポルト名古屋、星が丘ボウル、牧野松園ボウル
 - 対象外: 海外会場、イベント用仮設レーン
 - データファイル: `database/data/jpba_venues_2022_2026.json`
@@ -28,7 +28,7 @@ php artisan jpba:import-recent-venues --json
 php artisan jpba:import-recent-venues --force --json
 ```
 
-同じコマンドをもう一度実行し、`created_count = 0`、`updated_count = 0`、`unchanged_count = 58` になることを確認する。
+同じコマンドをもう一度実行し、`created_count = 0`、`updated_count = 0`、`unchanged_count = 59` になることを確認する。
 
 ## 更新ルール
 
@@ -56,6 +56,11 @@ php artisan jpba:import-recent-venues --force --json
 - 閉鎖会場混入0件
 - 大会ID61をサンスクエアボウルID18へ結線
 - 冪等再実行は新規0件、更新0件、変更なし58件
+
+## 2026-08-30 追加結果
+
+- 2026年オータムシリーズ公式ページを根拠にハマボールを追加
+- 現役会場59件
 
 ## 確認元
 

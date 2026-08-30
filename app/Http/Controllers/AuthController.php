@@ -17,7 +17,10 @@ class AuthController extends Controller
             return redirect()->route($this->homeRoute(Auth::user()));
         }
 
-        return view('auth.login');
+        return response()->view('auth.login')->withHeaders([
+            'Cache-Control' => 'no-store, no-cache, must-revalidate, max-age=0',
+            'Pragma' => 'no-cache',
+        ]);
     }
 
     public function login(Request $request)

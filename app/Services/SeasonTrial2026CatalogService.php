@@ -15,9 +15,9 @@ use RuntimeException;
 
 final class SeasonTrial2026CatalogService
 {
-    private const EXPECTED_EDITION_COUNT = 3;
+    private const EXPECTED_EDITION_COUNT = 4;
 
-    private const EXPECTED_EVENT_COUNT = 12;
+    private const EXPECTED_EVENT_COUNT = 16;
 
     private const EXPECTED_PUBLISHED_RESULT_COUNT = 12;
 
@@ -106,6 +106,13 @@ final class SeasonTrial2026CatalogService
                     'year' => (int) $payload['year'],
                     'season_key' => $editionRow['season_key'],
                 ]);
+
+                if ($edition->exists && ($editionRow['status'] ?? null) === 'completed') {
+                    $editionIds[$editionRow['season_key']] = $edition->id;
+
+                    continue;
+                }
+
                 $edition->fill($this->editionAttributes($editionRow));
                 if (! $edition->exists || $edition->isDirty()) {
                     $edition->save();
@@ -164,7 +171,7 @@ final class SeasonTrial2026CatalogService
             throw new RuntimeException('Season trial catalog year must be 2026.');
         }
         if (count((array) $payload['editions']) !== self::EXPECTED_EDITION_COUNT) {
-            throw new RuntimeException('Season trial catalog must contain winter, spring, and summer editions.');
+            throw new RuntimeException('Season trial catalog must contain winter, spring, summer, and autumn editions.');
         }
 
         $seasonKeys = [];
@@ -179,7 +186,7 @@ final class SeasonTrial2026CatalogService
             }
 
             $seasonKey = (string) $edition['season_key'];
-            if (! in_array($seasonKey, ['winter', 'spring', 'summer'], true) || isset($seasonKeys[$seasonKey])) {
+            if (! in_array($seasonKey, ['winter', 'spring', 'summer', 'autumn'], true) || isset($seasonKeys[$seasonKey])) {
                 throw new RuntimeException("Invalid or duplicate season key: {$seasonKey}");
             }
             $seasonKeys[$seasonKey] = true;
@@ -281,6 +288,7 @@ final class SeasonTrial2026CatalogService
 
         $editions = [];
         foreach ($payload['editions'] as $editionRow) {
+            $isCompletedEdition = ($editionRow['status'] ?? null) === 'completed';
             $edition = TournamentEdition::query()
                 ->where('tournament_series_id', $series->id)
                 ->where('year', (int) $payload['year'])
@@ -290,7 +298,7 @@ final class SeasonTrial2026CatalogService
 
             if (! $edition) {
                 $plan['edition_creates'][] = $editionRow['season_key'];
-            } else {
+            } elseif (! $isCompletedEdition) {
                 $dirty = $this->dirtyAttributes($edition, $this->editionAttributes($editionRow));
                 if ($dirty !== []) {
                     $plan['edition_updates'][] = [
@@ -318,6 +326,19 @@ final class SeasonTrial2026CatalogService
                         'venue_name' => $venue->name,
                         'name' => $name,
                         'final_result_url' => $eventRow['final_result_url'],
+                    ];
+
+                    continue;
+                }
+
+                // 公開成績取込後の大会はテンプレート版やポイント設定が更新される。
+                // 完了済み大会を新しい開催枠の追加時に再設定・競合扱いしない。
+                if ($isCompletedEdition) {
+                    $plan['tournament_existing'][] = [
+                        'id' => $tournament->id,
+                        'season_key' => $editionRow['season_key'],
+                        'venue_code' => $eventRow['venue_code'],
+                        'name' => $tournament->name,
                     ];
 
                     continue;

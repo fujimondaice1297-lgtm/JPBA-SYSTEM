@@ -1,6 +1,6 @@
 {
   "dataset": "JPBA 2026 season trial official venue catalog",
-  "source_checked_at": "2026-08-22",
+  "source_checked_at": "2026-08-30",
   "year": 2026,
   "series_code": "jpba-season-trial",
   "template_code": "season-trial-standard",
@@ -104,6 +104,40 @@
           "date": "2026-07-28",
           "venue_name": "賀茂ボール",
           "final_result_url": "https://www.jpba.or.jp/information/tournament/tournament2026/ST_Summer/Result/D_FinalResult.pdf"
+        }
+      ]
+    },
+    {
+      "season_key": "autumn",
+      "name": "JPBAシーズントライアル2026 オータムシリーズ",
+      "status": "scheduled",
+      "start_date": "2026-09-29",
+      "end_date": "2026-10-21",
+      "source_url": "https://www.jpba.or.jp/information/tournament/tournament2026/ST_Autumn/STautumn2026.html",
+      "events": [
+        {
+          "venue_code": "A",
+          "date": "2026-09-29",
+          "venue_name": "宇都宮第二トーヨーボウル",
+          "final_result_url": null
+        },
+        {
+          "venue_code": "B",
+          "date": "2026-10-21",
+          "venue_name": "ハマボール",
+          "final_result_url": null
+        },
+        {
+          "venue_code": "C",
+          "date": "2026-09-29",
+          "venue_name": "稲沢グランドボウル",
+          "final_result_url": null
+        },
+        {
+          "venue_code": "D",
+          "date": "2026-10-16",
+          "venue_name": "メリーランドタケオボウル",
+          "final_result_url": null
         }
       ]
     }
