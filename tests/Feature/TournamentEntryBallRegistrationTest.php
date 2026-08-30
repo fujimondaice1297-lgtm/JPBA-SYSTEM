@@ -118,6 +118,15 @@ test('a qualified member can register annually approved balls and the public vie
     ]);
 
     $this->actingAs($member)
+        ->get(route('ball_annual_registrations.edit', ['year' => 2026]))
+        ->assertOk()
+        ->assertSee('2026年度 大会使用履歴')
+        ->assertSee('大会ボール登録テスト')
+        ->assertSee('大会登録ボール');
+
+    auth()->logout();
+
+    $this
         ->get(route('scores.entry_balls.show', [
             'entry' => $entry,
             'public' => 1,
@@ -130,4 +139,53 @@ test('a qualified member can register annually approved balls and the public vie
         ->assertDontSee('PRIVATE-SERIAL-UNAPPROVED')
         ->assertDontSee('検量証番号')
         ->assertDontSee('有効期限');
+
+    $this->get(route('public.tournaments.entries', $tournament))
+        ->assertOk()
+        ->assertSee('エントリープロ')
+        ->assertSee('大会ボール 確認選手')
+        ->assertSee('1個を見る')
+        ->assertDontSee('PRIVATE-SERIAL-APPROVED');
+
+    $this->get(route('public.tournaments.show', $tournament))
+        ->assertOk()
+        ->assertSee('エントリープロ・大会登録ボール（1名）');
+});
+
+test('an entered upcoming tournament remains reachable after its entry window closes', function () {
+    $bowler = ProBowler::query()->create([
+        'license_no' => 'M00009990',
+        'name_kanji' => '受付終了 確認選手',
+        'sex' => 1,
+        'is_active' => true,
+        'member_class' => 'player',
+        'can_enter_official_tournament' => true,
+    ]);
+    $member = User::factory()->create([
+        'role' => 'member',
+        'pro_bowler_id' => $bowler->id,
+        'pro_bowler_license_no' => $bowler->license_no,
+        'license_no' => $bowler->license_no,
+    ]);
+    $tournament = Tournament::query()->create([
+        'name' => '受付終了後も表示する大会',
+        'start_date' => today()->addDays(10),
+        'end_date' => today()->addDays(10),
+        'entry_start' => now()->subDays(10),
+        'entry_end' => now()->subDay(),
+        'year' => (int) now()->year,
+        'gender' => 'M',
+    ]);
+    $entry = TournamentEntry::query()->create([
+        'tournament_id' => $tournament->id,
+        'pro_bowler_id' => $bowler->id,
+        'status' => 'entry',
+    ]);
+
+    $this->actingAs($member)
+        ->get(route('tournament.entry.select'))
+        ->assertOk()
+        ->assertSee('受付終了後も表示する大会')
+        ->assertSee('受付期間終了後も大会使用ボールを登録できます。')
+        ->assertSee(route('member.entries.balls.edit', $entry), false);
 });

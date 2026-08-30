@@ -3,7 +3,7 @@
 
 @section('content')
 <div class="container">
-  <h2 class="mb-3">プロ登録ボール一覧</h2>
+  <h2 class="mb-3">マイボール管理（保有ボール）</h2>
 
   @if(session('success'))
     <div class="alert alert-success">{{ session('success') }}</div>
@@ -17,11 +17,22 @@
   @endif
 
   <div class="mb-3 d-flex flex-wrap gap-2">
-    <a href="{{ route('used_balls.index') }}" class="btn btn-outline-secondary">使用ボール一覧へ</a>
+    <a href="{{ route('used_balls.index') }}" class="btn btn-outline-secondary">仮登録・検量証管理一覧</a>
+    <a href="{{ auth()->user()?->isAdmin() || auth()->user()?->isEditor()
+        ? route('ball_annual_registrations.index')
+        : route('ball_annual_registrations.edit') }}" class="btn btn-primary">年度ボール管理へ</a>
     <a href="{{ route('tournaments.index') }}" class="btn btn-secondary">大会一覧へ</a>
-    <a href="{{ route('tournament.entry.select') }}" class="btn btn-outline-secondary">大会エントリー選択へ</a>
+    <a href="{{ route('tournament.entry.select') }}" class="btn btn-success">大会ごとの使用ボールへ</a>
     <a href="{{ route('approved_balls.index') }}" class="btn btn-outline-secondary">承認ボールリストへ戻る</a>
     <a href="{{ route('athlete.index') }}" class="btn btn-outline-secondary">インデックスへ戻る</a>
+  </div>
+
+  <div class="alert alert-light border mb-3">
+    <div class="fw-bold mb-1">マイボールは自分の保有ボールを置くキャビネットです</div>
+    <div class="small">
+      検量証がないボールも仮登録として保管できます。ここへ登録しただけでは大会使用ボールにはなりません。<br>
+      大会で使用する場合は、年度ボール申請の事務局承認後、出場大会ごとに使用ボールを選択してください。
+    </div>
   </div>
 
   <div class="alert alert-light border mb-3">
@@ -80,8 +91,9 @@
       <a href="{{ route('registered_balls.index') }}" class="btn btn-warning">リセット</a>
     </div>
 
-    <div class="col-12 d-flex justify-content-end">
-      <a href="{{ route('registered_balls.create') }}" class="btn btn-success">+ 本登録を新規作成</a>
+    <div class="col-12 d-flex justify-content-end gap-2 flex-wrap">
+      <a href="{{ route('used_balls.create') }}" class="btn btn-outline-success">+ 仮登録（検量証なしでも可）</a>
+      <a href="{{ route('registered_balls.create') }}" class="btn btn-success">+ 本登録（検量証あり）</a>
     </div>
   </form>
 

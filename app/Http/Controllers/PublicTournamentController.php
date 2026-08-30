@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Models\ProBowler;
 use App\Models\Tournament;
 use Illuminate\Http\Request;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
@@ -78,6 +77,10 @@ class PublicTournamentController extends Controller
             'scheduleLinks' => $this->scheduleLinks($tournament),
             'resultCards' => $this->resultCards($tournament),
             'resultRows' => $this->resultRows($tournament),
+            'entryCount' => DB::table('tournament_entries')
+                ->where('tournament_id', $tournament->id)
+                ->where('status', 'entry')
+                ->count(),
         ]);
     }
 
@@ -173,6 +176,11 @@ class PublicTournamentController extends Controller
     {
         return DB::table('tournament_results as tr')
             ->leftJoin('pro_bowlers as pb', 'pb.id', '=', 'tr.pro_bowler_id')
+            ->leftJoin('tournament_entries as te', function ($join) use ($tournament) {
+                $join->on('te.pro_bowler_id', '=', 'tr.pro_bowler_id')
+                    ->where('te.tournament_id', '=', $tournament->id)
+                    ->where('te.status', '=', 'entry');
+            })
             ->where('tr.tournament_id', $tournament->id)
             ->orderByRaw('tr.ranking asc nulls last')
             ->orderByDesc('tr.total_pin')
@@ -189,11 +197,13 @@ class PublicTournamentController extends Controller
                 'pb.name_kanji as pro_name',
                 'pb.public_image_path as pro_photo_path',
                 'pb.updated_at as pro_updated_at',
+                'te.id as tournament_entry_id',
+                DB::raw('(select count(*) from tournament_entry_balls teb where teb.tournament_entry_id = te.id) as ball_count'),
             ])
             ->map(function ($row) {
                 $row->pro_photo_url = null;
                 if ($row->pro_bowler_id) {
-                    $bowler = (new ProBowler())->forceFill([
+                    $bowler = (new ProBowler)->forceFill([
                         'id' => $row->pro_bowler_id,
                         'public_image_path' => $row->pro_photo_path,
                         'updated_at' => $row->pro_updated_at,
@@ -209,7 +219,7 @@ class PublicTournamentController extends Controller
     private function applyRegionFilter($query, string $region): void
     {
         $options = $this->regionOptions();
-        if (!isset($options[$region])) {
+        if (! isset($options[$region])) {
             return;
         }
 
@@ -269,6 +279,6 @@ class PublicTournamentController extends Controller
             return $value;
         }
 
-        return asset('storage/' . ltrim($value, '/'));
+        return asset('storage/'.ltrim($value, '/'));
     }
 }

@@ -54,6 +54,7 @@
           <th>状態</th>
           <th>ライセンスNo</th>
           <th>氏名</th>
+          <th>大会登録ボール</th>
           <th>シフト</th>
           <th>レーン</th>
           <th>チェックイン</th>
@@ -73,14 +74,29 @@
               @endif
             </td>
             <td>{{ $bowler->license_no ?? '-' }}</td>
-            <td>{{ $bowler->name_kanji ?? '-' }}</td>
+            <td>
+              <a href="{{ route('scores.entry_balls.show', [
+                'entry' => $entry,
+                'return' => route('member.tournaments.entries.index', $tournament),
+              ]) }}">
+                {{ $bowler->name_kanji ?? '-' }}
+              </a>
+            </td>
+            <td>
+              <a href="{{ route('scores.entry_balls.show', [
+                'entry' => $entry,
+                'return' => route('member.tournaments.entries.index', $tournament),
+              ]) }}">
+                {{ number_format((int) $entry->balls_count) }}個を見る
+              </a>
+            </td>
             <td>{{ $entry->shift ?? '-' }}</td>
             <td>{{ $entry->lane ?? '-' }}</td>
             <td>{{ optional($entry->checked_in_at)->format('Y-m-d H:i') ?? '-' }}</td>
           </tr>
         @empty
           <tr>
-            <td colspan="6" class="text-center text-muted">該当データはありません。</td>
+            <td colspan="7" class="text-center text-muted">該当データはありません。</td>
           </tr>
         @endforelse
       </tbody>

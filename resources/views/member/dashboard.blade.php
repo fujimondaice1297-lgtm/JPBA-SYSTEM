@@ -47,6 +47,38 @@
     @endif
   </div>
 
+  <div class="row g-3 mb-4" aria-label="ボール登録の3段階">
+    <div class="col-12 col-lg-4">
+      <div class="card h-100 border-success">
+        <div class="card-header fw-bold text-success">1. マイボール管理</div>
+        <div class="card-body d-flex flex-column">
+          <p class="small">自分が保有するボールのキャビネットです。検量証がない仮登録ボールも自由に保管できます。</p>
+          <a href="{{ route('registered_balls.index') }}" class="btn btn-outline-success mt-auto">保有ボールを確認・追加</a>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-lg-4">
+      <div class="card h-100 border-primary">
+        <div class="card-header fw-bold text-primary">2. 年度ボール管理</div>
+        <div class="card-body d-flex flex-column">
+          <p class="small">その年度に大会で使う候補を申請し、事務局の承認を受けます。仮登録ボールも申請できます。</p>
+          <a href="{{ ($user?->isAdmin() || $user?->isEditor())
+              ? route('ball_annual_registrations.index')
+              : route('ball_annual_registrations.edit') }}" class="btn btn-outline-primary mt-auto">年度申請・承認状況を確認</a>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-lg-4">
+      <div class="card h-100 border-dark">
+        <div class="card-header fw-bold">3. 大会使用ボール</div>
+        <div class="card-body d-flex flex-column">
+          <p class="small">エントリーした大会ごとに、年度承認済みボールから実際に持ち込むボールを選びます。</p>
+          <a href="{{ route('tournament.entry.select') }}" class="btn btn-dark mt-auto">大会ごとの使用ボールを選ぶ</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
   {{-- ようこそ帯 --}}
   <p class="mb-4">{{ $bowler?->name ?? $user?->name }} さん、ようこそ。</p>
 

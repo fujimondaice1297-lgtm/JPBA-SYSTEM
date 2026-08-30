@@ -55,6 +55,9 @@ class BallAnnualRegistrationWorkflowSourceTest extends TestCase
         $this->assertStringContainsString('latestApproved', $service);
         $this->assertStringContainsString('approvedUsedBallIds', $service);
         $this->assertStringContainsString('registrationYearForTournament', $service);
+        $this->assertStringContainsString('latestApprovedOrCarryover', $service);
+        $this->assertStringContainsString('ensureInspectionCarryover', $service);
+        $this->assertStringContainsString('inspection_carryover', $service);
     }
 
     public function test_tournament_registration_only_accepts_annual_approved_new_balls(): void
@@ -75,6 +78,27 @@ class BallAnnualRegistrationWorkflowSourceTest extends TestCase
         $this->assertStringContainsString('年度ボール申請', $view);
         $this->assertStringContainsString('年度承認が必要', $view);
         $this->assertStringContainsString('既存登録（年度承認前）', $view);
+    }
+
+    public function test_annual_screen_shows_tournament_usage_history_and_role_boundaries(): void
+    {
+        $view = file_get_contents(
+            resource_path('views/ball_annual_registrations/edit.blade.php')
+        );
+        $dashboard = file_get_contents(
+            resource_path('views/member/dashboard.blade.php')
+        );
+
+        $this->assertIsString($view);
+        $this->assertStringContainsString('年度ボール管理の役割', $view);
+        $this->assertStringContainsString('年度 大会使用履歴', $view);
+        $this->assertStringContainsString('仮登録へ降格（期限切れ）', $view);
+        $this->assertStringContainsString('翌年度へ自動で引き継がれます', $view);
+
+        $this->assertIsString($dashboard);
+        $this->assertStringContainsString('1. マイボール管理', $dashboard);
+        $this->assertStringContainsString('2. 年度ボール管理', $dashboard);
+        $this->assertStringContainsString('3. 大会使用ボール', $dashboard);
     }
 
     public function test_member_and_staff_navigation_contains_the_annual_workflow(): void

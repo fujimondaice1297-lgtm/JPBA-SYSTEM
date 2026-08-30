@@ -40,7 +40,7 @@ class TournamentEntryBallController extends Controller
         $registrationYear = $this->annualRegistrationService
             ->registrationYearForTournament($entry->tournament);
         $approvedAnnualRegistration = $this->annualRegistrationService
-            ->latestApproved((int) $entry->pro_bowler_id, $registrationYear);
+            ->latestApprovedOrCarryover((int) $entry->pro_bowler_id, $registrationYear);
         $approvedAnnualBallIds = $this->annualRegistrationService
             ->approvedUsedBallIds((int) $entry->pro_bowler_id, $registrationYear)
             ->all();
@@ -118,6 +118,11 @@ class TournamentEntryBallController extends Controller
     public function showForResults(Request $request, TournamentEntry $entry)
     {
         $entry->loadMissing(['tournament', 'bowler']);
+        $isPublic = (int) $request->query('public', 0) === 1 || ! Auth::check();
+
+        if ($isPublic && $entry->status !== 'entry') {
+            abort(404);
+        }
 
         // 公開閲覧では個人情報を取得しない。
         // シリアル番号・検量証番号・有効期限は管理画面だけで扱う。
@@ -140,11 +145,13 @@ class TournamentEntryBallController extends Controller
 
         $requestedReturn = trim((string) $request->query('return', ''));
         $applicationRoot = rtrim(url('/'), '/');
+        $defaultReturn = $isPublic
+            ? route('public.tournaments.show', $entry->tournament_id)
+            : route('member.dashboard');
         $returnUrl = $requestedReturn !== ''
             && ($requestedReturn === $applicationRoot || str_starts_with($requestedReturn, $applicationRoot.'/'))
                 ? $requestedReturn
-                : route('member.dashboard');
-        $isPublic = (int) $request->query('public', 0) === 1;
+                : $defaultReturn;
 
         return view('scores.entry_balls_show', compact(
             'entry',

@@ -28,6 +28,19 @@
     </div>
   @endif
 
+  <div class="alert alert-light border mb-4">
+    <div class="fw-bold mb-1">大会使用ボールの役割</div>
+    <div class="small">
+      この大会へ実際に持ち込むボールを、{{ $registrationYear }}年度の事務局承認済み一覧から選びます。<br>
+      保存した内容は大会に紐づき、年度ボール管理の「大会使用履歴」から後で確認できます。
+    </div>
+    <div class="d-flex gap-2 flex-wrap mt-3">
+      <a href="{{ route('registered_balls.index') }}" class="btn btn-sm btn-outline-success">1. マイボール管理</a>
+      <a href="{{ route('ball_annual_registrations.edit', ['year' => $registrationYear, 'pro_bowler_id' => $entry->pro_bowler_id]) }}" class="btn btn-sm btn-outline-primary">2. 年度ボール管理</a>
+      <span class="btn btn-sm btn-dark disabled" aria-disabled="true">3. 大会使用ボール</span>
+    </div>
+  </div>
+
   <div class="card mb-4">
     <div class="card-header fw-bold">対象大会 / 登録状況</div>
     <div class="card-body">
@@ -109,8 +122,8 @@
     @else
       <a href="{{ route('tournament.entry.select') }}" class="btn btn-secondary">大会エントリー一覧へ戻る</a>
     @endif
-    <a href="{{ route('registered_balls.index') }}" class="btn btn-outline-secondary">登録ボール管理</a>
-    <a href="{{ route('used_balls.index') }}" class="btn btn-outline-secondary">使用ボール管理</a>
+    <a href="{{ route('registered_balls.index') }}" class="btn btn-outline-secondary">マイボール管理</a>
+    <a href="{{ route('used_balls.index') }}" class="btn btn-outline-secondary">仮登録・検量証管理</a>
     <a href="{{ route('ball_annual_registrations.edit', ['year' => $registrationYear, 'pro_bowler_id' => $entry->pro_bowler_id]) }}" class="btn btn-primary">
       {{ $registrationYear }}年度申請を確認
     </a>

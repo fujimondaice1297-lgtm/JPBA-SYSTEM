@@ -9,6 +9,35 @@ use Illuminate\Http\Request;
 
 class TournamentEntryPublicController extends Controller
 {
+    public function publicIndex(Request $request, Tournament $tournament)
+    {
+        $keyword = trim((string) $request->input('q', ''));
+
+        $query = TournamentEntry::query()
+            ->with('bowler')
+            ->withCount('balls')
+            ->where('tournament_id', $tournament->id)
+            ->where('status', 'entry');
+
+        $this->applyBowlerKeyword($query, $keyword);
+
+        $entries = $query
+            ->orderBy('id')
+            ->paginate(100)
+            ->withQueryString();
+
+        return view('public.tournaments.entries', [
+            'publicConfig' => config('jpba_public', []),
+            'tournament' => $tournament,
+            'entries' => $entries,
+            'entryCount' => TournamentEntry::query()
+                ->where('tournament_id', $tournament->id)
+                ->where('status', 'entry')
+                ->count(),
+            'keyword' => $keyword,
+        ]);
+    }
+
     public function index(Request $request, Tournament $tournament)
     {
         $keyword = trim((string) $request->input('q', ''));
@@ -23,11 +52,11 @@ class TournamentEntryPublicController extends Controller
 
         $entries = $query
             ->orderByRaw("case when status = 'entry' then 0 when status = 'waiting' then 1 else 2 end")
-            ->orderByRaw("case when waitlist_priority is null then 1 else 0 end")
+            ->orderByRaw('case when waitlist_priority is null then 1 else 0 end')
             ->orderBy('waitlist_priority')
-            ->orderByRaw("case when shift is null then 1 else 0 end")
+            ->orderByRaw('case when shift is null then 1 else 0 end')
             ->orderBy('shift')
-            ->orderByRaw("case when lane is null then 1 else 0 end")
+            ->orderByRaw('case when lane is null then 1 else 0 end')
             ->orderBy('lane')
             ->orderBy('id')
             ->paginate(100)
@@ -60,9 +89,9 @@ class TournamentEntryPublicController extends Controller
         $this->applyBowlerKeyword($query, $keyword);
 
         $entries = $query
-            ->orderByRaw("case when shift is null then 0 else 1 end")
+            ->orderByRaw('case when shift is null then 0 else 1 end')
             ->orderBy('shift')
-            ->orderByRaw("case when lane is null then 0 else 1 end")
+            ->orderByRaw('case when lane is null then 0 else 1 end')
             ->orderBy('lane')
             ->orderBy('id')
             ->paginate(100)
@@ -90,9 +119,9 @@ class TournamentEntryPublicController extends Controller
         }
 
         $query->whereHas('bowler', function (Builder $q) use ($keyword) {
-            $q->where('license_no', 'like', '%' . $keyword . '%')
-                ->orWhere('name_kanji', 'like', '%' . $keyword . '%')
-                ->orWhere('name_kana', 'like', '%' . $keyword . '%');
+            $q->where('license_no', 'like', '%'.$keyword.'%')
+                ->orWhere('name_kanji', 'like', '%'.$keyword.'%')
+                ->orWhere('name_kana', 'like', '%'.$keyword.'%');
         });
     }
 }

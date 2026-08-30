@@ -16,8 +16,7 @@ class BallAnnualRegistrationController extends Controller
 {
     public function __construct(
         private readonly BallAnnualRegistrationService $service
-    ) {
-    }
+    ) {}
 
     public function index(Request $request)
     {
@@ -86,21 +85,39 @@ class BallAnnualRegistrationController extends Controller
         $year = $this->resolveYear($request);
         $proBowler = $this->resolveTargetBowler($request);
 
-        if (!$proBowler) {
+        if (! $proBowler) {
             return redirect()
                 ->route('ball_annual_registrations.index', ['year' => $year])
                 ->with('error', '年度申請する選手を選択してください。');
         }
 
         $usedBalls = UsedBall::query()
-            ->with('approvedBall.catalogManufacturer')
+            ->with([
+                'approvedBall.catalogManufacturer',
+                'tournamentEntries' => function ($query) use ($year) {
+                    $query->with('tournament')
+                        ->whereHas('tournament', function ($tournamentQuery) use ($year) {
+                            $tournamentQuery->where(function ($yearQuery) use ($year) {
+                                $yearQuery->where('year', $year)
+                                    ->orWhereYear('start_date', $year);
+                            });
+                        })
+                        ->orderByDesc('tournament_entries.id');
+                },
+            ])
             ->where('pro_bowler_id', $proBowler->id)
             ->orderByDesc('registered_at')
             ->orderByDesc('id')
             ->get();
 
         $workingRegistration = $this->service->workingRegistration((int) $proBowler->id, $year);
-        $latestApproved = $this->service->latestApproved((int) $proBowler->id, $year);
+        $latestApproved = $this->service->latestApprovedOrCarryover((int) $proBowler->id, $year);
+        $latestApprovedIds = $latestApproved
+            ? $latestApproved->usedBalls()
+                ->pluck('used_balls.id')
+                ->map(fn ($id) => (int) $id)
+                ->all()
+            : [];
 
         if ($workingRegistration) {
             $selectedIds = $workingRegistration->usedBalls()
@@ -127,7 +144,7 @@ class BallAnnualRegistrationController extends Controller
             ->get();
 
         $staffProxy = $this->isStaffUser($request->user());
-        $canEdit = !$workingRegistration || in_array(
+        $canEdit = ! $workingRegistration || in_array(
             $workingRegistration->status,
             [BallAnnualRegistration::STATUS_DRAFT, BallAnnualRegistration::STATUS_RETURNED],
             true
@@ -139,6 +156,7 @@ class BallAnnualRegistrationController extends Controller
             'usedBalls',
             'workingRegistration',
             'latestApproved',
+            'latestApprovedIds',
             'selectedIds',
             'histories',
             'staffProxy',
@@ -298,7 +316,7 @@ class BallAnnualRegistrationController extends Controller
                 ]);
             }
 
-            if (!$working) {
+            if (! $working) {
                 $lastRevision = (int) BallAnnualRegistration::query()
                     ->where('pro_bowler_id', $proBowler->id)
                     ->where('registration_year', $year)
@@ -385,7 +403,7 @@ class BallAnnualRegistrationController extends Controller
             ? ProBowler::query()->find($proBowlerId)
             : null;
 
-        if ($required && !$proBowler) {
+        if ($required && ! $proBowler) {
             throw ValidationException::withMessages([
                 'pro_bowler_id' => '年度申請する選手を選択してください。',
             ]);
@@ -410,7 +428,7 @@ class BallAnnualRegistrationController extends Controller
 
     private function authorizeStaff(Request $request): void
     {
-        if (!$this->isStaffUser($request->user())) {
+        if (! $this->isStaffUser($request->user())) {
             abort(403, 'スタッフだけが年度申請を承認できます。');
         }
     }

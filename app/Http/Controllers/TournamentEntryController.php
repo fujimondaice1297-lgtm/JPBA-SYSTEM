@@ -20,9 +20,34 @@ class TournamentEntryController extends Controller
 
         $eligibility = $this->resolveEntryEligibility($bowler);
 
+        $activeEntryTournamentIds = collect();
+        if ($proBowlerId) {
+            $activeEntryTournamentIds = TournamentEntry::query()
+                ->where('pro_bowler_id', $proBowlerId)
+                ->whereIn('status', ['entry', 'waiting'])
+                ->whereHas('tournament', function ($query) {
+                    $query->where(function ($dateQuery) {
+                        $dateQuery->whereNull('end_date')
+                            ->orWhereDate('end_date', '>=', today());
+                    });
+                })
+                ->pluck('tournament_id')
+                ->map(fn ($id) => (int) $id)
+                ->unique()
+                ->values();
+        }
+
         $tournaments = Tournament::query()
-            ->where('entry_start', '<=', now())
-            ->where('entry_end', '>=', now())
+            ->where(function ($query) use ($activeEntryTournamentIds) {
+                $query->where(function ($entryPeriodQuery) {
+                    $entryPeriodQuery->where('entry_start', '<=', now())
+                        ->where('entry_end', '>=', now());
+                });
+
+                if ($activeEntryTournamentIds->isNotEmpty()) {
+                    $query->orWhereIn('id', $activeEntryTournamentIds);
+                }
+            })
             ->orderBy('entry_start')
             ->orderBy('id')
             ->get();
@@ -35,6 +60,7 @@ class TournamentEntryController extends Controller
         if ($proBowlerId) {
             $entries = TournamentEntry::withCount('balls')
                 ->where('pro_bowler_id', $proBowlerId)
+                ->whereIn('tournament_id', $tournaments->pluck('id'))
                 ->get()
                 ->keyBy('tournament_id');
         }
@@ -49,7 +75,7 @@ class TournamentEntryController extends Controller
         $bowler = $proBowlerId ? ProBowler::query()->find($proBowlerId) : null;
 
         $eligibility = $this->resolveEntryEligibility($bowler);
-        if (!$eligibility['allowed']) {
+        if (! $eligibility['allowed']) {
             return redirect()
                 ->route('tournament.entry.select')
                 ->with('error', $eligibility['message']);
@@ -71,13 +97,13 @@ class TournamentEntryController extends Controller
         foreach ($request->input('entries', []) as $tournamentId => $choice) {
             $tournamentId = (int) $tournamentId;
 
-            if (!$openTournaments->has($tournamentId)) {
+            if (! $openTournaments->has($tournamentId)) {
                 continue;
             }
 
             $tournament = $openTournaments->get($tournamentId);
             $tournamentEligibility = $this->resolveEntryEligibility($bowler, $tournament);
-            if ($choice === 'entry' && !$tournamentEligibility['allowed']) {
+            if ($choice === 'entry' && ! $tournamentEligibility['allowed']) {
                 return redirect()->route('tournament.entry.select')
                     ->with('error', $tournament->name.'：'.$tournamentEligibility['message']);
             }
@@ -134,7 +160,7 @@ class TournamentEntryController extends Controller
         $tournament = $entry->tournament()->first();
         $eligibility = $this->resolveEntryEligibility($bowler, $tournament);
 
-        if (!$eligibility['allowed']) {
+        if (! $eligibility['allowed']) {
             return redirect()
                 ->route('tournament.entry.select')
                 ->with('error', $eligibility['message']);
@@ -161,7 +187,7 @@ class TournamentEntryController extends Controller
                 ->with('error', '先にレーン抽選を完了してください。');
         }
 
-        if (!is_null($entry->checked_in_at)) {
+        if (! is_null($entry->checked_in_at)) {
             return redirect()
                 ->route('tournament.entry.select')
                 ->with('success', 'すでにチェックイン済みです。');
@@ -185,7 +211,7 @@ class TournamentEntryController extends Controller
 
     private function recordEntryOperation(TournamentEntry $entry, string $action, ?string $reason = null, array $payload = []): void
     {
-        if (!Schema::hasTable('tournament_entry_operation_logs')) {
+        if (! Schema::hasTable('tournament_entry_operation_logs')) {
             return;
         }
 
@@ -210,11 +236,11 @@ class TournamentEntryController extends Controller
 
     private function normalizePreferredShift(string $preferredShift, Tournament $tournament): ?string
     {
-        if (!(bool) ($tournament->use_shift_draw ?? false)) {
+        if (! (bool) ($tournament->use_shift_draw ?? false)) {
             return null;
         }
 
-        if (!(bool) ($tournament->accept_shift_preference ?? false)) {
+        if (! (bool) ($tournament->accept_shift_preference ?? false)) {
             return null;
         }
 

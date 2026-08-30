@@ -40,6 +40,19 @@
         </div>
     @endif
 
+    <div class="alert alert-light border mb-4">
+        <div class="fw-bold mb-1">年度ボール管理の役割</div>
+        <div class="small">
+            マイボールから、その年度に大会で使う可能性があるボールを申請し、事務局が選手単位で承認します。<br>
+            検量証がない仮登録ボールも承認対象です。承認後は、出場大会ごとの「大会使用ボール」画面で実際に持ち込むボールを選びます。
+        </div>
+        <div class="d-flex gap-2 flex-wrap mt-3">
+            <a href="{{ route('registered_balls.index') }}" class="btn btn-sm btn-outline-success">1. マイボール管理</a>
+            <span class="btn btn-sm btn-primary disabled" aria-disabled="true">2. 年度ボール管理</span>
+            <a href="{{ route('tournament.entry.select') }}" class="btn btn-sm btn-outline-dark">3. 大会使用ボール</a>
+        </div>
+    </div>
+
     <div class="row g-3 mb-4">
         <div class="col-md-6">
             <div class="card h-100">
@@ -96,6 +109,8 @@
         <div class="fw-bold mb-1">年度申請と検量証は別管理です</div>
         <div class="small">
             年度申請は{{ $year }}年12月31日まで有効です。検量証は検量日から1年間有効で、年度をまたげます。
+            翌年1月1日時点で検量証が有効な承認済みボールは、翌年度へ自動で引き継がれます。
+            翌年度中に期限が切れた場合は仮登録表示へ降格し、更新しなければ次の年度には引き継がれません。
             追加・入れ替えがある場合は新しい版として申請し、承認後に大会登録へ反映されます。
         </div>
     </div>
@@ -120,6 +135,7 @@
                             <th style="min-width:130px;">シリアル番号</th>
                             <th style="min-width:130px;">検量証状態</th>
                             <th style="min-width:150px;">アブプール照合</th>
+                            <th style="min-width:260px;">{{ $year }}年度 大会使用履歴</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -132,6 +148,8 @@
                                 $isProvisional = blank($ball->inspection_number) || !$ball->expires_at;
                                 $usbcMatched = ($approvedBall?->usbc_match_status ?? 'unmatched') === 'matched';
                                 $checkedIds = old('used_ball_ids', $selectedIds);
+                                $annualApproved = in_array((int) $ball->id, array_map('intval', $latestApprovedIds ?? []), true);
+                                $tournamentEntries = $ball->tournamentEntries ?? collect();
                             @endphp
                             <tr>
                                 <td class="text-center">
@@ -156,15 +174,18 @@
                                 <td>
                                     <div class="small text-muted">{{ $brand }}</div>
                                     <div class="fw-bold">{{ $ballName }}</div>
+                                    @if($annualApproved)
+                                        <span class="badge bg-primary mt-1">年度承認済み</span>
+                                    @endif
                                 </td>
                                 <td>{{ $ball->serial_number }}</td>
                                 <td>
                                     @if($isProvisional)
-                                        <span class="badge bg-warning text-dark">検量証待ち</span>
+                                        <span class="badge bg-warning text-dark">仮登録（検量証待ち）</span>
                                     @elseif($isExpired)
-                                        <span class="badge bg-danger">期限切れ</span>
+                                        <span class="badge bg-warning text-dark">仮登録へ降格（期限切れ）</span>
                                     @else
-                                        <span class="badge bg-success">有効</span>
+                                        <span class="badge bg-success">本登録（検量証有効）</span>
                                     @endif
                                 </td>
                                 <td>
@@ -173,6 +194,29 @@
                                     @else
                                         <span class="badge bg-danger">掲載なし・要確認</span>
                                     @endif
+                                </td>
+                                <td>
+                                    @forelse($tournamentEntries as $tournamentEntry)
+                                        @if($tournamentEntry->tournament)
+                                            <div class="mb-2">
+                                                <a href="{{ route('scores.entry_balls.show', [
+                                                    'entry' => $tournamentEntry->id,
+                                                    'return' => route('ball_annual_registrations.edit', [
+                                                        'year' => $year,
+                                                        'pro_bowler_id' => $proBowler->id,
+                                                    ]),
+                                                ]) }}" class="fw-bold">
+                                                    {{ $tournamentEntry->tournament->name }}
+                                                </a>
+                                                <div class="small text-muted">大会登録ボールを見る</div>
+                                                <div class="small text-muted">
+                                                    {{ optional($tournamentEntry->tournament->start_date)->format('Y-m-d') ?? '開催日未定' }}
+                                                </div>
+                                            </div>
+                                        @endif
+                                    @empty
+                                        <span class="text-muted">大会登録なし</span>
+                                    @endforelse
                                 </td>
                             </tr>
                         @endforeach
@@ -219,6 +263,7 @@
                                     'approved' => '承認',
                                     'returned' => '差戻し',
                                     'superseded' => '旧版更新',
+                                    'inspection_carryover' => '検量証有効ボール自動引継ぎ',
                                     default => $history->action,
                                 };
                             @endphp

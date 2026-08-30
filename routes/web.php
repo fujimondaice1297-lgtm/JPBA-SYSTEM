@@ -283,6 +283,12 @@ Route::get('/info/files/{informationFile}', [InformationController::class, 'down
 Route::get('/ball-catalog/images/{approved_ball}', [ApprovedBallController::class, 'image'])
     ->whereNumber('approved_ball')
     ->name('approved_balls.image');
+Route::get('/tournament-entries/{entry}/registered-balls', [TournamentEntryBallController::class, 'showForResults'])
+    ->whereNumber('entry')
+    ->name('scores.entry_balls.show');
+Route::get('/tournament/{tournament}/entries', [\App\Http\Controllers\TournamentEntryPublicController::class, 'publicIndex'])
+    ->whereNumber('tournament')
+    ->name('public.tournaments.entries');
 
 /* =======================================================================
    会員・編集者・管理者 共通（閲覧/自分の操作）  auth + role:member,editor,admin
@@ -304,9 +310,6 @@ Route::middleware(['auth', 'role:member,editor,admin'])->group(function () {
     Route::post('/entry/select', [TournamentEntryController::class, 'storeSelection'])->name('tournament.entry.select.store');
     Route::get('/member/entries/{entry}/balls', [TournamentEntryBallController::class, 'edit'])->name('member.entries.balls.edit');
     Route::post('/member/entries/{entry}/balls', [TournamentEntryBallController::class, 'bulkStore'])->name('member.entries.balls.store');
-    Route::get('/tournament-entries/{entry}/registered-balls', [TournamentEntryBallController::class, 'showForResults'])
-        ->whereNumber('entry')
-        ->name('scores.entry_balls.show');
     Route::post('/member/entries/{entry}/shift-draw', [DrawController::class, 'shift'])->name('member.entries.shift.draw');
     Route::post('/member/entries/{entry}/lane-draw', [DrawController::class, 'lane'])->name('member.entries.lane.draw');
     Route::post('/member/entries/{entry}/check-in', [TournamentEntryController::class, 'checkIn'])->name('member.entries.check_in');

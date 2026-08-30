@@ -1,18 +1,9 @@
-@extends('layouts.app')
+@extends($isPublic ? 'public.layout' : 'layouts.app')
+
+@section('title', '大会登録ボール｜' . ($entry->bowler?->name_kanji ?? '選手') . '｜公益社団法人 日本プロボウリング協会')
+@section('breadcrumb', '大会登録ボール')
 
 @section('content')
-@if($isPublic)
-<style>
-    header, nav, .navbar, .topbar, .site-header, .app-header,
-    .sidebar, .breadcrumb, .admin-menu, .auth-status, .login-state,
-    .global-nav, .main-nav, .pwa-header, .layout-header {
-        display: none !important;
-        visibility: hidden !important;
-    }
-    body { padding-top: 0 !important; }
-</style>
-@endif
-
 <div class="container py-3">
     <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap mb-3">
         <div>
@@ -36,7 +27,15 @@
                         @endif
                         <div>
                             <div class="text-muted small">選手</div>
-                            <div class="fs-4 fw-bold">{{ $entry->bowler?->name_kanji ?? '選手名未設定' }}</div>
+                            <div class="fs-4 fw-bold">
+                                @if($isPublic && $entry->bowler)
+                                    <a href="{{ route('public.players.show', $entry->bowler->id) }}">
+                                        {{ $entry->bowler->name_kanji ?? '選手名未設定' }}
+                                    </a>
+                                @else
+                                    {{ $entry->bowler?->name_kanji ?? '選手名未設定' }}
+                                @endif
+                            </div>
                             <div class="text-muted">{{ $entry->bowler?->license_no ?? 'ライセンス番号未設定' }}</div>
                         </div>
                     </div>

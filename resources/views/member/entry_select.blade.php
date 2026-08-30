@@ -2,7 +2,7 @@
 
 @section('content')
 <div class="container">
-  <h2 class="mb-3">大会エントリー選択</h2>
+  <h2 class="mb-3">大会エントリー・大会使用ボール</h2>
 
   @php
     $isAllowed = (bool) ($eligibility['allowed'] ?? false);
@@ -15,6 +15,19 @@
   @if (session('error'))
     <div class="alert alert-danger">{{ session('error') }}</div>
   @endif
+
+  <div class="alert alert-light border mb-4">
+    <div class="fw-bold mb-1">この画面の役割</div>
+    <div class="small">
+      受付中の大会へエントリーし、エントリー済み大会ごとに<strong>実際に持ち込むボール</strong>を登録します。<br>
+      大会使用ボールは、事務局が承認した年度ボールの中から選びます。受付期間が終了しても、開催前のエントリー済み大会はこの一覧に残ります。
+    </div>
+    <div class="d-flex gap-2 flex-wrap mt-3">
+      <a href="{{ route('registered_balls.index') }}" class="btn btn-sm btn-outline-success">1. マイボール管理</a>
+      <a href="{{ route('ball_annual_registrations.edit') }}" class="btn btn-sm btn-outline-primary">2. 年度ボール管理</a>
+      <span class="btn btn-sm btn-success disabled" aria-disabled="true">3. 大会使用ボール</span>
+    </div>
+  </div>
 
   <div class="card mb-4">
     <div class="card-header fw-bold">現在のエントリー判定</div>
@@ -86,6 +99,9 @@
               $preferredShift = old("preferred_shifts.{$tournament->id}", $entry?->preferred_shift_code);
               $rowEligibility = $tournamentEligibility[$tournament->id] ?? $eligibility;
               $rowAllowed = (bool) ($rowEligibility['allowed'] ?? false);
+              $entryWindowOpen = $tournament->entry_start
+                && $tournament->entry_end
+                && now()->betweenIncluded($tournament->entry_start, $tournament->entry_end);
             @endphp
 
             <tr>
@@ -98,11 +114,14 @@
               <td>
                 @if ($status === 'waiting')
                   <span class="badge bg-warning text-dark">ウェイティング中</span>
-                @elseif ($rowAllowed)
+                @elseif ($rowAllowed && $entryWindowOpen)
                   <select name="entries[{{ $tournament->id }}]" class="form-select">
                     <option value="entry" {{ $status === 'entry' ? 'selected' : '' }}>エントリーする</option>
                     <option value="no_entry" {{ $status === 'no_entry' ? 'selected' : '' }}>エントリーしない</option>
                   </select>
+                @elseif ($status === 'entry')
+                  <span class="badge bg-primary">エントリー済み</span>
+                  <div class="small text-muted mt-1">受付期間終了後も大会使用ボールを登録できます。</div>
                 @else
                   <input type="text" class="form-control" value="対象外" disabled>
                 @endif
@@ -111,7 +130,7 @@
               <td>
                 @if ($status === 'waiting')
                   <span class="text-muted">管理者登録</span>
-                @elseif ($rowAllowed && $useShiftDraw && $acceptShiftPreference && $shiftCodes->isNotEmpty())
+                @elseif ($rowAllowed && $entryWindowOpen && $useShiftDraw && $acceptShiftPreference && $shiftCodes->isNotEmpty())
                   <select name="preferred_shifts[{{ $tournament->id }}]" class="form-select">
                     <option value="">指定なし</option>
                     @foreach ($shiftCodes as $shiftCode)
@@ -146,8 +165,8 @@
                     @endif
                   @elseif ($entry && $status === 'entry')
                     <a href="{{ route('member.entries.balls.edit', $entry->id) }}"
-                       class="btn btn-outline-primary btn-sm">
-                      大会使用ボール登録
+                       class="btn btn-primary btn-sm">
+                      大会使用ボールを選ぶ（{{ (int) ($entry->balls_count ?? 0) }}個）
                     </a>
 
                     @if ($useShiftDraw)

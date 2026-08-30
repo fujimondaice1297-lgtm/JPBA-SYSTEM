@@ -162,6 +162,11 @@ class TournamentEntryBallWorkflowSourceTest extends TestCase
         $this->assertStringNotContainsString('有効期限', $detailView);
         $this->assertIsString($linkPartial);
         $this->assertStringContainsString("route('scores.entry_balls.show'", $linkPartial);
+        $this->assertTrue(Route::has('public.tournaments.entries'));
+
+        $route = Route::getRoutes()->getByName('scores.entry_balls.show');
+        $this->assertNotNull($route);
+        $this->assertNotContains('auth', $route->gatherMiddleware());
 
         foreach ([
             'result',
@@ -171,12 +176,12 @@ class TournamentEntryBallWorkflowSourceTest extends TestCase
             'shootout_result',
         ] as $viewName) {
             $source = file_get_contents(
-                resource_path('views/scores/' . $viewName . '.blade.php')
+                resource_path('views/scores/'.$viewName.'.blade.php')
             );
 
             $this->assertIsString($source);
             $this->assertStringContainsString(
-                "scores.partials.player_ball_link",
+                'scores.partials.player_ball_link',
                 $source,
                 "速報ビュー {$viewName} に登録ボール導線がありません。"
             );

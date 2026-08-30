@@ -18,6 +18,8 @@ class ScheduledOperationsSafetySourceTest extends TestCase
         $this->assertStringContainsString("Schedule::command('balls:audit-retention')", $schedule);
         $this->assertStringContainsString("Schedule::command('balls:sync-catalog --manufacturer=all --force')", $schedule);
         $this->assertStringContainsString("Schedule::command('balls:sync-usbc-approved --force')", $schedule);
+        $this->assertStringContainsString("Schedule::command('balls:carry-over-annual-registrations --force')", $schedule);
+        $this->assertStringContainsString('scheduled-ball-annual-carryover.log', $schedule);
         $this->assertLessThan(
             strpos($schedule, "Schedule::command('balls:sync-usbc-approved --force')"),
             strpos($schedule, "Schedule::command('balls:sync-catalog --manufacturer=all --force')")

@@ -191,8 +191,13 @@
 <section class="jpba-panel" aria-labelledby="file-heading">
   <h2 id="file-heading" class="jpba-section-title">資料・速報・成績</h2>
 
-  @if(!empty($fileLinks) || !empty($scheduleLinks))
+  @if(!empty($fileLinks) || !empty($scheduleLinks) || $entryCount > 0)
     <div class="jpba-link-list">
+      @if($entryCount > 0)
+        <a href="{{ route('public.tournaments.entries', $tournament) }}">
+          エントリープロ・大会登録ボール（{{ number_format($entryCount) }}名）
+        </a>
+      @endif
       @foreach($fileLinks as $link)
         <a href="{{ $link['url'] }}" target="_blank" rel="noopener">{{ $link['label'] }}</a>
       @endforeach
@@ -263,7 +268,16 @@
                     <img src="{{ $row->pro_photo_url }}" alt="" style="width:38px;height:38px;border-radius:50%;object-fit:cover;border:1px solid #dbe3ec;flex:0 0 auto;">
                   @endif
                 @endif
-                @if($row->pro_bowler_id)
+                @if($row->tournament_entry_id)
+                  <a href="{{ route('scores.entry_balls.show', [
+                    'entry' => $row->tournament_entry_id,
+                    'public' => 1,
+                    'return' => route('public.tournaments.show', $tournament),
+                  ]) }}">
+                    {{ $row->pro_name ?: '-' }}
+                  </a>
+                  <div class="small text-muted">大会登録ボール {{ number_format((int) $row->ball_count) }}個</div>
+                @elseif($row->pro_bowler_id)
                   <a href="{{ route('public.players.show', $row->pro_bowler_id) }}">{{ $row->pro_name ?: '-' }}</a>
                 @else
                   <span>{{ $row->amateur_name ?: '-' }}</span>

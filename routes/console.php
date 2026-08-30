@@ -59,6 +59,15 @@ Schedule::command('balls:audit-retention')
     ->withoutOverlapping(120)
     ->appendOutputTo(storage_path('logs/scheduled-ball-retention-audit.log'));
 
+// 元日時点で検量証が有効な前年度承認ボールだけを、新年度の承認一覧へ引き継ぐ。
+// 期限切れ・検量証なしは引き継がず、前年度の大会使用履歴は削除しない。
+Schedule::command('balls:carry-over-annual-registrations --force')
+    ->yearlyOn(1, 1, '00:20')
+    ->timezone('Asia/Tokyo')
+    ->name('ball-annual-registration-carryover')
+    ->withoutOverlapping(120)
+    ->appendOutputTo(storage_path('logs/scheduled-ball-annual-carryover.log'));
+
 // DB・公開／非公開ファイルを暗号化し、完了済み14世代を保持する。
 Schedule::command('jpba:backup --isolated')
     ->dailyAt('01:15')
