@@ -70,6 +70,7 @@ final class SeasonTrialRankingService
                     $sourceRow->organization_name,
                     $sourceRow->equipment_contract,
                 ),
+                'sex' => (int) $sourceRow->sex,
                 'points' => 0,
                 'games' => 0,
                 'total_pin' => 0,
@@ -228,6 +229,7 @@ final class SeasonTrialRankingService
             ->where('tournaments.year', $year)
             ->where($this->seasonTrialTournamentConstraint('tournaments'))
             ->whereNotNull('rows.pro_bowler_id')
+            ->where('bowlers.sex', 1)
             ->select([
                 'rows.pro_bowler_id',
                 'rows.pro_bowler_license_no as publication_license_no',
@@ -246,6 +248,7 @@ final class SeasonTrialRankingService
                 'bowlers.kibetsu',
                 'bowlers.organization_name',
                 'bowlers.equipment_contract',
+                'bowlers.sex',
             ]);
     }
 
@@ -272,6 +275,7 @@ final class SeasonTrialRankingService
             ->join('pro_bowlers as bowlers', 'bowlers.id', '=', 'titles.pro_bowler_id')
             ->leftJoin('tournaments as tournaments', 'tournaments.id', '=', 'titles.tournament_id')
             ->where('titles.year', $year)
+            ->where('bowlers.sex', 1)
             ->where(function (Builder $query): void {
                 $query->whereNull('tournaments.id')
                     ->orWhere(function (Builder $query): void {
@@ -322,6 +326,7 @@ final class SeasonTrialRankingService
             ->join('pro_bowlers as bowlers', 'bowlers.id', '=', 'seeds.pro_bowler_id')
             ->where('tournaments.year', $year)
             ->where('tournaments.name', 'like', '%STチャンピオンズ%')
+            ->where('bowlers.sex', 1)
             ->where('seeds.seed_source_type', ProBowlerSeedService::SOURCE_EVENT_SPONSOR_RECOMMENDATION)
             ->where('seeds.is_active', true)
             ->orderBy('seeds.priority_order')
@@ -341,6 +346,10 @@ final class SeasonTrialRankingService
     ): void {
         foreach ($candidates as $candidate) {
             $candidateArray = (array) $candidate;
+            if (! $this->isMaleCandidate($candidateArray)) {
+                continue;
+            }
+
             $key = $this->identityKey($candidateArray);
             if ($key === '' || isset($seen[$key])) {
                 continue;
@@ -375,7 +384,17 @@ final class SeasonTrialRankingService
             'bowlers.name_kanji',
             'bowlers.kibetsu',
             'bowlers.organization_name',
+            'bowlers.sex',
         ];
+    }
+
+    private function isMaleCandidate(array $row): bool
+    {
+        if (array_key_exists('sex', $row)) {
+            return (int) $row['sex'] === 1;
+        }
+
+        return str_starts_with(mb_strtoupper(trim((string) ($row['license_no'] ?? ''))), 'M');
     }
 
     private function identityKey(array $row): string

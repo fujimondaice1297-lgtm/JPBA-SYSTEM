@@ -152,7 +152,7 @@
 <section class="jpba-panel" aria-labelledby="player-search-heading">
   <h2 id="player-search-heading" class="jpba-section-title">選手データ検索</h2>
 
-  <p class="mb-3">選手データを検索することができます。任意の項目に入力してください。</p>
+  <p class="mb-3">性別と選手区分を選択して検索してください。初期状態では検索結果を表示しません。</p>
 
   <form method="GET" action="{{ route('public.players.index') }}" class="jpba-player-form">
     <div class="span-4">
@@ -173,10 +173,20 @@
 
     <div class="span-2">
       <label for="gender">性別</label>
-      <select id="gender" name="gender">
-        <option value="">すべて</option>
+      <select id="gender" name="gender" required>
+        <option value="">選択してください</option>
         <option value="男性" @selected(($filters['gender'] ?? '') === '男性')>男性</option>
         <option value="女性" @selected(($filters['gender'] ?? '') === '女性')>女性</option>
+      </select>
+    </div>
+
+    <div class="span-2">
+      <label for="member_class">選手区分</label>
+      <select id="member_class" name="member_class" required>
+        <option value="">選択してください</option>
+        @foreach($memberClassOptions as $value => $label)
+          <option value="{{ $value }}" @selected(($filters['member_class'] ?? '') === $value)>{{ $label }}</option>
+        @endforeach
       </select>
     </div>
 
@@ -207,9 +217,7 @@
 
     <div class="span-12 jpba-action-row">
       <button type="submit" class="jpba-search-button">検索する</button>
-      <a class="jpba-outline-button" href="{{ route('public.players.index') }}">通常検索</a>
-      <a class="jpba-outline-button" href="{{ route('public.players.index', ['player_status' => 'overseas']) }}">海外プロ</a>
-      <a class="jpba-outline-button" href="{{ route('public.players.index', ['player_status' => 'retired']) }}">退会者</a>
+      <a class="jpba-outline-button" href="{{ route('public.players.index') }}">条件をクリア</a>
     </div>
   </form>
 </section>
@@ -217,12 +225,18 @@
 <section class="jpba-panel" aria-labelledby="player-result-heading">
   <div class="jpba-result-meta">
     <h2 id="player-result-heading" class="jpba-section-title mb-0">
-      {{ ($playerStatusOptions[$filters['player_status'] ?? 'active'] ?? '現役選手') }}検索結果
+      @if($hasRequiredFilters)
+        {{ ($memberClassOptions[$filters['member_class']] ?? '') }}・{{ $filters['gender'] }}・{{ ($playerStatusOptions[$filters['player_status'] ?? 'active'] ?? '現役選手') }}検索結果
+      @else
+        検索条件を選択してください
+      @endif
     </h2>
     <div class="text-muted">該当件数: {{ number_format($bowlers->total()) }}件</div>
   </div>
 
-  @if($bowlers->count())
+  @if(!$hasRequiredFilters)
+    <p class="mb-0 text-muted">性別と選手区分は必須です。両方を選択して「検索する」を押してください。</p>
+  @elseif($bowlers->count())
     <table class="jpba-player-table">
       <thead>
         <tr>

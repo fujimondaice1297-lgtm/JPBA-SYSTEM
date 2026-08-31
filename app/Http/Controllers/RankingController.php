@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\ProBowler;
 use App\Models\ProBowlerRankingRow;
 use App\Models\ProBowlerRankingSnapshot;
+use App\Services\OfficialCurrentRankingService;
 use App\Services\SeasonTrialRankingService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -42,6 +43,28 @@ class RankingController extends Controller
             'years' => $years,
             'selectedYear' => $selectedYear,
             'canManageRankings' => $this->canManageRankings(),
+        ]);
+    }
+
+    public function officialCurrent(Request $request, OfficialCurrentRankingService $rankingService)
+    {
+        $years = $rankingService->years();
+        $selectedYear = $this->requestedYear($request, $years);
+        $gender = array_key_exists((string) $request->query('gender'), OfficialCurrentRankingService::GENDER_LABELS)
+            ? (string) $request->query('gender')
+            : 'M';
+        $rankingType = array_key_exists((string) $request->query('type'), OfficialCurrentRankingService::RANKING_TYPE_LABELS)
+            ? (string) $request->query('type')
+            : 'points';
+
+        return view('rankings.official_current', [
+            'ranking' => $rankingService->ranking($selectedYear, $gender, $rankingType),
+            'years' => $years,
+            'selectedYear' => $selectedYear,
+            'gender' => $gender,
+            'rankingType' => $rankingType,
+            'genderLabels' => OfficialCurrentRankingService::GENDER_LABELS,
+            'rankingTypeLabels' => OfficialCurrentRankingService::RANKING_TYPE_LABELS,
         ]);
     }
 

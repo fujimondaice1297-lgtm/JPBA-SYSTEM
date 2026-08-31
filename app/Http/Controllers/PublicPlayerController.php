@@ -6,10 +6,18 @@ use App\Models\District;
 use App\Models\ProBowler;
 use App\Services\ProBowlerSearchScopeService;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\View\View;
 
 class PublicPlayerController extends Controller
 {
+    private const MEMBER_CLASS_OPTIONS = [
+        'player' => 'プロボウラー',
+        'pro_instructor' => 'プロインストラクター',
+        'honorary_or_overseas' => '名誉プロ・海外',
+        'other' => 'その他',
+    ];
+
     public function index(Request $request): View
     {
         $statusService = app(ProBowlerSearchScopeService::class);
@@ -19,50 +27,67 @@ class PublicPlayerController extends Controller
             'license_from' => trim((string) $request->query('license_from', '')),
             'license_to' => trim((string) $request->query('license_to', '')),
             'gender' => trim((string) $request->query('gender', '')),
+            'member_class' => trim((string) $request->query('member_class', '')),
             'district_id' => trim((string) $request->query('district_id', '')),
             'player_status' => $statusService->normalizeStatus(
                 $request->query('player_status', $request->boolean('retired') ? 'retired' : 'active')
             ),
         ];
 
-        $query = ProBowler::query()
-            ->with('district')
-            ->where('is_visible', true);
+        $hasRequiredFilters = in_array($filters['gender'], ['男性', '女性'], true)
+            && array_key_exists($filters['member_class'], self::MEMBER_CLASS_OPTIONS);
 
-        $statusService->applyStatus($query, $filters['player_status']);
+        if ($hasRequiredFilters) {
+            $query = ProBowler::query()
+                ->with('district')
+                ->where('is_visible', true)
+                ->where('sex', $filters['gender'] === '男性' ? 1 : 2)
+                ->where('member_class', $filters['member_class']);
 
-        if ($filters['name'] !== '') {
-            $name = $filters['name'];
-            $query->where(function ($q) use ($name) {
-                $q->where('name_kanji', 'like', "%{$name}%")
-                    ->orWhere('name_kana', 'like', "%{$name}%");
-            });
+            $statusService->applyStatus($query, $filters['player_status']);
+
+            if ($filters['name'] !== '') {
+                $name = $filters['name'];
+                $query->where(function ($q) use ($name) {
+                    $q->where('name_kanji', 'like', "%{$name}%")
+                        ->orWhere('name_kana', 'like', "%{$name}%");
+                });
+            }
+
+            $this->applyLicenseFilter(
+                $query,
+                $filters['license_from'],
+                $filters['license_to']
+            );
+
+            if ($filters['district_id'] !== '' && ctype_digit($filters['district_id'])) {
+                $query->where('district_id', (int) $filters['district_id']);
+            }
+
+            $bowlers = $query
+                ->orderByRaw('license_no_num asc nulls last')
+                ->orderBy('license_no')
+                ->paginate(30)
+                ->withQueryString();
+        } else {
+            $bowlers = new LengthAwarePaginator(
+                items: [],
+                total: 0,
+                perPage: 30,
+                currentPage: LengthAwarePaginator::resolveCurrentPage(),
+                options: [
+                    'path' => $request->url(),
+                    'query' => $request->query(),
+                ],
+            );
         }
-
-        $this->applyLicenseFilter(
-            $query,
-            $filters['license_from'],
-            $filters['license_to']
-        );
-
-        if (in_array($filters['gender'], ['男性', '女性'], true)) {
-            $query->where('sex', $filters['gender'] === '男性' ? 1 : 2);
-        }
-
-        if ($filters['district_id'] !== '' && ctype_digit($filters['district_id'])) {
-            $query->where('district_id', (int) $filters['district_id']);
-        }
-
-        $bowlers = $query
-            ->orderByRaw('license_no_num asc nulls last')
-            ->orderBy('license_no')
-            ->paginate(30)
-            ->withQueryString();
 
         return view('public.players.index', [
             'publicConfig' => config('jpba_public', []),
             'filters' => $filters,
             'playerStatusOptions' => $statusService->statusOptions(),
+            'memberClassOptions' => self::MEMBER_CLASS_OPTIONS,
+            'hasRequiredFilters' => $hasRequiredFilters,
             'districts' => $this->orderedDistricts(),
             'bowlers' => $bowlers,
         ]);
@@ -74,7 +99,7 @@ class PublicPlayerController extends Controller
             return;
         }
 
-        $raw = strtoupper($from . $to);
+        $raw = strtoupper($from.$to);
         $hasAlphabet = preg_match('/[A-Z]/', $raw) === 1;
 
         if ($hasAlphabet) {
@@ -87,7 +112,7 @@ class PublicPlayerController extends Controller
             $query->where(function ($q) use ($values) {
                 foreach ($values as $value) {
                     $q->orWhereRaw('upper(license_no) = ?', [$value])
-                        ->orWhereRaw('upper(license_no) like ?', [$value . '%']);
+                        ->orWhereRaw('upper(license_no) like ?', [$value.'%']);
                 }
             });
 

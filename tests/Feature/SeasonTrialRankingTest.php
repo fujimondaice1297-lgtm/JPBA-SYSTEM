@@ -179,3 +179,43 @@ test('championship priority follows the official category order and removes dupl
         ->assertSee('速報・成績へ戻る')
         ->assertSee('ST年間ポイントランキング上位者');
 });
+
+test('season trial rankings and championship priority never include women', function () {
+    $male = createSeasonTrialRankingBowler('M00009821', 'ST男子対象');
+    $female = createSeasonTrialRankingBowler('F00000981', 'ST女子対象外', ['sex' => 2]);
+    $seasonTrial = createSeasonTrialRankingTournament('2026オータムシリーズ シーズントライアル除外確認', '2026-09-20');
+
+    publishSeasonTrialRankingRows($seasonTrial, [
+        ['bowler' => $female, 'ranking' => 1, 'points' => 100, 'games' => 12, 'total_pin' => 2900],
+        ['bowler' => $male, 'ranking' => 2, 'points' => 80, 'games' => 12, 'total_pin' => 2700],
+    ]);
+
+    $officialTournament = Tournament::query()->create([
+        'name' => '2026女子優勝者混入確認大会',
+        'start_date' => '2026-08-01',
+        'year' => 2026,
+        'gender' => 'F',
+        'title_category' => 'normal',
+        'title_scope' => 'official',
+    ]);
+    ProBowlerTitle::query()->create([
+        'pro_bowler_id' => $female->id,
+        'tournament_id' => $officialTournament->id,
+        'title_name' => $officialTournament->name,
+        'year' => 2026,
+        'won_date' => '2026-08-01',
+        'source' => 'result',
+    ]);
+
+    $ranking = app(SeasonTrialRankingService::class)->ranking(2026);
+    $priority = app(SeasonTrialRankingService::class)->championshipPriority(2026);
+
+    expect(collect($ranking['rows'])->pluck('pro_bowler_id')->all())
+        ->toContain($male->id)
+        ->not->toContain($female->id)
+        ->and(collect($priority['rows'])->pluck('pro_bowler_id')->all())
+        ->not->toContain($female->id)
+        ->and(collect($priority['rows'])->every(
+            fn (array $row): bool => str_starts_with($row['license_no'], 'M')
+        ))->toBeTrue();
+});

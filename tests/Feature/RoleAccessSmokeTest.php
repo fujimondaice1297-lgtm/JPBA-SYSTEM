@@ -41,6 +41,7 @@ test('public visitors can use public pages and are redirected away from protecte
         route('public.tournaments.live_results'),
         route('rankings.season_trial'),
         route('rankings.season_trial_championship_priority'),
+        route('rankings.official_current'),
         route('public.privacy'),
     ] as $url) {
         $this->get($url)->assertOk();
@@ -79,6 +80,7 @@ test('members can use only their own member workflows and cannot import rankings
         ->assertDontSee('年度別シード管理へ');
     $this->actingAs($member)->get(route('rankings.season_trial'))->assertOk();
     $this->actingAs($member)->get(route('rankings.season_trial_championship_priority'))->assertOk();
+    $this->actingAs($member)->get(route('rankings.official_current'))->assertOk();
 
     $this->actingAs($member)
         ->post(route('rankings.import_official'), [

@@ -986,6 +986,9 @@ class TournamentController extends Controller
             default => ($validated['title_category'] ?? 'normal') === 'season_trial' ? 'normal' : ($validated['title_category'] ?? 'normal'),
         };
 
+        $validated = app(\App\Services\TournamentClassificationPolicyService::class)
+            ->normalizeTournamentAttributes($validated);
+
         $flowType = trim((string) ($validated['result_flow_type'] ?? 'legacy_standard')) ?: 'legacy_standard';
 
         $usesRoundRobin = in_array($flowType, [

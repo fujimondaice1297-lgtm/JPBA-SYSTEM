@@ -64,6 +64,9 @@ class TournamentConfigurationService
 
     public function syncResultOutputs(Tournament $tournament, array $input): void
     {
+        $input = app(TournamentClassificationPolicyService::class)
+            ->normalizeResultOutputInput($tournament, $input);
+
         $outputs = [];
 
         if (! empty($input['counts_for_official_points'])) {

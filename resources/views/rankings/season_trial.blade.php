@@ -12,6 +12,7 @@
         </div>
         <div class="d-flex gap-2 flex-wrap">
             <a href="{{ route('public.tournaments.live_results') }}" class="btn btn-outline-secondary">速報・成績へ戻る</a>
+            <a href="{{ route('rankings.official_current', ['year' => $selectedYear, 'gender' => 'M', 'type' => 'points']) }}" class="btn btn-outline-primary">公式ポイント・賞金</a>
             <a href="{{ route('rankings.season_trial_championship_priority', ['year' => $selectedYear]) }}" class="btn btn-primary">優先出場一覧</a>
         </div>
     </div>

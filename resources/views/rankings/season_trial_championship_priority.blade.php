@@ -12,6 +12,7 @@
         </div>
         <div class="d-flex gap-2 flex-wrap">
             <a href="{{ route('public.tournaments.live_results') }}" class="btn btn-outline-secondary">速報・成績へ戻る</a>
+            <a href="{{ route('rankings.official_current', ['year' => $selectedYear, 'gender' => 'M', 'type' => 'points']) }}" class="btn btn-outline-primary">公式ポイント・賞金</a>
             <a href="{{ route('rankings.season_trial', ['year' => $selectedYear]) }}" class="btn btn-primary">ST年間ポイント</a>
         </div>
     </div>
@@ -39,6 +40,7 @@
 
     <div class="alert alert-warning">
         <div class="fw-bold mb-1">大会途中の一覧は暫定です</div>
+        シーズントライアルと本一覧は男子プロのみを対象とします。
         各シーズントライアルの成績公開、当該年度の優勝者、推薦選手の登録に応じて選考順位が変わります。
         ⑥の同ポイント順位はSTトータルピンで決定します。
     </div>

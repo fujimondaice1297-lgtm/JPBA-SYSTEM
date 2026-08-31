@@ -34,6 +34,14 @@
 </section>
 
 <section class="jpba-panel" aria-labelledby="season-trial-ranking-heading">
+  <h2 id="official-ranking-heading" class="jpba-section-title">当年度公式ランキング</h2>
+  <div class="jpba-link-grid mb-4">
+    <a href="{{ route('rankings.official_current', ['gender' => 'M', 'type' => 'points']) }}">男子ポイントランキング</a>
+    <a href="{{ route('rankings.official_current', ['gender' => 'F', 'type' => 'points']) }}">女子ポイントランキング</a>
+    <a href="{{ route('rankings.official_current', ['gender' => 'M', 'type' => 'prize']) }}">男子賞金ランキング</a>
+    <a href="{{ route('rankings.official_current', ['gender' => 'F', 'type' => 'prize']) }}">女子賞金ランキング</a>
+  </div>
+
   <h2 id="season-trial-ranking-heading" class="jpba-section-title">シーズントライアル</h2>
   <div class="jpba-link-grid">
     <a href="{{ route('rankings.season_trial') }}">ST年間ポイントランキング</a>
