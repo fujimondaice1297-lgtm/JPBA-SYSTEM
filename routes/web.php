@@ -355,7 +355,6 @@ Route::middleware(['auth', 'role:member,editor,admin'])->group(function () {
     // サイト内の閲覧系
     Route::get('/tournament_pro', [TournamentProController::class, 'index'])->name('tournament_pro.index');
     Route::get('/rankings', [RankingController::class, 'index'])->name('rankings.index');
-    Route::post('/rankings/import-official', [RankingController::class, 'storeOfficialRanking'])->name('rankings.import_official');
     Route::get('/perfect_records', [PerfectRecordController::class, 'index'])->name('perfect_records.index');
     Route::get('/pro_groups', [ProGroupController::class, 'index'])->name('pro_groups.index');
     Route::get('/certificates', [CertificateController::class, 'index'])->name('certificates.index');
@@ -399,6 +398,9 @@ Route::middleware(['auth', 'role:editor,admin'])->group(function () {
 
     Route::get('/management', [AdminHomeController::class, 'index'])
         ->name('management.home');
+
+    Route::post('/rankings/import-official', [RankingController::class, 'storeOfficialRanking'])
+        ->name('rankings.import_official');
 
     Route::prefix('annual-schedules')->name('annual_schedules.')->group(function () {
         Route::get('{year}/edit', [AnnualScheduleController::class, 'edit'])->whereNumber('year')->name('edit');

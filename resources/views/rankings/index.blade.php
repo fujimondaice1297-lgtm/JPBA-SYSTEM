@@ -4,15 +4,19 @@
 <div class="container" style="max-width: 1180px;">
     <div class="d-flex justify-content-between align-items-start mb-4">
         <div>
-            <h2 class="mb-1">公式ランキング管理</h2>
+            <h2 class="mb-1">{{ $canManageRankings ? '公式ランキング管理' : '公式ランキング' }}</h2>
             <div class="text-muted">
-                年度末の公式ポイントランキングを確定保存し、翌年度シードプロ生成の正本にします。
+                {{ $canManageRankings
+                    ? '年度末の公式ポイントランキングを確定保存し、翌年度シードプロ生成の正本にします。'
+                    : '保存済みの公式ポイントランキングを確認できます。' }}
             </div>
         </div>
         <div class="d-flex gap-2 flex-wrap">
-            <a href="{{ route('pro_bowler_seed_lists.index') }}" class="btn btn-outline-primary">
-                年度別シード管理へ
-            </a>
+            @if ($canManageRankings)
+                <a href="{{ route('pro_bowler_seed_lists.index') }}" class="btn btn-outline-primary">
+                    年度別シード管理へ
+                </a>
+            @endif
             <a href="{{ route('tournament_pro.index') }}" class="btn btn-outline-secondary">
                 今年度シードプロへ
             </a>
@@ -40,7 +44,7 @@
         $importSummary = session('official_ranking_import_summary');
     @endphp
 
-    @if (is_array($importSummary))
+    @if ($canManageRankings && is_array($importSummary))
         <div class="card border-success mb-4">
             <div class="card-header bg-success text-white fw-bold">直近の取込結果</div>
             <div class="card-body">
@@ -108,6 +112,7 @@
         </div>
     @endif
 
+    @if ($canManageRankings)
     <div class="alert alert-info">
         <div class="fw-bold mb-1">運用方針</div>
         <div>
@@ -175,6 +180,7 @@
             </form>
         </div>
     </div>
+    @endif
 
     <div class="card">
         <div class="card-header fw-bold">保存済み公式ランキング</div>
@@ -193,7 +199,7 @@
                                 <th style="width: 120px;">確定日</th>
                                 <th style="width: 120px;">件数</th>
                                 <th>参照URL / 備考</th>
-                                <th style="width: 180px;">次の操作</th>
+                                @if ($canManageRankings)<th style="width: 180px;">次の操作</th>@endif
                             </tr>
                         </thead>
                         <tbody>
@@ -213,11 +219,13 @@
                                         @endif
                                         <div class="small text-muted">{{ $snapshot->notes ?: '-' }}</div>
                                     </td>
-                                    <td>
-                                        <a href="{{ route('pro_bowler_seed_lists.index') }}" class="btn btn-outline-primary btn-sm">
-                                            シード生成へ
-                                        </a>
-                                    </td>
+                                    @if ($canManageRankings)
+                                        <td>
+                                            <a href="{{ route('pro_bowler_seed_lists.index') }}" class="btn btn-outline-primary btn-sm">
+                                                シード生成へ
+                                            </a>
+                                        </td>
+                                    @endif
                                 </tr>
                             @endforeach
                         </tbody>

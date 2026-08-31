@@ -27,6 +27,7 @@ class RankingController extends Controller
             'genderLabels' => $this->genderLabels(),
             'officialRankingUrls' => $this->officialRankingUrls(),
             'defaultRankingYear' => 2025,
+            'canManageRankings' => (bool) (auth()->user()?->isAdmin() || auth()->user()?->isEditor()),
         ]);
     }
 
@@ -130,7 +131,7 @@ class RankingController extends Controller
 
         return redirect()
             ->route('rankings.index')
-            ->with('status', "{$rankingYear}年{$genderLabel}公式最終ポイントランキングを" . count($parsedRows) . "件取り込みました。")
+            ->with('status', "{$rankingYear}年{$genderLabel}公式最終ポイントランキングを".count($parsedRows).'件取り込みました。')
             ->with('official_ranking_import_summary', [
                 'snapshot_id' => $snapshot?->id,
                 'ranking_year' => $rankingYear,
@@ -156,7 +157,7 @@ class RankingController extends Controller
                 continue;
             }
 
-            if (!preg_match('/^\s*(\d{1,4})\s+(\d{3,4})\s+(.+?)\s+(\d{1,3})\s+(.+?)\s+(\d{1,3})\s+(\d{1,3})\s+([0-9,]+)\s+([0-9]+\.[0-9]+)\s+([0-9,]+)\s+([0-9,]+)(?:\s+.*)?$/u', $line, $matches)) {
+            if (! preg_match('/^\s*(\d{1,4})\s+(\d{3,4})\s+(.+?)\s+(\d{1,3})\s+(.+?)\s+(\d{1,3})\s+(\d{1,3})\s+([0-9,]+)\s+([0-9]+\.[0-9]+)\s+([0-9,]+)\s+([0-9,]+)(?:\s+.*)?$/u', $line, $matches)) {
                 continue;
             }
 
@@ -220,7 +221,7 @@ class RankingController extends Controller
         $prefix = $gender === 'F' ? 'F' : 'M';
         $digits = str_pad($this->normalizeLicenseDigits($licenseDigits), 8, '0', STR_PAD_LEFT);
 
-        return $prefix . $digits;
+        return $prefix.$digits;
     }
 
     private function findBowlerByLicenseDigits(string $licenseDigits, string $gender): ?ProBowler
