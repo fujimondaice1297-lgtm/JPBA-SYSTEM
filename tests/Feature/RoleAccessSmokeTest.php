@@ -39,6 +39,8 @@ test('public visitors can use public pages and are redirected away from protecte
         route('public.players.show', $bowler),
         route('public.tournaments.index'),
         route('public.tournaments.live_results'),
+        route('rankings.season_trial'),
+        route('rankings.season_trial_championship_priority'),
         route('public.privacy'),
     ] as $url) {
         $this->get($url)->assertOk();

@@ -33,6 +33,14 @@
   <p class="mb-0">開催中大会の途中経過と、終了大会の全成績を確認できます。速報値は大会進行中に更新され、確定後は全成績へ反映されます。</p>
 </section>
 
+<section class="jpba-panel" aria-labelledby="season-trial-ranking-heading">
+  <h2 id="season-trial-ranking-heading" class="jpba-section-title">シーズントライアル</h2>
+  <div class="jpba-link-grid">
+    <a href="{{ route('rankings.season_trial') }}">ST年間ポイントランキング</a>
+    <a href="{{ route('rankings.season_trial_championship_priority') }}">STチャンピオンズ優先出場一覧</a>
+  </div>
+</section>
+
 <section class="jpba-panel" aria-labelledby="result-search-heading">
   <h2 id="result-search-heading" class="jpba-section-title">大会を検索</h2>
   <form method="GET" action="{{ route('public.tournaments.live_results') }}" class="jpba-result-search">

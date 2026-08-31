@@ -6,7 +6,6 @@ use DOMDocument;
 use Illuminate\Console\Command;
 use Illuminate\Contracts\Http\Kernel;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Route;
 use Throwable;
 
 class RunPublicSiteParityAudit extends Command
@@ -62,6 +61,9 @@ class RunPublicSiteParityAudit extends Command
             ['page' => 'schedule', 'path' => '/schedule', 'required' => ['スケジュール']],
             ['page' => 'players', 'path' => '/players', 'required' => ['選手データ']],
             ['page' => 'tournaments', 'path' => '/tournament', 'required' => ['トーナメント']],
+            ['page' => 'live-results', 'path' => '/tournament/live-results', 'required' => ['速報・成績', 'ST年間ポイントランキング', 'STチャンピオンズ優先出場一覧']],
+            ['page' => 'season-trial-ranking', 'path' => '/rankings/season-trial?year=2026', 'required' => ['シーズントライアル年間ポイントランキング', '優先出場一覧']],
+            ['page' => 'season-trial-priority', 'path' => '/rankings/season-trial/championship-priority?year=2026', 'required' => ['STチャンピオンズ優先出場一覧', 'ST年間ポイント']],
             ['page' => 'instructors', 'path' => '/instructor', 'required' => ['インストラクター']],
             ['page' => 'protest', 'path' => '/protest', 'required' => ['プロテスト']],
             ['page' => 'topics', 'path' => '/topics', 'required' => ['トピックス']],
@@ -73,7 +75,7 @@ class RunPublicSiteParityAudit extends Command
     }
 
     /**
-     * @param array<string,mixed> $config
+     * @param  array<string,mixed>  $config
      * @return array<int,string>
      */
     private function globalRequiredLabels(array $config): array
@@ -97,8 +99,8 @@ class RunPublicSiteParityAudit extends Command
     }
 
     /**
-     * @param array<string,mixed> $page
-     * @param array<int,string> $globalRequiredLabels
+     * @param  array<string,mixed>  $page
+     * @param  array<int,string>  $globalRequiredLabels
      * @return array<string,mixed>
      */
     private function auditPage(Kernel $kernel, array $page, array $globalRequiredLabels): array
@@ -135,7 +137,7 @@ class RunPublicSiteParityAudit extends Command
 
         $missingLabels = [];
         foreach ($requiredLabels as $label) {
-            if (!$this->containsText($content, (string) $label)) {
+            if (! $this->containsText($content, (string) $label)) {
                 $missingLabels[] = (string) $label;
             }
         }
@@ -144,7 +146,7 @@ class RunPublicSiteParityAudit extends Command
         $links = $this->extractAttributeValues($dom, 'a', 'href');
         $images = $this->extractAttributeValues($dom, 'img', 'src');
         $localAssetPaths = array_merge($images, $this->localAssetLinks($links));
-        $missingAssets = array_values(array_filter($localAssetPaths, fn (string $url) => !$this->localAssetExists($url)));
+        $missingAssets = array_values(array_filter($localAssetPaths, fn (string $url) => ! $this->localAssetExists($url)));
 
         $httpStatus = (int) $response->getStatusCode();
         $status = ($httpStatus >= 200 && $httpStatus < 400 && empty($missingLabels)) ? 'OK' : 'FAIL';
@@ -158,7 +160,7 @@ class RunPublicSiteParityAudit extends Command
             'image_count' => count($images),
             'pdf_link_count' => count(array_filter($links, fn (string $href) => str_contains(strtolower($href), '.pdf'))),
             'external_link_count' => count(array_filter($links, fn (string $href) => $this->isExternalUrl($href))),
-            'internal_link_count' => count(array_filter($links, fn (string $href) => !$this->isExternalUrl($href))),
+            'internal_link_count' => count(array_filter($links, fn (string $href) => ! $this->isExternalUrl($href))),
             'missing_asset_count' => count($missingAssets),
             'missing_assets' => $missingAssets,
         ];
@@ -180,9 +182,9 @@ class RunPublicSiteParityAudit extends Command
 
     private function loadDom(string $html): DOMDocument
     {
-        $dom = new DOMDocument();
+        $dom = new DOMDocument;
         $previous = libxml_use_internal_errors(true);
-        $dom->loadHTML('<?xml encoding="UTF-8">' . $html);
+        $dom->loadHTML('<?xml encoding="UTF-8">'.$html);
         libxml_clear_errors();
         libxml_use_internal_errors($previous);
 
@@ -206,7 +208,7 @@ class RunPublicSiteParityAudit extends Command
     }
 
     /**
-     * @param array<int,string> $links
+     * @param  array<int,string>  $links
      * @return array<int,string>
      */
     private function localAssetLinks(array $links): array
@@ -238,7 +240,7 @@ class RunPublicSiteParityAudit extends Command
         }
 
         if (str_starts_with($path, 'storage/')) {
-            return is_file(storage_path('app/public/' . substr($path, strlen('storage/'))));
+            return is_file(storage_path('app/public/'.substr($path, strlen('storage/'))));
         }
 
         return false;
@@ -246,7 +248,7 @@ class RunPublicSiteParityAudit extends Command
 
     private function isExternalUrl(string $href): bool
     {
-        if (!preg_match('/^https?:\/\//i', $href)) {
+        if (! preg_match('/^https?:\/\//i', $href)) {
             return false;
         }
 

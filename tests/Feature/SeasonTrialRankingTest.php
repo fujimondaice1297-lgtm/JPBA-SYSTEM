@@ -7,7 +7,6 @@ use App\Models\ProBowlerTitle;
 use App\Models\Tournament;
 use App\Models\TournamentResultPublication;
 use App\Models\TournamentResultPublicationRow;
-use App\Models\User;
 use App\Services\ProBowlerSeedService;
 use App\Services\SeasonTrialRankingService;
 
@@ -107,19 +106,11 @@ test('season trial ranking adds every published venue and breaks ties by total p
         ->and($ranking['rows'][0]['season_points']['spring'])->toBe(40)
         ->and($ranking['rows'][1]['pro_bowler_id'])->toBe($a->id);
 
-    $member = User::factory()->create([
-        'role' => 'member',
-        'account_status' => User::STATUS_ACTIVE,
-        'pro_bowler_id' => $a->id,
-        'pro_bowler_license_no' => $a->license_no,
-        'license_no' => $a->license_no,
-    ]);
-
-    $this->actingAs($member)
-        ->get(route('rankings.season_trial', ['year' => 2026]))
+    $this->get(route('rankings.season_trial', ['year' => 2026]))
         ->assertOk()
         ->assertSee('シーズントライアル年間ポイントランキング')
         ->assertSee('ST集計 選手B')
+        ->assertSee('速報・成績へ戻る')
         ->assertSee('2会場');
 });
 
@@ -181,16 +172,10 @@ test('championship priority follows the official category order and removes dupl
         ->and($rows->firstWhere('pro_bowler_id', $rankingPlayer->id)['category_code'])->toBe('⑥')
         ->and($priority['capacity'])->toBe(55);
 
-    $admin = User::factory()->create([
-        'role' => 'admin',
-        'is_admin' => true,
-        'account_status' => User::STATUS_ACTIVE,
-    ]);
-
-    $this->actingAs($admin)
-        ->get(route('rankings.season_trial_championship_priority', ['year' => 2026]))
+    $this->get(route('rankings.season_trial_championship_priority', ['year' => 2026]))
         ->assertOk()
         ->assertSee('STチャンピオンズ優先出場一覧')
         ->assertSee('優先順位 ランキング')
+        ->assertSee('速報・成績へ戻る')
         ->assertSee('ST年間ポイントランキング上位者');
 });

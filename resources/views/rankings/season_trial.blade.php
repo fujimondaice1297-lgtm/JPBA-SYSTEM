@@ -1,14 +1,17 @@
-@extends('layouts.app')
+@extends('public.layout')
+
+@section('title', 'シーズントライアル年間ポイントランキング｜公益社団法人 日本プロボウリング協会')
+@section('breadcrumb', 'シーズントライアル年間ポイントランキング')
 
 @section('content')
-<div class="container" style="max-width: 1280px;">
+<div>
     <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap mb-4">
         <div>
-            <h2 class="mb-1">シーズントライアル年間ポイントランキング</h2>
+            <h1 class="jpba-page-title mb-1">シーズントライアル年間ポイントランキング</h1>
             <div class="text-muted">確定・再公開された各会場の成績から、年間ポイントを自動集計します。</div>
         </div>
         <div class="d-flex gap-2 flex-wrap">
-            <a href="{{ route('rankings.index') }}" class="btn btn-outline-secondary">公式ポイントランキング</a>
+            <a href="{{ route('public.tournaments.live_results') }}" class="btn btn-outline-secondary">速報・成績へ戻る</a>
             <a href="{{ route('rankings.season_trial_championship_priority', ['year' => $selectedYear]) }}" class="btn btn-primary">優先出場一覧</a>
         </div>
     </div>
