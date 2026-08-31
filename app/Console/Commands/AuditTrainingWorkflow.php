@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Http\Controllers\TpRegistrationController;
 use App\Models\ProBowler;
 use App\Models\ProBowlerTraining;
+use App\Models\Tournament;
 use App\Models\TrainingSession;
 use App\Models\TrainingSessionParticipant;
 use App\Models\User;
@@ -142,6 +143,28 @@ class AuditTrainingWorkflow extends Command
             $this->assertSame($expectedExpiry->toDateString(), $record->expires_at?->toDateString(), '3年期限');
             $this->assertTrue($eligibility->evaluate($attendedBowler->refresh())['allowed'], '受講後の出場資格');
             $this->assertFalse($eligibility->evaluate($absentBowler->refresh())['allowed'], '未受講者の出場資格');
+
+            $beforeTrainingTournament = new Tournament([
+                'start_date' => $heldOn->copy()->subDay(),
+            ]);
+            $validPeriodTournament = new Tournament([
+                'start_date' => $heldOn->copy(),
+            ]);
+            $afterExpiryTournament = new Tournament([
+                'start_date' => $expectedExpiry->copy()->addDay(),
+            ]);
+            $this->assertFalse(
+                $eligibility->evaluate($attendedBowler->refresh(), $beforeTrainingTournament)['allowed'],
+                '受講日前に始まる大会の出場資格',
+            );
+            $this->assertTrue(
+                $eligibility->evaluate($attendedBowler->refresh(), $validPeriodTournament)['allowed'],
+                '受講日以降に始まる大会の出場資格',
+            );
+            $this->assertFalse(
+                $eligibility->evaluate($attendedBowler->refresh(), $afterExpiryTournament)['allowed'],
+                '受講期限後に始まる大会の出場資格',
+            );
             $this->assertSame(
                 1,
                 $notifications->countCandidatesForExpiryYear((int) $expectedExpiry->year, [$attendedBowler->id]),
@@ -166,6 +189,10 @@ class AuditTrainingWorkflow extends Command
             $this->assertSame(2, $corrected['absent'], '確定解除後の未受講集計');
             $this->assertSame('revoked', $record->refresh()->record_status, '訂正前受講履歴の無効化');
             $this->assertFalse($eligibility->evaluate($attendedBowler->refresh())['allowed'], '訂正後の出場資格');
+            $this->assertFalse(
+                $eligibility->evaluate($attendedBowler->refresh(), $validPeriodTournament)['allowed'],
+                '未受講へ訂正後の大会初日時点の出場資格',
+            );
 
             DB::rollBack();
         } catch (Throwable $exception) {
@@ -184,6 +211,7 @@ class AuditTrainingWorkflow extends Command
         }
 
         $this->info('OK: 開催回作成→対象者登録→出欠→確定→3年期限→CSV→通知候補→資格判定を確認しました。');
+        $this->info('OK: 大会初日が受講日前・有効期間内・期限後の場合の出場資格切替を確認しました。');
         $this->info('OK: 確定解除後の訂正で受講履歴を無効化し、出場資格なしへ戻ることを確認しました。');
         $this->info('OK: メールは送信せず、試験データはすべてロールバックしました。');
 
