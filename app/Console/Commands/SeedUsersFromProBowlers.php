@@ -13,6 +13,8 @@ class SeedUsersFromProBowlers extends Command
         {--bowler-id=* : 発行対象のpro_bowlers.id（複数指定可）}
         {--license=* : 発行対象のライセンス番号（複数指定可）}
         {--all : 全選手を対象にする}
+        {--after-id=0 : --all使用時、このpro_bowlers.idより後を対象にする}
+        {--limit= : --all使用時の最大処理人数（確定時は必須、最大100名）}
         {--dry-run : DBを変更せず対象と処理内容だけ確認する}
         {--send-setup-link : 発行・更新後に初回パスワード設定メールを送信する}';
 
@@ -31,6 +33,9 @@ class SeedUsersFromProBowlers extends Command
             ->unique()
             ->values();
         $all = (bool) $this->option('all');
+        $afterId = max(0, (int) $this->option('after-id'));
+        $limitOption = trim((string) $this->option('limit'));
+        $limit = $limitOption === '' ? null : (int) $limitOption;
         $dryRun = (bool) $this->option('dry-run');
         $sendSetupLink = (bool) $this->option('send-setup-link');
 
@@ -45,6 +50,21 @@ class SeedUsersFromProBowlers extends Command
 
             return self::FAILURE;
         }
+        if (! $all && ($afterId > 0 || $limit !== null)) {
+            $this->error('--after-id と --limit は --all と一緒に使用してください。');
+
+            return self::FAILURE;
+        }
+        if ($limit !== null && ($limit < 1 || $limit > 100)) {
+            $this->error('--limit は1～100名で指定してください。');
+
+            return self::FAILURE;
+        }
+        if ($all && ! $dryRun && $limit === null) {
+            $this->error('全選手の一括確定は禁止しています。--all の確定実行には --limit=1～100 を指定してください。');
+
+            return self::FAILURE;
+        }
         if ($all && $sendSetupLink) {
             $this->error('安全のため --all と --send-setup-link は同時に使えません。');
 
@@ -52,7 +72,12 @@ class SeedUsersFromProBowlers extends Command
         }
 
         $query = ProBowler::query()->orderBy('id');
-        if (! $all) {
+        if ($all) {
+            $query->where('id', '>', $afterId);
+            if ($limit !== null) {
+                $query->limit($limit);
+            }
+        } else {
             $query->where(function ($scope) use ($bowlerIds, $licenses) {
                 if ($bowlerIds->isNotEmpty()) {
                     $scope->whereIn('id', $bowlerIds);
@@ -69,8 +94,16 @@ class SeedUsersFromProBowlers extends Command
         $skipped = 0;
         $mailSent = 0;
         $mailFailed = 0;
+        $lastProcessedId = null;
 
-        $query->chunkById(200, function ($bowlers) use (
+        $bowlers = $query->get();
+        $this->info(sprintf(
+            '対象: %d名%s',
+            $bowlers->count(),
+            $all ? "（ID {$afterId} より後）" : ''
+        ));
+
+        $bowlers->chunk(200)->each(function ($chunk) use (
             $accounts,
             $dryRun,
             $sendSetupLink,
@@ -78,9 +111,11 @@ class SeedUsersFromProBowlers extends Command
             &$updated,
             &$skipped,
             &$mailSent,
-            &$mailFailed
+            &$mailFailed,
+            &$lastProcessedId
         ): void {
-            foreach ($bowlers as $bowler) {
+            foreach ($chunk as $bowler) {
+                $lastProcessedId = (int) $bowler->id;
                 $result = $accounts->issue($bowler, $dryRun);
                 $this->{$result['status'] === 'skipped' ? 'warn' : 'line'}($result['message']);
                 match ($result['status']) {
@@ -115,6 +150,9 @@ class SeedUsersFromProBowlers extends Command
         }
         if ($dryRun) {
             $this->comment('DBは変更していません。');
+        }
+        if ($all && $lastProcessedId !== null) {
+            $this->comment("次回カーソル: --after-id={$lastProcessedId}");
         }
 
         return $mailFailed === 0 ? self::SUCCESS : self::FAILURE;

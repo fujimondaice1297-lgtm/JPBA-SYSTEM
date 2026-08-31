@@ -2,7 +2,10 @@
 
 use App\Models\ApprovedBall;
 use App\Models\BallAnnualRegistration;
+use App\Models\BallAnnualRegistrationHistory;
 use App\Models\ProBowler;
+use App\Models\Tournament;
+use App\Models\TournamentEntry;
 use App\Models\UsedBall;
 use App\Models\User;
 use App\Services\BallAnnualRegistrationService;
@@ -150,4 +153,126 @@ test('only annually approved balls with a valid inspection carry over to the nex
             ->where('pro_bowler_id', $bowler->id)
             ->where('registration_year', 2027)
             ->count())->toBe(1);
+});
+
+test('staff proxy submission can be returned resubmitted and approved for tournament use', function () {
+    $bowler = ProBowler::query()->create([
+        'license_no' => 'M00009989',
+        'name_kanji' => '代理申請 確認選手',
+        'sex' => 1,
+        'is_active' => true,
+    ]);
+    $member = User::factory()->create([
+        'name' => '代理申請 確認選手',
+        'role' => 'member',
+        'pro_bowler_id' => $bowler->id,
+        'pro_bowler_license_no' => $bowler->license_no,
+        'license_no' => $bowler->license_no,
+    ]);
+    $admin = User::factory()->create([
+        'name' => '年度申請 管理者',
+        'role' => 'admin',
+        'is_admin' => true,
+    ]);
+    $catalogBall = ApprovedBall::query()->create([
+        'name' => 'PROXY ANNUAL TEST',
+        'manufacturer' => 'ABS',
+        'brand' => 'NANODESU',
+        'approved' => true,
+        'catalog_status' => 'listed',
+        'usbc_match_status' => 'matched',
+        'release_date' => '2026-01-01',
+    ]);
+    $usedBall = UsedBall::query()->create([
+        'pro_bowler_id' => $bowler->id,
+        'approved_ball_id' => $catalogBall->id,
+        'serial_number' => 'PROXY-ANNUAL-SERIAL',
+        'registered_at' => '2026-08-31',
+    ]);
+    $tournament = Tournament::query()->create([
+        'name' => '代理大会ボール登録テスト',
+        'start_date' => '2026-10-01',
+        'end_date' => '2026-10-01',
+        'year' => 2026,
+        'gender' => 'M',
+        'ball_registration_limit' => 4,
+        'inspection_required' => false,
+    ]);
+    $entry = TournamentEntry::query()->create([
+        'tournament_id' => $tournament->id,
+        'pro_bowler_id' => $bowler->id,
+        'status' => 'entry',
+    ]);
+
+    $this->actingAs($admin)
+        ->post(route('ball_annual_registrations.submit'), [
+            'year' => 2026,
+            'pro_bowler_id' => $bowler->id,
+            'used_ball_ids' => [$usedBall->id],
+        ])
+        ->assertRedirect();
+
+    $registration = BallAnnualRegistration::query()
+        ->where('pro_bowler_id', $bowler->id)
+        ->sole();
+
+    expect($registration->status)->toBe(BallAnnualRegistration::STATUS_SUBMITTED)
+        ->and($registration->submitted_by_user_id)->toBe($admin->id);
+
+    $this->actingAs($admin)
+        ->post(route('ball_annual_registrations.return', $registration), [
+            'return_reason' => 'シリアル番号を再確認してください。',
+        ])
+        ->assertRedirect();
+
+    expect($registration->refresh()->status)->toBe(BallAnnualRegistration::STATUS_RETURNED)
+        ->and($registration->return_reason)->toBe('シリアル番号を再確認してください。')
+        ->and($registration->returned_by_user_id)->toBe($admin->id);
+
+    $this->actingAs($member)
+        ->get(route('ball_annual_registrations.edit', ['year' => 2026]))
+        ->assertOk()
+        ->assertSee('差戻し理由')
+        ->assertSee('シリアル番号を再確認してください。');
+
+    $this->actingAs($member)
+        ->post(route('ball_annual_registrations.submit'), [
+            'year' => 2026,
+            'used_ball_ids' => [$usedBall->id],
+        ])
+        ->assertRedirect();
+
+    expect($registration->refresh()->status)->toBe(BallAnnualRegistration::STATUS_SUBMITTED)
+        ->and($registration->submitted_by_user_id)->toBe($member->id)
+        ->and($registration->return_reason)->toBeNull();
+
+    $this->actingAs($admin)
+        ->post(route('ball_annual_registrations.approve', $registration))
+        ->assertRedirect();
+
+    expect($registration->refresh()->status)->toBe(BallAnnualRegistration::STATUS_APPROVED)
+        ->and($registration->approved_by_user_id)->toBe($admin->id);
+
+    $this->actingAs($admin)
+        ->get(route('member.entries.balls.edit', $entry))
+        ->assertOk()
+        ->assertSee('スタッフ代理入力')
+        ->assertSee('PROXY ANNUAL TEST');
+
+    $this->actingAs($admin)
+        ->post(route('member.entries.balls.store', $entry), [
+            'used_ball_ids' => [$usedBall->id],
+        ])
+        ->assertRedirect(route('member.entries.balls.edit', $entry));
+
+    $this->assertDatabaseHas('tournament_entry_balls', [
+        'tournament_entry_id' => $entry->id,
+        'used_ball_id' => $usedBall->id,
+    ]);
+
+    expect(BallAnnualRegistrationHistory::query()
+        ->where('registration_id', $registration->id)
+        ->orderBy('id')
+        ->pluck('action')
+        ->all())->toBe(['submitted', 'returned', 'submitted', 'approved']);
 });

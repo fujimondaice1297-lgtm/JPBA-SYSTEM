@@ -136,3 +136,41 @@ test('forgot password never creates an unissued player account', function () {
         ->and(User::query()->where('pro_bowler_id', $this->bowler->id)->exists())->toBeFalse();
     Notification::assertNothingSent();
 });
+
+test('all account issuance requires a bounded batch and supports cursor continuation', function () {
+    foreach (range(1, 3) as $index) {
+        ProBowler::query()->create([
+            'license_no' => 'M000098'.str_pad((string) $index, 2, '0', STR_PAD_LEFT),
+            'name_kanji' => "段階発行 {$index}",
+            'sex' => 1,
+            'email' => "batch-{$index}@example.com",
+            'is_active' => true,
+        ]);
+    }
+
+    $this->artisan('seed:users-from-bowlers', ['--all' => true])
+        ->expectsOutput('全選手の一括確定は禁止しています。--all の確定実行には --limit=1～100 を指定してください。')
+        ->assertFailed();
+
+    expect(User::query()->where('role', 'member')->count())->toBe(0);
+
+    $this->artisan('seed:users-from-bowlers', [
+        '--all' => true,
+        '--limit' => 2,
+    ])->assertSuccessful();
+
+    $firstBatch = User::query()
+        ->where('role', 'member')
+        ->orderBy('pro_bowler_id')
+        ->get();
+
+    expect($firstBatch)->toHaveCount(2);
+
+    $this->artisan('seed:users-from-bowlers', [
+        '--all' => true,
+        '--after-id' => (int) $firstBatch->max('pro_bowler_id'),
+        '--limit' => 2,
+    ])->assertSuccessful();
+
+    expect(User::query()->where('role', 'member')->count())->toBe(4);
+});

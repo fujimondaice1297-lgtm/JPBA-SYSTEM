@@ -16,8 +16,12 @@ class PlayerAccountBallLinkageSourceTest extends TestCase
 
         $this->assertIsString($command);
         $this->assertStringContainsString('{--bowler-id=*', $command);
+        $this->assertStringContainsString('{--after-id=0', $command);
+        $this->assertStringContainsString('{--limit=', $command);
         $this->assertStringContainsString('{--dry-run', $command);
         $this->assertStringContainsString('{--send-setup-link', $command);
+        $this->assertStringContainsString('全選手の一括確定は禁止しています', $command);
+        $this->assertStringContainsString('次回カーソル: --after-id=', $command);
         $this->assertStringContainsString('PlayerAccountService', $command);
         $this->assertStringNotContainsString("Hash::make('changeme')", $command);
 
