@@ -76,9 +76,24 @@
 
 <section class="jpba-panel" aria-labelledby="live-table-heading">
   <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-3">
-    <h2 id="live-table-heading" class="jpba-section-title mb-0">{{ $stage }} {{ $uptoGame }}G終了時点</h2>
+    <h2 id="live-table-heading" class="jpba-section-title mb-0">
+      {{ $stage }} {{ $uptoGame }}G終了時点
+      @if($carryGameCount > 0)
+        （通算{{ $carryGameCount + $uptoGame }}G）
+      @endif
+    </h2>
     <div class="text-muted">{{ number_format($rankings->total()) }}名</div>
   </div>
+
+  @if($carryGameCount > 0)
+    <div class="alert alert-light border py-2 mb-3">
+      トータルピン・AVG・順位には、{{ $carryStageLabel !== '' ? $carryStageLabel : '前ステージ' }}の
+      {{ number_format($carryGameCount) }}Gを持ち込んでいます。
+      @if($isRoundRobinPointRanking)
+        ラウンドロビン順位は、通算トータルピンに勝敗ボーナスを加えたトータルポイント順です。
+      @endif
+    </div>
+  @endif
 
   @if($rankings->count())
     <div class="jpba-live-table-wrap">
@@ -88,12 +103,23 @@
             <th>順位</th>
             <th class="player">選手</th>
             <th>ライセンスNo.</th>
+            @if($carryGameCount > 0)
+              <th>持込<br><span class="small">{{ number_format($carryGameCount) }}G</span></th>
+            @endif
             @foreach($gameNumbers as $gameNumber)
               <th>{{ $gameNumber }}G</th>
             @endforeach
+            @if($isRoundRobinPointRanking)
+              <th>RR計</th>
+            @endif
             <th>ゲーム数</th>
-            <th>トータル</th>
+            <th>トータルピン</th>
             <th>AVG</th>
+            @if($isRoundRobinPointRanking)
+              <th>勝-敗-分</th>
+              <th>ボーナス</th>
+              <th>トータルP</th>
+            @endif
           </tr>
         </thead>
         <tbody>
@@ -130,12 +156,24 @@
                 </div>
               </td>
               <td>{{ $licenseDisplay }}</td>
+              @if($carryGameCount > 0)
+                <td>{{ number_format((int)($row['carry_pin'] ?? 0)) }}</td>
+              @endif
               @foreach($gameNumbers as $gameNumber)
                 <td>{{ isset($scores[$gameNumber]) ? number_format((int)$scores[$gameNumber]) : '-' }}</td>
               @endforeach
+              @if($isRoundRobinPointRanking)
+                <td>{{ number_format((int)data_get($row, 'round_robin.stage_pin', 0)) }}</td>
+              @endif
               <td>{{ number_format($gamesCounted) }}</td>
               <td><strong>{{ number_format((int)$row['total']) }}</strong></td>
               <td>{{ $average !== null ? number_format($average, 2) : '-' }}</td>
+              @if($isRoundRobinPointRanking)
+                @php $totalPoint = (int)data_get($row, 'round_robin.over_under_points', 0); @endphp
+                <td>{{ data_get($row, 'round_robin.record', '-') }}</td>
+                <td>{{ number_format((int)data_get($row, 'round_robin.bonus_points', 0)) }}</td>
+                <td><strong>{{ $totalPoint > 0 ? '+' : '' }}{{ number_format($totalPoint) }}</strong></td>
+              @endif
             </tr>
           @endforeach
         </tbody>

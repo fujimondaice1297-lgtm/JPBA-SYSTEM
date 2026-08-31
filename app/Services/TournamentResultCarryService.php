@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Tournament;
+use Illuminate\Support\Facades\DB;
 
 class TournamentResultCarryService
 {
@@ -186,7 +187,7 @@ class TournamentResultCarryService
             }
 
             $decoded = json_decode($json, true);
-            if (!is_array($decoded)) {
+            if (! is_array($decoded)) {
                 return [];
             }
 
@@ -198,7 +199,7 @@ class TournamentResultCarryService
 
     public function settingsForTournament(?Tournament $tournament): array
     {
-        if (!$tournament) {
+        if (! $tournament) {
             return [];
         }
 
@@ -209,7 +210,7 @@ class TournamentResultCarryService
             $settings = is_array($decoded) ? $decoded : [];
         }
 
-        if (is_array($settings) && !empty($settings)) {
+        if (is_array($settings) && ! empty($settings)) {
             return $this->normalizeCarrySettingsArray($settings);
         }
 
@@ -238,13 +239,13 @@ class TournamentResultCarryService
         $settings = $this->settingsForTournament($tournament);
         $setting = $settings[$resultCode] ?? null;
 
-        if (!is_array($setting)) {
+        if (! is_array($setting)) {
             return [];
         }
 
         $sourceStages = $setting['source_stages'] ?? [];
 
-        if (!is_array($sourceStages) || empty($sourceStages)) {
+        if (! is_array($sourceStages) || empty($sourceStages)) {
             return [];
         }
 
@@ -257,7 +258,7 @@ class TournamentResultCarryService
     /**
      * 速報ランキング / snapshot 共通で扱いやすい source_sets を返す。
      *
-     * @param array<string,int> $stageGameCounts
+     * @param  array<string,int>  $stageGameCounts
      * @return array<int,array{stage:string,game_from:int,game_to:int,bucket:string}>
      */
     public function sourceSetsForStage(?Tournament $tournament, string $stage, array $stageGameCounts, int $currentUptoGame): array
@@ -294,6 +295,74 @@ class TournamentResultCarryService
         return $sourceSets;
     }
 
+    /**
+     * 一般公開速報で使用する大会別の持越し範囲を解決する。
+     *
+     * 優先順位:
+     * 1. 大会編集画面の持越し設定
+     * 2. 確定・公開済み成績スナップショットの持越し実績
+     * 3. 準々決勝・準決勝のみ、通常の連続ステージとして前段階を自動持越し
+     *
+     * マッチプレイ系（ラウンドロビン、シュートアウト、トーナメント等）は
+     * 大会設定または公式スナップショットに明示されている場合だけ持ち越す。
+     *
+     * @param  array<string,int>  $stageGameCounts
+     * @return array<int,array{stage:string,game_from:int,game_to:int,bucket:string}>
+     */
+    public function liveSourceSetsForStage(
+        ?Tournament $tournament,
+        string $stage,
+        array $stageGameCounts,
+        int $currentUptoGame
+    ): array {
+        $stage = $this->normalizeStageLabel($stage);
+
+        $configured = $this->sourceSetsForStage(
+            tournament: $tournament,
+            stage: $stage,
+            stageGameCounts: $stageGameCounts,
+            currentUptoGame: $currentUptoGame
+        );
+
+        if ($configured !== []) {
+            return $configured;
+        }
+
+        $snapshotCarryStages = $this->snapshotCarryStagesForStage($tournament, $stage);
+        if ($snapshotCarryStages !== null) {
+            return $this->buildSourceSetsFromStages(
+                array_merge($snapshotCarryStages, [$stage]),
+                $stage,
+                $stageGameCounts,
+                $currentUptoGame
+            );
+        }
+
+        // 通常のピン合算ステージだけを安全な既定値として自動累積する。
+        // ラウンドロビン等は大会ごとの持越し有無が異なるため推測しない。
+        if (! in_array($stage, ['準々決勝', '準決勝'], true)) {
+            return [];
+        }
+
+        $stageOrder = ['予選', '準々決勝', '準決勝'];
+        $currentIndex = array_search($stage, $stageOrder, true);
+        if ($currentIndex === false) {
+            return [];
+        }
+
+        $sourceStages = array_values(array_filter(
+            array_slice($stageOrder, 0, $currentIndex + 1),
+            fn (string $sourceStage): bool => (int) ($stageGameCounts[$sourceStage] ?? 0) > 0
+        ));
+
+        return $this->buildSourceSetsFromStages(
+            $sourceStages,
+            $stage,
+            $stageGameCounts,
+            $currentUptoGame
+        );
+    }
+
     public function normalizeStageLabel(string $stage): string
     {
         $stage = trim($stage);
@@ -310,18 +379,105 @@ class TournamentResultCarryService
         };
     }
 
+    /** @return array<int,string>|null */
+    private function snapshotCarryStagesForStage(?Tournament $tournament, string $stage): ?array
+    {
+        if (! $tournament) {
+            return null;
+        }
+
+        $resultCode = $this->resultCodeForStage($stage);
+        if ($resultCode === null) {
+            return null;
+        }
+
+        $resultCodes = [$resultCode];
+        if ($resultCode === 'final_total') {
+            $resultCodes[] = 'final';
+        }
+
+        $snapshot = DB::table('tournament_result_snapshots')
+            ->where('tournament_id', $tournament->id)
+            ->whereIn('result_code', $resultCodes)
+            ->where(function ($query): void {
+                $query->where('is_current', true)
+                    ->orWhere('is_published', true);
+            })
+            ->orderByDesc('is_current')
+            ->orderByDesc('is_published')
+            ->orderByDesc('reflected_at')
+            ->orderByDesc('id')
+            ->first(['carry_stage_names']);
+
+        if (! $snapshot) {
+            return null;
+        }
+
+        $carryStages = $snapshot->carry_stage_names ?? [];
+        if (is_string($carryStages)) {
+            $decoded = json_decode($carryStages, true);
+            $carryStages = is_array($decoded) ? $decoded : [];
+        }
+
+        if (! is_array($carryStages)) {
+            return [];
+        }
+
+        return array_values(array_unique(array_map(
+            fn ($sourceStage): string => $this->normalizeStageLabel((string) $sourceStage),
+            array_filter($carryStages, fn ($sourceStage): bool => trim((string) $sourceStage) !== '')
+        )));
+    }
+
+    /**
+     * @param  array<int,string>  $sourceStages
+     * @param  array<string,int>  $stageGameCounts
+     * @return array<int,array{stage:string,game_from:int,game_to:int,bucket:string}>
+     */
+    private function buildSourceSetsFromStages(
+        array $sourceStages,
+        string $stage,
+        array $stageGameCounts,
+        int $currentUptoGame
+    ): array {
+        $sourceStages = array_values(array_unique(array_map(
+            fn (string $sourceStage): string => $this->normalizeStageLabel($sourceStage),
+            $sourceStages
+        )));
+
+        $sourceSets = [];
+        foreach ($sourceStages as $sourceStage) {
+            $gameTo = $sourceStage === $stage
+                ? $currentUptoGame
+                : (int) ($stageGameCounts[$sourceStage] ?? 0);
+
+            if ($gameTo <= 0) {
+                continue;
+            }
+
+            $sourceSets[] = [
+                'stage' => $sourceStage,
+                'game_from' => 1,
+                'game_to' => $gameTo,
+                'bucket' => $sourceStage === $stage ? 'scratch' : 'carry',
+            ];
+        }
+
+        return $sourceSets;
+    }
+
     private function normalizeCarrySettingsArray(array $settings): array
     {
         $normalized = [];
 
         foreach ($settings as $resultCode => $setting) {
-            if (!is_string($resultCode) || !is_array($setting)) {
+            if (! is_string($resultCode) || ! is_array($setting)) {
                 continue;
             }
 
             $sourceStages = $setting['source_stages'] ?? [];
 
-            if (!is_array($sourceStages)) {
+            if (! is_array($sourceStages)) {
                 continue;
             }
 
