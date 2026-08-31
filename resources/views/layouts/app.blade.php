@@ -304,7 +304,9 @@
                                     <li><a class="dropdown-item" href="{{ route('scores.input') }}">速報・スコア入力</a></li>
                                     <li><a class="dropdown-item" href="{{ route('scores.result') }}">速報ランキング</a></li>
                                     <li><a class="dropdown-item" href="{{ route('tournament_results.index') }}">大会成績一覧</a></li>
-                                    <li><a class="dropdown-item" href="{{ route('rankings.index') }}">年間ランキング</a></li>
+                                    <li><a class="dropdown-item" href="{{ route('rankings.index') }}">公式ポイントランキング</a></li>
+                                    <li><a class="dropdown-item" href="{{ route('rankings.season_trial') }}">ST年間ポイントランキング</a></li>
+                                    <li><a class="dropdown-item" href="{{ route('rankings.season_trial_championship_priority') }}">STチャンピオンズ優先出場</a></li>
                                     <li><a class="dropdown-item" href="{{ route('record_types.index') }}">公認記録管理</a></li>
                                 </ul>
                             </li>

@@ -37,7 +37,7 @@ test('autumn import adds only empty tournament shells and preserves completed ed
                 'title_category' => 'season_trial',
                 'competition_type' => 'singles',
                 'include_annual_seeds' => false,
-                'counts_for_official_points' => false,
+                'counts_for_official_points' => true,
                 'counts_for_average' => true,
                 'counts_for_prize' => true,
                 'title_scope' => 'season_trial',

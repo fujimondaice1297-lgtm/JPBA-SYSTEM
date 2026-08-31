@@ -355,6 +355,10 @@ Route::middleware(['auth', 'role:member,editor,admin'])->group(function () {
     // サイト内の閲覧系
     Route::get('/tournament_pro', [TournamentProController::class, 'index'])->name('tournament_pro.index');
     Route::get('/rankings', [RankingController::class, 'index'])->name('rankings.index');
+    Route::get('/rankings/season-trial', [RankingController::class, 'seasonTrial'])
+        ->name('rankings.season_trial');
+    Route::get('/rankings/season-trial/championship-priority', [RankingController::class, 'seasonTrialChampionshipPriority'])
+        ->name('rankings.season_trial_championship_priority');
     Route::get('/perfect_records', [PerfectRecordController::class, 'index'])->name('perfect_records.index');
     Route::get('/pro_groups', [ProGroupController::class, 'index'])->name('pro_groups.index');
     Route::get('/certificates', [CertificateController::class, 'index'])->name('certificates.index');

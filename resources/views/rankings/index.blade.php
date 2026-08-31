@@ -12,6 +12,12 @@
             </div>
         </div>
         <div class="d-flex gap-2 flex-wrap">
+            <a href="{{ route('rankings.season_trial') }}" class="btn btn-outline-primary">
+                ST年間ポイント
+            </a>
+            <a href="{{ route('rankings.season_trial_championship_priority') }}" class="btn btn-outline-primary">
+                STチャンピオンズ優先出場
+            </a>
             @if ($canManageRankings)
                 <a href="{{ route('pro_bowler_seed_lists.index') }}" class="btn btn-outline-primary">
                     年度別シード管理へ

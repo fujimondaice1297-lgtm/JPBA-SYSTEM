@@ -65,7 +65,9 @@ final class ManagementNavigation
                 'tone' => 'purple',
                 'items' => [
                     $this->item('大会成績一覧', 'tournament_results.index', '大会ごとの確定成績を確認・修正します。', ['tournament_results.*']),
-                    $this->item('年間ランキング', 'rankings.index', 'ポイント・賞金・アベレージを確認します。', ['rankings.*']),
+                    $this->item('公式ポイントランキング', 'rankings.index', '公式ポイント・賞金・アベレージを確認します。', ['rankings.index']),
+                    $this->item('ST年間ポイントランキング', 'rankings.season_trial', 'シーズントライアル各会場の年間ポイントを確認します。', ['rankings.season_trial']),
+                    $this->item('STチャンピオンズ優先出場', 'rankings.season_trial_championship_priority', '選考区分と現時点の優先出場者を確認します。', ['rankings.season_trial_championship_priority']),
                     $this->item('公認記録管理', 'record_types.index', 'パーフェクト等の明細と公認番号を管理します。', ['record_types.*']),
                     $this->item('パーフェクト記録', 'perfect_records.index', '従来の記録一覧を確認します。', ['perfect_records.*']),
                 ],

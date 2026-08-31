@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\ProBowler;
 use App\Models\ProBowlerRankingRow;
 use App\Models\ProBowlerRankingSnapshot;
+use App\Services\SeasonTrialRankingService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -28,6 +29,34 @@ class RankingController extends Controller
             'officialRankingUrls' => $this->officialRankingUrls(),
             'defaultRankingYear' => 2025,
             'canManageRankings' => (bool) (auth()->user()?->isAdmin() || auth()->user()?->isEditor()),
+        ]);
+    }
+
+    public function seasonTrial(Request $request, SeasonTrialRankingService $rankingService)
+    {
+        $years = $rankingService->years();
+        $selectedYear = $this->requestedYear($request, $years);
+
+        return view('rankings.season_trial', [
+            'ranking' => $rankingService->ranking($selectedYear),
+            'years' => $years,
+            'selectedYear' => $selectedYear,
+            'canManageRankings' => $this->canManageRankings(),
+        ]);
+    }
+
+    public function seasonTrialChampionshipPriority(
+        Request $request,
+        SeasonTrialRankingService $rankingService,
+    ) {
+        $years = $rankingService->years();
+        $selectedYear = $this->requestedYear($request, $years);
+
+        return view('rankings.season_trial_championship_priority', [
+            'priority' => $rankingService->championshipPriority($selectedYear),
+            'years' => $years,
+            'selectedYear' => $selectedYear,
+            'canManageRankings' => $this->canManageRankings(),
         ]);
     }
 
@@ -286,5 +315,21 @@ class RankingController extends Controller
             'M' => 'https://www.jpba.or.jp/information/tournament/ranking/2025/M/M_PointRanking_251220.pdf',
             'F' => 'https://www.jpba.or.jp/information/tournament/ranking/2025/W/W_PointRanking_251213.pdf',
         ];
+    }
+
+    /** @param array<int,int> $years */
+    private function requestedYear(Request $request, array $years): int
+    {
+        $fallback = $years[0] ?? (int) now()->year;
+        $year = filter_var($request->query('year'), FILTER_VALIDATE_INT, [
+            'options' => ['min_range' => 2000, 'max_range' => 2100],
+        ]);
+
+        return $year === false ? $fallback : (int) $year;
+    }
+
+    private function canManageRankings(): bool
+    {
+        return (bool) (auth()->user()?->isAdmin() || auth()->user()?->isEditor());
     }
 }

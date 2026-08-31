@@ -42,7 +42,7 @@ class SeasonTrialTemplateSetupServiceTest extends TestCase
         $this->assertNull($tournament['lane_to']);
         $this->assertSame('', $tournament['season_key']);
         $this->assertFalse($tournament['include_annual_seeds']);
-        $this->assertFalse($tournament['counts_for_official_points']);
+        $this->assertTrue($tournament['counts_for_official_points']);
         $this->assertTrue($tournament['counts_for_average']);
         $this->assertTrue($tournament['counts_for_prize']);
         $this->assertSame('season_trial', $tournament['title_scope']);
@@ -70,6 +70,7 @@ class SeasonTrialTemplateSetupServiceTest extends TestCase
             ['stage' => '準決勝', 'total_games' => 4, 'enabled' => true],
         ], $settings['stage_settings']);
         $this->assertSame([
+            'points|official',
             'points|season_trial_championship',
             'qualification|entry_priority',
             'average|official',

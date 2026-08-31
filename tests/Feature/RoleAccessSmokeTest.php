@@ -75,6 +75,8 @@ test('members can use only their own member workflows and cannot import rankings
         ->assertSee('公式ランキング')
         ->assertDontSee('公式ランキングを確定保存する')
         ->assertDontSee('年度別シード管理へ');
+    $this->actingAs($member)->get(route('rankings.season_trial'))->assertOk();
+    $this->actingAs($member)->get(route('rankings.season_trial_championship_priority'))->assertOk();
 
     $this->actingAs($member)
         ->post(route('rankings.import_official'), [
@@ -106,6 +108,8 @@ test('editors can perform staff work but cannot use administrator only pages', f
         route('ball_annual_registrations.index'),
         route('ball_annual_registrations.edit', ['year' => 2026, 'pro_bowler_id' => $bowler->id]),
         route('rankings.index'),
+        route('rankings.season_trial'),
+        route('rankings.season_trial_championship_priority'),
     ] as $url) {
         $this->actingAs($editor)->get($url)->assertOk();
     }
@@ -136,6 +140,8 @@ test('administrators can use management and administrator only pages', function 
         route('tp_registration.index'),
         route('ball_annual_registrations.index'),
         route('rankings.index'),
+        route('rankings.season_trial'),
+        route('rankings.season_trial_championship_priority'),
         route('admin.compliance.index'),
         route('admin.player_accounts.show', $bowler),
         route('admin.public_pages.index'),

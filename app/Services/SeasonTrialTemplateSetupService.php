@@ -21,6 +21,7 @@ final class SeasonTrialTemplateSetupService
     private const TEMPLATE_CODE = 'season-trial-standard';
 
     private const STANDARD_OUTPUTS = [
+        ['output_type' => 'points', 'output_scope' => 'official'],
         ['output_type' => 'points', 'output_scope' => 'season_trial_championship'],
         ['output_type' => 'qualification', 'output_scope' => 'entry_priority'],
         ['output_type' => 'average', 'output_scope' => 'official'],
@@ -83,7 +84,7 @@ final class SeasonTrialTemplateSetupService
                 'include_annual_seeds' => false,
                 'annual_seed_rank_limit' => null,
                 'auto_sync_priority_rules' => true,
-                'counts_for_official_points' => false,
+                'counts_for_official_points' => true,
                 'counts_for_average' => true,
                 'counts_for_prize' => true,
                 'title_scope' => 'season_trial',
@@ -200,7 +201,7 @@ final class SeasonTrialTemplateSetupService
             'include_annual_seeds' => false,
             'annual_seed_rank_limit' => null,
             'auto_sync_priority_rules' => true,
-            'counts_for_official_points' => false,
+            'counts_for_official_points' => true,
             'counts_for_average' => true,
             'counts_for_prize' => true,
             'title_scope' => 'season_trial',
@@ -485,7 +486,7 @@ final class SeasonTrialTemplateSetupService
             'protected_after' => $protectedAfter,
             'standard' => [
                 'annual_seeds_auto_inserted' => false,
-                'official_points' => false,
+                'official_points' => true,
                 'season_trial_championship_points' => true,
                 'entry_priority' => true,
                 'average' => true,
