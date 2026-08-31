@@ -98,7 +98,7 @@ final class ManagementNavigation
                     $this->item('INFORMATION新規作成', 'admin.informations.create', '新しいお知らせを掲載します。', ['admin.informations.create'], true),
                     $this->item('一般公開ページ編集', 'admin.public_pages.index', '規程・方針・制度案内などの固定ページを編集します。', ['admin.public_pages.*'], true),
                     $this->item('カレンダー管理', 'calendar_events.index', '大会・行事の日程を登録します。', ['calendar_events.*']),
-                    $this->item('速報ニュース管理', 'flash_news.index', '速報記事を作成・修正します。', ['flash_news.*']),
+                    $this->item('外部速報リンク管理', 'flash_news.index', '特設速報サイトなど外部URLだけを登録・修正します。', ['flash_news.*']),
                     $this->item('殿堂入り管理', 'hof.index', '殿堂入り選手と写真を管理します。', ['hof.*']),
                     $this->item('公開INFORMATION確認', 'informations.index', '一般公開側の見え方を確認します。', ['informations.*']),
                 ],
@@ -108,7 +108,7 @@ final class ManagementNavigation
         foreach ($groups as &$group) {
             $group['items'] = array_values(array_filter(
                 $group['items'],
-                fn (array $item): bool => !($item['admin_only'] ?? false) || $user->isAdmin()
+                fn (array $item): bool => ! ($item['admin_only'] ?? false) || $user->isAdmin()
             ));
         }
         unset($group);
@@ -136,7 +136,7 @@ final class ManagementNavigation
     }
 
     /**
-     * @param array<int, string> $patterns
+     * @param  array<int, string>  $patterns
      * @return array<string, mixed>
      */
     private function item(

@@ -80,7 +80,7 @@
 
     .jpba-nav {
       display: grid;
-      grid-template-columns: repeat(7, minmax(0, 1fr));
+      grid-template-columns: repeat(8, minmax(0, 1fr));
       border-bottom: 3px solid var(--jpba-blue);
       background: var(--jpba-blue);
     }
@@ -416,8 +416,19 @@
                 @if($period !== '')
                   <div class="jpba-date">{{ $period }}</div>
                 @endif
-                <h3 class="jpba-tournament-name">{{ $tournament->name }}</h3>
+                <h3 class="jpba-tournament-name">
+                  <a href="{{ route('public.tournaments.show', $tournament) }}">{{ $tournament->name }}</a>
+                </h3>
                 <div class="jpba-mini-links">
+                  @php
+                    $canPublishScores = in_array((string) $tournament->setup_status, ['in_progress', 'provisional', 'final', 'archived', 'completed'], true);
+                  @endphp
+                  @if($canPublishScores && (int) $tournament->game_scores_count > 0)
+                    <a href="{{ route('public.tournaments.live', $tournament) }}">速報</a>
+                  @endif
+                  @if($canPublishScores && (int) $tournament->official_results_count > 0)
+                    <a href="{{ route('public.tournaments.results', $tournament) }}">全成績</a>
+                  @endif
                   @foreach($publicFiles->take(3) as $file)
                     <a href="{{ asset('storage/' . ltrim((string) $file->file_path, '/')) }}" target="_blank" rel="noopener">
                       {{ $file->title ?: 'PDF' }}

@@ -2,19 +2,19 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
 use App\Models\Tournament;
 use App\Models\TournamentResultFormatVersion;
 use App\Models\TournamentSeries;
 use App\Models\TournamentTemplateVersion;
 use App\Models\Venue;
-use App\Services\TournamentConfigurationService;
 use App\Services\AnnualScheduleSyncService;
+use App\Services\TournamentConfigurationService;
 use App\Services\TournamentEditionService;
 use App\Services\TournamentPrioritySyncService;
 use App\Services\TournamentResultCarryService;
 use App\Services\TournamentTemplateService;
 use Carbon\Carbon;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
@@ -26,13 +26,13 @@ class TournamentController extends Controller
         $query = Tournament::query();
 
         if ($request->filled('name')) {
-            $query->where('name', 'like', '%' . $request->name . '%');
+            $query->where('name', 'like', '%'.$request->name.'%');
         }
         if ($request->filled('start_date')) {
             $query->whereDate('start_date', $request->start_date);
         }
         if ($request->filled('venue_name')) {
-            $query->where('venue_name', 'like', '%' . $request->venue_name . '%');
+            $query->where('venue_name', 'like', '%'.$request->venue_name.'%');
         }
 
         $tournaments = $query->get();
@@ -44,7 +44,7 @@ class TournamentController extends Controller
     {
         $prefill = $request->session()->pull('tournament_prefill', []);
 
-        if (!empty($prefill) && !$request->session()->hasOldInput()) {
+        if (! empty($prefill) && ! $request->session()->hasOldInput()) {
             $request->session()->flashInput($this->buildPrefillOldInput($prefill));
         }
 
@@ -141,9 +141,9 @@ class TournamentController extends Controller
 
         $prefill['org'] = $src->organizations->map(function ($o) {
             return [
-                'category'   => $o->category,
-                'name'       => $o->name,
-                'url'        => $o->url,
+                'category' => $o->category,
+                'name' => $o->name,
+                'url' => $o->url,
                 'sort_order' => $o->sort_order,
             ];
         })->values()->all();
@@ -194,7 +194,7 @@ class TournamentController extends Controller
             'series',
             'templateVersion.template',
             'resultFormatVersion.format',
-        ])->findOrFail($id);
+        ])->withCount(['gameScores', 'officialResults'])->findOrFail($id);
 
         return view('tournaments.edit', array_merge(
             compact('tournament'),
@@ -226,7 +226,7 @@ class TournamentController extends Controller
             'counts_for_average',
             'counts_for_prize',
         ] as $booleanKey) {
-            $old[$booleanKey] = !empty($prefill[$booleanKey]) ? 1 : 0;
+            $old[$booleanKey] = ! empty($prefill[$booleanKey]) ? 1 : 0;
         }
 
         foreach ([
@@ -314,10 +314,10 @@ class TournamentController extends Controller
         return collect($rows)
             ->map(function ($row) {
                 return [
-                    'date'      => (string) ($row['date'] ?? ''),
-                    'label'     => (string) ($row['label'] ?? ($row['title'] ?? '')),
-                    'url'       => $this->normalizePrefillUrl($row['href'] ?? ($row['url'] ?? '')),
-                    'separator' => !empty($row['separator']) ? 1 : 0,
+                    'date' => (string) ($row['date'] ?? ''),
+                    'label' => (string) ($row['label'] ?? ($row['title'] ?? '')),
+                    'url' => $this->normalizePrefillUrl($row['href'] ?? ($row['url'] ?? '')),
+                    'separator' => ! empty($row['separator']) ? 1 : 0,
                 ];
             })
             ->values()
@@ -329,12 +329,12 @@ class TournamentController extends Controller
         return collect($rows)
             ->map(function ($row) {
                 return [
-                    'type'   => (string) ($row['type'] ?? ($row['category'] ?? 'perfect')),
+                    'type' => (string) ($row['type'] ?? ($row['category'] ?? 'perfect')),
                     'player' => (string) ($row['player'] ?? ''),
-                    'game'   => (string) ($row['game'] ?? ''),
-                    'lane'   => (string) ($row['lane'] ?? ''),
-                    'note'   => (string) ($row['note'] ?? ''),
-                    'title'  => (string) ($row['title'] ?? ''),
+                    'game' => (string) ($row['game'] ?? ''),
+                    'lane' => (string) ($row['lane'] ?? ''),
+                    'note' => (string) ($row['note'] ?? ''),
+                    'title' => (string) ($row['title'] ?? ''),
                 ];
             })
             ->values()
@@ -346,11 +346,11 @@ class TournamentController extends Controller
         return collect($rows)
             ->map(function ($row) {
                 return [
-                    'title'  => (string) ($row['title'] ?? ''),
+                    'title' => (string) ($row['title'] ?? ''),
                     'player' => (string) ($row['player'] ?? ''),
-                    'balls'  => (string) ($row['balls'] ?? ''),
-                    'note'   => (string) ($row['note'] ?? ''),
-                    'url'    => $this->normalizePrefillUrl($row['url'] ?? ''),
+                    'balls' => (string) ($row['balls'] ?? ''),
+                    'note' => (string) ($row['note'] ?? ''),
+                    'url' => $this->normalizePrefillUrl($row['url'] ?? ''),
                 ];
             })
             ->values()
@@ -399,7 +399,7 @@ class TournamentController extends Controller
         if ($shootoutSettingsRaw !== '') {
             $decodedShootoutSettings = json_decode($shootoutSettingsRaw, true);
 
-            if (!is_array($decodedShootoutSettings)) {
+            if (! is_array($decodedShootoutSettings)) {
                 throw ValidationException::withMessages([
                     'shootout_settings' => 'シュートアウト詳細設定JSONの形式が正しくありません。',
                 ]);
@@ -413,26 +413,26 @@ class TournamentController extends Controller
             shootoutQualifierCount: $usesShootout ? $shootoutQualifierCount : null
         );
 
-        if (!empty($stageProgress)) {
+        if (! empty($stageProgress)) {
             $settings['stage_progress'] = $stageProgress;
         } else {
             unset($settings['stage_progress']);
         }
 
-        if (!$usesShootout && isset($settings['stage_progress'])) {
+        if (! $usesShootout && isset($settings['stage_progress'])) {
             $settings = [
                 'stage_progress' => $settings['stage_progress'],
             ];
         }
 
-        return !empty($settings) ? $settings : null;
+        return ! empty($settings) ? $settings : null;
     }
 
     private function normalizeShootoutStageProgress(Request $request, ?int $shootoutQualifierCount): array
     {
         $input = $request->input('shootout_stage_progress', []);
 
-        if (!is_array($input)) {
+        if (! is_array($input)) {
             return [];
         }
 
@@ -506,7 +506,7 @@ class TournamentController extends Controller
 
         $decoded = json_decode((string) $value, true);
 
-        if (json_last_error() !== JSON_ERROR_NONE || !is_array($decoded)) {
+        if (json_last_error() !== JSON_ERROR_NONE || ! is_array($decoded)) {
             throw ValidationException::withMessages([
                 'single_elimination_seed_settings' => 'シード詳細設定はJSON形式で入力してください。',
             ]);
@@ -515,19 +515,18 @@ class TournamentController extends Controller
         return empty($decoded) ? null : $decoded;
     }
 
-
     private function normalizeSingleEliminationLaneSettings(Request $request): array
     {
         $settings = [];
         $rounds = [];
 
         $roundInputs = $request->input('single_elimination_lane_rounds', []);
-        if (!is_array($roundInputs)) {
+        if (! is_array($roundInputs)) {
             $roundInputs = [];
         }
 
         foreach ($roundInputs as $roundNo => $row) {
-            if (!is_array($row)) {
+            if (! is_array($row)) {
                 continue;
             }
 
@@ -551,12 +550,12 @@ class TournamentController extends Controller
             ];
         }
 
-        if (!empty($rounds)) {
+        if (! empty($rounds)) {
             $settings['rounds'] = $rounds;
         }
 
         $matchInputs = $request->input('single_elimination_match_lanes', []);
-        if (!is_array($matchInputs)) {
+        if (! is_array($matchInputs)) {
             $matchInputs = [];
         }
 
@@ -572,7 +571,7 @@ class TournamentController extends Controller
             $matches[$matchKey] = $laneLabel;
         }
 
-        if (!empty($matches)) {
+        if (! empty($matches)) {
             $settings['matches'] = $matches;
         }
 
@@ -593,7 +592,7 @@ class TournamentController extends Controller
 
             $decoded = json_decode($json, true);
 
-            if (json_last_error() !== JSON_ERROR_NONE || !is_array($decoded)) {
+            if (json_last_error() !== JSON_ERROR_NONE || ! is_array($decoded)) {
                 throw ValidationException::withMessages([
                     'result_carry_settings' => '成績持ち込み設定はJSON形式で入力してください。',
                 ]);
@@ -604,7 +603,6 @@ class TournamentController extends Controller
 
         return $service->presetSettings($preset);
     }
-
 
     private function normalizeLaneMovementSettings(Request $request): ?string
     {
@@ -772,22 +770,22 @@ class TournamentController extends Controller
     private function validateAndNormalize(Request $request): array
     {
         $validated = $request->validate([
-            'name'                 => 'required|string|max:255',
+            'name' => 'required|string|max:255',
             'tournament_series_id' => 'nullable|integer|exists:tournament_series,id',
             'tournament_template_version_id' => 'nullable|integer|exists:tournament_template_versions,id',
             'tournament_result_format_version_id' => 'nullable|integer|exists:tournament_result_format_versions,id',
-            'season_key'           => 'nullable|string|max:50',
-            'setup_status'         => 'nullable|in:draft,ready,entry_open,in_progress,provisional,final,archived',
-            'competition_type'     => 'nullable|in:singles,doubles,team,all_events,qualifier,priority_ranking,championship',
-            'start_date'           => 'nullable|date',
-            'end_date'             => 'nullable|date|after_or_equal:start_date',
-            'venue_name'           => 'nullable|string',
-            'venue_address'        => 'nullable|string',
-            'venue_tel'            => 'nullable|string',
-            'venue_fax'            => 'nullable|string',
-            'gender'               => 'required|in:M,F,X',
-            'official_type'        => 'required|in:official,approved,other',
-            'title_category'       => 'nullable|in:normal,season_trial,excluded',
+            'season_key' => 'nullable|string|max:50',
+            'setup_status' => 'nullable|in:draft,ready,entry_open,in_progress,provisional,final,archived,completed',
+            'competition_type' => 'nullable|in:singles,doubles,team,all_events,qualifier,priority_ranking,championship',
+            'start_date' => 'nullable|date',
+            'end_date' => 'nullable|date|after_or_equal:start_date',
+            'venue_name' => 'nullable|string',
+            'venue_address' => 'nullable|string',
+            'venue_tel' => 'nullable|string',
+            'venue_fax' => 'nullable|string',
+            'gender' => 'required|in:M,F,X',
+            'official_type' => 'required|in:official,approved,other',
+            'title_category' => 'nullable|in:normal,season_trial,excluded',
             'include_annual_seeds' => 'nullable|boolean',
             'annual_seed_rank_limit' => 'nullable|integer|min:1|max:999',
             'auto_sync_priority_rules' => 'nullable|boolean',
@@ -801,7 +799,7 @@ class TournamentController extends Controller
             'priority_rule_types.*' => 'in:past_champions,current_year_winners,permanent_seeds',
             'priority_source_tournament_id' => 'nullable|integer|exists:tournaments,id',
             'priority_source_tournament_top_n' => 'nullable|integer|min:1|max:999',
-            'result_flow_type'     => 'nullable|in:legacy_standard,prelim_to_rr_to_final,prelim_to_quarterfinal_to_rr_to_final,prelim_to_single_elimination_to_final,prelim_to_quarterfinal_to_single_elimination_to_final,prelim_to_semifinal_to_single_elimination_to_final,prelim_to_shootout_to_final,prelim_to_quarterfinal_to_shootout_to_final,prelim_to_semifinal_to_shootout_to_final',
+            'result_flow_type' => 'nullable|in:legacy_standard,prelim_to_rr_to_final,prelim_to_quarterfinal_to_rr_to_final,prelim_to_single_elimination_to_final,prelim_to_quarterfinal_to_single_elimination_to_final,prelim_to_semifinal_to_single_elimination_to_final,prelim_to_shootout_to_final,prelim_to_quarterfinal_to_shootout_to_final,prelim_to_semifinal_to_shootout_to_final',
             'round_robin_qualifier_count' => 'nullable|integer|min:4|max:16',
             'round_robin_win_bonus' => 'nullable|integer|min:0|max:200',
             'round_robin_tie_bonus' => 'nullable|integer|min:0|max:200',
@@ -826,26 +824,26 @@ class TournamentController extends Controller
             'shootout_stage_progress.prelim_qualifier_count' => 'nullable|integer|min:1|max:999',
             'shootout_stage_progress.semifinal_game_count' => 'nullable|integer|min:1|max:99',
             'shootout_stage_progress.semifinal_total_game_count' => 'nullable|integer|min:1|max:199',
-            'result_carry_preset' => 'nullable|in:' . implode(',', app(TournamentResultCarryService::class)->allowedPresetKeys()),
+            'result_carry_preset' => 'nullable|in:'.implode(',', app(TournamentResultCarryService::class)->allowedPresetKeys()),
             'result_carry_settings' => 'nullable|string|max:20000',
-            'entry_start'          => 'nullable|date',
-            'entry_end'            => 'nullable|date|after_or_equal:entry_start',
-            'inspection_required'  => 'nullable|boolean',
+            'entry_start' => 'nullable|date',
+            'entry_end' => 'nullable|date|after_or_equal:entry_start',
+            'inspection_required' => 'nullable|boolean',
             'ball_registration_limit' => 'required|integer|min:1|max:100',
             'sync_annual_schedule' => 'nullable|boolean',
             'annual_schedule_conflict_action' => 'nullable|in:ask,link,overwrite,separate,skip',
 
-            'spectator_policy'     => 'nullable|in:paid,free,none',
-            'prize'                => 'nullable|string',
-            'admission_fee'        => 'nullable|string',
-            'broadcast'            => 'nullable|string',
-            'streaming'            => 'nullable|string',
-            'broadcast_url'        => 'nullable|string|max:255',
-            'streaming_url'        => 'nullable|string|max:255',
-            'previous_event'       => 'nullable|string',
-            'previous_event_url'   => 'nullable|string|max:255',
-            'entry_conditions'     => 'nullable|string',
-            'materials'            => 'nullable|string',
+            'spectator_policy' => 'nullable|in:paid,free,none',
+            'prize' => 'nullable|string',
+            'admission_fee' => 'nullable|string',
+            'broadcast' => 'nullable|string',
+            'streaming' => 'nullable|string',
+            'broadcast_url' => 'nullable|string|max:255',
+            'streaming_url' => 'nullable|string|max:255',
+            'previous_event' => 'nullable|string',
+            'previous_event_url' => 'nullable|string|max:255',
+            'entry_conditions' => 'nullable|string',
+            'materials' => 'nullable|string',
             'result_format' => 'nullable|array',
             'result_format.english_title' => 'nullable|string|max:500',
             'result_format.tagline' => 'nullable|string|max:1000',
@@ -860,61 +858,61 @@ class TournamentController extends Controller
             'result_format.bracket_rules' => 'nullable|string|max:2000',
             'result_format.footnote' => 'nullable|string|max:2000',
 
-            'venue_id'             => 'nullable|integer|exists:venues,id',
+            'venue_id' => 'nullable|integer|exists:venues,id',
 
-            'extra_venues'                 => 'nullable|array|max:4',
-            'extra_venues.*.venue_id'      => 'nullable|integer|exists:venues,id',
-            'extra_venues.*.name'          => 'nullable|string|max:255',
-            'extra_venues.*.address'       => 'nullable|string|max:255',
-            'extra_venues.*.tel'           => 'nullable|string|max:50',
-            'extra_venues.*.fax'           => 'nullable|string|max:50',
-            'extra_venues.*.website_url'   => 'nullable|string|max:255',
-            'extra_venues.*.memo'          => 'nullable|string|max:2000',
+            'extra_venues' => 'nullable|array|max:4',
+            'extra_venues.*.venue_id' => 'nullable|integer|exists:venues,id',
+            'extra_venues.*.name' => 'nullable|string|max:255',
+            'extra_venues.*.address' => 'nullable|string|max:255',
+            'extra_venues.*.tel' => 'nullable|string|max:50',
+            'extra_venues.*.fax' => 'nullable|string|max:50',
+            'extra_venues.*.website_url' => 'nullable|string|max:255',
+            'extra_venues.*.memo' => 'nullable|string|max:2000',
 
-            'use_shift_draw'               => 'nullable|boolean',
-            'shift_codes'                  => 'nullable|string|max:255',
-            'accept_shift_preference'      => 'nullable|boolean',
-            'shift_draw_open_at'           => 'nullable|date',
-            'shift_draw_close_at'          => 'nullable|date|after_or_equal:shift_draw_open_at',
+            'use_shift_draw' => 'nullable|boolean',
+            'shift_codes' => 'nullable|string|max:255',
+            'accept_shift_preference' => 'nullable|boolean',
+            'shift_draw_open_at' => 'nullable|date',
+            'shift_draw_close_at' => 'nullable|date|after_or_equal:shift_draw_open_at',
 
-            'use_lane_draw'                => 'nullable|boolean',
-            'lane_assignment_mode'         => 'nullable|in:single_lane,box',
-            'lane_from'                    => 'nullable|integer|min:1',
-            'lane_to'                      => 'nullable|integer|gte:lane_from|max:999',
-            'lane_draw_open_at'            => 'nullable|date',
-            'lane_draw_close_at'           => 'nullable|date|after_or_equal:lane_draw_open_at',
-            'box_player_count'             => 'nullable|integer|min:1|max:12',
-            'odd_lane_player_count'        => 'nullable|integer|min:1|max:12',
-            'even_lane_player_count'       => 'nullable|integer|min:1|max:12',
-            'lane_movement'                 => 'nullable|array',
-            'lane_movement.enabled'         => 'nullable|boolean',
-            'lane_movement.box_width'       => 'nullable|integer|min:1|max:20',
-            'lane_movement.games'           => 'nullable|integer|min:1|max:99',
-            'lane_movement.start_time'      => 'nullable|date_format:H:i',
+            'use_lane_draw' => 'nullable|boolean',
+            'lane_assignment_mode' => 'nullable|in:single_lane,box',
+            'lane_from' => 'nullable|integer|min:1',
+            'lane_to' => 'nullable|integer|gte:lane_from|max:999',
+            'lane_draw_open_at' => 'nullable|date',
+            'lane_draw_close_at' => 'nullable|date|after_or_equal:lane_draw_open_at',
+            'box_player_count' => 'nullable|integer|min:1|max:12',
+            'odd_lane_player_count' => 'nullable|integer|min:1|max:12',
+            'even_lane_player_count' => 'nullable|integer|min:1|max:12',
+            'lane_movement' => 'nullable|array',
+            'lane_movement.enabled' => 'nullable|boolean',
+            'lane_movement.box_width' => 'nullable|integer|min:1|max:20',
+            'lane_movement.games' => 'nullable|integer|min:1|max:99',
+            'lane_movement.start_time' => 'nullable|date_format:H:i',
             'lane_movement.regular_move_boxes' => 'nullable|integer|min:0|max:99',
             'lane_movement.half_turn_enabled' => 'nullable|boolean',
-            'lane_movement.half_turn_game'  => 'nullable|integer|min:2|max:99',
+            'lane_movement.half_turn_game' => 'nullable|integer|min:2|max:99',
             'lane_movement.half_turn_move_boxes' => 'nullable|integer|min:0|max:99',
-            'lane_movement.direction'       => 'nullable|in:right,left',
-            'lane_movement.wrap'            => 'nullable|boolean',
-            'lane_movement.day1_label'      => 'nullable|string|max:255',
+            'lane_movement.direction' => 'nullable|in:right,left',
+            'lane_movement.wrap' => 'nullable|boolean',
+            'lane_movement.day1_label' => 'nullable|string|max:255',
             'lane_movement.second_day_enabled' => 'nullable|boolean',
-            'lane_movement.day2_label'      => 'nullable|string|max:255',
+            'lane_movement.day2_label' => 'nullable|string|max:255',
             'lane_movement.day2_start_game' => 'nullable|integer|min:2|max:99',
-            'lane_movement.day2_games'      => 'nullable|integer|min:1|max:99',
+            'lane_movement.day2_games' => 'nullable|integer|min:1|max:99',
             'lane_movement.day2_start_time' => 'nullable|date_format:H:i',
             'lane_movement.day2_start_move_boxes' => 'nullable|integer|min:0|max:99',
             'lane_movement.day2_regular_move_boxes' => 'nullable|integer|min:0|max:99',
-            'lane_movement.day2_direction'  => 'nullable|in:right,left',
+            'lane_movement.day2_direction' => 'nullable|in:right,left',
             'lane_movement.day2_half_turn_enabled' => 'nullable|boolean',
             'lane_movement.day2_half_turn_game' => 'nullable|integer|min:2|max:99',
             'lane_movement.day2_half_turn_move_boxes' => 'nullable|integer|min:0|max:99',
-            'lane_movement.day2_wrap'       => 'nullable|boolean',
+            'lane_movement.day2_wrap' => 'nullable|boolean',
 
-            'schedule'                     => 'sometimes|array',
-            'awards'                       => 'sometimes|array',
-            'result_cards'                 => 'sometimes|array',
-            'org'                          => 'sometimes|array',
+            'schedule' => 'sometimes|array',
+            'awards' => 'sometimes|array',
+            'result_cards' => 'sometimes|array',
+            'org' => 'sometimes|array',
         ]);
 
         $selectedSeries = ! empty($validated['tournament_series_id'])
@@ -941,8 +939,8 @@ class TournamentController extends Controller
         }
 
         foreach (['broadcast_url', 'streaming_url', 'previous_event_url'] as $key) {
-            if (!empty($validated[$key]) && !preg_match('~^https?://~i', $validated[$key])) {
-                $validated[$key] = 'https://' . ltrim($validated[$key]);
+            if (! empty($validated[$key]) && ! preg_match('~^https?://~i', $validated[$key])) {
+                $validated[$key] = 'https://'.ltrim($validated[$key]);
             }
         }
 
@@ -1044,8 +1042,8 @@ class TournamentController extends Controller
         ) ?? [];
         $singleEliminationLaneSettings = $this->normalizeSingleEliminationLaneSettings($request);
         $hasSingleEliminationSettingInput = $usesSingleElimination
-            || !empty($singleEliminationSeedSettings)
-            || !empty($singleEliminationLaneSettings)
+            || ! empty($singleEliminationSeedSettings)
+            || ! empty($singleEliminationLaneSettings)
             || $request->filled('single_elimination_qualifier_count')
             || $request->filled('single_elimination_seed_policy');
 
@@ -1067,7 +1065,7 @@ class TournamentController extends Controller
             : null;
 
         if ($hasSingleEliminationSettingInput) {
-            if (!empty($singleEliminationLaneSettings)) {
+            if (! empty($singleEliminationLaneSettings)) {
                 $singleEliminationSeedSettings['lane_settings'] = $singleEliminationLaneSettings;
             } elseif ($request->has('single_elimination_lane_rounds') || $request->has('single_elimination_match_lanes')) {
                 unset($singleEliminationSeedSettings['lane_settings']);
@@ -1146,7 +1144,7 @@ class TournamentController extends Controller
             $validated['shootout_stage_progress'],
             $validated['lane_movement']
         );
-        
+
         $validated['shift_draw_open_at'] = $useShiftDraw && $request->filled('shift_draw_open_at')
             ? Carbon::parse($request->input('shift_draw_open_at'))
             : null;
@@ -1204,9 +1202,9 @@ class TournamentController extends Controller
             }
 
             if (
-                !is_null($validated['box_player_count']) &&
-                !is_null($validated['odd_lane_player_count']) &&
-                !is_null($validated['even_lane_player_count']) &&
+                ! is_null($validated['box_player_count']) &&
+                ! is_null($validated['odd_lane_player_count']) &&
+                ! is_null($validated['even_lane_player_count']) &&
                 ((int) $validated['odd_lane_player_count'] + (int) $validated['even_lane_player_count']) !== (int) $validated['box_player_count']
             ) {
                 throw ValidationException::withMessages([
@@ -1267,15 +1265,15 @@ class TournamentController extends Controller
 
         $add = function (string $cat, ?string $name, ?string $url, int $order = 0) use (&$rows, &$texts, &$seen) {
             $name = trim((string) $name);
-            if ($name === '' || !isset($texts[$cat])) {
+            if ($name === '' || ! isset($texts[$cat])) {
                 return;
             }
 
-            if ($url && !preg_match('~^https?://~i', $url)) {
-                $url = 'https://' . ltrim($url);
+            if ($url && ! preg_match('~^https?://~i', $url)) {
+                $url = 'https://'.ltrim($url);
             }
 
-            $key = strtolower($cat . '|' . $name . '|' . ($url ?? ''));
+            $key = strtolower($cat.'|'.$name.'|'.($url ?? ''));
             if (isset($seen[$key])) {
                 return;
             }
@@ -1303,10 +1301,10 @@ class TournamentController extends Controller
             }
         }
 
-        if (is_array($flat) && !array_key_exists(0, $flat)) {
+        if (is_array($flat) && ! array_key_exists(0, $flat)) {
             foreach (array_keys($texts) as $cat) {
                 $list = $flat[$cat] ?? null;
-                if (!is_array($list)) {
+                if (! is_array($list)) {
                     continue;
                 }
                 $j = 0;
@@ -1321,8 +1319,8 @@ class TournamentController extends Controller
         }
 
         foreach (array_keys($texts) as $cat) {
-            $key = 'org_' . $cat;
-            if (!$request->has($key)) {
+            $key = 'org_'.$cat;
+            if (! $request->has($key)) {
                 continue;
             }
             $list = $request->input($key);
@@ -1362,20 +1360,20 @@ class TournamentController extends Controller
             $date = trim((string) ($r['date'] ?? ''));
             $label = trim((string) ($r['label'] ?? ''));
             $url = trim((string) ($r['url'] ?? ''));
-            $sep = !empty($r['separator']);
+            $sep = ! empty($r['separator']);
 
             $href = null;
-            if (!$sep) {
+            if (! $sep) {
                 if ($url !== '') {
-                    $href = preg_match('~^https?://~i', $url) ? $url : ('https://' . ltrim($url));
-                } elseif (!empty($files[$i])) {
+                    $href = preg_match('~^https?://~i', $url) ? $url : ('https://'.ltrim($url));
+                } elseif (! empty($files[$i])) {
                     $href = $files[$i]->store('tournament_pdfs', 'public');
-                } elseif (!empty($keeps[$i]['keep']) && !empty($keeps[$i]['href'])) {
+                } elseif (! empty($keeps[$i]['keep']) && ! empty($keeps[$i]['href'])) {
                     $href = $keeps[$i]['href'];
                 }
             }
 
-            if (!$sep && $label === '' && $href === null) {
+            if (! $sep && $label === '' && $href === null) {
                 continue;
             }
 
@@ -1390,7 +1388,7 @@ class TournamentController extends Controller
         $uniq = [];
         $dedup = [];
         foreach ($out as $r) {
-            $k = ($r['date'] ?? '') . '|' . ($r['label'] ?? '') . '|' . ($r['href'] ?? '') . '|' . (!empty($r['separator']) ? '1' : '0');
+            $k = ($r['date'] ?? '').'|'.($r['label'] ?? '').'|'.($r['href'] ?? '').'|'.(! empty($r['separator']) ? '1' : '0');
             if (isset($uniq[$k])) {
                 continue;
             }
@@ -1417,9 +1415,9 @@ class TournamentController extends Controller
             $title = trim((string) ($r['title'] ?? ''));
 
             $photo = null;
-            if (!empty($files[$i])) {
+            if (! empty($files[$i])) {
                 $photo = $files[$i]->store('tournament_awards', 'public');
-            } elseif (!empty($keeps[$i]['photo'])) {
+            } elseif (! empty($keeps[$i]['photo'])) {
                 $photo = $keeps[$i]['photo'];
             }
 
@@ -1448,7 +1446,7 @@ class TournamentController extends Controller
 
         if (is_array($request->input('__keep_gallery'))) {
             foreach ($request->input('__keep_gallery') as $g) {
-                if (!empty($g['photo'])) {
+                if (! empty($g['photo'])) {
                     $gallery[] = [
                         'photo' => $g['photo'],
                         'title' => $g['title'] ?? null,
@@ -1461,7 +1459,7 @@ class TournamentController extends Controller
 
         if (is_array($request->input('__keep_results'))) {
             foreach ($request->input('__keep_results') as $r) {
-                if (!empty($r['file'])) {
+                if (! empty($r['file'])) {
                     $results[] = [
                         'file' => $r['file'],
                         'title' => $r['title'] ?? null,
@@ -1478,7 +1476,7 @@ class TournamentController extends Controller
                 $titles = array_map('trim', preg_split('/\r\n|\n|\r/u', $titles[0]));
             }
             foreach ($request->file('gallery_files') as $i => $f) {
-                if (!$f) {
+                if (! $f) {
                     continue;
                 }
                 $path = $f->store('tournament_gallery', 'public');
@@ -1495,7 +1493,7 @@ class TournamentController extends Controller
                 $titles = array_map('trim', preg_split('/\r\n|\n|\r/u', $titles[0]));
             }
             foreach ($request->file('result_pdfs') as $i => $f) {
-                if (!$f) {
+                if (! $f) {
                     continue;
                 }
                 $path = $f->store('tournament_pdfs', 'public');
@@ -1525,19 +1523,19 @@ class TournamentController extends Controller
             $note = trim((string) ($r['note'] ?? ''));
             $url = trim((string) ($r['url'] ?? ''));
 
-            if ($url !== '' && !preg_match('~^https?://~i', $url)) {
-                $url = 'https://' . ltrim($url);
+            if ($url !== '' && ! preg_match('~^https?://~i', $url)) {
+                $url = 'https://'.ltrim($url);
             }
 
             $photos = [];
-            if (!empty($keeps[$i]['photos']) && is_array($keeps[$i]['photos'])) {
+            if (! empty($keeps[$i]['photos']) && is_array($keeps[$i]['photos'])) {
                 foreach ($keeps[$i]['photos'] as $p) {
                     if ($p !== null && $p !== '') {
                         $photos[] = $p;
                     }
                 }
             }
-            if (empty($keeps[$i]['photos']) && !empty($keeps[$i]['photo'])) {
+            if (empty($keeps[$i]['photos']) && ! empty($keeps[$i]['photo'])) {
                 $photos[] = $keeps[$i]['photo'];
             }
 
@@ -1545,7 +1543,7 @@ class TournamentController extends Controller
                 $slot = $photoFiles[$i];
                 if (is_array($slot)) {
                     foreach ($slot as $pf) {
-                        if (!$pf) {
+                        if (! $pf) {
                             continue;
                         }
                         $photos[] = $pf->store('tournament_results', 'public');
@@ -1558,13 +1556,13 @@ class TournamentController extends Controller
             }
 
             $filePath = null;
-            if (!empty($pdfFiles[$i])) {
+            if (! empty($pdfFiles[$i])) {
                 $filePath = $pdfFiles[$i]->store('tournament_pdfs', 'public');
-            } elseif (!empty($keeps[$i]['file'])) {
+            } elseif (! empty($keeps[$i]['file'])) {
                 $filePath = $keeps[$i]['file'];
             }
 
-            if ($title === '' && $player === '' && $balls === '' && $note === '' && $url === '' && !$photos && !$filePath) {
+            if ($title === '' && $player === '' && $balls === '' && $note === '' && $url === '' && ! $photos && ! $filePath) {
                 continue;
             }
 
@@ -1589,8 +1587,7 @@ class TournamentController extends Controller
         TournamentEditionService $editionService,
         TournamentConfigurationService $configurationService,
         TournamentPrioritySyncService $prioritySyncService,
-    )
-    {
+    ) {
         $validated = $this->validateAndNormalize($request);
         $scheduleAction = $request->boolean('sync_annual_schedule', true)
             ? (string) $request->input('annual_schedule_conflict_action', AnnualScheduleSyncService::ACTION_ASK)
@@ -1641,12 +1638,12 @@ class TournamentController extends Controller
             $validated['result_cards'] = $cards;
         }
 
-        $t = new Tournament();
+        $t = new Tournament;
         $t->forceFill($validated);
         $t->save();
 
         $org = $this->buildOrgRowsAndTexts($request);
-        if (!empty($org['rows'])) {
+        if (! empty($org['rows'])) {
             $t->organizations()->saveMany($org['rows']);
         }
         $t->fill([
@@ -1681,10 +1678,10 @@ class TournamentController extends Controller
             $titles = (array) $request->input('custom_titles', []);
             $i = 0;
             foreach ($request->file('custom_files') as $file) {
-                if (!$file) {
+                if (! $file) {
                     continue;
                 }
-                $title = $titles[$i] ?? '資料' . ($i + 1);
+                $title = $titles[$i] ?? '資料'.($i + 1);
                 $path = $file->store('tournament_pdfs', 'public');
                 $t->files()->create([
                     'type' => 'custom',
@@ -1727,15 +1724,14 @@ class TournamentController extends Controller
         TournamentEditionService $editionService,
         TournamentConfigurationService $configurationService,
         TournamentPrioritySyncService $prioritySyncService,
-    )
-    {
+    ) {
         $t = Tournament::with(['organizations', 'files'])->findOrFail($id);
         $originalTemplateVersionId = $t->tournament_template_version_id;
         $validated = $this->validateAndNormalize($request);
         $scheduleAction = $request->boolean('sync_annual_schedule', true)
             ? (string) $request->input('annual_schedule_conflict_action', AnnualScheduleSyncService::ACTION_ASK)
             : AnnualScheduleSyncService::ACTION_SKIP;
-        if (!$t->annualScheduleRow()->exists()) {
+        if (! $t->annualScheduleRow()->exists()) {
             app(AnnualScheduleSyncService::class)->assertNoUnresolvedConflict($validated, $scheduleAction);
         }
         $this->applyResultFormatSettings($validated, $t);
@@ -1784,7 +1780,7 @@ class TournamentController extends Controller
 
         $t->organizations()->delete();
         $org = $this->buildOrgRowsAndTexts($request);
-        if (!empty($org['rows'])) {
+        if (! empty($org['rows'])) {
             $t->organizations()->saveMany($org['rows']);
         }
         $t->fill([
@@ -1821,10 +1817,10 @@ class TournamentController extends Controller
             $titles = (array) $request->input('custom_titles', []);
             $i = 0;
             foreach ($request->file('custom_files') as $file) {
-                if (!$file) {
+                if (! $file) {
                     continue;
                 }
-                $title = $titles[$i] ?? '資料' . ($i + 1);
+                $title = $titles[$i] ?? '資料'.($i + 1);
                 $path = $file->store('tournament_pdfs', 'public');
                 $t->files()->create([
                     'type' => 'custom',
@@ -1890,14 +1886,14 @@ class TournamentController extends Controller
             }
             if (is_array($t->gallery_items)) {
                 foreach ($t->gallery_items as $gi) {
-                    if (!empty($gi['photo'])) {
+                    if (! empty($gi['photo'])) {
                         $paths[] = $gi['photo'];
                     }
                 }
             }
             if (is_array($t->simple_result_pdfs)) {
                 foreach ($t->simple_result_pdfs as $ri) {
-                    if (!empty($ri['file'])) {
+                    if (! empty($ri['file'])) {
                         $paths[] = $ri['file'];
                     }
                 }

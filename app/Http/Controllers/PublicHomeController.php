@@ -57,6 +57,7 @@ class PublicHomeController extends Controller
                     ->orderBy('sort_order')
                     ->orderBy('id');
             }])
+            ->withCount(['gameScores', 'officialResults'])
             ->whereNotNull('start_date');
     }
 }

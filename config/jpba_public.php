@@ -6,6 +6,7 @@ return [
         ['label' => 'スケジュール', 'route' => 'public.schedule'],
         ['label' => '選手データ', 'route' => 'public.players.index'],
         ['label' => 'トーナメント', 'route' => 'public.tournaments.index'],
+        ['label' => '速報・成績', 'route' => 'public.tournaments.live_results'],
         ['label' => 'インストラクター', 'route' => 'public.instructors.index'],
         ['label' => 'プロテスト', 'route' => 'public.protest'],
         ['label' => 'トピックス', 'route' => 'public.topics'],

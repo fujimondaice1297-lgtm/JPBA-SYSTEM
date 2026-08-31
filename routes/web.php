@@ -42,6 +42,7 @@ use App\Http\Controllers\PublicPageController;
 use App\Http\Controllers\PublicPlayerController;
 use App\Http\Controllers\PublicProfileController;
 use App\Http\Controllers\PublicTournamentController;
+use App\Http\Controllers\PublicTournamentResultController;
 use App\Http\Controllers\RankingController;
 use App\Http\Controllers\RecordCertificationSequenceController;
 use App\Http\Controllers\RecordTypeController;
@@ -227,10 +228,21 @@ Route::get('/players/{id}', [PublicProfileController::class, 'show'])
 Route::redirect('/player', '/players', 301);
 Route::redirect('/player/index.html', '/players', 301);
 Route::get('/tournament', [PublicTournamentController::class, 'index'])->name('public.tournaments.index');
+Route::get('/tournament/live-results', [PublicTournamentResultController::class, 'index'])
+    ->name('public.tournaments.live_results');
 Route::get('/tournament/{tournament}', [PublicTournamentController::class, 'show'])
     ->whereNumber('tournament')
     ->name('public.tournaments.show');
+Route::get('/tournament/{tournament}/live', [PublicTournamentResultController::class, 'live'])
+    ->whereNumber('tournament')
+    ->name('public.tournaments.live');
+Route::get('/tournament/{tournament}/results', [PublicTournamentResultController::class, 'results'])
+    ->whereNumber('tournament')
+    ->name('public.tournaments.results');
 Route::redirect('/tournament/index.html', '/tournament', 301);
+Route::get('/flash-news/{id}', [FlashNewsPublicController::class, 'show'])
+    ->whereNumber('id')
+    ->name('flash_news.public');
 Route::get('/instructor', [PublicInstructorController::class, 'index'])->name('public.instructors.index');
 Route::redirect('/instructor/index.html', '/instructor', 301);
 Route::get('/protest', [PublicPageController::class, 'protest'])->name('public.protest');
@@ -367,10 +379,6 @@ Route::middleware(['auth', 'role:member,editor,admin'])->group(function () {
     Route::get('/calendar/{year}/{month}', [CalendarController::class, 'monthly'])->whereNumber('year')->whereNumber('month')->name('calendar.monthly');
     Route::get('/calendar/{year}/pdf', [CalendarController::class, 'annualPdf'])->whereNumber('year')->name('calendar.annual.pdf');
     Route::get('/calendar/{year}/{month}/pdf', [CalendarController::class, 'monthlyPdf'])->whereNumber('year')->name('calendar.monthly.pdf');
-
-    Route::get('/flash-news/{id}', [FlashNewsPublicController::class, 'show'])
-        ->whereNumber('id')
-        ->name('flash_news.public');
 
     // API（会員以上のみで使う想定：route:list のエントリと一致）
     Route::get('/api/pro-bowler-by-license/{licenseNo}', function ($licenseNo) {
@@ -761,6 +769,7 @@ Route::middleware(['auth', 'role:editor,admin'])->group(function () {
     Route::post('/flash-news', [FlashNewsController::class, 'store'])->name('flash_news.store');
     Route::get('/flash-news/{id}/edit', [FlashNewsController::class, 'edit'])->name('flash_news.edit');
     Route::put('/flash-news/{id}', [FlashNewsController::class, 'update'])->name('flash_news.update');
+    Route::delete('/flash-news/{id}', [FlashNewsController::class, 'destroy'])->name('flash_news.destroy');
 
     Route::get('/pro_bowlers/{id}', [PublicProfileController::class, 'show'])
         ->name('pro_bowlers.public_show');

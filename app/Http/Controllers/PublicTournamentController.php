@@ -20,7 +20,8 @@ class PublicTournamentController extends Controller
         ];
 
         $query = Tournament::query()
-            ->with(['files' => fn ($q) => $q->where('visibility', 'public')->orderBy('sort_order'), 'venue']);
+            ->with(['files' => fn ($q) => $q->where('visibility', 'public')->orderBy('sort_order'), 'venue'])
+            ->withCount(['gameScores', 'officialResults']);
 
         if (in_array($filters['type'], ['official', 'approved', 'other'], true)) {
             $query->where('official_type', $filters['type']);
@@ -68,7 +69,7 @@ class PublicTournamentController extends Controller
             'files' => fn ($q) => $q->where('visibility', 'public')->orderBy('sort_order'),
             'organizations',
             'venue',
-        ]);
+        ])->loadCount(['gameScores', 'officialResults']);
 
         return view('public.tournaments.show', [
             'publicConfig' => config('jpba_public', []),
@@ -81,6 +82,9 @@ class PublicTournamentController extends Controller
                 ->where('tournament_id', $tournament->id)
                 ->where('status', 'entry')
                 ->count(),
+            'canPublishScores' => in_array((string) $tournament->setup_status, [
+                'in_progress', 'provisional', 'final', 'archived', 'completed',
+            ], true),
         ]);
     }
 

@@ -2,8 +2,8 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Model;
 
 class Tournament extends Model
 {
@@ -115,9 +115,9 @@ class Tournament extends Model
 
     protected $casts = [
         'start_date' => 'date:Y-m-d',
-        'end_date'   => 'date:Y-m-d',
-        'entry_start'=> 'datetime:Y-m-d H:i:s',
-        'entry_end'  => 'datetime:Y-m-d H:i:s',
+        'end_date' => 'date:Y-m-d',
+        'entry_start' => 'datetime:Y-m-d H:i:s',
+        'entry_end' => 'datetime:Y-m-d H:i:s',
         'shift_draw_open_at' => 'datetime:Y-m-d H:i:s',
         'shift_draw_close_at' => 'datetime:Y-m-d H:i:s',
         'lane_draw_open_at' => 'datetime:Y-m-d H:i:s',
@@ -144,7 +144,7 @@ class Tournament extends Model
         'lane_auto_draw_reminder_send_on' => 'date:Y-m-d',
 
         'poster_images' => 'array',
-        'extra_venues'  => 'array',
+        'extra_venues' => 'array',
         'sidebar_schedule' => 'array',
         'award_highlights' => 'array',
         'gallery_items' => 'array',
@@ -160,7 +160,7 @@ class Tournament extends Model
         'single_elimination_seed_settings' => 'array',
         'shootout_qualifier_count' => 'integer',
         'shootout_settings' => 'array',
-         'result_carry_settings' => 'array',
+        'result_carry_settings' => 'array',
     ];
 
     public function prizeDistributions()
@@ -252,9 +252,19 @@ class Tournament extends Model
         return $this->hasMany(\App\Models\TournamentEntry::class);
     }
 
+    public function gameScores()
+    {
+        return $this->hasMany(GameScore::class);
+    }
+
+    public function officialResults()
+    {
+        return $this->hasMany(TournamentResult::class);
+    }
+
     public function getGenderLabelAttribute(): string
     {
-        return match($this->gender) {
+        return match ($this->gender) {
             'M' => '男子',
             'F' => '女子',
             default => '男女',
@@ -263,10 +273,10 @@ class Tournament extends Model
 
     public function getOfficialTypeLabelAttribute(): string
     {
-        return match($this->official_type) {
+        return match ($this->official_type) {
             'approved' => '承認',
-            'other'    => 'その他',
-            default    => '公認',
+            'other' => 'その他',
+            default => '公認',
         };
     }
 
@@ -275,49 +285,49 @@ class Tournament extends Model
         parent::boot();
 
         static::saving(function ($tournament) {
-            if ($tournament->start_date && !$tournament->year) {
+            if ($tournament->start_date && ! $tournament->year) {
                 $sd = $tournament->start_date instanceof \DateTimeInterface
                     ? $tournament->start_date
                     : Carbon::parse($tournament->start_date);
                 $tournament->year = $sd->year;
             }
 
-            if (!$tournament->gender) {
+            if (! $tournament->gender) {
                 $tournament->gender = 'X';
             }
-            if (!$tournament->official_type) {
+            if (! $tournament->official_type) {
                 $tournament->official_type = 'official';
             }
-            if (!$tournament->title_category) {
+            if (! $tournament->title_category) {
                 $tournament->title_category = 'normal';
             }
-            if (!$tournament->setup_status) {
+            if (! $tournament->setup_status) {
                 $tournament->setup_status = 'draft';
             }
-            if (!$tournament->competition_type) {
+            if (! $tournament->competition_type) {
                 $tournament->competition_type = 'singles';
             }
-            if (!$tournament->title_scope) {
+            if (! $tournament->title_scope) {
                 $tournament->title_scope = $tournament->title_category === 'season_trial'
                     ? 'season_trial'
                     : ($tournament->title_category === 'excluded' ? 'none' : 'official');
             }
-            if (!$tournament->lane_assignment_mode) {
+            if (! $tournament->lane_assignment_mode) {
                 $tournament->lane_assignment_mode = 'single_lane';
             }
-            if (!$tournament->auto_draw_reminder_pending_type) {
+            if (! $tournament->auto_draw_reminder_pending_type) {
                 $tournament->auto_draw_reminder_pending_type = 'either';
             }
-            if (!$tournament->result_flow_type) {
+            if (! $tournament->result_flow_type) {
                 $tournament->result_flow_type = 'legacy_standard';
             }
-            if (!$tournament->single_elimination_seed_policy) {
+            if (! $tournament->single_elimination_seed_policy) {
                 $tournament->single_elimination_seed_policy = 'standard';
             }
-            if (!$tournament->shootout_format) {
+            if (! $tournament->shootout_format) {
                 $tournament->shootout_format = 'standard_8';
             }
-            if (!$tournament->result_carry_preset) {
+            if (! $tournament->result_carry_preset) {
                 $tournament->result_carry_preset = 'default';
             }
             if (is_null($tournament->result_carry_settings)) {

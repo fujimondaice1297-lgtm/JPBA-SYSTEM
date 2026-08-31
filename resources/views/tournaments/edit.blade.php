@@ -134,6 +134,61 @@
   </a>
 </div>
 
+@php
+  $publicScoreStatuses = ['in_progress', 'provisional', 'final', 'archived', 'completed'];
+  $publicScoresEnabled = in_array((string) $tournament->setup_status, $publicScoreStatuses, true);
+@endphp
+<section class="card border-primary mb-4">
+  <div class="card-header bg-primary text-white fw-bold">一般公開：大会ページ・速報・全成績</div>
+  <div class="card-body">
+    <p class="mb-3">
+      スコア入力から「速報」、確定成績から「全成績」が自動で作られます。
+      公開する場合は登録状態を「大会進行中」以降にしてください。
+    </p>
+    <div class="row g-3 mb-3">
+      <div class="col-md-4">
+        <div class="border rounded p-3 h-100">
+          <div class="fw-bold">大会ページ</div>
+          <div class="text-muted small mb-2">資料・エントリー・速報・成績の入口</div>
+          <a class="btn btn-outline-primary btn-sm" href="{{ route('public.tournaments.show', $tournament) }}" target="_blank">公開画面を確認</a>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="border rounded p-3 h-100">
+          <div class="fw-bold">速報</div>
+          <div class="text-muted small mb-2">{{ number_format((int)$tournament->game_scores_count) }}スコア登録済み</div>
+          @if($publicScoresEnabled && (int)$tournament->game_scores_count > 0)
+            <a class="btn btn-primary btn-sm" href="{{ route('public.tournaments.live', $tournament) }}" target="_blank">速報を確認</a>
+          @else
+            <span class="badge text-bg-secondary">公開前</span>
+          @endif
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="border rounded p-3 h-100">
+          <div class="fw-bold">全成績</div>
+          <div class="text-muted small mb-2">{{ number_format((int)$tournament->official_results_count) }}名登録済み</div>
+          @if($publicScoresEnabled && (int)$tournament->official_results_count > 0)
+            <a class="btn btn-danger btn-sm" href="{{ route('public.tournaments.results', $tournament) }}" target="_blank">全成績を確認</a>
+          @else
+            <span class="badge text-bg-secondary">公開前</span>
+          @endif
+        </div>
+      </div>
+    </div>
+    @unless($publicScoresEnabled)
+      <div class="alert alert-warning py-2 mb-3">
+        現在の登録状態「{{ $tournament->setup_status ?: '未設定' }}」では、入力途中の速報・成績を一般公開しません。
+      </div>
+    @endunless
+    <div class="d-flex flex-wrap gap-2">
+      <a class="btn btn-outline-primary btn-sm" href="{{ route('public.tournaments.live_results') }}" target="_blank">一般公開「速報・成績」一覧</a>
+      <a class="btn btn-outline-secondary btn-sm" href="{{ route('flash_news.index') }}">外部速報リンク管理</a>
+      <a class="btn btn-outline-secondary btn-sm" href="{{ route('flash_news.create', ['title' => $tournament->name]) }}">この大会の外部リンクを追加</a>
+    </div>
+  </div>
+</section>
+
 <form method="POST" action="{{ route('tournaments.update', $tournament->id) }}" enctype="multipart/form-data" id="tournament-edit-form">
   @csrf
   @method('PUT')
@@ -165,7 +220,8 @@
       <select name="setup_status" class="form-select">
         @foreach([
           'draft' => '下書き', 'ready' => '準備完了', 'entry_open' => '申込受付中',
-          'in_progress' => '大会進行中', 'provisional' => '暫定成績', 'final' => '確定', 'archived' => '保管'
+          'in_progress' => '大会進行中', 'provisional' => '暫定成績', 'final' => '確定', 'archived' => '保管',
+          'completed' => '取込完了（公開）'
         ] as $value => $label)
           <option value="{{ $value }}" {{ $setupStatus === $value ? 'selected' : '' }}>{{ $label }}</option>
         @endforeach

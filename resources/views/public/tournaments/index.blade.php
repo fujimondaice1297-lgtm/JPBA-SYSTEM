@@ -242,6 +242,15 @@
 
             <div class="jpba-tournament-links">
               <a href="{{ route('public.tournaments.show', $tournament) }}">大会ページ</a>
+              @php
+                $canPublishScores = in_array((string) $tournament->setup_status, ['in_progress', 'provisional', 'final', 'archived', 'completed'], true);
+              @endphp
+              @if($canPublishScores && (int) $tournament->game_scores_count > 0)
+                <a href="{{ route('public.tournaments.live', $tournament) }}">速報（{{ number_format((int) $tournament->game_scores_count) }}スコア）</a>
+              @endif
+              @if($canPublishScores && (int) $tournament->official_results_count > 0)
+                <a href="{{ route('public.tournaments.results', $tournament) }}">全成績（{{ number_format((int) $tournament->official_results_count) }}名）</a>
+              @endif
               @foreach($tournament->files->take(3) as $file)
                 <a href="{{ asset('storage/' . ltrim($file->file_path, '/')) }}" target="_blank" rel="noopener">
                   {{ $file->title ?: '資料' }}

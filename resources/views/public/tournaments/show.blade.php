@@ -191,8 +191,18 @@
 <section class="jpba-panel" aria-labelledby="file-heading">
   <h2 id="file-heading" class="jpba-section-title">資料・速報・成績</h2>
 
-  @if(!empty($fileLinks) || !empty($scheduleLinks) || $entryCount > 0)
+  @if(!empty($fileLinks) || !empty($scheduleLinks) || $entryCount > 0 || ($canPublishScores && ((int) $tournament->game_scores_count > 0 || (int) $tournament->official_results_count > 0)))
     <div class="jpba-link-list">
+      @if($canPublishScores && (int) $tournament->game_scores_count > 0)
+        <a href="{{ route('public.tournaments.live', $tournament) }}" style="background:#174a8b;color:#fff;border-color:#174a8b;">
+          速報・途中経過を見る（{{ number_format((int) $tournament->game_scores_count) }}スコア）
+        </a>
+      @endif
+      @if($canPublishScores && (int) $tournament->official_results_count > 0)
+        <a href="{{ route('public.tournaments.results', $tournament) }}" style="background:#c5282f;color:#fff;border-color:#c5282f;">
+          全成績を見る（{{ number_format((int) $tournament->official_results_count) }}名）
+        </a>
+      @endif
       @if($entryCount > 0)
         <a href="{{ route('public.tournaments.entries', $tournament) }}">
           エントリープロ・大会登録ボール（{{ number_format($entryCount) }}名）
@@ -242,7 +252,14 @@
 @endif
 
 <section class="jpba-panel" aria-labelledby="result-heading">
-  <h2 id="result-heading" class="jpba-section-title">成績</h2>
+  <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-2">
+    <h2 id="result-heading" class="jpba-section-title mb-0">成績（上位10名）</h2>
+    @if($canPublishScores && (int) $tournament->official_results_count > 0)
+      <a class="jpba-small-button" href="{{ route('public.tournaments.results', $tournament) }}">
+        全成績を見る（{{ number_format((int) $tournament->official_results_count) }}名）
+      </a>
+    @endif
+  </div>
 
   @if($resultRows->count())
     <table class="jpba-result-table">
@@ -284,7 +301,9 @@
                 @endif
               </div>
             </td>
-            <td>{{ $row->pro_bowler_license_no ?: '-' }}</td>
+            <td>
+              {{ str_starts_with(strtoupper((string)$row->pro_bowler_license_no), 'AMATEUR-') ? 'アマ' : ($row->pro_bowler_license_no ?: '-') }}
+            </td>
             <td>{{ $row->total_pin !== null ? number_format((int)$row->total_pin) : '-' }}</td>
             <td>{{ $row->games ?: '-' }}</td>
             <td>{{ $row->average !== null ? number_format((float)$row->average, 2) : '-' }}</td>

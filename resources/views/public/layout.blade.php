@@ -79,7 +79,7 @@
 
     .jpba-nav {
       display: grid;
-      grid-template-columns: repeat(7, minmax(0, 1fr));
+      grid-template-columns: repeat(8, minmax(0, 1fr));
       border-bottom: 3px solid var(--jpba-blue);
       background: var(--jpba-blue);
     }
