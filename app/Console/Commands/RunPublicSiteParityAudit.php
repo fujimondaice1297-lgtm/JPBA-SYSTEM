@@ -56,6 +56,7 @@ class RunPublicSiteParityAudit extends Command
     private function publicPages(): array
     {
         return [
+            ['page' => 'women-tournament-priority', 'path' => '/rankings/women-tournament-priority?year=2026&period=lower', 'required' => ['2026年度下半期女子トーナメント出場優先順位', '239名', '下半期出場優先順位決定戦']],
             ['page' => 'home', 'path' => '/', 'required' => ['TOURNAMENT', 'INFORMATION', '公式PDF', '関連チャンネル', '会員・関係者', '2026 JPBAトーナメント予定表', 'JPBAツアー ご観戦時のご案内', 'ウレタンボールの使用規制について', 'JPBA LIVEチャンネル', 'io.LEAGUEチャンネル', 'io.LEAGUE Official Website']],
             ['page' => 'about', 'path' => '/about', 'required' => ['JPBAについて', '協会概要', '事業']],
             ['page' => 'schedule', 'path' => '/schedule', 'required' => ['スケジュール']],

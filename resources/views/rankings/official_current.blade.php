@@ -14,6 +14,8 @@
             <a href="{{ route('public.tournaments.live_results') }}" class="btn btn-outline-secondary">速報・成績へ戻る</a>
             @if($gender === 'M')
                 <a href="{{ route('rankings.season_trial', ['year' => $selectedYear]) }}" class="btn btn-outline-primary">ST年間ポイント</a>
+            @else
+                <a href="{{ route('rankings.women_tournament_priority', ['year' => $selectedYear]) }}" class="btn btn-outline-primary">女子出場優先順位</a>
             @endif
         </div>
     </div>

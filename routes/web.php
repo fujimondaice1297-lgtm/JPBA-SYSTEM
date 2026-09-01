@@ -236,6 +236,8 @@ Route::get('/rankings/season-trial/championship-priority', [RankingController::c
     ->name('rankings.season_trial_championship_priority');
 Route::get('/rankings/current', [RankingController::class, 'officialCurrent'])
     ->name('rankings.official_current');
+Route::get('/rankings/women-tournament-priority', [RankingController::class, 'womenTournamentPriority'])
+    ->name('rankings.women_tournament_priority');
 Route::get('/tournament/{tournament}', [PublicTournamentController::class, 'show'])
     ->whereNumber('tournament')
     ->name('public.tournaments.show');

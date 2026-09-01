@@ -7,6 +7,7 @@ use App\Models\ProBowlerRankingRow;
 use App\Models\ProBowlerRankingSnapshot;
 use App\Services\OfficialCurrentRankingService;
 use App\Services\SeasonTrialRankingService;
+use App\Services\WomenTournamentPriorityService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -80,6 +81,25 @@ class RankingController extends Controller
             'years' => $years,
             'selectedYear' => $selectedYear,
             'canManageRankings' => $this->canManageRankings(),
+        ]);
+    }
+
+    public function womenTournamentPriority(
+        Request $request,
+        WomenTournamentPriorityService $priorityService,
+    ) {
+        $years = $priorityService->years();
+        $selectedYear = $this->requestedYear($request, $years);
+        $period = array_key_exists((string) $request->query('period'), WomenTournamentPriorityService::PERIOD_LABELS)
+            ? (string) $request->query('period')
+            : 'lower';
+
+        return view('rankings.women_tournament_priority', [
+            'priority' => $priorityService->priority($selectedYear, $period),
+            'years' => $years,
+            'selectedYear' => $selectedYear,
+            'period' => $period,
+            'periodLabels' => WomenTournamentPriorityService::PERIOD_LABELS,
         ]);
     }
 
