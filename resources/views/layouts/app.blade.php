@@ -308,6 +308,7 @@
                                     <li><a class="dropdown-item" href="{{ route('rankings.season_trial') }}">ST年間ポイントランキング</a></li>
                                     <li><a class="dropdown-item" href="{{ route('rankings.season_trial_championship_priority') }}">STチャンピオンズ優先出場</a></li>
                                     <li><a class="dropdown-item" href="{{ route('rankings.women_tournament_priority') }}">女子トーナメント出場優先順位</a></li>
+                                    <li><a class="dropdown-item" href="{{ route('rankings.point_distribution') }}">JPBAポイント配分表</a></li>
                                     <li><a class="dropdown-item" href="{{ route('record_types.index') }}">公認記録管理</a></li>
                                 </ul>
                             </li>

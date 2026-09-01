@@ -41,6 +41,7 @@
     <a href="{{ route('rankings.official_current', ['gender' => 'M', 'type' => 'prize']) }}">男子賞金ランキング</a>
     <a href="{{ route('rankings.official_current', ['gender' => 'F', 'type' => 'prize']) }}">女子賞金ランキング</a>
     <a href="{{ route('rankings.women_tournament_priority') }}">女子トーナメント出場優先順位</a>
+    <a href="{{ route('rankings.point_distribution') }}">JPBAポイント配分表</a>
   </div>
 
   <h2 id="season-trial-ranking-heading" class="jpba-section-title">シーズントライアル</h2>

@@ -56,13 +56,14 @@ class RunPublicSiteParityAudit extends Command
     private function publicPages(): array
     {
         return [
+            ['page' => 'point-distribution', 'path' => '/rankings/point-distribution', 'required' => ['JPBAポイント配分表', '男子（96名）', '女子（72名）', 'シーズントライアル（8名）']],
             ['page' => 'women-tournament-priority', 'path' => '/rankings/women-tournament-priority?year=2026&period=lower', 'required' => ['2026年度下半期女子トーナメント出場優先順位', '239名', '下半期出場優先順位決定戦']],
             ['page' => 'home', 'path' => '/', 'required' => ['TOURNAMENT', 'INFORMATION', '公式PDF', '関連チャンネル', '会員・関係者', '2026 JPBAトーナメント予定表', 'JPBAツアー ご観戦時のご案内', 'ウレタンボールの使用規制について', 'JPBA LIVEチャンネル', 'io.LEAGUEチャンネル', 'io.LEAGUE Official Website']],
             ['page' => 'about', 'path' => '/about', 'required' => ['JPBAについて', '協会概要', '事業']],
             ['page' => 'schedule', 'path' => '/schedule', 'required' => ['スケジュール']],
             ['page' => 'players', 'path' => '/players', 'required' => ['選手データ']],
             ['page' => 'tournaments', 'path' => '/tournament', 'required' => ['トーナメント']],
-            ['page' => 'live-results', 'path' => '/tournament/live-results', 'required' => ['速報・成績', '男子ポイントランキング', '女子賞金ランキング', 'ST年間ポイントランキング', 'STチャンピオンズ優先出場一覧']],
+            ['page' => 'live-results', 'path' => '/tournament/live-results', 'required' => ['速報・成績', '男子ポイントランキング', '女子賞金ランキング', 'JPBAポイント配分表', 'ST年間ポイントランキング', 'STチャンピオンズ優先出場一覧']],
             ['page' => 'official-current-ranking', 'path' => '/rankings/current?year=2026&gender=M&type=points', 'required' => ['2026年 男子ポイントランキング', '獲得賞金']],
             ['page' => 'season-trial-ranking', 'path' => '/rankings/season-trial?year=2026', 'required' => ['シーズントライアル年間ポイントランキング', '優先出場一覧']],
             ['page' => 'season-trial-priority', 'path' => '/rankings/season-trial/championship-priority?year=2026', 'required' => ['STチャンピオンズ優先出場一覧', 'ST年間ポイント']],

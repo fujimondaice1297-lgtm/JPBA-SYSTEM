@@ -17,6 +17,7 @@
             @else
                 <a href="{{ route('rankings.women_tournament_priority', ['year' => $selectedYear]) }}" class="btn btn-outline-primary">女子出場優先順位</a>
             @endif
+            <a href="{{ route('rankings.point_distribution') }}" class="btn btn-outline-primary">ポイント配分表</a>
         </div>
     </div>
 

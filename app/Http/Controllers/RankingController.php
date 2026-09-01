@@ -6,6 +6,7 @@ use App\Models\ProBowler;
 use App\Models\ProBowlerRankingRow;
 use App\Models\ProBowlerRankingSnapshot;
 use App\Services\OfficialCurrentRankingService;
+use App\Services\OfficialPointDistributionService;
 use App\Services\SeasonTrialRankingService;
 use App\Services\WomenTournamentPriorityService;
 use Illuminate\Http\Request;
@@ -100,6 +101,13 @@ class RankingController extends Controller
             'selectedYear' => $selectedYear,
             'period' => $period,
             'periodLabels' => WomenTournamentPriorityService::PERIOD_LABELS,
+        ]);
+    }
+
+    public function pointDistribution(OfficialPointDistributionService $distributionService)
+    {
+        return view('rankings.point_distribution', [
+            'distribution' => $distributionService->distribution(),
         ]);
     }
 
