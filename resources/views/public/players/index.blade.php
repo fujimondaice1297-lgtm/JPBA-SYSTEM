@@ -134,17 +134,7 @@
 
 @section('content')
 @php
-  $licenseDisplay = function ($bowler) {
-      if (($bowler->license_no_num ?? null) !== null && $bowler->license_no_num !== '') {
-          return str_pad((string) ((int) $bowler->license_no_num), 4, '0', STR_PAD_LEFT);
-      }
-
-      if (preg_match('/(\d{1,4})$/', (string) ($bowler->license_no ?? ''), $matches)) {
-          return str_pad($matches[1], 4, '0', STR_PAD_LEFT);
-      }
-
-      return $bowler->license_no ?: '-';
-  };
+  $licenseDisplay = fn ($bowler): string => \App\Support\PublicLicenseNumber::format($bowler->license_no);
 @endphp
 
 <h1 class="jpba-page-title">選手データ</h1>

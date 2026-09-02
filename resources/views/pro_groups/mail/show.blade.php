@@ -20,7 +20,7 @@
         <tbody>
           @forelse($samples as $r)
             <tr>
-              <td>{{ $r->bowler?->license_no }}</td>
+              <td>{{ \App\Support\PublicLicenseNumber::format($r->bowler?->license_no) }}</td>
               <td>{{ $r->bowler?->name_kanji }}</td>
               <td>{{ $r->email }}</td>
               <td>{{ $r->status }} @if($r->error_message) <span class="text-danger">({{ $r->error_message }})</span>@endif</td>

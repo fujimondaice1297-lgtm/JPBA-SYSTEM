@@ -178,7 +178,7 @@
               <option value="">未結線のまま</option>
               @foreach ($candidateBowlers as $bowler)
                 <option value="{{ $bowler->id }}" {{ (string) old('linked_pro_bowler_id', $instructor->pro_bowler_id) === (string) $bowler->id ? 'selected' : '' }}>
-                  {{ $bowler->license_no }} / {{ $bowler->name_kanji }}{{ $bowler->name_kana ? ' / ' . $bowler->name_kana : '' }}{{ optional($bowler->district)->label ? ' / ' . $bowler->district->label : '' }}
+                  {{ \App\Support\PublicLicenseNumber::format($bowler->license_no) }} / {{ $bowler->name_kanji }}{{ $bowler->name_kana ? ' / ' . $bowler->name_kana : '' }}{{ optional($bowler->district)->label ? ' / ' . $bowler->district->label : '' }}
                 </option>
               @endforeach
             </select>

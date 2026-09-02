@@ -7,7 +7,7 @@
             <h2 class="mb-1">{{ $year }}年度 ボール登録申請</h2>
             <div class="text-muted">
                 {{ $proBowler->name_kanji ?? '-' }}
-                （{{ $proBowler->license_no ?? '-' }}）
+                （{{ \App\Support\PublicLicenseNumber::format($proBowler->license_no) }}）
                 @if($staffProxy)
                     <span class="badge bg-warning text-dark ms-2">スタッフ代理入力</span>
                 @endif

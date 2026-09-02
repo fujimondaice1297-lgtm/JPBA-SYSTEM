@@ -326,12 +326,7 @@
                             $heldInstructorQualificationLabel = 'C級';
                         }
 
-                        $displayLicenseNo = '-';
-                        if (($bowler->license_no_num ?? null) !== null && $bowler->license_no_num !== '') {
-                            $displayLicenseNo = str_pad((string) ((int) $bowler->license_no_num), 4, '0', STR_PAD_LEFT);
-                        } elseif (preg_match('/(\d{1,4})$/', (string) ($bowler->license_no ?? ''), $matches)) {
-                            $displayLicenseNo = str_pad($matches[1], 4, '0', STR_PAD_LEFT);
-                        }
+                        $displayLicenseNo = \App\Support\PublicLicenseNumber::format($bowler->license_no);
                     @endphp
                     <tr data-id="{{ $bowler->id }}">
                         {{-- ライセンスNo. --}}

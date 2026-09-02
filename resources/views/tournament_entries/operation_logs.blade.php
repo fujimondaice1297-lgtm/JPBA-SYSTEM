@@ -381,7 +381,7 @@
                     <td>
                       {{ $missingScorePlayer['license_tail'] ?? '-' }}
                       @if (!empty($missingScorePlayer['license_no']))
-                        <div class="small text-muted">{{ $missingScorePlayer['license_no'] }}</div>
+                        <div class="small text-muted">{{ \App\Support\PublicLicenseNumber::format($missingScorePlayer['license_no']) }}</div>
                       @endif
                     </td>
                     <td>{{ $missingScorePlayer['name'] ?? '-' }}</td>
@@ -916,7 +916,7 @@
                       <ul class="mb-0 mt-2">
                         @foreach ($errors as $error)
                           <li>
-                            {{ $error['license_no'] ?? '-' }}
+                            {{ \App\Support\PublicLicenseNumber::format($error['license_no'] ?? null) }}
                             {{ $error['name_kanji'] ?? '-' }}
                             / {{ $error['message'] ?? '-' }}
                           </li>

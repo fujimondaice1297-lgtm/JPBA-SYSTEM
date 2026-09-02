@@ -55,7 +55,7 @@
                 @if ($isEdit)
                     <div class="col-md-6">
                         <label class="form-label">選手</label>
-                        <input class="form-control" value="{{ $recordType->proBowler->name_kanji ?? '不明' }}（{{ $recordType->proBowler->license_no ?? '-' }}）" readonly>
+                        <input class="form-control" value="{{ $recordType->proBowler->name_kanji ?? '不明' }}（{{ \App\Support\PublicLicenseNumber::format($recordType->proBowler->license_no) }}）" readonly>
                     </div>
                 @else
                     <div class="col-md-6">

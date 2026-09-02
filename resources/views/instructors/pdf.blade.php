@@ -51,10 +51,10 @@
         <tbody>
             @forelse ($instructors as $i)
                 @php
-                    $displayCode = $i->license_no
+                    $displayCode = \App\Support\PublicLicenseNumber::format($i->license_no
                         ?? $i->cert_no
                         ?? $i->legacy_instructor_license_no
-                        ?? '-';
+                        ?? null);
 
                     $sexLabel = $i->sex === null
                         ? '-'

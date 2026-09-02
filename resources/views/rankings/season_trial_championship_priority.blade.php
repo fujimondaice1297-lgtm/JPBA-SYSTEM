@@ -119,7 +119,7 @@
                                             <span class="fw-bold">{{ $row['name_kanji'] }}</span>
                                         @endif
                                         <div class="small text-muted">
-                                            {{ $row['license_no'] ?: '-' }}
+                                            {{ \App\Support\PublicLicenseNumber::format($row['license_no'] ?? null) }}
                                             @if ($row['kibetsu']) ・第{{ $row['kibetsu'] }}期 @endif
                                             @if ($row['organization_name']) ・{{ $row['organization_name'] }} @endif
                                         </div>

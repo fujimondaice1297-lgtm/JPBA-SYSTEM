@@ -302,7 +302,7 @@
               </div>
             </td>
             <td>
-              {{ str_starts_with(strtoupper((string)$row->pro_bowler_license_no), 'AMATEUR-') ? 'アマ' : ($row->pro_bowler_license_no ?: '-') }}
+              {{ \App\Support\PublicLicenseNumber::format($row->pro_bowler_license_no) }}
             </td>
             <td>{{ $row->total_pin !== null ? number_format((int)$row->total_pin) : '-' }}</td>
             <td>{{ $row->games ?: '-' }}</td>

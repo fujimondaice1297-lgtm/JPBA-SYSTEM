@@ -35,7 +35,7 @@
       <div class="row g-2">
         <div class="col-md-3">
           <div class="text-muted small">ライセンスNo</div>
-          <div>{{ $bowler->license_no ?? '-' }}</div>
+          <div>{{ \App\Support\PublicLicenseNumber::format($bowler->license_no) }}</div>
         </div>
         <div class="col-md-3">
           <div class="text-muted small">氏名</div>

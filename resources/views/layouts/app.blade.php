@@ -344,7 +344,7 @@
                     <div class="d-xl-flex align-items-center gap-3">
                         <div class="jpba-user-block">
                             <strong>{{ $u?->proBowler?->name_kanji ?? $u?->name }}</strong>
-                            <small>{{ $isStaff ? ($u->isAdmin() ? '管理者' : '編集者') : '選手' }}／{{ $licenseNo }}</small>
+                            <small>{{ $isStaff ? ($u->isAdmin() ? '管理者' : '編集者') : '選手' }}／{{ $isStaff ? $licenseNo : \App\Support\PublicLicenseNumber::format($licenseNo) }}</small>
                         </div>
                         <a href="{{ route('logout') }}"
                            onclick="event.preventDefault(); document.getElementById('logout-form').submit();"

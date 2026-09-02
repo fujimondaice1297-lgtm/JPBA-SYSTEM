@@ -125,7 +125,7 @@
                     <span class="fw-bold">{{ $row['display_name'] }}</span>
                   @endif
                   <div class="small text-muted">
-                    {{ $row['license_no'] }}
+                    {{ \App\Support\PublicLicenseNumber::format($row['license_no']) }}
                     @if($row['kibetsu']) ・第{{ $row['kibetsu'] }}期 @endif
                     @if($row['category_value']) ・{{ $row['category_value'] }} @endif
                     @if($row['affiliation']) ・{{ $row['affiliation'] }} @endif

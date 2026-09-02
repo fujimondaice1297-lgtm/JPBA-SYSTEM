@@ -218,10 +218,10 @@
           <tbody>
             @foreach ($instructors as $instructor)
               @php
-                $displayCode = $instructor->license_no
+                $displayCode = \App\Support\PublicLicenseNumber::format($instructor->license_no
                   ?? $instructor->cert_no
                   ?? $instructor->legacy_instructor_license_no
-                  ?? '-';
+                  ?? null);
 
                 $sexLabel = $instructor->sex === null
                   ? '-'
@@ -237,7 +237,7 @@
                 $rowStateBadgeClass = $instructor->is_current ? 'bg-success' : 'bg-secondary';
 
                 if ($instructor->proBowler) {
-                  $linkedProLabel = ($instructor->proBowler->license_no ?? '-') . ' / ' . ($instructor->proBowler->name_kanji ?? '-');
+                  $linkedProLabel = \App\Support\PublicLicenseNumber::format($instructor->proBowler->license_no) . ' / ' . ($instructor->proBowler->name_kanji ?? '-');
                 } elseif ($instructor->pro_bowler_id) {
                   $linkedProLabel = 'ID:' . $instructor->pro_bowler_id . ' / 未取得';
                 } else {

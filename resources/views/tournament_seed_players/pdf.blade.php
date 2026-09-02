@@ -490,7 +490,7 @@
                                     <tr>
                                         <td class="text-right">{{ $player['priority_no'] ?? '-' }}</td>
                                         <td class="text-right">{{ $player['ranking_rank'] ?? '-' }}</td>
-                                        <td class="license">{{ $player['license_no'] ?? '-' }}</td>
+                                        <td class="license">{{ \App\Support\PublicLicenseNumber::format($player['license_no'] ?? null) }}</td>
                                         <td>{{ $player['name'] ?? '-' }}</td>
                                         <td class="text-center">{{ $player['period_label'] ?? '-' }}</td>
                                         <td class="text-center">TS</td>
@@ -517,7 +517,7 @@
                                     @foreach($otherSupplementalPlayers as $player)
                                         <tr>
                                             <td class="text-right">{{ $player['priority_no'] ?? '-' }}</td>
-                                            <td class="license">{{ $player['license_no'] ?? '-' }}</td>
+                                            <td class="license">{{ \App\Support\PublicLicenseNumber::format($player['license_no'] ?? null) }}</td>
                                             <td>{{ $player['name'] ?? '-' }}</td>
                                             <td class="text-center">{{ $player['period_label'] ?? '-' }}</td>
                                             <td>{{ $player['seed_label'] ?? '-' }}</td>
@@ -564,7 +564,7 @@
                                         @foreach($players as $player)
                                             <tr>
                                                 <td class="text-right">{{ $player['priority_no'] ?? '-' }}</td>
-                                                <td class="license">{{ $player['license_no'] ?? '-' }}</td>
+                                                <td class="license">{{ \App\Support\PublicLicenseNumber::format($player['license_no'] ?? null) }}</td>
                                                 <td>{{ $player['name'] ?? '-' }}</td>
                                                 <td class="text-center">{{ $player['period_label'] ?? '-' }}</td>
                                             </tr>

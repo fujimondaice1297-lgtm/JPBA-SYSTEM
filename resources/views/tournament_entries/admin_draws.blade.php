@@ -176,7 +176,7 @@
         @forelse ($entries as $entry)
           @php $bowler = $entry->bowler; @endphp
           <tr class="{{ $entry->is_priority_entry ? 'table-success' : '' }}">
-            <td>{{ $bowler->license_no ?? '-' }}</td>
+            <td>{{ \App\Support\PublicLicenseNumber::format($bowler->license_no) }}</td>
             <td>{{ $bowler->name_kanji ?? '-' }}</td>
             <td>
               @if ($entry->is_priority_entry)

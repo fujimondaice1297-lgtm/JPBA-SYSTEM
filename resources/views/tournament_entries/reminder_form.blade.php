@@ -122,7 +122,7 @@
           <tbody>
             @forelse ($mailReadyEntries->take(50) as $entry)
               <tr>
-                <td>{{ $entry->bowler?->license_no ?? '-' }}</td>
+                <td>{{ \App\Support\PublicLicenseNumber::format($entry->bowler?->license_no) }}</td>
                 <td>{{ $entry->bowler?->name_kanji ?? '-' }}</td>
                 <td>{{ $entry->bowler?->email ?? '-' }}</td>
                 <td>{{ $entry->preferred_shift_code ?? '-' }}</td>

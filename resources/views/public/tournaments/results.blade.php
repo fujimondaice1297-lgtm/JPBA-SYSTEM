@@ -68,9 +68,7 @@
             $bowler = $result->publicBowler;
             $entry = $result->public_entry;
             $playerName = $bowler?->name_kanji ?: ($result->amateur_name ?: '-');
-            $licenseDisplay = str_starts_with(strtoupper((string)$result->pro_bowler_license_no), 'AMATEUR-')
-                ? 'アマ'
-                : ($result->pro_bowler_license_no ?: '-');
+            $licenseDisplay = \App\Support\PublicLicenseNumber::format($result->pro_bowler_license_no);
           @endphp
           <tr>
             <td>{{ $result->ranking ?: '-' }}</td>

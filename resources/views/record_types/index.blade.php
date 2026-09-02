@@ -84,7 +84,7 @@
                         </td>
                         <td>
                             <div>{{ $record->proBowler->name_kanji ?? '不明' }}</div>
-                            <small class="text-muted">{{ $record->proBowler->license_no ?? '' }}</small>
+                            <small class="text-muted">{{ \App\Support\PublicLicenseNumber::format($record->proBowler->license_no, '') }}</small>
                         </td>
                         <td>{{ $record->record_type_label }}</td>
                         <td>

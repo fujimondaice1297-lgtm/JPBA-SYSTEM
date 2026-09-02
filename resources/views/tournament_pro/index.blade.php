@@ -124,7 +124,7 @@
                                                 <td class="text-end">{{ $row['seed_rank'] ?: '-' }}</td>
                                                 <td class="text-end">
                                                     @if ($row['license_no'])
-                                                        <span title="{{ $row['license_no'] }}">{{ $row['display_license_no'] }}</span>
+                                                        <span>{{ \App\Support\PublicLicenseNumber::format($row['display_license_no'] ?? $row['license_no']) }}</span>
                                                     @else
                                                         -
                                                     @endif

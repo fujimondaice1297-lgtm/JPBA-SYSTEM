@@ -33,7 +33,7 @@
             <div class="row g-3 small">
                 <div class="col-md-3">
                     <div class="text-muted">ライセンス番号</div>
-                    <div>{{ $usedBall->proBowler?->license_no ?? '-' }}</div>
+                    <div>{{ \App\Support\PublicLicenseNumber::format($usedBall->proBowler?->license_no) }}</div>
                 </div>
                 <div class="col-md-3">
                     <div class="text-muted">氏名</div>

@@ -122,7 +122,7 @@
                                 <td>{{ $row['ranking'] }}</td>
                                 <td>
                                     <div>{{ $row['display_name'] }}</div>
-                                    <div class="small text-muted">{{ $row['pro_bowler_license_no'] ?? 'アマ' }}</div>
+                                    <div class="small text-muted">{{ \App\Support\PublicLicenseNumber::format($row['pro_bowler_license_no'] ?? null, 'アマ') }}</div>
                                 </td>
                                 <td class="small">{{ $row['source_result_code'] }}</td>
                                 <td class="text-end">{{ number_format((int) ($row['games'] ?? 0)) }}</td>

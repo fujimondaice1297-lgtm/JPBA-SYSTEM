@@ -91,7 +91,7 @@
       <thead class="table-light"><tr><th><input type="checkbox" id="checkAll"></th><th>ライセンスNo</th><th>氏名</th><th>受講状態</th><th>最終受講日</th><th>有効期限</th><th>確認根拠</th><th>メール</th><th>操作</th></tr></thead>
       <tbody>@forelse($bowlers as $bowler)@php($key=$bowler->training_compliance_status ?: 'unconfirmed')@php($evidence=$evidenceByBowler->get($bowler->id, []))<tr>
         <td><input type="checkbox" name="bowler_ids[]" value="{{ $bowler->id }}" class="row-check"></td>
-        <td>{{ $bowler->license_no }}</td><td class="fw-bold">{{ $bowler->name_kanji }}</td>
+        <td>{{ \App\Support\PublicLicenseNumber::format($bowler->license_no) }}</td><td class="fw-bold">{{ $bowler->name_kanji }}</td>
         <td><span class="status-pill {{ $classes[$key] ?? 'status-muted' }}">{{ $labels[$key] ?? $key }}</span></td>
         <td>{{ data_get($evidence, 'completed_at')?->format('Y/m/d') ?? '―' }}</td>
         <td>{{ data_get($evidence, 'expires_at')?->format('Y/m/d') ?? '―' }}</td>

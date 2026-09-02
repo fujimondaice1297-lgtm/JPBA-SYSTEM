@@ -110,6 +110,8 @@ test('season trial ranking adds every published venue and breaks ties by total p
         ->assertOk()
         ->assertSee('シーズントライアル年間ポイントランキング')
         ->assertSee('ST集計 選手B')
+        ->assertSee('9802')
+        ->assertDontSee('M00009802')
         ->assertSee('速報・成績へ戻る')
         ->assertSee('2会場');
 });

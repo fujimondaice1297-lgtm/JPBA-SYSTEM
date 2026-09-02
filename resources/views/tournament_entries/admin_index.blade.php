@@ -283,8 +283,8 @@
               <tr>
                 <td>{{ $amateurParticipant->sort_order ?? '-' }}</td>
                 <td>
-                  {{ $amateurParticipant->display_license_no ?? 'アマ' }}<br>
-                  <span class="text-muted small">{{ $amateurParticipant->pro_bowler_license_no }}</span>
+                  {{ \App\Support\PublicLicenseNumber::format($amateurParticipant->display_license_no, 'アマ') }}<br>
+                  <span class="text-muted small">{{ \App\Support\PublicLicenseNumber::format($amateurParticipant->pro_bowler_license_no) }}</span>
                   @if (!empty($amateurParticipant->master_amateur_no))
                     <br><span class="badge text-bg-light">{{ $amateurParticipant->master_amateur_no }}</span>
                   @endif
@@ -699,7 +699,7 @@
               @endif
             </td>
             <td>{{ $entry->waitlist_priority ?? '-' }}</td>
-            <td>{{ $entry->participant_display_license_no ?? ($bowler->license_no ?? '-') }}</td>
+            <td>{{ \App\Support\PublicLicenseNumber::format($entry->participant_display_license_no ?? $bowler->license_no) }}</td>
             <td>{{ $entry->participant_display_name ?? ($bowler->name_kanji ?? '-') }}</td>
             <td>
               <span class="badge bg-light text-dark" title="{{ $entry->eligibility_message }}">

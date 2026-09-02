@@ -230,7 +230,7 @@
                                             data-kana="{{ $option->name_kana }}"
                                             data-arm="{{ $option->dominant_arm }}"
                                             @selected((string)old("players.$playerIndex.pro_bowler_id", $player['pro_bowler_id']) === (string)$option->id)>
-                                            {{ $option->license_no }} / {{ $option->name_kanji }}
+                                            {{ \App\Support\PublicLicenseNumber::format($option->license_no) }} / {{ $option->name_kanji }}
                                         </option>
                                     @endforeach
                                 </select>

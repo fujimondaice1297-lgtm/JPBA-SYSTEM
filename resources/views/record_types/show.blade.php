@@ -16,7 +16,7 @@
                 <dt class="col-md-3">状態</dt>
                 <dd class="col-md-9">{{ $recordType->status_label }}</dd>
                 <dt class="col-md-3">選手</dt>
-                <dd class="col-md-9">{{ $recordType->proBowler->name_kanji ?? '不明' }}（{{ $recordType->proBowler->license_no ?? '-' }}）</dd>
+                <dd class="col-md-9">{{ $recordType->proBowler->name_kanji ?? '不明' }}（{{ \App\Support\PublicLicenseNumber::format($recordType->proBowler->license_no) }}）</dd>
                 <dt class="col-md-3">記録種別</dt>
                 <dd class="col-md-9">{{ $recordType->record_type_label }}</dd>
                 <dt class="col-md-3">達成日</dt>

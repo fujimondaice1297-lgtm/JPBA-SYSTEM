@@ -296,7 +296,7 @@
                 @php($affiliationDisplay = $compactAffiliation($profile['affiliation'] ?? '-'))
                 <tr>
                     <td>{{ $row->ranking }}</td>
-                    <td class="license-cell">{{ $profile['license_display'] ?? ($row->pro_bowler_license_no ?? '-') }}</td>
+                    <td class="license-cell">{{ \App\Support\PublicLicenseNumber::format($profile['license_display'] ?? $row->pro_bowler_license_no) }}</td>
                     <td class="text-left fw-bold">{{ $row->display_name }}</td>
                     <td>{{ $profile['period'] ?? '' }}</td>
                     <td>{{ $profile['throw'] ?? '' }}</td>
@@ -354,7 +354,7 @@
                 <tr>
                     <td class="highlight">{{ $row->points !== null ? (int) $row->points . 'P' : '' }}</td>
                     <td>{{ $row->ranking }}</td>
-                    <td class="license-cell">{{ $profile['license_display'] ?? ($row->pro_bowler_license_no ?? '-') }}</td>
+                    <td class="license-cell">{{ \App\Support\PublicLicenseNumber::format($profile['license_display'] ?? $row->pro_bowler_license_no) }}</td>
                     <td class="text-left fw-bold">{{ $row->display_name }}</td>
                     <td>{{ $profile['period'] ?? '' }}</td>
                     <td>{{ $profile['throw'] ?? '' }}</td>

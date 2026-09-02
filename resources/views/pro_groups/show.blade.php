@@ -57,7 +57,7 @@
         <tbody>
           @forelse($group->members as $b)
             <tr>
-              <td>{{ $b->license_no }}</td>
+              <td>{{ \App\Support\PublicLicenseNumber::format($b->license_no) }}</td>
               <td>{{ $b->name_kanji }}</td>
               <td>{{ $b->district?->label }}</td>
               <td>{{ optional($b->pivot->assigned_at)->format('Y-m-d H:i') }}</td>

@@ -73,7 +73,7 @@
                 <span class="badge bg-secondary">{{ $entry->status_label }}</span>
               @endif
             </td>
-            <td>{{ $bowler->license_no ?? '-' }}</td>
+            <td>{{ \App\Support\PublicLicenseNumber::format($bowler->license_no) }}</td>
             <td>
               <a href="{{ route('scores.entry_balls.show', [
                 'entry' => $entry,

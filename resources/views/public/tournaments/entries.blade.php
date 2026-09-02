@@ -66,7 +66,7 @@
                                 <span>{{ $bowler?->name_kanji ?? '選手名未設定' }}</span>
                             </a>
                         </td>
-                        <td>{{ $bowler?->license_no ?? '-' }}</td>
+                        <td>{{ \App\Support\PublicLicenseNumber::format($bowler?->license_no) }}</td>
                         <td>
                             <a href="{{ route('scores.entry_balls.show', [
                                 'entry' => $entry,

@@ -177,10 +177,10 @@
   $licenseLinks = $instructorConfig['license_links'] ?? [];
   $displayCode = fn ($instructor) => $instructor->instructor_category === 'certified'
       ? '-'
-      : ($instructor->license_no
+      : \App\Support\PublicLicenseNumber::format($instructor->license_no
       ?? $instructor->cert_no
       ?? $instructor->legacy_instructor_license_no
-      ?? '-');
+      ?? null);
   $sexLabel = fn ($instructor) => $instructor->sex === null
       ? '-'
       : ($instructor->sex ? '男性' : '女性');
@@ -256,8 +256,18 @@
 
 <section class="jpba-panel" aria-labelledby="search-heading">
   <h2 id="search-heading" class="jpba-section-title">インストラクター検索</h2>
+  <p class="text-muted">男女で同じ番号が存在するため、性別を選択してから検索してください。未検索時は一覧を表示しません。</p>
 
   <form method="GET" action="{{ route('public.instructors.index') }}" class="jpba-instructor-form">
+    <div class="span-3">
+      <label for="gender">性別 <span class="text-danger">必須</span></label>
+      <select id="gender" name="gender" required>
+        <option value="">選択してください</option>
+        <option value="男性" @selected(($filters['gender'] ?? '') === '男性')>男性</option>
+        <option value="女性" @selected(($filters['gender'] ?? '') === '女性')>女性</option>
+      </select>
+    </div>
+
     <div class="span-3">
       <label for="name">氏名</label>
       <input id="name" type="text" name="name" value="{{ $filters['name'] ?? '' }}">
@@ -309,11 +319,13 @@
 
 <section class="jpba-panel" aria-labelledby="result-heading">
   <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-3">
-    <h2 id="result-heading" class="jpba-section-title mb-0">ライセンス別一覧</h2>
+    <h2 id="result-heading" class="jpba-section-title mb-0">{{ $hasRequiredFilters ? $filters['gender'].'インストラクター検索結果' : '検索条件を選択してください' }}</h2>
     <div class="text-muted">該当件数: {{ number_format($instructors->total()) }}件</div>
   </div>
 
-  @if($instructors->count())
+  @if(!$hasRequiredFilters)
+    <p class="mb-0 text-muted">性別は必須です。選択して「検索する」を押してください。</p>
+  @elseif($instructors->count())
     <table class="jpba-instructor-table">
       <thead>
         <tr>

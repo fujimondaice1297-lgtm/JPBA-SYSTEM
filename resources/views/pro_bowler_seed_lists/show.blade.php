@@ -164,7 +164,7 @@
                                             <td class="text-end">{{ $player['seed_rank'] }}</td>
                                             <td class="text-end">
                                                 @if ($player['license_no'])
-                                                    <span title="{{ $player['license_no'] }}">{{ $player['display_license_no'] }}</span>
+                                                    <span>{{ \App\Support\PublicLicenseNumber::format($player['display_license_no'] ?? $player['license_no']) }}</span>
                                                 @else
                                                     -
                                                 @endif

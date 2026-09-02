@@ -70,7 +70,7 @@
           @endphp
           <tr>
             <td><a href="{{ route('pro_bowlers.edit', $b->id) }}">{{ $b->id }}</a></td>
-            <td>{{ $b->license_no }}</td>
+            <td>{{ \App\Support\PublicLicenseNumber::format($b->license_no) }}</td>
             <td>{{ $b->name_kanji }}</td>
             <td>{{ $latest?->completed_at?->format('Y-m-d') }}</td>
             <td>{{ $latest?->expires_at?->format('Y-m-d') }}</td>

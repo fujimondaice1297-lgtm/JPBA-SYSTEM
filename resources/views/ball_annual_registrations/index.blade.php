@@ -67,7 +67,7 @@
                     <tr>
                         <td>
                             <div class="fw-bold">{{ $bowler->name_kanji }}</div>
-                            <div class="small text-muted">{{ $bowler->license_no }}</div>
+                            <div class="small text-muted">{{ \App\Support\PublicLicenseNumber::format($bowler->license_no) }}</div>
                         </td>
                         <td>{{ $bowler->used_balls_count }}個</td>
                         <td>

@@ -124,7 +124,7 @@
                 {{ $row['source_label'] }}
               </span>
             </td>
-            <td>{{ $row['license_no'] ?? '―' }}</td>
+            <td>{{ \App\Support\PublicLicenseNumber::format($row['license_no'] ?? null, '―') }}</td>
             <td>{{ $row['name_kanji'] ?? '―' }}</td>
             <td>{{ $row['brand'] ?: '―' }}</td>
             <td>{{ $row['ball_name'] ?: '―' }}</td>

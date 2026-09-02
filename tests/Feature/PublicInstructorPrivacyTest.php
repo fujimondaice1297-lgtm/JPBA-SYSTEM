@@ -29,6 +29,15 @@ class PublicInstructorPrivacyTest extends TestCase
         ]);
         $pro->setRelation('district', null);
 
+        $proInstructor = new InstructorRegistry([
+            'name' => 'プロインストラクターテスト',
+            'license_no' => 'M000T012',
+            'instructor_category' => 'pro_instructor',
+            'grade' => 'C級',
+            'renewal_status' => 'renewed',
+        ]);
+        $proInstructor->setRelation('district', null);
+
         $html = view('public.instructors.index', [
             'publicConfig' => [],
             'instructorConfig' => [
@@ -36,8 +45,9 @@ class PublicInstructorPrivacyTest extends TestCase
                 'feature_links' => [],
                 'license_links' => [],
             ],
-            'filters' => [],
-            'instructors' => new LengthAwarePaginator([$certified, $pro], 2, 30),
+            'filters' => ['gender' => '男性'],
+            'hasRequiredFilters' => true,
+            'instructors' => new LengthAwarePaginator([$certified, $pro, $proInstructor], 3, 30),
             'districts' => collect(),
             'categoryOptions' => [
                 'pro_bowler' => 'プロボウラー',
@@ -54,7 +64,62 @@ class PublicInstructorPrivacyTest extends TestCase
         ])->render();
 
         $this->assertStringNotContainsString('X00009999', $html);
-        $this->assertStringContainsString('M00009999', $html);
+        $this->assertStringNotContainsString('M00009999', $html);
+        $this->assertStringNotContainsString('M000T012', $html);
+        $this->assertStringContainsString('9999', $html);
+        $this->assertStringContainsString('T012', $html);
         $this->assertStringContainsString('認定テスト', $html);
+    }
+
+    public function test_public_search_stays_empty_until_gender_is_selected_and_separates_gender(): void
+    {
+        $suffix = str_replace('.', '', uniqid('', true));
+        $maleName = '公開講師 男子テスト'.$suffix;
+        $femaleName = '公開講師 女子テスト'.$suffix;
+
+        InstructorRegistry::query()->create([
+            'source_type' => 'manual',
+            'source_key' => 'public-instructor-male-search-test-'.$suffix,
+            'license_no' => 'M00009701',
+            'name' => $maleName,
+            'sex' => true,
+            'instructor_category' => 'pro_bowler',
+            'grade' => 'A級',
+            'is_current' => true,
+            'is_active' => true,
+            'is_visible' => true,
+        ]);
+        InstructorRegistry::query()->create([
+            'source_type' => 'manual',
+            'source_key' => 'public-instructor-female-search-test-'.$suffix,
+            'license_no' => 'F00009701',
+            'name' => $femaleName,
+            'sex' => false,
+            'instructor_category' => 'pro_bowler',
+            'grade' => 'A級',
+            'is_current' => true,
+            'is_active' => true,
+            'is_visible' => true,
+        ]);
+
+        $this->get(route('public.instructors.index'))
+            ->assertOk()
+            ->assertSee('性別は必須です')
+            ->assertDontSee($maleName)
+            ->assertDontSee($femaleName);
+
+        $this->get(route('public.instructors.index', ['gender' => '男性']))
+            ->assertOk()
+            ->assertSee($maleName)
+            ->assertSee('9701')
+            ->assertDontSee('M00009701')
+            ->assertDontSee($femaleName);
+
+        $this->get(route('public.instructors.index', ['gender' => '女性']))
+            ->assertOk()
+            ->assertSee($femaleName)
+            ->assertSee('9701')
+            ->assertDontSee('F00009701')
+            ->assertDontSee($maleName);
     }
 }

@@ -36,7 +36,7 @@
                 </td>
                 <td>
                   <div>{{ $log->bowler_name ?? '-' }}</div>
-                  <div class="small text-muted">{{ $log->bowler_license_no ?? '-' }}</div>
+                  <div class="small text-muted">{{ \App\Support\PublicLicenseNumber::format($log->bowler_license_no) }}</div>
                 </td>
                 <td class="small text-nowrap">
                   {{ $log->from_status ?? '-' }} → {{ $log->to_status ?? '-' }}

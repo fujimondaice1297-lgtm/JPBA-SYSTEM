@@ -109,7 +109,7 @@
                     ];
                 @endphp
                 <tr>
-                    <td>{{ $ball->proBowler?->license_no ?? '未登録' }}</td>
+                    <td>{{ \App\Support\PublicLicenseNumber::format($ball->proBowler?->license_no, '未登録') }}</td>
                     <td>{{ $ball->proBowler?->name_kanji ?? '未登録' }}</td>
                     <td>{{ $ball->approvedBall?->registration_brand ?: '―' }}</td>
                     <td>{{ $ball->approvedBall?->name ?? $ball->approvedBall?->model_name ?? '' }}</td>

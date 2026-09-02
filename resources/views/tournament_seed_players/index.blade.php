@@ -175,7 +175,7 @@
                                 <tr>
                                     <td class="text-end fw-bold">{{ $player['priority_no'] }}</td>
                                     <td class="text-end">{{ $player['ranking_rank'] ?? '-' }}</td>
-                                    <td class="seed-license">{{ $player['license_no'] ?? '-' }}</td>
+                                    <td class="seed-license">{{ \App\Support\PublicLicenseNumber::format($player['license_no'] ?? null) }}</td>
                                     <td>{{ $player['name'] ?? '-' }}</td>
                                     <td class="small text-muted">{{ $player['kana'] ?? '' }}</td>
                                     <td>{{ $player['seed_label'] ?? '-' }}</td>

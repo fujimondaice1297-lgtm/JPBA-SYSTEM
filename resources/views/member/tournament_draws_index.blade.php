@@ -83,7 +83,7 @@
                 <span class="badge bg-warning text-dark">未抽選</span>
               @endif
             </td>
-            <td>{{ $bowler->license_no ?? '-' }}</td>
+            <td>{{ \App\Support\PublicLicenseNumber::format($bowler->license_no) }}</td>
             <td>{{ $bowler->name_kanji ?? '-' }}</td>
             <td>{{ optional($entry->checked_in_at)->format('Y-m-d H:i') ?? '-' }}</td>
             <td>

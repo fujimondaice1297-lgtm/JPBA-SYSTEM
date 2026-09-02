@@ -9,7 +9,7 @@
 
         @foreach ($players as $i => $player)
             <div class="card my-3 p-3">
-                <h5>{{ $player->name_kanji }}（{{ $player->license_no }}）</h5>
+                <h5>{{ $player->name_kanji }}（{{ \App\Support\PublicLicenseNumber::format($player->license_no) }}）</h5>
 
                 <input type="hidden" name="results[{{ $i }}][pro_bowler_license_no]" value="{{ $player->license_no }}">
 

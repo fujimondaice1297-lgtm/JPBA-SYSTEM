@@ -106,10 +106,10 @@
                                     <td class="text-end fw-bold">{{ $row['rank'] }}</td>
                                     <td>
                                         <a href="{{ route('public.players.show', $row['pro_bowler_id']) }}" class="fw-bold">
-                                            {{ $row['name_kanji'] ?: $row['license_no'] }}
+                                            {{ $row['name_kanji'] ?: \App\Support\PublicLicenseNumber::format($row['license_no']) }}
                                         </a>
                                         <div class="small text-muted">
-                                            {{ $row['license_no'] }}
+                                            {{ \App\Support\PublicLicenseNumber::format($row['license_no']) }}
                                             @if($row['kibetsu']) ・第{{ $row['kibetsu'] }}期 @endif
                                             @if($row['organization_name']) ・{{ $row['organization_name'] }} @endif
                                         </div>

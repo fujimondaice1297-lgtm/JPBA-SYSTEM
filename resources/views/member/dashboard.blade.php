@@ -9,7 +9,7 @@
 
   <div class="d-flex align-items-center gap-2 mb-3">
     <h2 class="mb-0">会員ページ</h2>
-    <span class="text-muted fs-6">（{{ $bowler?->license_no ?? 'N/A' }}）</span>
+    <span class="text-muted fs-6">（{{ \App\Support\PublicLicenseNumber::format($bowler?->license_no, 'N/A') }}）</span>
   </div>
 
     {{-- 操作ボタン --}}
@@ -133,7 +133,7 @@
             <dd class="col-8">{{ $user?->name ?? $user?->email ?? '—' }}</dd>
 
             <dt class="col-4">ライセンスNo</dt>
-            <dd class="col-8">{{ $user?->pro_bowler_license_no ?? $bowler?->license_no ?? '—' }}</dd>
+            <dd class="col-8">{{ \App\Support\PublicLicenseNumber::format($user?->pro_bowler_license_no ?? $bowler?->license_no, '—') }}</dd>
           </dl>
         </div>
       </div>

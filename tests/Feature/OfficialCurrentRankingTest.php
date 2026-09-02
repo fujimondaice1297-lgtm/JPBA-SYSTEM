@@ -128,6 +128,8 @@ test('current official rankings aggregate current publications and separate gend
         ->assertOk()
         ->assertSee('2026年 男子ポイントランキング')
         ->assertSeeInOrder(['公式集計 男子A', '公式集計 男子B'])
+        ->assertSee('9501')
+        ->assertDontSee('M00009501')
         ->assertDontSee('公式集計 女子');
 
     $this->get(route('rankings.official_current', [

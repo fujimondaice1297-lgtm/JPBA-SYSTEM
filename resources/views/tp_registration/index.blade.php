@@ -103,7 +103,7 @@
       <div class="table-responsive"><table class="table align-middle tp-table">
         <thead class="table-light"><tr><th>No.</th><th>選手</th><th>現在の講習状態</th><th>今回の受講結果</th><th>今回の有効期限</th><th>備考</th></tr></thead>
         <tbody>@foreach($selectedSession->participants as $participant)<tr>
-          <td>{{ $participant->bowler?->license_no }}</td>
+          <td>{{ \App\Support\PublicLicenseNumber::format($participant->bowler?->license_no) }}</td>
           <td><a href="{{ route('pro_bowlers.edit',$participant->pro_bowler_id) }}">{{ $participant->bowler?->name_kanji }}</a></td>
           <td><span class="badge bg-light text-dark">{{ $participant->bowler?->training_compliance_status ?: 'unconfirmed' }}</span></td>
           <td><select name="participants[{{ $participant->id }}][attendance_status]" class="form-select" @disabled($selectedSession->status==='completed')>@foreach(['registered'=>'受講予定','attended'=>'受講済み','absent'=>'未受講','exempt'=>'免除'] as $value=>$label)<option value="{{ $value }}" @selected($participant->attendance_status===$value)>{{ $label }}</option>@endforeach</select></td>

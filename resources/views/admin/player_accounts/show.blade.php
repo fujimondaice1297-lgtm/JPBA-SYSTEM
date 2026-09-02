@@ -5,7 +5,7 @@
   <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
     <div>
       <h1 class="h3 mb-1">選手アカウント管理</h1>
-      <p class="text-muted mb-0">{{ $bowler->name_kanji ?: $bowler->name_kana }} / {{ $bowler->license_no }}</p>
+      <p class="text-muted mb-0">{{ $bowler->name_kanji ?: $bowler->name_kana }} / {{ \App\Support\PublicLicenseNumber::format($bowler->license_no) }}</p>
     </div>
     <a href="{{ route('pro_bowlers.edit', $bowler->id) }}" class="btn btn-outline-secondary">選手編集へ戻る</a>
   </div>

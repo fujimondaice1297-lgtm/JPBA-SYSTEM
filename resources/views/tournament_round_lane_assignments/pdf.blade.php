@@ -174,7 +174,7 @@ strong, b {
                 <tr>
                     <td>{{ $row->start_lane_label ?: (($row->start_lane && $row->lane_slot) ? ($row->start_lane . 'L-' . $row->lane_slot) : '') }}</td>
                     <td>{{ $row->seed_rank ? $row->seed_rank . '位' : '' }}</td>
-                    <td>{{ $row->display_license_no }}</td>
+                    <td>{{ \App\Support\PublicLicenseNumber::format($row->display_license_no) }}</td>
                     <td class="name-cell">{{ $compactName($row->display_name) }}</td>
                     <td>{{ $row->period_label }}</td>
                     <td>{{ $row->dominant_arm }}</td>

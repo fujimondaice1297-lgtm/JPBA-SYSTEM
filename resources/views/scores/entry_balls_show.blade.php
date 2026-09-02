@@ -36,7 +36,7 @@
                                     {{ $entry->bowler?->name_kanji ?? '選手名未設定' }}
                                 @endif
                             </div>
-                            <div class="text-muted">{{ $entry->bowler?->license_no ?? 'ライセンス番号未設定' }}</div>
+                            <div class="text-muted">{{ \App\Support\PublicLicenseNumber::format($entry->bowler?->license_no, 'ライセンス番号未設定') }}</div>
                         </div>
                     </div>
                 </div>

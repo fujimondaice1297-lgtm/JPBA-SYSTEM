@@ -57,7 +57,7 @@
         <tr>
           <td>{{ $candidate->gender_label }}@if($candidate->gender === 'M' && $event->male_generation) {{ $event->male_generation }}@elseif($candidate->gender === 'F' && $event->female_generation) {{ $event->female_generation }}@endif</td>
           <td>{{ $candidate->exam_number }}</td>
-          <td>{{ $candidate->license_no ?: '-' }}</td>
+          <td>{{ \App\Support\PublicLicenseNumber::format($candidate->license_no) }}</td>
           <td>@if($candidate->proBowler)<a href="{{ route('public.players.show', $candidate->proBowler) }}">{{ $candidate->name }}</a>@else{{ $candidate->name }}@endif</td>
           <td>{{ $candidate->name_kana ?: '-' }}</td>
         </tr>

@@ -132,9 +132,9 @@
               $gamesCounted = (int)($row['games_counted'] ?? 0);
               $average = $gamesCounted > 0 ? ((int)$row['total'] / $gamesCounted) : null;
               $rawLicense = (string)($rawIds['license_number'] ?? '');
-              $licenseDisplay = str_starts_with(strtoupper($rawLicense), 'AMATEUR-')
-                  ? 'アマ'
-                  : ($rawLicense !== '' ? $rawLicense : ($row['display_license'] ?? '-'));
+              $licenseDisplay = \App\Support\PublicLicenseNumber::format(
+                  $rawLicense !== '' ? $rawLicense : ($row['display_license'] ?? null)
+              );
             @endphp
             <tr>
               <td>{{ number_format((int)$row['rank']) }}</td>
