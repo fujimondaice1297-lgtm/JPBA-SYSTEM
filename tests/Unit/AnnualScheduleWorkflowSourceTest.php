@@ -44,6 +44,19 @@ class AnnualScheduleWorkflowSourceTest extends TestCase
     }
 
     #[Test]
+    public function public_browser_schedule_uses_readable_month_sections_instead_of_the_pdf_table_layout(): void
+    {
+        $public = (string) file_get_contents(resource_path('views/public/schedule.blade.php'));
+
+        $this->assertStringContainsString('annual-schedule-month-nav', $public);
+        $this->assertStringContainsString('annual-schedule-event', $public);
+        $this->assertStringContainsString('annual-schedule-location', $public);
+        $this->assertStringContainsString('annual-schedule-ranking', $public);
+        $this->assertStringContainsString('@media (max-width:720px)', $public);
+        $this->assertStringNotContainsString('annual-schedule-table', $public);
+    }
+
+    #[Test]
     public function tournament_form_requires_an_explicit_duplicate_policy(): void
     {
         $controller = (string) file_get_contents(app_path('Http/Controllers/TournamentController.php'));
