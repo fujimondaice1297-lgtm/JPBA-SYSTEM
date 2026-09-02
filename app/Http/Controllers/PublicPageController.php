@@ -6,12 +6,13 @@ use App\Models\AnnualSchedule;
 use App\Models\CalendarEvent;
 use App\Models\Information;
 use App\Models\ManagedPublicPage;
+use App\Models\ProTestEvent;
 use App\Models\Tournament;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
-use Illuminate\Support\Collection;
 use Illuminate\View\View;
 
 class PublicPageController extends Controller
@@ -30,7 +31,7 @@ class PublicPageController extends Controller
         $requestedYear = $request->integer('year');
         $year = $requestedYear > 0 ? $requestedYear : now()->year;
 
-        if (!in_array($year, $availableYears, true) && !empty($availableYears)) {
+        if (! in_array($year, $availableYears, true) && ! empty($availableYears)) {
             $year = $availableYears[0];
         }
 
@@ -113,6 +114,12 @@ class PublicPageController extends Controller
             'protestConfig' => config('jpba_public.protest', []),
             'proTestSchedules' => $this->proTestSchedules(),
             'proTestInformations' => $this->proTestInformations(),
+            'proTestEvents' => ProTestEvent::query()
+                ->publiclyVisible()
+                ->withCount(['sessions' => fn ($query) => $query->whereNotNull('published_at')])
+                ->orderByDesc('year')
+                ->orderByDesc('id')
+                ->get(),
         ]);
     }
 
@@ -121,7 +128,7 @@ class PublicPageController extends Controller
         $categories = Information::categories();
         $category = trim((string) $request->query('category', ''));
 
-        if ($category === '' || !in_array($category, $categories, true)) {
+        if ($category === '' || ! in_array($category, $categories, true)) {
             $category = null;
         }
 
@@ -162,7 +169,7 @@ class PublicPageController extends Controller
 
         $pages = config('jpba_public.static_pages', []);
 
-        if (!isset($pages[$page])) {
+        if (! isset($pages[$page])) {
             abort(404);
         }
 
@@ -241,7 +248,7 @@ class PublicPageController extends Controller
             ->get()
             ->map(function (CalendarEvent $event) {
                 return (object) [
-                    'id' => 'event-' . $event->id,
+                    'id' => 'event-'.$event->id,
                     'year' => $event->start_date ? Carbon::parse($event->start_date)->year : null,
                     'schedule_name' => $event->title,
                     'start_date' => $event->start_date,
@@ -251,9 +258,29 @@ class PublicPageController extends Controller
                 ];
             });
 
+        $operationalEvents = collect();
+        if (Schema::hasTable('pro_test_events')) {
+            $operationalEvents = ProTestEvent::query()
+                ->whereIn('status', [ProTestEvent::STATUS_LIVE, ProTestEvent::STATUS_FINAL])
+                ->orderByDesc('year')
+                ->limit(8)
+                ->get()
+                ->map(fn (ProTestEvent $event) => (object) [
+                    'id' => 'operation-'.$event->id,
+                    'year' => $event->year,
+                    'schedule_name' => $event->name,
+                    'start_date' => $event->start_date,
+                    'end_date' => $event->end_date,
+                    'application_start' => $event->application_start,
+                    'application_end' => $event->application_end,
+                ]);
+        }
+
         return $rows
             ->concat($events)
-            ->sortByDesc(fn ($row) => ($row->start_date ?: ($row->year ? $row->year . '-01-01' : '0000-01-01')))
+            ->concat($operationalEvents)
+            ->unique(fn ($row) => $row->year.'|'.$row->schedule_name)
+            ->sortByDesc(fn ($row) => ($row->start_date ?: ($row->year ? $row->year.'-01-01' : '0000-01-01')))
             ->values();
     }
 
@@ -291,7 +318,7 @@ class PublicPageController extends Controller
 
         return [
             'type' => 'tournament',
-            'type_label' => $tournament->officialTypeLabel . ' / ' . $tournament->genderLabel,
+            'type_label' => $tournament->officialTypeLabel.' / '.$tournament->genderLabel,
             'title' => $tournament->name,
             'venue' => $tournament->venue_name,
             'period' => $this->formatPeriod($start, $end),
@@ -301,7 +328,7 @@ class PublicPageController extends Controller
                 ->take(3)
                 ->map(fn ($file) => [
                     'label' => $file->title ?: 'PDF',
-                    'url' => asset('storage/' . ltrim((string) $file->file_path, '/')),
+                    'url' => asset('storage/'.ltrim((string) $file->file_path, '/')),
                 ])
                 ->values()
                 ->all(),
@@ -327,7 +354,7 @@ class PublicPageController extends Controller
 
     private function formatPeriod(?Carbon $start, ?Carbon $end): string
     {
-        if (!$start && !$end) {
+        if (! $start && ! $end) {
             return '';
         }
 

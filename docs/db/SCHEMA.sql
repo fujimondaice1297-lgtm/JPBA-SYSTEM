@@ -639,7 +639,7 @@ CREATE TABLE public.calendar_events (
     kind character varying(255) DEFAULT 'other'::character varying NOT NULL,
     created_at timestamp(0) without time zone,
     updated_at timestamp(0) without time zone,
-    CONSTRAINT calendar_events_kind_check CHECK (((kind)::text = ANY ((ARRAY['pro_test'::character varying, 'approved'::character varying, 'other'::character varying])::text[])))
+    CONSTRAINT calendar_events_kind_check CHECK (((kind)::text = ANY (ARRAY[('pro_test'::character varying)::text, ('approved'::character varying)::text, ('other'::character varying)::text])))
 );
 
 
@@ -921,7 +921,7 @@ CREATE TABLE public.group_members (
     expires_at date,
     created_at timestamp(0) without time zone,
     updated_at timestamp(0) without time zone,
-    CONSTRAINT group_members_source_check CHECK (((source)::text = ANY ((ARRAY['rule'::character varying, 'manual'::character varying, 'snapshot'::character varying])::text[])))
+    CONSTRAINT group_members_source_check CHECK (((source)::text = ANY (ARRAY[('rule'::character varying)::text, ('manual'::character varying)::text, ('snapshot'::character varying)::text])))
 );
 
 
@@ -963,8 +963,8 @@ CREATE TABLE public.groups (
     action_mypage boolean DEFAULT false NOT NULL,
     action_email boolean DEFAULT false NOT NULL,
     action_postal boolean DEFAULT false NOT NULL,
-    CONSTRAINT groups_retention_check CHECK (((retention)::text = ANY ((ARRAY['forever'::character varying, 'fye'::character varying, 'until'::character varying])::text[]))),
-    CONSTRAINT groups_type_check CHECK (((type)::text = ANY ((ARRAY['rule'::character varying, 'snapshot'::character varying])::text[])))
+    CONSTRAINT groups_retention_check CHECK (((retention)::text = ANY (ARRAY[('forever'::character varying)::text, ('fye'::character varying)::text, ('until'::character varying)::text]))),
+    CONSTRAINT groups_type_check CHECK (((type)::text = ANY (ARRAY[('rule'::character varying)::text, ('snapshot'::character varying)::text])))
 );
 
 
@@ -1108,8 +1108,8 @@ CREATE TABLE public.informations (
     updated_at timestamp(0) without time zone,
     category character varying(32) DEFAULT 'NEWS'::character varying NOT NULL,
     published_at timestamp(0) without time zone,
-    CONSTRAINT informations_audience_check CHECK (((audience)::text = ANY ((ARRAY['public'::character varying, 'members'::character varying, 'district_leaders'::character varying, 'needs_training'::character varying])::text[]))),
-    CONSTRAINT informations_category_check CHECK (((category IS NULL) OR ((category)::text = ANY ((ARRAY['NEWS'::character varying, '大会'::character varying, 'TV情報'::character varying, 'ｲﾝｽﾄﾗｸﾀｰ'::character varying, 'イベント'::character varying])::text[]))))
+    CONSTRAINT informations_audience_check CHECK (((audience)::text = ANY (ARRAY[('public'::character varying)::text, ('members'::character varying)::text, ('district_leaders'::character varying)::text, ('needs_training'::character varying)::text]))),
+    CONSTRAINT informations_category_check CHECK (((category IS NULL) OR ((category)::text = ANY (ARRAY[('NEWS'::character varying)::text, ('大会'::character varying)::text, ('TV情報'::character varying)::text, ('ｲﾝｽﾄﾗｸﾀｰ'::character varying)::text, ('イベント'::character varying)::text]))))
 );
 
 
@@ -1166,9 +1166,9 @@ CREATE TABLE public.instructor_registry (
     renewal_status character varying(16),
     renewed_at date,
     renewal_note text,
-    CONSTRAINT instructor_registry_category_check CHECK (((instructor_category)::text = ANY ((ARRAY['pro_bowler'::character varying, 'pro_instructor'::character varying, 'certified'::character varying])::text[]))),
-    CONSTRAINT instructor_registry_grade_check CHECK (((grade IS NULL) OR ((grade)::text = ANY ((ARRAY['C級'::character varying, '準B級'::character varying, 'B級'::character varying, '準A級'::character varying, 'A級'::character varying, '2級'::character varying, '1級'::character varying])::text[])))),
-    CONSTRAINT instructor_registry_renewal_status_check CHECK (((renewal_status IS NULL) OR ((renewal_status)::text = ANY ((ARRAY['pending'::character varying, 'renewed'::character varying, 'expired'::character varying])::text[]))))
+    CONSTRAINT instructor_registry_category_check CHECK (((instructor_category)::text = ANY (ARRAY[('pro_bowler'::character varying)::text, ('pro_instructor'::character varying)::text, ('certified'::character varying)::text]))),
+    CONSTRAINT instructor_registry_grade_check CHECK (((grade IS NULL) OR ((grade)::text = ANY (ARRAY[('C級'::character varying)::text, ('準B級'::character varying)::text, ('B級'::character varying)::text, ('準A級'::character varying)::text, ('A級'::character varying)::text, ('2級'::character varying)::text, ('1級'::character varying)::text])))),
+    CONSTRAINT instructor_registry_renewal_status_check CHECK (((renewal_status IS NULL) OR ((renewal_status)::text = ANY (ARRAY[('pending'::character varying)::text, ('renewed'::character varying)::text, ('expired'::character varying)::text]))))
 );
 
 
@@ -1342,8 +1342,8 @@ CREATE TABLE public.instructors (
     coach_qualification boolean DEFAULT false NOT NULL,
     created_at timestamp(0) without time zone,
     updated_at timestamp(0) without time zone,
-    CONSTRAINT instructors_grade_check CHECK (((grade IS NULL) OR ((grade)::text = ANY ((ARRAY['C級'::character varying, '準B級'::character varying, 'B級'::character varying, '準A級'::character varying, 'A級'::character varying, '2級'::character varying, '1級'::character varying])::text[])))),
-    CONSTRAINT instructors_instructor_type_check CHECK (((instructor_type)::text = ANY ((ARRAY['pro'::character varying, 'certified'::character varying])::text[])))
+    CONSTRAINT instructors_grade_check CHECK (((grade IS NULL) OR ((grade)::text = ANY (ARRAY[('C級'::character varying)::text, ('準B級'::character varying)::text, ('B級'::character varying)::text, ('準A級'::character varying)::text, ('A級'::character varying)::text, ('2級'::character varying)::text, ('1級'::character varying)::text])))),
+    CONSTRAINT instructors_instructor_type_check CHECK (((instructor_type)::text = ANY (ARRAY[('pro'::character varying)::text, ('certified'::character varying)::text])))
 );
 
 
@@ -2700,7 +2700,7 @@ CREATE TABLE public.pro_bowlers (
     season_trial_win_count integer,
     training_compliance_status character varying(30) DEFAULT 'unconfirmed'::character varying NOT NULL,
     training_compliance_checked_at timestamp(0) without time zone,
-    CONSTRAINT pro_bowlers_member_class_check CHECK (((member_class)::text = ANY ((ARRAY['player'::character varying, 'pro_instructor'::character varying, 'honorary_or_overseas'::character varying, 'other'::character varying])::text[])))
+    CONSTRAINT pro_bowlers_member_class_check CHECK (((member_class)::text = ANY (ARRAY[('player'::character varying)::text, ('pro_instructor'::character varying)::text, ('honorary_or_overseas'::character varying)::text, ('other'::character varying)::text])))
 );
 
 
@@ -3094,6 +3094,88 @@ ALTER SEQUENCE public.pro_test_attachment_id_seq OWNED BY public.pro_test_attach
 
 
 --
+-- Name: pro_test_candidate_stage_results; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.pro_test_candidate_stage_results (
+    id bigint NOT NULL,
+    pro_test_candidate_id bigint NOT NULL,
+    stage_code character varying(255) NOT NULL,
+    result character varying(255) DEFAULT 'pending'::character varying NOT NULL,
+    note text,
+    decided_by bigint,
+    decided_at timestamp(0) without time zone,
+    created_at timestamp(0) without time zone,
+    updated_at timestamp(0) without time zone
+);
+
+
+--
+-- Name: pro_test_candidate_stage_results_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.pro_test_candidate_stage_results_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: pro_test_candidate_stage_results_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.pro_test_candidate_stage_results_id_seq OWNED BY public.pro_test_candidate_stage_results.id;
+
+
+--
+-- Name: pro_test_candidates; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.pro_test_candidates (
+    id bigint NOT NULL,
+    pro_test_event_id bigint NOT NULL,
+    exam_number character varying(255) NOT NULL,
+    gender character varying(1) NOT NULL,
+    name character varying(255) NOT NULL,
+    name_kana character varying(255),
+    resident_prefecture character varying(255),
+    handedness character varying(20),
+    final_result character varying(255) DEFAULT 'pending'::character varying NOT NULL,
+    license_no character varying(255),
+    pro_bowler_id bigint,
+    created_at timestamp(0) without time zone,
+    updated_at timestamp(0) without time zone,
+    entry_stage character varying(255) DEFAULT 'first'::character varying NOT NULL,
+    entry_reason character varying(255) DEFAULT 'regular'::character varying NOT NULL,
+    previous_candidate_id bigint,
+    exemption_approved_at timestamp(0) without time zone,
+    exemption_approved_by bigint,
+    exemption_note text
+);
+
+
+--
+-- Name: pro_test_candidates_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.pro_test_candidates_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: pro_test_candidates_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.pro_test_candidates_id_seq OWNED BY public.pro_test_candidates.id;
+
+
+--
 -- Name: pro_test_category; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -3182,6 +3264,122 @@ ALTER SEQUENCE public.pro_test_comment_id_seq OWNED BY public.pro_test_comment.i
 
 
 --
+-- Name: pro_test_events; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.pro_test_events (
+    id bigint NOT NULL,
+    year smallint NOT NULL,
+    name character varying(255) NOT NULL,
+    start_date date,
+    end_date date,
+    application_start date,
+    application_end date,
+    male_generation character varying(255),
+    female_generation character varying(255),
+    status character varying(255) DEFAULT 'draft'::character varying NOT NULL,
+    public_summary text,
+    final_results_published_at timestamp(0) without time zone,
+    created_by bigint,
+    updated_by bigint,
+    created_at timestamp(0) without time zone,
+    updated_at timestamp(0) without time zone
+);
+
+
+--
+-- Name: pro_test_events_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.pro_test_events_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: pro_test_events_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.pro_test_events_id_seq OWNED BY public.pro_test_events.id;
+
+
+--
+-- Name: pro_test_final_result_publication_rows; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.pro_test_final_result_publication_rows (
+    id bigint NOT NULL,
+    pro_test_final_result_publication_id bigint CONSTRAINT pro_test_final_result_publi_pro_test_final_result_publ_not_null NOT NULL,
+    pro_test_candidate_id bigint,
+    gender character varying(1) NOT NULL,
+    exam_number character varying(255) NOT NULL,
+    license_no character varying(255),
+    name character varying(255) NOT NULL,
+    name_kana character varying(255),
+    pro_bowler_id bigint,
+    created_at timestamp(0) without time zone,
+    updated_at timestamp(0) without time zone
+);
+
+
+--
+-- Name: pro_test_final_result_publication_rows_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.pro_test_final_result_publication_rows_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: pro_test_final_result_publication_rows_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.pro_test_final_result_publication_rows_id_seq OWNED BY public.pro_test_final_result_publication_rows.id;
+
+
+--
+-- Name: pro_test_final_result_publications; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.pro_test_final_result_publications (
+    id bigint NOT NULL,
+    pro_test_event_id bigint NOT NULL,
+    revision integer NOT NULL,
+    row_count integer DEFAULT 0 NOT NULL,
+    published_by bigint,
+    published_at timestamp(0) without time zone NOT NULL,
+    created_at timestamp(0) without time zone,
+    updated_at timestamp(0) without time zone
+);
+
+
+--
+-- Name: pro_test_final_result_publications_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.pro_test_final_result_publications_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: pro_test_final_result_publications_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.pro_test_final_result_publications_id_seq OWNED BY public.pro_test_final_result_publications.id;
+
+
+--
 -- Name: pro_test_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
@@ -3198,6 +3396,84 @@ CREATE SEQUENCE public.pro_test_id_seq
 --
 
 ALTER SEQUENCE public.pro_test_id_seq OWNED BY public.pro_test.id;
+
+
+--
+-- Name: pro_test_result_publication_rows; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.pro_test_result_publication_rows (
+    id bigint NOT NULL,
+    pro_test_result_publication_id bigint CONSTRAINT pro_test_result_publication_pro_test_result_publicatio_not_null NOT NULL,
+    pro_test_candidate_id bigint,
+    rank integer NOT NULL,
+    exam_number character varying(255) NOT NULL,
+    name character varying(255) NOT NULL,
+    name_kana character varying(255),
+    resident_prefecture character varying(255),
+    handedness character varying(20),
+    games smallint NOT NULL,
+    total_pin integer NOT NULL,
+    average numeric(7,2) NOT NULL,
+    result_label character varying(255),
+    session_scores json,
+    created_at timestamp(0) without time zone,
+    updated_at timestamp(0) without time zone
+);
+
+
+--
+-- Name: pro_test_result_publication_rows_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.pro_test_result_publication_rows_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: pro_test_result_publication_rows_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.pro_test_result_publication_rows_id_seq OWNED BY public.pro_test_result_publication_rows.id;
+
+
+--
+-- Name: pro_test_result_publications; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.pro_test_result_publications (
+    id bigint NOT NULL,
+    pro_test_session_id bigint NOT NULL,
+    revision integer NOT NULL,
+    row_count integer DEFAULT 0 NOT NULL,
+    published_by bigint,
+    published_at timestamp(0) without time zone NOT NULL,
+    created_at timestamp(0) without time zone,
+    updated_at timestamp(0) without time zone
+);
+
+
+--
+-- Name: pro_test_result_publications_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.pro_test_result_publications_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: pro_test_result_publications_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.pro_test_result_publications_id_seq OWNED BY public.pro_test_result_publications.id;
 
 
 --
@@ -3404,6 +3680,84 @@ ALTER SEQUENCE public.pro_test_score_summary_id_seq OWNED BY public.pro_test_sco
 
 
 --
+-- Name: pro_test_scores_v2; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.pro_test_scores_v2 (
+    id bigint NOT NULL,
+    pro_test_session_id bigint NOT NULL,
+    pro_test_candidate_id bigint NOT NULL,
+    game_number smallint NOT NULL,
+    score smallint NOT NULL,
+    created_at timestamp(0) without time zone,
+    updated_at timestamp(0) without time zone
+);
+
+
+--
+-- Name: pro_test_scores_v2_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.pro_test_scores_v2_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: pro_test_scores_v2_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.pro_test_scores_v2_id_seq OWNED BY public.pro_test_scores_v2.id;
+
+
+--
+-- Name: pro_test_sessions; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.pro_test_sessions (
+    id bigint NOT NULL,
+    pro_test_event_id bigint NOT NULL,
+    gender character varying(1) NOT NULL,
+    stage_code character varying(255) NOT NULL,
+    stage_label character varying(255) NOT NULL,
+    day_number smallint NOT NULL,
+    test_date date,
+    venue character varying(255),
+    game_start smallint NOT NULL,
+    game_end smallint NOT NULL,
+    pass_average numeric(6,2),
+    is_stage_final boolean DEFAULT false NOT NULL,
+    status character varying(255) DEFAULT 'draft'::character varying NOT NULL,
+    sort_order integer DEFAULT 0 NOT NULL,
+    published_at timestamp(0) without time zone,
+    created_at timestamp(0) without time zone,
+    updated_at timestamp(0) without time zone
+);
+
+
+--
+-- Name: pro_test_sessions_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.pro_test_sessions_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: pro_test_sessions_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.pro_test_sessions_id_seq OWNED BY public.pro_test_sessions.id;
+
+
+--
 -- Name: pro_test_status_log; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -3520,7 +3874,7 @@ CREATE TABLE public.record_certification_sequences (
     created_at timestamp(0) without time zone,
     updated_at timestamp(0) without time zone,
     CONSTRAINT record_cert_sequences_gender_check CHECK ((gender = ANY (ARRAY['M'::bpchar, 'F'::bpchar]))),
-    CONSTRAINT record_cert_sequences_type_check CHECK (((record_type)::text = ANY ((ARRAY['perfect'::character varying, 'seven_ten'::character varying, 'eight_hundred'::character varying])::text[])))
+    CONSTRAINT record_cert_sequences_type_check CHECK (((record_type)::text = ANY (ARRAY[('perfect'::character varying)::text, ('seven_ten'::character varying)::text, ('eight_hundred'::character varying)::text])))
 );
 
 
@@ -3584,9 +3938,9 @@ CREATE TABLE public.record_types (
     certification_number_value bigint,
     notes text,
     source_match_score_frame_id bigint,
-    CONSTRAINT record_types_record_type_check CHECK (((record_type)::text = ANY ((ARRAY['perfect'::character varying, 'seven_ten'::character varying, 'eight_hundred'::character varying])::text[]))),
-    CONSTRAINT record_types_registration_mode_check CHECK (((registration_mode)::text = ANY ((ARRAY['historical_backfill'::character varying, 'new_achievement'::character varying])::text[]))),
-    CONSTRAINT record_types_status_check CHECK (((status)::text = ANY ((ARRAY['candidate'::character varying, 'confirmed'::character varying, 'rejected'::character varying, 'void'::character varying])::text[])))
+    CONSTRAINT record_types_record_type_check CHECK (((record_type)::text = ANY (ARRAY[('perfect'::character varying)::text, ('seven_ten'::character varying)::text, ('eight_hundred'::character varying)::text]))),
+    CONSTRAINT record_types_registration_mode_check CHECK (((registration_mode)::text = ANY (ARRAY[('historical_backfill'::character varying)::text, ('new_achievement'::character varying)::text]))),
+    CONSTRAINT record_types_status_check CHECK (((status)::text = ANY (ARRAY[('candidate'::character varying)::text, ('confirmed'::character varying)::text, ('rejected'::character varying)::text, ('void'::character varying)::text])))
 );
 
 
@@ -5392,8 +5746,8 @@ CREATE TABLE public.tournaments (
     template_snapshot json,
     tournament_result_format_version_id bigint,
     ball_registration_limit smallint DEFAULT '12'::smallint NOT NULL,
-    CONSTRAINT tournaments_gender_check CHECK (((gender)::text = ANY ((ARRAY['M'::character varying, 'F'::character varying, 'X'::character varying])::text[]))),
-    CONSTRAINT tournaments_official_type_check CHECK (((official_type)::text = ANY ((ARRAY['official'::character varying, 'approved'::character varying, 'other'::character varying])::text[])))
+    CONSTRAINT tournaments_gender_check CHECK (((gender)::text = ANY (ARRAY[('M'::character varying)::text, ('F'::character varying)::text, ('X'::character varying)::text]))),
+    CONSTRAINT tournaments_official_type_check CHECK (((official_type)::text = ANY (ARRAY[('official'::character varying)::text, ('approved'::character varying)::text, ('other'::character varying)::text])))
 );
 
 
@@ -6537,6 +6891,20 @@ ALTER TABLE ONLY public.pro_test_attachment ALTER COLUMN id SET DEFAULT nextval(
 
 
 --
+-- Name: pro_test_candidate_stage_results id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.pro_test_candidate_stage_results ALTER COLUMN id SET DEFAULT nextval('public.pro_test_candidate_stage_results_id_seq'::regclass);
+
+
+--
+-- Name: pro_test_candidates id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.pro_test_candidates ALTER COLUMN id SET DEFAULT nextval('public.pro_test_candidates_id_seq'::regclass);
+
+
+--
 -- Name: pro_test_category id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -6548,6 +6916,41 @@ ALTER TABLE ONLY public.pro_test_category ALTER COLUMN id SET DEFAULT nextval('p
 --
 
 ALTER TABLE ONLY public.pro_test_comment ALTER COLUMN id SET DEFAULT nextval('public.pro_test_comment_id_seq'::regclass);
+
+
+--
+-- Name: pro_test_events id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.pro_test_events ALTER COLUMN id SET DEFAULT nextval('public.pro_test_events_id_seq'::regclass);
+
+
+--
+-- Name: pro_test_final_result_publication_rows id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.pro_test_final_result_publication_rows ALTER COLUMN id SET DEFAULT nextval('public.pro_test_final_result_publication_rows_id_seq'::regclass);
+
+
+--
+-- Name: pro_test_final_result_publications id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.pro_test_final_result_publications ALTER COLUMN id SET DEFAULT nextval('public.pro_test_final_result_publications_id_seq'::regclass);
+
+
+--
+-- Name: pro_test_result_publication_rows id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.pro_test_result_publication_rows ALTER COLUMN id SET DEFAULT nextval('public.pro_test_result_publication_rows_id_seq'::regclass);
+
+
+--
+-- Name: pro_test_result_publications id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.pro_test_result_publications ALTER COLUMN id SET DEFAULT nextval('public.pro_test_result_publications_id_seq'::regclass);
 
 
 --
@@ -6576,6 +6979,20 @@ ALTER TABLE ONLY public.pro_test_score ALTER COLUMN id SET DEFAULT nextval('publ
 --
 
 ALTER TABLE ONLY public.pro_test_score_summary ALTER COLUMN id SET DEFAULT nextval('public.pro_test_score_summary_id_seq'::regclass);
+
+
+--
+-- Name: pro_test_scores_v2 id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.pro_test_scores_v2 ALTER COLUMN id SET DEFAULT nextval('public.pro_test_scores_v2_id_seq'::regclass);
+
+
+--
+-- Name: pro_test_sessions id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.pro_test_sessions ALTER COLUMN id SET DEFAULT nextval('public.pro_test_sessions_id_seq'::regclass);
 
 
 --
@@ -7745,6 +8162,46 @@ ALTER TABLE ONLY public.pro_test_attachment
 
 
 --
+-- Name: pro_test_candidate_stage_results pro_test_candidate_stage_results_candidate_stage_unique; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.pro_test_candidate_stage_results
+    ADD CONSTRAINT pro_test_candidate_stage_results_candidate_stage_unique UNIQUE (pro_test_candidate_id, stage_code);
+
+
+--
+-- Name: pro_test_candidate_stage_results pro_test_candidate_stage_results_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.pro_test_candidate_stage_results
+    ADD CONSTRAINT pro_test_candidate_stage_results_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: pro_test_candidates pro_test_candidates_event_exam_unique; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.pro_test_candidates
+    ADD CONSTRAINT pro_test_candidates_event_exam_unique UNIQUE (pro_test_event_id, exam_number);
+
+
+--
+-- Name: pro_test_candidates pro_test_candidates_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.pro_test_candidates
+    ADD CONSTRAINT pro_test_candidates_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: pro_test_candidates pro_test_candidates_previous_candidate_id_unique; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.pro_test_candidates
+    ADD CONSTRAINT pro_test_candidates_previous_candidate_id_unique UNIQUE (previous_candidate_id);
+
+
+--
 -- Name: pro_test_category pro_test_category_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -7761,11 +8218,91 @@ ALTER TABLE ONLY public.pro_test_comment
 
 
 --
+-- Name: pro_test_events pro_test_events_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.pro_test_events
+    ADD CONSTRAINT pro_test_events_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: pro_test_events pro_test_events_year_name_unique; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.pro_test_events
+    ADD CONSTRAINT pro_test_events_year_name_unique UNIQUE (year, name);
+
+
+--
+-- Name: pro_test_final_result_publications pro_test_final_publications_event_revision_unique; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.pro_test_final_result_publications
+    ADD CONSTRAINT pro_test_final_publications_event_revision_unique UNIQUE (pro_test_event_id, revision);
+
+
+--
+-- Name: pro_test_final_result_publication_rows pro_test_final_result_publication_rows_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.pro_test_final_result_publication_rows
+    ADD CONSTRAINT pro_test_final_result_publication_rows_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: pro_test_final_result_publications pro_test_final_result_publications_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.pro_test_final_result_publications
+    ADD CONSTRAINT pro_test_final_result_publications_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: pro_test_final_result_publication_rows pro_test_final_rows_publication_exam_unique; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.pro_test_final_result_publication_rows
+    ADD CONSTRAINT pro_test_final_rows_publication_exam_unique UNIQUE (pro_test_final_result_publication_id, exam_number);
+
+
+--
 -- Name: pro_test pro_test_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.pro_test
     ADD CONSTRAINT pro_test_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: pro_test_result_publication_rows pro_test_result_publication_rows_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.pro_test_result_publication_rows
+    ADD CONSTRAINT pro_test_result_publication_rows_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: pro_test_result_publication_rows pro_test_result_publication_rows_publication_exam_unique; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.pro_test_result_publication_rows
+    ADD CONSTRAINT pro_test_result_publication_rows_publication_exam_unique UNIQUE (pro_test_result_publication_id, exam_number);
+
+
+--
+-- Name: pro_test_result_publications pro_test_result_publications_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.pro_test_result_publications
+    ADD CONSTRAINT pro_test_result_publications_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: pro_test_result_publications pro_test_result_publications_session_revision_unique; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.pro_test_result_publications
+    ADD CONSTRAINT pro_test_result_publications_session_revision_unique UNIQUE (pro_test_session_id, revision);
 
 
 --
@@ -7798,6 +8335,38 @@ ALTER TABLE ONLY public.pro_test_score
 
 ALTER TABLE ONLY public.pro_test_score_summary
     ADD CONSTRAINT pro_test_score_summary_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: pro_test_scores_v2 pro_test_scores_v2_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.pro_test_scores_v2
+    ADD CONSTRAINT pro_test_scores_v2_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: pro_test_scores_v2 pro_test_scores_v2_session_candidate_game_unique; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.pro_test_scores_v2
+    ADD CONSTRAINT pro_test_scores_v2_session_candidate_game_unique UNIQUE (pro_test_session_id, pro_test_candidate_id, game_number);
+
+
+--
+-- Name: pro_test_sessions pro_test_sessions_event_gender_stage_day_unique; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.pro_test_sessions
+    ADD CONSTRAINT pro_test_sessions_event_gender_stage_day_unique UNIQUE (pro_test_event_id, gender, stage_code, day_number);
+
+
+--
+-- Name: pro_test_sessions pro_test_sessions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.pro_test_sessions
+    ADD CONSTRAINT pro_test_sessions_pkey PRIMARY KEY (id);
 
 
 --
@@ -9143,6 +9712,69 @@ CREATE INDEX pro_dsp_pro_bowler_id_idx ON public.pro_dsp USING btree (pro_bowler
 
 
 --
+-- Name: pro_test_candidate_stage_results_result_index; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX pro_test_candidate_stage_results_result_index ON public.pro_test_candidate_stage_results USING btree (result);
+
+
+--
+-- Name: pro_test_candidates_entry_reason_index; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX pro_test_candidates_entry_reason_index ON public.pro_test_candidates USING btree (entry_reason);
+
+
+--
+-- Name: pro_test_candidates_entry_stage_index; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX pro_test_candidates_entry_stage_index ON public.pro_test_candidates USING btree (entry_stage);
+
+
+--
+-- Name: pro_test_candidates_final_result_index; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX pro_test_candidates_final_result_index ON public.pro_test_candidates USING btree (final_result);
+
+
+--
+-- Name: pro_test_candidates_gender_index; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX pro_test_candidates_gender_index ON public.pro_test_candidates USING btree (gender);
+
+
+--
+-- Name: pro_test_events_status_index; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX pro_test_events_status_index ON public.pro_test_events USING btree (status);
+
+
+--
+-- Name: pro_test_events_year_index; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX pro_test_events_year_index ON public.pro_test_events USING btree (year);
+
+
+--
+-- Name: pro_test_sessions_event_stage_sort_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX pro_test_sessions_event_stage_sort_idx ON public.pro_test_sessions USING btree (pro_test_event_id, gender, stage_code, sort_order);
+
+
+--
+-- Name: pro_test_sessions_status_index; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX pro_test_sessions_status_index ON public.pro_test_sessions USING btree (status);
+
+
+--
 -- Name: record_types_bowler_type_status_idx; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -10239,6 +10871,166 @@ ALTER TABLE ONLY public.pro_bowlers
 
 ALTER TABLE ONLY public.pro_dsp
     ADD CONSTRAINT pro_dsp_pro_bowler_id_fk FOREIGN KEY (pro_bowler_id) REFERENCES public.pro_bowlers(id) ON DELETE SET NULL;
+
+
+--
+-- Name: pro_test_candidate_stage_results pro_test_candidate_stage_results_decided_by_foreign; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.pro_test_candidate_stage_results
+    ADD CONSTRAINT pro_test_candidate_stage_results_decided_by_foreign FOREIGN KEY (decided_by) REFERENCES public.users(id) ON DELETE SET NULL;
+
+
+--
+-- Name: pro_test_candidate_stage_results pro_test_candidate_stage_results_pro_test_candidate_id_foreign; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.pro_test_candidate_stage_results
+    ADD CONSTRAINT pro_test_candidate_stage_results_pro_test_candidate_id_foreign FOREIGN KEY (pro_test_candidate_id) REFERENCES public.pro_test_candidates(id) ON DELETE CASCADE;
+
+
+--
+-- Name: pro_test_candidates pro_test_candidates_exemption_approved_by_foreign; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.pro_test_candidates
+    ADD CONSTRAINT pro_test_candidates_exemption_approved_by_foreign FOREIGN KEY (exemption_approved_by) REFERENCES public.users(id) ON DELETE SET NULL;
+
+
+--
+-- Name: pro_test_candidates pro_test_candidates_previous_candidate_id_foreign; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.pro_test_candidates
+    ADD CONSTRAINT pro_test_candidates_previous_candidate_id_foreign FOREIGN KEY (previous_candidate_id) REFERENCES public.pro_test_candidates(id) ON DELETE SET NULL;
+
+
+--
+-- Name: pro_test_candidates pro_test_candidates_pro_bowler_id_foreign; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.pro_test_candidates
+    ADD CONSTRAINT pro_test_candidates_pro_bowler_id_foreign FOREIGN KEY (pro_bowler_id) REFERENCES public.pro_bowlers(id) ON DELETE SET NULL;
+
+
+--
+-- Name: pro_test_candidates pro_test_candidates_pro_test_event_id_foreign; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.pro_test_candidates
+    ADD CONSTRAINT pro_test_candidates_pro_test_event_id_foreign FOREIGN KEY (pro_test_event_id) REFERENCES public.pro_test_events(id) ON DELETE CASCADE;
+
+
+--
+-- Name: pro_test_events pro_test_events_created_by_foreign; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.pro_test_events
+    ADD CONSTRAINT pro_test_events_created_by_foreign FOREIGN KEY (created_by) REFERENCES public.users(id) ON DELETE SET NULL;
+
+
+--
+-- Name: pro_test_events pro_test_events_updated_by_foreign; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.pro_test_events
+    ADD CONSTRAINT pro_test_events_updated_by_foreign FOREIGN KEY (updated_by) REFERENCES public.users(id) ON DELETE SET NULL;
+
+
+--
+-- Name: pro_test_final_result_publication_rows pro_test_final_result_publication_rows_pro_bowler_id_foreign; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.pro_test_final_result_publication_rows
+    ADD CONSTRAINT pro_test_final_result_publication_rows_pro_bowler_id_foreign FOREIGN KEY (pro_bowler_id) REFERENCES public.pro_bowlers(id) ON DELETE SET NULL;
+
+
+--
+-- Name: pro_test_final_result_publication_rows pro_test_final_result_publication_rows_pro_test_candidate_id_fo; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.pro_test_final_result_publication_rows
+    ADD CONSTRAINT pro_test_final_result_publication_rows_pro_test_candidate_id_fo FOREIGN KEY (pro_test_candidate_id) REFERENCES public.pro_test_candidates(id) ON DELETE SET NULL;
+
+
+--
+-- Name: pro_test_final_result_publication_rows pro_test_final_result_publication_rows_pro_test_final_result_pu; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.pro_test_final_result_publication_rows
+    ADD CONSTRAINT pro_test_final_result_publication_rows_pro_test_final_result_pu FOREIGN KEY (pro_test_final_result_publication_id) REFERENCES public.pro_test_final_result_publications(id) ON DELETE CASCADE;
+
+
+--
+-- Name: pro_test_final_result_publications pro_test_final_result_publications_pro_test_event_id_foreign; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.pro_test_final_result_publications
+    ADD CONSTRAINT pro_test_final_result_publications_pro_test_event_id_foreign FOREIGN KEY (pro_test_event_id) REFERENCES public.pro_test_events(id) ON DELETE CASCADE;
+
+
+--
+-- Name: pro_test_final_result_publications pro_test_final_result_publications_published_by_foreign; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.pro_test_final_result_publications
+    ADD CONSTRAINT pro_test_final_result_publications_published_by_foreign FOREIGN KEY (published_by) REFERENCES public.users(id) ON DELETE SET NULL;
+
+
+--
+-- Name: pro_test_result_publication_rows pro_test_result_publication_rows_pro_test_candidate_id_foreign; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.pro_test_result_publication_rows
+    ADD CONSTRAINT pro_test_result_publication_rows_pro_test_candidate_id_foreign FOREIGN KEY (pro_test_candidate_id) REFERENCES public.pro_test_candidates(id) ON DELETE SET NULL;
+
+
+--
+-- Name: pro_test_result_publication_rows pro_test_result_publication_rows_pro_test_result_publication_id; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.pro_test_result_publication_rows
+    ADD CONSTRAINT pro_test_result_publication_rows_pro_test_result_publication_id FOREIGN KEY (pro_test_result_publication_id) REFERENCES public.pro_test_result_publications(id) ON DELETE CASCADE;
+
+
+--
+-- Name: pro_test_result_publications pro_test_result_publications_pro_test_session_id_foreign; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.pro_test_result_publications
+    ADD CONSTRAINT pro_test_result_publications_pro_test_session_id_foreign FOREIGN KEY (pro_test_session_id) REFERENCES public.pro_test_sessions(id) ON DELETE CASCADE;
+
+
+--
+-- Name: pro_test_result_publications pro_test_result_publications_published_by_foreign; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.pro_test_result_publications
+    ADD CONSTRAINT pro_test_result_publications_published_by_foreign FOREIGN KEY (published_by) REFERENCES public.users(id) ON DELETE SET NULL;
+
+
+--
+-- Name: pro_test_scores_v2 pro_test_scores_v2_pro_test_candidate_id_foreign; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.pro_test_scores_v2
+    ADD CONSTRAINT pro_test_scores_v2_pro_test_candidate_id_foreign FOREIGN KEY (pro_test_candidate_id) REFERENCES public.pro_test_candidates(id) ON DELETE CASCADE;
+
+
+--
+-- Name: pro_test_scores_v2 pro_test_scores_v2_pro_test_session_id_foreign; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.pro_test_scores_v2
+    ADD CONSTRAINT pro_test_scores_v2_pro_test_session_id_foreign FOREIGN KEY (pro_test_session_id) REFERENCES public.pro_test_sessions(id) ON DELETE CASCADE;
+
+
+--
+-- Name: pro_test_sessions pro_test_sessions_pro_test_event_id_foreign; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.pro_test_sessions
+    ADD CONSTRAINT pro_test_sessions_pro_test_event_id_foreign FOREIGN KEY (pro_test_event_id) REFERENCES public.pro_test_events(id) ON DELETE CASCADE;
 
 
 --

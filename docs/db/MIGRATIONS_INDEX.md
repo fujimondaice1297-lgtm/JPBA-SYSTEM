@@ -157,3 +157,7 @@ Source: `database/migrations`
 - `2026_08_22_000001_internalize_media_public_document_links.php`
 - `2026_08_27_000001_link_record_types_to_match_score_frames.php`
 - `2026_08_27_000002_add_lifecycle_to_users.php`
+- `2026_08_31_000001_enable_official_points_for_season_trials.php`
+- `2026_09_01_000001_create_pro_test_operations.php`
+- `2026_09_01_000002_create_pro_test_final_result_publications.php`
+- `2026_09_01_000003_add_pro_test_entry_stage_and_exemptions.php`

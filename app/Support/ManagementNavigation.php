@@ -79,6 +79,7 @@ final class ManagementNavigation
                 'description' => '選手プロフィール、資格、講習、出場資格を管理します。',
                 'tone' => 'navy',
                 'items' => [
+                    $this->item('プロテスト運用', 'pro_tests.index', '受験者、日別得点、速報、合格者公開を一画面で管理します。', ['pro_tests.*']),
                     $this->item('全プロデータ', 'pro_bowlers.list', '選手を検索してプロフィールを編集します。', ['pro_bowlers.*']),
                     $this->item('選手を新規登録', 'pro_bowlers.create', '新しいプロボウラーを登録します。', ['pro_bowlers.create']),
                     $this->item('今年度シードプロ', 'tournament_pro.index', '当年度の対象選手を確認します。', ['tournament_pro.*']),

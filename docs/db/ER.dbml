@@ -1,5 +1,5 @@
 // Auto-generated from docs/db/data_dictionary.md
-// Generated at: 2026-08-27T01:23:39+09:00
+// Generated at: 2026-09-01T21:15:00+09:00
 
 Project JPBA_SYSTEM {
   database_type: 'PostgreSQL'
@@ -198,6 +198,26 @@ Table pro_bowlers {
 }
 
 Table pro_dsp {
+  // columns omitted (see docs/db/columns_by_table.md)
+}
+
+Table pro_test_candidate_stage_results {
+  // columns omitted (see docs/db/columns_by_table.md)
+}
+
+Table pro_test_candidates {
+  // columns omitted (see docs/db/columns_by_table.md)
+}
+
+Table pro_test_events {
+  // columns omitted (see docs/db/columns_by_table.md)
+}
+
+Table pro_test_scores_v2 {
+  // columns omitted (see docs/db/columns_by_table.md)
+}
+
+Table pro_test_sessions {
   // columns omitted (see docs/db/columns_by_table.md)
 }
 

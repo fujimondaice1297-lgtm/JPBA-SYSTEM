@@ -3134,6 +3134,120 @@ JPBA公式ページのような「予選前半成績」「予選通算成績」�
 
 ---
 
+## pro_test_events
+
+### 役割
+年度ごとのプロボウラー資格取得テストを管理する運用単位。準備中、速報公開中、最終結果確定の状態と、一般向け日程・説明を保持する。
+
+### 主要カラム
+- year / name / start_date / end_date / application_start / application_end
+- male_generation / female_generation
+- status（draft / live / final）
+- public_summary / final_results_published_at
+- created_by / updated_by
+
+---
+
+## pro_test_sessions
+
+### 役割
+プロテストの男女、第1次・第2次等、実施日ごとのゲーム範囲と公開状態を管理する。
+
+### 主要カラム
+- pro_test_event_id / gender / stage_code / stage_label / day_number
+- test_date / venue / game_start / game_end / sort_order
+- pass_average / is_stage_final
+- status / published_at
+
+### 注意（運用方針）
+- `game_start` / `game_end` は段階内の累計ゲーム番号として設定する。
+- 得点修正だけでは一般速報を変更せず、公開処理で新しい版を作成する。
+
+---
+
+## pro_test_candidates
+
+### 役割
+年度ごとの受験者と最終合否を管理する。途中結果の公開に不要な年齢、生年月日、詳細住所、電話、メールは保持しない。
+
+### 主要カラム
+- pro_test_event_id / exam_number / gender / name / name_kana
+- resident_prefecture / handedness
+- entry_stage（first / second / third）
+- entry_reason（regular / previous_year_second_fail / approved_amateur_performance / amateur_pro_event_champion / other）
+- previous_candidate_id / exemption_approved_at / exemption_approved_by / exemption_note
+- final_result（pending / passed / not_passed / withdrawn）
+- license_no / pro_bowler_id
+
+### 注意（運用方針）
+- 合格後にライセンス番号から `pro_bowlers` へ紐付ける。
+- 一般の最終結果には `final_result = passed` の行だけを表示する。
+- 前年第2次不合格による第1次免除は `previous_candidate_id` で前年受験者へ結び、1つの前年履歴を複数回利用できないよう一意制約を持つ。
+- 前年免除で第2次から受験した候補者は、再度第2次で不合格でも翌々年度の免除元にできない。
+- 協会承認のアマチュア好成績者は第2次から、プロ公式戦を制したアマチュアは実技免除として第3次から登録できる。
+
+---
+
+## pro_test_candidate_stage_results
+
+### 役割
+受験者ごとの第1次・第2次・第3次の結果と免除を内部正本として保持し、翌年度の免除判定へ使用する。
+
+### 主要カラム
+- pro_test_candidate_id / stage_code
+- result（pending / passed / not_passed / withdrawn / exempt）
+- note / decided_by / decided_at
+
+### 注意（運用方針）
+- 開始段階より前の段階は `exempt`、開始段階以後は実際の結果を保存する。
+- 最終日かつ合格AVG設定済みの速報公開時に、必要ゲーム数が揃った受験者を自動判定する。棄権・例外・訂正は管理画面から上書きする。
+- 免除理由、前年履歴、段階別内部結果は一般速報と公開合格者スナップショットへ保存しない。
+
+---
+
+## pro_test_scores_v2
+
+### 役割
+実施日・受験者・ゲーム番号ごとの内部得点正本。既存の旧 `pro_test_score` は変更せず、複数年度・複数段階対応の運用を分離する。
+
+### 主要カラム
+- pro_test_session_id / pro_test_candidate_id / game_number / score
+
+---
+
+## pro_test_result_publications / pro_test_result_publication_rows
+
+### 役割
+管理者が確認して一般公開した速報の改訂版と、その時点のプライバシー安全な行スナップショットを保持する。
+
+### 主要カラム
+- publications: pro_test_session_id / revision / row_count / published_by / published_at
+- rows: rank / exam_number / name / name_kana / resident_prefecture / handedness
+- rows: games / total_pin / average / result_label / session_scores
+
+### 注意（運用方針）
+- 一般速報は常に最新の公開版を参照する。内部得点の修正は再公開まで反映しない。
+- 公開行には年齢、生年月日、詳細住所、電話、メール等を保存しない。
+- 同得点は同順位とし、次順位は競技順位方式で繰り下げる。
+
+---
+
+## pro_test_final_result_publications / pro_test_final_result_publication_rows
+
+### 役割
+管理者が一般公開した最終合格者一覧を改訂版として固定保存する。内部の合否や氏名を訂正しても、再公開するまで一般ページは変化しない。
+
+### 主要カラム
+- publications: pro_test_event_id / revision / row_count / published_by / published_at
+- rows: gender / exam_number / license_no / name / name_kana / pro_bowler_id
+
+### 注意（運用方針）
+- 公開行へ保存するのは `final_result = passed` の受験者だけとする。
+- 不合格者、棄権者、未確定者は公開版へ保存しない。
+- 合格後に `pro_bowler_id` が解決できた行だけ、一般選手プロフィールへリンクする。
+
+---
+
 ## venues
 
 ### 役割

@@ -36,11 +36,13 @@ use App\Http\Controllers\ProBowlerImportController;
 use App\Http\Controllers\ProBowlerTitleController;
 use App\Http\Controllers\ProBowlerTrainingController;
 use App\Http\Controllers\ProGroupController;
+use App\Http\Controllers\ProTestOperationController;
 use App\Http\Controllers\PublicHomeController;
 use App\Http\Controllers\PublicInstructorController;
 use App\Http\Controllers\PublicPageController;
 use App\Http\Controllers\PublicPlayerController;
 use App\Http\Controllers\PublicProfileController;
+use App\Http\Controllers\PublicProTestResultController;
 use App\Http\Controllers\PublicTournamentController;
 use App\Http\Controllers\PublicTournamentResultController;
 use App\Http\Controllers\RankingController;
@@ -256,6 +258,10 @@ Route::get('/flash-news/{id}', [FlashNewsPublicController::class, 'show'])
 Route::get('/instructor', [PublicInstructorController::class, 'index'])->name('public.instructors.index');
 Route::redirect('/instructor/index.html', '/instructor', 301);
 Route::get('/protest', [PublicPageController::class, 'protest'])->name('public.protest');
+Route::get('/protest/results/{proTest}', [PublicProTestResultController::class, 'show'])
+    ->name('public.pro_tests.show');
+Route::get('/protest/results/{proTest}/sessions/{session}', [PublicProTestResultController::class, 'session'])
+    ->name('public.pro_tests.sessions.show');
 Route::redirect('/protest/index.html', '/protest', 301);
 Route::get('/topics', [PublicPageController::class, 'topics'])->name('public.topics');
 Route::redirect('/topics.html', '/topics', 301);
@@ -408,6 +414,31 @@ Route::middleware(['auth', 'role:editor,admin'])->group(function () {
 
     Route::get('/management', [AdminHomeController::class, 'index'])
         ->name('management.home');
+
+    Route::get('/pro-test-operations', [ProTestOperationController::class, 'index'])
+        ->name('pro_tests.index');
+    Route::post('/pro-test-operations', [ProTestOperationController::class, 'store'])
+        ->name('pro_tests.store');
+    Route::get('/pro-test-operations/{proTest}', [ProTestOperationController::class, 'show'])
+        ->name('pro_tests.show');
+    Route::put('/pro-test-operations/{proTest}', [ProTestOperationController::class, 'update'])
+        ->name('pro_tests.update');
+    Route::post('/pro-test-operations/{proTest}/sessions', [ProTestOperationController::class, 'storeSession'])
+        ->name('pro_tests.sessions.store');
+    Route::post('/pro-test-operations/{proTest}/candidates/import', [ProTestOperationController::class, 'importCandidates'])
+        ->name('pro_tests.candidates.import');
+    Route::post('/pro-test-operations/{proTest}/stage-results/import', [ProTestOperationController::class, 'importStageResults'])
+        ->name('pro_tests.stage_results.import');
+    Route::post('/pro-test-operations/{proTest}/sessions/{session}/scores/import', [ProTestOperationController::class, 'importScores'])
+        ->name('pro_tests.sessions.scores.import');
+    Route::post('/pro-test-operations/{proTest}/sessions/{session}/publish', [ProTestOperationController::class, 'publishSession'])
+        ->middleware('role:admin')
+        ->name('pro_tests.sessions.publish');
+    Route::post('/pro-test-operations/{proTest}/final-results/import', [ProTestOperationController::class, 'importFinalResults'])
+        ->name('pro_tests.final_results.import');
+    Route::post('/pro-test-operations/{proTest}/final-results/publish', [ProTestOperationController::class, 'publishFinalResults'])
+        ->middleware('role:admin')
+        ->name('pro_tests.final_results.publish');
 
     Route::post('/rankings/import-official', [RankingController::class, 'storeOfficialRanking'])
         ->name('rankings.import_official');

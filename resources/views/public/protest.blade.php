@@ -92,6 +92,23 @@
   </div>
 </section>
 
+<section class="jpba-panel" aria-labelledby="protest-results-heading">
+  <h2 id="protest-results-heading" class="jpba-section-title">速報・結果</h2>
+
+  @if($proTestEvents->count())
+    <div class="jpba-link-grid">
+      @foreach($proTestEvents as $event)
+        <a href="{{ route('public.pro_tests.show', $event) }}">
+          {{ $event->year }}年度　{{ $event->name }}
+          <span class="text-muted">（公開速報 {{ $event->sessions_count }}件@if($event->final_results_published_at) / 合格者発表済み@endif）</span>
+        </a>
+      @endforeach
+    </div>
+  @else
+    <p class="mb-0 text-muted">公開中のプロテスト速報・結果はありません。</p>
+  @endif
+</section>
+
 <section class="jpba-panel" aria-labelledby="protest-flow-heading">
   <h2 id="protest-flow-heading" class="jpba-section-title">プロテスト受験の流れ</h2>
 
