@@ -1,4 +1,7 @@
-@extends('layouts.app')
+@extends(($mode ?? 'public') === 'public' ? 'public.layout' : 'layouts.app')
+
+@section('title', (($information->title ?? 'お知らせ 詳細').'｜公益社団法人 日本プロボウリング協会'))
+@section('breadcrumb', 'INFORMATION')
 
 @section('content')
 <div class="container" style="max-width:860px">

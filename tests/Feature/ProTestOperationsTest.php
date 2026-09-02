@@ -7,6 +7,7 @@ use App\Models\ProTestScore;
 use App\Models\ProTestSession;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Artisan;
 
 uses(RefreshDatabase::class);
 
@@ -80,6 +81,16 @@ test('staff can import scores and only an explicitly published privacy safe snap
         ->assertOk()
         ->assertSee('第2版')
         ->assertSee('>900<', false);
+
+    $exitCode = Artisan::call('public:parity-audit', [
+        '--dynamic-only' => true,
+        '--json' => true,
+    ]);
+    $audit = collect(json_decode(Artisan::output(), true, flags: JSON_THROW_ON_ERROR));
+
+    expect($exitCode)->toBe(0)
+        ->and($audit->firstWhere('page', 'pro-test-event:'.$event->id)['status'])->toBe('OK')
+        ->and($audit->firstWhere('page', 'pro-test-session:'.$session->id)['status'])->toBe('OK');
 });
 
 test('final public result contains passers only', function () {

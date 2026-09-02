@@ -2,6 +2,12 @@
 
 namespace App\Console\Commands;
 
+use App\Models\Information;
+use App\Models\ManagedPublicPage;
+use App\Models\ProBowler;
+use App\Models\ProTestEvent;
+use App\Models\Tournament;
+use App\Models\TournamentEntry;
 use DOMDocument;
 use Illuminate\Console\Command;
 use Illuminate\Contracts\Http\Kernel;
@@ -10,7 +16,9 @@ use Throwable;
 
 class RunPublicSiteParityAudit extends Command
 {
-    protected $signature = 'public:parity-audit {--json : Output audit result as JSON}';
+    protected $signature = 'public:parity-audit
+        {--json : Output audit result as JSON}
+        {--dynamic-only : Audit only representative data-driven detail pages}';
 
     protected $description = 'Audit public JPBA pages for current-site navigation, footer, images, PDF links, and external links.';
 
@@ -18,7 +26,10 @@ class RunPublicSiteParityAudit extends Command
     {
         $config = config('jpba_public', []);
         $globalRequiredLabels = $this->globalRequiredLabels($config);
-        $pages = $this->publicPages();
+        $pages = array_merge(
+            $this->option('dynamic-only') ? [] : $this->publicPages(),
+            $this->dynamicPublicPages()
+        );
         $results = [];
 
         foreach ($pages as $page) {
@@ -74,7 +85,140 @@ class RunPublicSiteParityAudit extends Command
             ['page' => 'media', 'path' => '/media', 'required' => ['取材のお申込み']],
             ['page' => 'commerce', 'path' => '/commerce', 'required' => ['特定商取引法に基づく表記']],
             ['page' => 'privacy', 'path' => '/privacy', 'required' => ['プライバシーポリシー']],
+            ['page' => 'information-index', 'path' => '/info', 'required' => ['INFORMATION', 'カテゴリ']],
         ];
+    }
+
+    /**
+     * Public detail pages are selected from the current database so the audit
+     * follows real route-model bindings instead of relying on fixed IDs.
+     *
+     * @return array<int,array<string,mixed>>
+     */
+    private function dynamicPublicPages(): array
+    {
+        $pages = [];
+
+        $player = ProBowler::query()
+            ->where('is_visible', true)
+            ->whereNotNull('name_kanji')
+            ->orderByDesc('updated_at')
+            ->orderByDesc('id')
+            ->first();
+        if ($player) {
+            $pages[] = [
+                'page' => 'player-profile:'.$player->id,
+                'path' => '/players/'.$player->id,
+                'required' => ['選手プロフィール', (string) $player->name_kanji, '公式戦記録', '出場大会'],
+            ];
+        }
+
+        $tournament = Tournament::query()
+            ->whereIn('setup_status', ['in_progress', 'provisional', 'final', 'archived', 'completed'])
+            ->where(function ($query): void {
+                $query->whereHas('gameScores')->orWhereHas('officialResults');
+            })
+            ->orderByRaw('start_date desc nulls last')
+            ->orderByDesc('id')
+            ->first();
+        if ($tournament) {
+            $pages[] = [
+                'page' => 'tournament-detail:'.$tournament->id,
+                'path' => '/tournament/'.$tournament->id,
+                'required' => [(string) $tournament->name, '資料・速報・成績'],
+            ];
+            $pages[] = [
+                'page' => 'tournament-live:'.$tournament->id,
+                'path' => '/tournament/'.$tournament->id.'/live',
+                'required' => [(string) $tournament->name, '速報', '表示を切り替える'],
+            ];
+
+            if ($tournament->officialResults()->exists()) {
+                $pages[] = [
+                    'page' => 'tournament-results:'.$tournament->id,
+                    'path' => '/tournament/'.$tournament->id.'/results',
+                    'required' => [(string) $tournament->name, '全成績', '最終成績'],
+                ];
+            }
+
+            $entry = TournamentEntry::query()
+                ->where('tournament_id', $tournament->id)
+                ->where('status', 'entry')
+                ->whereHas('bowler')
+                ->with('bowler')
+                ->withCount('balls')
+                ->orderByDesc('balls_count')
+                ->orderBy('id')
+                ->first();
+            if ($entry) {
+                $pages[] = [
+                    'page' => 'tournament-entries:'.$tournament->id,
+                    'path' => '/tournament/'.$tournament->id.'/entries',
+                    'required' => [(string) $tournament->name, 'エントリープロ'],
+                ];
+                $pages[] = [
+                    'page' => 'tournament-entry-balls:'.$entry->id,
+                    'path' => '/tournament-entries/'.$entry->id.'/registered-balls?public=1',
+                    'required' => [(string) $entry->bowler->name_kanji, '大会登録ボール'],
+                ];
+            }
+        }
+
+        $information = Information::query()
+            ->public()
+            ->active()
+            ->orderByDesc('published_at')
+            ->orderByDesc('id')
+            ->first();
+        if ($information) {
+            $pages[] = [
+                'page' => 'information-detail:'.$information->id,
+                'path' => '/info/'.$information->id,
+                'required' => ['お知らせ 詳細', (string) $information->title],
+            ];
+        }
+
+        $managedPage = ManagedPublicPage::query()
+            ->published()
+            ->orderBy('sort_order')
+            ->orderBy('id')
+            ->first();
+        if ($managedPage) {
+            $pages[] = [
+                'page' => 'managed-page:'.$managedPage->id,
+                'path' => '/pages/'.$managedPage->slug,
+                'required' => [(string) $managedPage->title],
+            ];
+        }
+
+        $proTest = ProTestEvent::query()
+            ->publiclyVisible()
+            ->orderByDesc('year')
+            ->orderByDesc('id')
+            ->first();
+        if ($proTest) {
+            $pages[] = [
+                'page' => 'pro-test-event:'.$proTest->id,
+                'path' => '/protest/results/'.$proTest->id,
+                'required' => [(string) $proTest->name, '速報・結果', '年齢・生年月日・住所・連絡先を公開していません'],
+            ];
+
+            $session = $proTest->sessions()
+                ->whereNotNull('published_at')
+                ->whereHas('publications')
+                ->orderByDesc('sort_order')
+                ->orderByDesc('id')
+                ->first();
+            if ($session) {
+                $pages[] = [
+                    'page' => 'pro-test-session:'.$session->id,
+                    'path' => '/protest/results/'.$proTest->id.'/sessions/'.$session->id,
+                    'required' => [(string) $proTest->name, $session->display_name, '年齢・生年月日・住所・連絡先は公開していません'],
+                ];
+            }
+        }
+
+        return $pages;
     }
 
     /**
@@ -149,10 +293,16 @@ class RunPublicSiteParityAudit extends Command
         $links = $this->extractAttributeValues($dom, 'a', 'href');
         $images = $this->extractAttributeValues($dom, 'img', 'src');
         $localAssetPaths = array_merge($images, $this->localAssetLinks($links));
-        $missingAssets = array_values(array_filter($localAssetPaths, fn (string $url) => ! $this->localAssetExists($url)));
+        $missingAssets = array_values(array_filter(
+            $localAssetPaths,
+            fn (string $url) => ! $this->localAssetExists($kernel, $url)
+        ));
 
         $httpStatus = (int) $response->getStatusCode();
-        $status = ($httpStatus >= 200 && $httpStatus < 400 && empty($missingLabels)) ? 'OK' : 'FAIL';
+        $status = ($httpStatus >= 200
+            && $httpStatus < 400
+            && empty($missingLabels)
+            && empty($missingAssets)) ? 'OK' : 'FAIL';
 
         return [
             'page' => $page['page'] ?? $path,
@@ -226,7 +376,7 @@ class RunPublicSiteParityAudit extends Command
         }));
     }
 
-    private function localAssetExists(string $url): bool
+    private function localAssetExists(Kernel $kernel, string $url): bool
     {
         if ($this->isExternalUrl($url)) {
             return true;
@@ -243,10 +393,24 @@ class RunPublicSiteParityAudit extends Command
         }
 
         if (str_starts_with($path, 'storage/')) {
-            return is_file(storage_path('app/public/'.substr($path, strlen('storage/'))));
+            if (is_file(storage_path('app/public/'.substr($path, strlen('storage/'))))) {
+                return true;
+            }
         }
 
-        return false;
+        $request = Request::create($url, 'GET', [], [], [], [
+            'HTTP_HOST' => parse_url((string) config('app.url'), PHP_URL_HOST) ?: 'localhost',
+        ]);
+
+        try {
+            $response = $kernel->handle($request);
+            $status = (int) $response->getStatusCode();
+            $kernel->terminate($request, $response);
+
+            return $status >= 200 && $status < 400;
+        } catch (Throwable) {
+            return false;
+        }
     }
 
     private function isExternalUrl(string $href): bool

@@ -1,8 +1,11 @@
-@extends('layouts.app')
+@extends('public.layout')
+
+@section('title', 'INFORMATION｜公益社団法人 日本プロボウリング協会')
+@section('breadcrumb', 'INFORMATION')
 
 @section('content')
 <div class="container" style="max-width:860px">
-  <h2 class="mb-3">お知らせ</h2>
+  <h1 class="jpba-page-title mb-3">INFORMATION</h1>
 
   @auth
     @if(auth()->user()?->isEditor() || auth()->user()?->isAdmin())

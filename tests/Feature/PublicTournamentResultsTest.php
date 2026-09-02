@@ -7,6 +7,7 @@ use App\Models\Tournament;
 use App\Models\TournamentEntry;
 use App\Models\TournamentResult;
 use App\Models\User;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 
 test('published tournament scores and final results are reachable from the public hub', function () {
@@ -85,6 +86,20 @@ test('published tournament scores and final results are reachable from the publi
         ->assertOk()
         ->assertSee('速報・途中経過を見る（2スコア）')
         ->assertSee('全成績を見る（1名）');
+
+    $exitCode = Artisan::call('public:parity-audit', [
+        '--dynamic-only' => true,
+        '--json' => true,
+    ]);
+    $audit = collect(json_decode(Artisan::output(), true, flags: JSON_THROW_ON_ERROR));
+
+    expect($exitCode)->toBe(0)
+        ->and($audit->firstWhere('page', 'player-profile:'.$bowler->id)['status'])->toBe('OK')
+        ->and($audit->firstWhere('page', 'tournament-detail:'.$tournament->id)['status'])->toBe('OK')
+        ->and($audit->firstWhere('page', 'tournament-live:'.$tournament->id)['status'])->toBe('OK')
+        ->and($audit->firstWhere('page', 'tournament-results:'.$tournament->id)['status'])->toBe('OK')
+        ->and($audit->firstWhere('page', 'tournament-entries:'.$tournament->id)['status'])->toBe('OK')
+        ->and($audit->firstWhere('page', 'tournament-entry-balls:'.$entry->id)['status'])->toBe('OK');
 });
 
 test('draft score data stays hidden from public live and result pages', function () {
