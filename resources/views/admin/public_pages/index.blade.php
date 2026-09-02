@@ -19,7 +19,7 @@
         <div class="card-body d-flex flex-column gap-3">
           <div class="d-flex justify-content-between gap-2 align-items-start">
             <div>
-              <div class="small text-muted">{{ match($page->navigation_group){'association'=>'JPBAについて','instructor'=>'インストラクター','protest'=>'プロテスト','footer'=>'フッター',default=>'その他'} }}</div>
+              <div class="small text-muted">{{ match($page->navigation_group){'association'=>'JPBAについて','instructor'=>'インストラクター','protest'=>'プロテスト','support'=>'賛助会員','footer'=>'フッター',default=>'その他'} }}</div>
               <h2 class="h5 mb-0">{{ $page->title }}</h2>
             </div>
             <span class="badge {{ $page->is_published ? 'bg-success' : 'bg-secondary' }}">{{ $page->is_published ? '公開中' : '非公開' }}</span>

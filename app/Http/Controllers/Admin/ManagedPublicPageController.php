@@ -40,7 +40,7 @@ class ManagedPublicPageController extends Controller
         $data['body_html'] = $sanitizer->sanitize($data['body_html']);
         $data['is_published'] = $request->boolean('is_published');
         $data['published_at'] = $data['is_published'] ? now() : null;
-        $data['source_checked_at'] = !empty($data['source_url']) ? now() : null;
+        $data['source_checked_at'] = ! empty($data['source_url']) ? now() : null;
         $data['created_by_user_id'] = auth()->id();
         $data['updated_by_user_id'] = auth()->id();
 
@@ -66,7 +66,7 @@ class ManagedPublicPageController extends Controller
         $data['published_at'] = $data['is_published']
             ? ($publicPage->published_at ?: now())
             : null;
-        $data['source_checked_at'] = !empty($data['source_url'])
+        $data['source_checked_at'] = ! empty($data['source_url'])
             ? ($publicPage->source_checked_at ?: now())
             : null;
         $data['updated_by_user_id'] = auth()->id();
@@ -89,7 +89,7 @@ class ManagedPublicPageController extends Controller
             'title' => ['required', 'string', 'max:255'],
             'body_html' => ['required', 'string', 'max:500000'],
             'source_url' => ['nullable', 'url', 'max:2000'],
-            'navigation_group' => ['nullable', 'in:association,instructor,protest,footer,other'],
+            'navigation_group' => ['nullable', 'in:association,instructor,protest,support,footer,other'],
             'sort_order' => ['nullable', 'integer', 'min:0', 'max:65000'],
             'is_published' => ['nullable', 'boolean'],
         ]);

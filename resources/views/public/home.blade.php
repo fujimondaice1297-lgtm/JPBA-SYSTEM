@@ -271,6 +271,13 @@
       overflow-wrap: anywhere;
     }
 
+    .jpba-related-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 22px;
+      margin-top: 22px;
+    }
+
     .jpba-empty {
       padding: 16px;
       border: 1px solid var(--jpba-line);
@@ -299,6 +306,7 @@
       .jpba-nav { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .jpba-tournament-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .jpba-layout { grid-template-columns: 1fr; }
+      .jpba-related-grid { grid-template-columns: 1fr; }
       .jpba-info-row { grid-template-columns: 1fr; gap: 4px; }
     }
 
@@ -320,6 +328,9 @@
   $utilityLinks = $config['utility_links'] ?? [];
   $featuredPdfLinks = $config['featured_pdf_links'] ?? [];
   $channelLinks = $config['channel_links'] ?? [];
+  $supportLinks = $config['support_links'] ?? [];
+  $socialLinks = $config['social_links'] ?? [];
+  $relatedOrganizationLinks = $config['related_organization_links'] ?? [];
   $footerLinks = $config['footer_links'] ?? [];
   $logoUrl = asset('images/jpba_logo.png');
 
@@ -502,9 +513,31 @@
           <div class="jpba-link-list">
             <a href="{{ route('login') }}">プロボウラー専用ページ</a>
             <a href="{{ route('informations.index') }}">一般公開INFORMATION</a>
+            @foreach($supportLinks as $link)
+              <a href="{{ $urlFor($link) }}">{{ $link['label'] }}</a>
+            @endforeach
           </div>
         </div>
       </aside>
+    </div>
+
+    <div class="jpba-related-grid">
+      <section class="jpba-side-block" aria-labelledby="sns-heading">
+        <h2 id="sns-heading" class="jpba-side-title">公式SNS</h2>
+        <div class="jpba-link-list">
+          @foreach($socialLinks as $link)
+            <a href="{{ $urlFor($link) }}" target="_blank" rel="noopener">{{ $link['label'] }}</a>
+          @endforeach
+        </div>
+      </section>
+      <section class="jpba-side-block" aria-labelledby="organizations-heading">
+        <h2 id="organizations-heading" class="jpba-side-title">関連団体</h2>
+        <div class="jpba-link-list">
+          @foreach($relatedOrganizationLinks as $link)
+            <a href="{{ $urlFor($link) }}" target="_blank" rel="noopener">{{ $link['label'] }}</a>
+          @endforeach
+        </div>
+      </section>
     </div>
   </main>
 

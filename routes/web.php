@@ -266,6 +266,10 @@ Route::redirect('/protest/index.html', '/protest', 301);
 Route::get('/topics', [PublicPageController::class, 'topics'])->name('public.topics');
 Route::redirect('/topics.html', '/topics', 301);
 Route::redirect('/update_logs.html', '/topics', 301);
+Route::get('/support', [PublicPageController::class, 'staticPage'])->defaults('page', 'support')->name('public.support');
+Route::redirect('/support/index.html', '/support', 301);
+Route::redirect('/support/corporation.html', '/pages/support-corporate', 301);
+Route::redirect('/support/person.html', '/pages/support-individual', 301);
 Route::get('/contact', [PublicPageController::class, 'staticPage'])->defaults('page', 'contact')->name('public.contact');
 Route::redirect('/inquiry', '/contact', 301);
 Route::redirect('/inquiry/index.html', '/contact', 301);
@@ -285,6 +289,10 @@ Route::redirect('/association/map.html', '/pages/organization-chart', 301);
 Route::redirect('/instructor/overview.html', '/pages/instructor-overview', 301);
 Route::redirect('/instructor/textbook.html', '/pages/instructor-textbook', 301);
 Route::redirect('/instructor/school_guide.html', '/pages/instructor-school', 301);
+Route::redirect('/instructor/flow.html', '/pages/instructor-flow', 301);
+Route::redirect('/instructor/plan.html', '/pages/instructor-plan', 301);
+Route::redirect('/instructor/school.html', '/pages/instructor-school-about', 301);
+Route::redirect('/instructor/signage.html', '/pages/instructor-signage', 301);
 Route::redirect('/protest/guide.html', '/pages/pro-test-guide', 301);
 
 /* ========================

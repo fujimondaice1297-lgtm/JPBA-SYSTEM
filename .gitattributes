@@ -18,6 +18,13 @@ CHANGELOG.md export-ignore
 # PHP
 *.php text eol=lf
 
+# Downloaded public documents and images must never be normalized as text.
+*.pdf binary
+*.docx binary
+*.jpg binary
+*.jpeg binary
+*.png binary
+
 # DBML
 *.dbml text eol=lf
 

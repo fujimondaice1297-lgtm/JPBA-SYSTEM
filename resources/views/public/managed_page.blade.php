@@ -12,6 +12,7 @@
   .jpba-managed-body th,.jpba-managed-body td { padding:.65rem .75rem; border:1px solid var(--jpba-line); vertical-align:top; }
   .jpba-managed-body th { width:190px; background:var(--jpba-soft); }
   .jpba-managed-body a { overflow-wrap:anywhere; }
+  .jpba-managed-body img { display:block; max-width:100%; height:auto; margin:.4rem auto; }
   @media(max-width:560px){.jpba-managed-body th,.jpba-managed-body td{display:block;width:100%;}}
 </style>
 @endpush

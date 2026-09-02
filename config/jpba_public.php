@@ -48,13 +48,39 @@ return [
         ],
     ],
 
+    'support_links' => [
+        ['label' => '法人・個人賛助会員', 'route' => 'public.support'],
+        ['label' => '法人賛助会員のご案内', 'route' => 'public.managed_pages.show', 'params' => ['managedPublicPage' => 'support-corporate']],
+        ['label' => '個人賛助会員のご案内', 'route' => 'public.managed_pages.show', 'params' => ['managedPublicPage' => 'support-individual']],
+    ],
+
+    'social_links' => [
+        ['label' => 'Facebook', 'url' => 'https://www.facebook.com/jpba1967/'],
+        ['label' => 'X（旧Twitter）', 'url' => 'https://twitter.com/JPBA_OFFICIAL'],
+        ['label' => 'Instagram', 'url' => 'https://www.instagram.com/jpba_official/'],
+    ],
+
+    'related_organization_links' => [
+        ['label' => 'PBA', 'url' => 'https://www.pba.com/'],
+        ['label' => 'KPBA', 'url' => 'http://koreapba.com/'],
+        ['label' => 'P★LEAGUE', 'url' => 'https://www.p-league.jp/'],
+        ['label' => 'JAPAN BOWLING', 'url' => 'http://japanbowling.org/'],
+        ['label' => '公益社団法人 日本ボウリング場協会', 'url' => 'https://bowling.or.jp/'],
+        ['label' => '公益財団法人 JAPAN BOWLING', 'url' => 'https://www.japan-bowling.or.jp/'],
+        ['label' => '日本ボウラーズ連盟', 'url' => 'https://nbfgr.jp/'],
+        ['label' => '全国実業団ボウリング連盟', 'url' => 'https://abbf.sakura.ne.jp/'],
+        ['label' => 'ジャパンレディースボウリングクラブ', 'url' => 'http://www.jlbc-home.com/'],
+        ['label' => '公益財団法人 日本スポーツ協会', 'url' => 'https://www.japan-sports.or.jp/'],
+        ['label' => '公益財団法人 日本プロスポーツ協会', 'url' => 'http://www.jpsa.jp/'],
+    ],
+
     'association' => [
         'overview' => [
             ['label' => '名称', 'value' => '公益社団法人日本プロボウリング協会 / Japan Professional Bowling Association / JPBA'],
             ['label' => '設立', 'value' => '1967年1月27日 発足 / 1991年7月10日 社団法人化 / 2013年7月1日 公益社団法人に移行'],
             ['label' => '所在地', 'value' => '〒105-0023 東京都港区芝浦1-13-10 第三東運ビル2F'],
             ['label' => '連絡', 'value' => 'TEL: 03-6436-0310（代表） / FAX: 03-3454-6140'],
-            ['label' => '会員数', 'value' => '男子736名 / 女子363名 / プロ・インストラクター8名 / 計1,107名（2026年3月11日現在）'],
+            ['label' => '会員数', 'value' => '男子748名 / 女子372名 / プロ・インストラクター8名 / 計1,128名（2026年5月16日現在）'],
         ],
         'description' => [
             '本協会は、我が国におけるプロボウリングを統括し代表する団体として、健全なるプロフェッショナルボウラーの育成に努めるとともに、指導者の資格認定・登録、養成・研修を行います。',
@@ -111,6 +137,30 @@ return [
                 'description' => 'JPBAインストラクター制度の概要を確認できます。',
                 'route' => 'public.managed_pages.show',
                 'params' => ['managedPublicPage' => 'instructor-overview'],
+            ],
+            [
+                'label' => '資格取得までの流れ',
+                'description' => 'インストラクター資格取得の流れをPDFで確認できます。',
+                'route' => 'public.managed_pages.show',
+                'params' => ['managedPublicPage' => 'instructor-flow'],
+            ],
+            [
+                'label' => '講習会年間計画',
+                'description' => '資格取得講習会、専門講習会、研修会の確認方法をご案内します。',
+                'route' => 'public.managed_pages.show',
+                'params' => ['managedPublicPage' => 'instructor-plan'],
+            ],
+            [
+                'label' => 'JPBA公認ボウリングスクールについて',
+                'description' => '開講資格、申請書、スクール用教材の案内です。',
+                'route' => 'public.managed_pages.show',
+                'params' => ['managedPublicPage' => 'instructor-school-about'],
+            ],
+            [
+                'label' => 'ステッカー・ワッペン',
+                'description' => '資格区分ごとのステッカーとワッペンを確認できます。',
+                'route' => 'public.managed_pages.show',
+                'params' => ['managedPublicPage' => 'instructor-signage'],
             ],
         ],
         'license_links' => [
@@ -254,6 +304,7 @@ return [
     ],
 
     'footer_links' => [
+        ['label' => '法人・個人賛助会員', 'route' => 'public.support'],
         ['label' => 'お問い合わせ', 'route' => 'public.contact'],
         ['label' => '取材のお申込み', 'route' => 'public.media'],
         ['label' => '特定商取引法に基づく表記', 'route' => 'public.commerce'],

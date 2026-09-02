@@ -4,7 +4,7 @@ namespace App\Services;
 
 class ManagedPublicPageSanitizer
 {
-    private const ALLOWED_TAGS = '<p><br><div><h2><h3><h4><ul><ol><li><strong><b><em><i><u><a><table><thead><tbody><tr><th><td><blockquote><hr>';
+    private const ALLOWED_TAGS = '<p><br><div><h2><h3><h4><ul><ol><li><strong><b><em><i><u><a><img><table><thead><tbody><tr><th><td><blockquote><hr>';
 
     public function sanitize(?string $html): string
     {
@@ -14,6 +14,7 @@ class ManagedPublicPageSanitizer
         $html = preg_replace('/\s+on[a-z]+\s*=\s*("[^"]*"|\'[^\']*\'|[^\s>]+)/iu', '', $html) ?? $html;
         $html = preg_replace('/\s+(style|class|id)\s*=\s*("[^"]*"|\'[^\']*\'|[^\s>]+)/iu', '', $html) ?? $html;
         $html = preg_replace('/href\s*=\s*(["\'])\s*(?:javascript|data):[^"\']*\1/iu', 'href="#"', $html) ?? $html;
+        $html = preg_replace('/src\s*=\s*(["\'])\s*(?:javascript|data):[^"\']*\1/iu', 'src=""', $html) ?? $html;
 
         return trim($html);
     }
