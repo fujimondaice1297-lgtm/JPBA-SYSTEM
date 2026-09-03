@@ -258,6 +258,9 @@ Route::get('/flash-news/{id}', [FlashNewsPublicController::class, 'show'])
 Route::get('/instructor', [PublicInstructorController::class, 'index'])->name('public.instructors.index');
 Route::redirect('/instructor/index.html', '/instructor', 301);
 Route::get('/protest', [PublicPageController::class, 'protest'])->name('public.protest');
+Route::get('/protest/history/{year}', [PublicProTestResultController::class, 'history'])
+    ->whereNumber('year')
+    ->name('public.pro_tests.history');
 Route::get('/protest/results/{proTest}', [PublicProTestResultController::class, 'show'])
     ->name('public.pro_tests.show');
 Route::get('/protest/results/{proTest}/sessions/{session}', [PublicProTestResultController::class, 'session'])

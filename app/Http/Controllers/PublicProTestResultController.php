@@ -8,6 +8,21 @@ use Illuminate\View\View;
 
 class PublicProTestResultController extends Controller
 {
+    public function history(int $year): View
+    {
+        $history = config("pro_test_history.years.{$year}");
+        abort_unless(is_array($history), 404);
+
+        return view('public.pro_tests.history', [
+            'history' => $history,
+            'groupLabels' => [
+                'final' => '最終結果・合格者',
+                'first' => '第1次テスト',
+                'second' => '第2次テスト',
+            ],
+        ]);
+    }
+
     public function show(ProTestEvent $proTest): View
     {
         abort_unless($this->isVisible($proTest), 404);

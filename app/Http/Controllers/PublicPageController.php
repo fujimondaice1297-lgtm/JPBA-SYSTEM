@@ -120,6 +120,7 @@ class PublicPageController extends Controller
                 ->orderByDesc('year')
                 ->orderByDesc('id')
                 ->get(),
+            'proTestHistoryYears' => collect(config('pro_test_history.years', [])),
         ]);
     }
 

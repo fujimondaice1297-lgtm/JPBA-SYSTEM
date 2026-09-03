@@ -35,8 +35,43 @@
     min-width: 760px;
   }
 
+  .jpba-protest-history-years {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .jpba-protest-history-years a {
+    display: block;
+    padding: 12px;
+    border: 1px solid var(--jpba-line);
+    border-radius: 6px;
+    background: #fff;
+    color: var(--jpba-blue);
+    font-weight: 700;
+    text-decoration: none;
+  }
+
+  .jpba-protest-history-years a:hover,
+  .jpba-protest-history-years a:focus-visible {
+    border-color: var(--jpba-blue);
+    background: #f4f8fd;
+  }
+
+  .jpba-protest-history-years small {
+    display: block;
+    margin-top: 3px;
+    color: #5f6b78;
+    font-weight: 400;
+  }
+
   @media (max-width: 900px) {
     .jpba-protest-lead { grid-template-columns: 1fr; }
+    .jpba-protest-history-years { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+
+  @media (max-width: 520px) {
+    .jpba-protest-history-years { grid-template-columns: 1fr; }
   }
 </style>
 @endpush
@@ -107,6 +142,27 @@
   @else
     <p class="mb-0 text-muted">公開中のプロテスト速報・結果はありません。</p>
   @endif
+</section>
+
+<section class="jpba-panel" aria-labelledby="protest-history-heading">
+  <h2 id="protest-history-heading" class="jpba-section-title">過去のプロテスト結果</h2>
+  <p>現行JPBAサイトで公開されていた2008年度以降の実技成績と最終結果を、新サイト内に保存しています。</p>
+
+  <div class="jpba-protest-history-years">
+    @foreach($proTestHistoryYears as $history)
+      @php($documentCount = count($history['documents'] ?? []))
+      <a href="{{ route('public.pro_tests.history', ['year' => $history['year']]) }}">
+        {{ $history['year'] }}年度
+        <small>
+          @if($history['held'])
+            男子{{ $history['male_generation'] }}・女子{{ $history['female_generation'] }}／資料{{ $documentCount }}件
+          @else
+            開催中止
+          @endif
+        </small>
+      </a>
+    @endforeach
+  </div>
 </section>
 
 <section class="jpba-panel" aria-labelledby="protest-flow-heading">
