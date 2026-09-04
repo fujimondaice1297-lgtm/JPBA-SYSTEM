@@ -6,7 +6,6 @@ use App\Models\Information;
 use App\Models\InformationFile;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 
 class InformationController extends Controller
 {
@@ -14,12 +13,14 @@ class InformationController extends Controller
     public function index(Request $request)
     {
         $year = $request->input('year');
-        if ($year === null) { $year = now()->year; } // デフォルト：今年（未指定時のみ）
+        if ($year === null) {
+            $year = now()->year;
+        } // デフォルト：今年（未指定時のみ）
 
         $categories = Information::categories();
-        $category = (string)($request->input('category') ?? '');
+        $category = (string) ($request->input('category') ?? '');
         $category = trim($category);
-        if ($category === '' || !in_array($category, $categories, true)) {
+        if ($category === '' || ! in_array($category, $categories, true)) {
             $category = null;
         }
 
@@ -29,13 +30,12 @@ class InformationController extends Controller
                 $q->where('visibility', 'public');
             }])
             ->when($year, function ($q) use ($year) {
-                // updated_at の年でフィルタ。なければ starts_at/created_at を使っても良いが設計統一のため updated_at で。
-                $q->whereYear('updated_at', $year);
+                $q->whereYear(DB::raw('COALESCE(published_at, updated_at, starts_at, created_at)'), $year);
             })
             ->when($category, function ($q) use ($category) {
                 $q->where('category', $category);
             })
-            ->orderByDesc('updated_at')
+            ->orderByDesc(DB::raw('COALESCE(published_at, updated_at, starts_at, created_at)'))
             ->orderByDesc('starts_at')
             ->orderByDesc('id')
             ->paginate(20) // 1ページ20件（好みで変更）
@@ -43,7 +43,7 @@ class InformationController extends Controller
 
         $availableYears = $this->years();
 
-        return view('informations.index', compact('infos','availableYears','categories'));
+        return view('informations.index', compact('infos', 'availableYears', 'categories'));
     }
 
     /** 会員向け（要ログイン） */
@@ -51,21 +51,23 @@ class InformationController extends Controller
     {
         $user = $request->user();
         $year = $request->input('year');
-        if ($year === null) { $year = now()->year; }
+        if ($year === null) {
+            $year = now()->year;
+        }
 
         $categories = Information::categories();
-        $category = (string)($request->input('category') ?? '');
+        $category = (string) ($request->input('category') ?? '');
         $category = trim($category);
-        if ($category === '' || !in_array($category, $categories, true)) {
+        if ($category === '' || ! in_array($category, $categories, true)) {
             $category = null;
         }
 
         $infos = Information::active()->forUser($user)
             // 会員向けでは public / members どちらもカウント（運用上は visibility で出し分け可能）
             ->withCount('files')
-            ->when($year, fn($q) => $q->whereYear('updated_at', $year))
-            ->when($category, fn($q) => $q->where('category', $category))
-            ->orderByDesc('updated_at')
+            ->when($year, fn ($q) => $q->whereYear(DB::raw('COALESCE(published_at, updated_at, starts_at, created_at)'), $year))
+            ->when($category, fn ($q) => $q->where('category', $category))
+            ->orderByDesc(DB::raw('COALESCE(published_at, updated_at, starts_at, created_at)'))
             ->orderByDesc('starts_at')
             ->orderByDesc('id')
             ->paginate(20)
@@ -73,7 +75,7 @@ class InformationController extends Controller
 
         $availableYears = $this->years();
 
-        return view('informations.member', compact('infos','availableYears','categories'));
+        return view('informations.member', compact('infos', 'availableYears', 'categories'));
     }
 
     /**
@@ -95,7 +97,9 @@ class InformationController extends Controller
                 ->whereKey($information->id)
                 ->exists();
 
-            if (!$ok) abort(404);
+            if (! $ok) {
+                abort(404);
+            }
         } else {
             $ok = Information::query()
                 ->active()
@@ -103,7 +107,9 @@ class InformationController extends Controller
                 ->whereKey($information->id)
                 ->exists();
 
-            if (!$ok) abort(404);
+            if (! $ok) {
+                abort(404);
+            }
         }
 
         // 添付（表示順）
@@ -111,7 +117,7 @@ class InformationController extends Controller
             ->orderBy('sort_order')
             ->orderBy('id');
 
-        if (!$isMemberMode) {
+        if (! $isMemberMode) {
             $filesQ->where('visibility', 'public');
         }
 
@@ -134,7 +140,9 @@ class InformationController extends Controller
         $isMemberMode = $this->isMemberMode($request);
 
         $information = $informationFile->information()->first();
-        if (!$information) abort(404);
+        if (! $information) {
+            abort(404);
+        }
 
         // ルートに応じたアクセス制御（show と同じ思想）
         if ($isMemberMode) {
@@ -145,10 +153,14 @@ class InformationController extends Controller
                 ->whereKey($information->id)
                 ->exists();
 
-            if (!$ok) abort(404);
+            if (! $ok) {
+                abort(404);
+            }
         } else {
             // 一般公開モードでは、ファイル自体も public 以外は落とさせない
-            if (($informationFile->visibility ?? 'public') !== 'public') abort(404);
+            if (($informationFile->visibility ?? 'public') !== 'public') {
+                abort(404);
+            }
 
             $ok = Information::query()
                 ->active()
@@ -156,43 +168,41 @@ class InformationController extends Controller
                 ->whereKey($information->id)
                 ->exists();
 
-            if (!$ok) abort(404);
+            if (! $ok) {
+                abort(404);
+            }
         }
 
-        // file_path は「storage/〜」「public/〜」など混在し得るので正規化
-        $path = (string)($informationFile->file_path ?? '');
-        $path = trim($path);
-        $path = preg_replace('#^/?storage/#', '', $path);
-        $path = preg_replace('#^/?public/#', '', $path);
-        $path = ltrim($path, '/');
-
-        // 原則: storage/app/public 配下（disk: public）
-        if (!Storage::disk('public')->exists($path)) {
+        $path = $informationFile->normalizedPath();
+        $absolutePath = $informationFile->absolutePath();
+        if ($absolutePath === null) {
             abort(404);
         }
 
         // DL時のファイル名
-        $downloadName = (string)($informationFile->title ?? '');
+        $downloadName = (string) ($informationFile->title ?? '');
         $downloadName = trim($downloadName);
 
         if ($downloadName === '') {
             $downloadName = basename($path);
         } else {
             // 拡張子が無ければ path から補完
-            if (!str_contains($downloadName, '.')) {
+            if (! str_contains($downloadName, '.')) {
                 $ext = pathinfo($path, PATHINFO_EXTENSION);
-                if ($ext) $downloadName .= '.' . $ext;
+                if ($ext) {
+                    $downloadName .= '.'.$ext;
+                }
             }
         }
 
-        return Storage::disk('public')->download($path, $downloadName);
+        return response()->download($absolutePath, $downloadName);
     }
 
     /** 情報が存在する年一覧（降順） */
     private function years(): array
     {
         return DB::table('informations')
-            ->selectRaw("DISTINCT EXTRACT(YEAR FROM COALESCE(updated_at, starts_at, created_at))::int AS y")
+            ->selectRaw('DISTINCT EXTRACT(YEAR FROM COALESCE(published_at, updated_at, starts_at, created_at))::int AS y')
             ->orderByDesc('y')
             ->pluck('y')
             ->all();
@@ -201,14 +211,15 @@ class InformationController extends Controller
     /** /member/info 配下かどうか（ルート名依存を避け、URLで判定） */
     private function isMemberMode(Request $request): bool
     {
-        $path = ltrim((string)$request->path(), '/');
+        $path = ltrim((string) $request->path(), '/');
         if (str_starts_with($path, 'member/info')) {
             return true;
         }
 
         // ルート追加無しで member 表示したい場合：/info/{id}?mode=member
         // ※ログインしていない場合は member 扱いにしない（forUser の安全のため）
-        $mode = (string)($request->query('mode') ?? '');
+        $mode = (string) ($request->query('mode') ?? '');
+
         return ($mode === 'member') && ($request->user() !== null);
     }
 }

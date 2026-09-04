@@ -35,7 +35,11 @@
         <span class="badge text-bg-light">更新: {{ optional($information->updated_at)->format('Y-m-d') }}</span>
       </div>
 
-      <div class="card-text" style="white-space:pre-wrap">{{ $information->body }}</div>
+      @if(($information->body_format ?? 'plain') === 'html')
+        <div class="card-text jpba-information-body">{!! $information->body !!}</div>
+      @else
+        <div class="card-text" style="white-space:pre-wrap">{{ $information->body }}</div>
+      @endif
     </div>
   </div>
 
@@ -45,8 +49,29 @@
     </div>
     <div class="card-body">
       @if(isset($files) && count($files) > 0)
+        @php
+          $images = $files->filter(fn ($file) => str_contains(strtolower((string) $file->type), 'image'));
+          $documents = $files->reject(fn ($file) => str_contains(strtolower((string) $file->type), 'image'));
+        @endphp
+
+        @if($images->isNotEmpty())
+          <div class="row g-3 mb-3">
+            @foreach($images as $file)
+              @if($file->publicUrl())
+                <div class="col-6 col-md-4">
+                  <a href="{{ $file->publicUrl() }}" target="_blank" rel="noopener" class="d-block text-decoration-none">
+                    <img src="{{ $file->publicUrl() }}" alt="{{ $file->title ?: $information->title }}" class="img-fluid rounded border" loading="lazy">
+                    @if($file->title)<div class="small mt-1">{{ $file->title }}</div>@endif
+                  </a>
+                </div>
+              @endif
+            @endforeach
+          </div>
+        @endif
+
+        @if($documents->isNotEmpty())
         <div class="list-group">
-          @foreach($files as $file)
+          @foreach($documents as $file)
             <div class="list-group-item d-flex justify-content-between align-items-center">
               <div>
                 <div class="fw-semibold">
@@ -63,6 +88,7 @@
             </div>
           @endforeach
         </div>
+        @endif
       @else
         <div class="text-muted">添付ファイルはありません。</div>
       @endif

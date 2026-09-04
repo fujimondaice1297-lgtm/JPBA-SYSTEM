@@ -1,7 +1,7 @@
 # Columns by table (generated)
 
 - Source: `docs/db/columns_public.csv`
-- Generated: 2026-09-01 21:15:00
+- Generated: 2026-09-05 07:06:38
 
 > ⚠️ このファイルは自動生成です。手で編集しないでください。
 
@@ -97,31 +97,31 @@
 | 2 | name | character varying | NO |
 | 3 | name_kana | character varying | YES |
 | 4 | manufacturer | character varying | NO |
-| 6 | approved | boolean | NO |
-| 7 | created_at | timestamp without time zone | YES |
-| 8 | updated_at | timestamp without time zone | YES |
-| 9 | release_date | date | YES |
-| 10 | manufacturer_id | bigint | YES |
-| 11 | brand | character varying | YES |
-| 12 | sort_name | character varying | YES |
-| 13 | source_key | character varying | YES |
-| 14 | source_url | text | YES |
-| 15 | source_image_url | text | YES |
-| 16 | image_path | text | YES |
-| 17 | image_sha256 | character varying | YES |
-| 18 | catalog_status | character varying | NO |
-| 19 | source_payload | json | YES |
-| 20 | source_fingerprint | character varying | YES |
-| 21 | first_seen_at | timestamp without time zone | YES |
-| 22 | last_seen_at | timestamp without time zone | YES |
-| 23 | imported_at | timestamp without time zone | YES |
-| 24 | image_imported_at | timestamp without time zone | YES |
-| 25 | usbc_match_status | character varying | NO |
-| 26 | usbc_match_method | character varying | YES |
-| 27 | usbc_matched_brand | character varying | YES |
-| 28 | usbc_matched_name | character varying | YES |
-| 29 | usbc_match_candidates | json | YES |
-| 30 | usbc_checked_at | timestamp without time zone | YES |
+| 5 | approved | boolean | NO |
+| 6 | created_at | timestamp without time zone | YES |
+| 7 | updated_at | timestamp without time zone | YES |
+| 8 | release_date | date | YES |
+| 9 | manufacturer_id | bigint | YES |
+| 10 | brand | character varying | YES |
+| 11 | sort_name | character varying | YES |
+| 12 | source_key | character varying | YES |
+| 13 | source_url | text | YES |
+| 14 | source_image_url | text | YES |
+| 15 | image_path | text | YES |
+| 16 | image_sha256 | character varying | YES |
+| 17 | catalog_status | character varying | NO |
+| 18 | source_payload | json | YES |
+| 19 | source_fingerprint | character varying | YES |
+| 20 | first_seen_at | timestamp without time zone | YES |
+| 21 | last_seen_at | timestamp without time zone | YES |
+| 22 | imported_at | timestamp without time zone | YES |
+| 23 | image_imported_at | timestamp without time zone | YES |
+| 24 | usbc_match_status | character varying | NO |
+| 25 | usbc_match_method | character varying | YES |
+| 26 | usbc_matched_brand | character varying | YES |
+| 27 | usbc_matched_name | character varying | YES |
+| 28 | usbc_match_candidates | json | YES |
+| 29 | usbc_checked_at | timestamp without time zone | YES |
 
 ## area (5 columns)
 
@@ -444,7 +444,7 @@
 | 8 | created_at | timestamp without time zone | YES |
 | 9 | updated_at | timestamp without time zone | YES |
 
-## informations (12 columns)
+## informations (18 columns)
 
 | # | column | type | nullable |
 |---:|---|---|---|
@@ -460,6 +460,12 @@
 | 10 | updated_at | timestamp without time zone | YES |
 | 11 | category | character varying | NO |
 | 12 | published_at | timestamp without time zone | YES |
+| 13 | source_type | character varying | YES |
+| 14 | source_key | character varying | YES |
+| 15 | source_url | text | YES |
+| 16 | source_fingerprint | character varying | YES |
+| 17 | source_synced_at | timestamp without time zone | YES |
+| 18 | body_format | character varying | NO |
 
 ## instructor_registry (29 columns)
 
@@ -1005,103 +1011,103 @@
 | 27 | home_address | character varying | YES |
 | 28 | work_zip | character varying | YES |
 | 29 | work_address | character varying | YES |
-| 31 | organization_url | character varying | YES |
-| 32 | phone_work | character varying | YES |
-| 33 | phone_mobile | character varying | YES |
-| 34 | fax_number | character varying | YES |
-| 35 | email | character varying | YES |
-| 36 | image_path | character varying | YES |
-| 37 | public_image_path | character varying | YES |
-| 38 | qr_code_path | character varying | YES |
-| 39 | mailing_preference | smallint | YES |
-| 40 | pro_entry_year | smallint | YES |
-| 42 | hobby | character varying | YES |
-| 43 | bowling_history | character varying | YES |
-| 44 | other_sports_history | text | YES |
-| 45 | season_goal | character varying | YES |
-| 46 | coach | character varying | YES |
-| 47 | selling_point | text | YES |
-| 48 | free_comment | text | YES |
-| 49 | facebook | character varying | YES |
-| 50 | twitter | character varying | YES |
-| 51 | instagram | character varying | YES |
-| 52 | rankseeker | character varying | YES |
-| 53 | jbc_driller_cert | character varying | YES |
-| 54 | a_license_date | date | YES |
-| 55 | permanent_seed_date | date | YES |
-| 56 | hall_of_fame_date | date | YES |
-| 57 | birthdate_public | date | YES |
-| 58 | memo | text | YES |
-| 59 | usbc_coach | character varying | YES |
-| 60 | a_class_status | character varying | YES |
-| 61 | a_class_year | character varying | YES |
-| 62 | b_class_status | character varying | YES |
-| 63 | b_class_year | character varying | YES |
-| 64 | c_class_status | character varying | YES |
-| 65 | c_class_year | character varying | YES |
-| 66 | master_status | character varying | YES |
-| 67 | master_year | character varying | YES |
-| 68 | coach_4_status | character varying | YES |
-| 69 | coach_4_year | character varying | YES |
-| 70 | coach_3_status | character varying | YES |
-| 71 | coach_3_year | character varying | YES |
-| 72 | coach_1_status | character varying | YES |
-| 73 | coach_1_year | character varying | YES |
-| 74 | kenkou_status | character varying | YES |
-| 75 | kenkou_year | character varying | YES |
-| 76 | school_license_status | character varying | YES |
-| 77 | school_license_year | character varying | YES |
-| 78 | license_no_num | integer | YES |
-| 79 | titles_count | integer | NO |
-| 80 | perfect_count | integer | NO |
-| 81 | seven_ten_count | integer | NO |
-| 82 | eight_hundred_count | integer | NO |
-| 83 | award_total_count | integer | NO |
-| 84 | organization_name | character varying | YES |
-| 85 | organization_zip | character varying | YES |
-| 86 | organization_addr1 | character varying | YES |
-| 87 | organization_addr2 | character varying | YES |
-| 88 | public_zip | character varying | YES |
-| 89 | public_addr1 | character varying | YES |
-| 90 | public_addr2 | character varying | YES |
-| 91 | public_addr_same_as_org | boolean | YES |
-| 92 | mailing_zip | character varying | YES |
-| 93 | mailing_addr1 | character varying | YES |
-| 94 | mailing_addr2 | character varying | YES |
-| 95 | mailing_addr_same_as_org | boolean | YES |
-| 96 | password_change_status | smallint | YES |
-| 97 | login_id | character varying | YES |
-| 98 | mypage_temp_password | character varying | YES |
-| 99 | height_is_public | boolean | YES |
-| 100 | weight_is_public | boolean | YES |
-| 101 | blood_type_is_public | boolean | YES |
-| 102 | dominant_arm | character varying | YES |
-| 103 | motto | character varying | YES |
-| 104 | equipment_contract | character varying | YES |
-| 105 | coaching_history | text | YES |
-| 106 | sponsor_a | character varying | YES |
-| 107 | sponsor_a_url | character varying | YES |
-| 108 | sponsor_b | character varying | YES |
-| 109 | sponsor_b_url | character varying | YES |
-| 110 | sponsor_c | character varying | YES |
-| 111 | sponsor_c_url | character varying | YES |
-| 112 | association_role | character varying | YES |
-| 113 | a_license_number | integer | YES |
-| 114 | birthdate_public_hide_year | boolean | NO |
-| 115 | birthdate_public_is_private | boolean | NO |
-| 116 | member_class | character varying | NO |
-| 117 | can_enter_official_tournament | boolean | NO |
-| 118 | official_win_count | integer | YES |
-| 119 | official_total_games | integer | YES |
-| 120 | official_total_pins | bigint | YES |
-| 121 | official_total_prize_money | bigint | YES |
-| 122 | official_career_average | numeric | YES |
-| 123 | official_profile_url | character varying | YES |
-| 124 | official_profile_imported_at | timestamp without time zone | YES |
-| 125 | official_profile_import_error | text | YES |
-| 126 | season_trial_win_count | integer | YES |
-| 127 | training_compliance_status | character varying | NO |
-| 128 | training_compliance_checked_at | timestamp without time zone | YES |
+| 30 | organization_url | character varying | YES |
+| 31 | phone_work | character varying | YES |
+| 32 | phone_mobile | character varying | YES |
+| 33 | fax_number | character varying | YES |
+| 34 | email | character varying | YES |
+| 35 | image_path | character varying | YES |
+| 36 | public_image_path | character varying | YES |
+| 37 | qr_code_path | character varying | YES |
+| 38 | mailing_preference | smallint | YES |
+| 39 | pro_entry_year | smallint | YES |
+| 40 | hobby | character varying | YES |
+| 41 | bowling_history | character varying | YES |
+| 42 | other_sports_history | text | YES |
+| 43 | season_goal | character varying | YES |
+| 44 | coach | character varying | YES |
+| 45 | selling_point | text | YES |
+| 46 | free_comment | text | YES |
+| 47 | facebook | character varying | YES |
+| 48 | twitter | character varying | YES |
+| 49 | instagram | character varying | YES |
+| 50 | rankseeker | character varying | YES |
+| 51 | jbc_driller_cert | character varying | YES |
+| 52 | a_license_date | date | YES |
+| 53 | permanent_seed_date | date | YES |
+| 54 | hall_of_fame_date | date | YES |
+| 55 | birthdate_public | date | YES |
+| 56 | memo | text | YES |
+| 57 | usbc_coach | character varying | YES |
+| 58 | a_class_status | character varying | YES |
+| 59 | a_class_year | character varying | YES |
+| 60 | b_class_status | character varying | YES |
+| 61 | b_class_year | character varying | YES |
+| 62 | c_class_status | character varying | YES |
+| 63 | c_class_year | character varying | YES |
+| 64 | master_status | character varying | YES |
+| 65 | master_year | character varying | YES |
+| 66 | coach_4_status | character varying | YES |
+| 67 | coach_4_year | character varying | YES |
+| 68 | coach_3_status | character varying | YES |
+| 69 | coach_3_year | character varying | YES |
+| 70 | coach_1_status | character varying | YES |
+| 71 | coach_1_year | character varying | YES |
+| 72 | kenkou_status | character varying | YES |
+| 73 | kenkou_year | character varying | YES |
+| 74 | school_license_status | character varying | YES |
+| 75 | school_license_year | character varying | YES |
+| 76 | license_no_num | integer | YES |
+| 77 | titles_count | integer | NO |
+| 78 | perfect_count | integer | NO |
+| 79 | seven_ten_count | integer | NO |
+| 80 | eight_hundred_count | integer | NO |
+| 81 | award_total_count | integer | NO |
+| 82 | organization_name | character varying | YES |
+| 83 | organization_zip | character varying | YES |
+| 84 | organization_addr1 | character varying | YES |
+| 85 | organization_addr2 | character varying | YES |
+| 86 | public_zip | character varying | YES |
+| 87 | public_addr1 | character varying | YES |
+| 88 | public_addr2 | character varying | YES |
+| 89 | public_addr_same_as_org | boolean | YES |
+| 90 | mailing_zip | character varying | YES |
+| 91 | mailing_addr1 | character varying | YES |
+| 92 | mailing_addr2 | character varying | YES |
+| 93 | mailing_addr_same_as_org | boolean | YES |
+| 94 | password_change_status | smallint | YES |
+| 95 | login_id | character varying | YES |
+| 96 | mypage_temp_password | character varying | YES |
+| 97 | height_is_public | boolean | YES |
+| 98 | weight_is_public | boolean | YES |
+| 99 | blood_type_is_public | boolean | YES |
+| 100 | dominant_arm | character varying | YES |
+| 101 | motto | character varying | YES |
+| 102 | equipment_contract | character varying | YES |
+| 103 | coaching_history | text | YES |
+| 104 | sponsor_a | character varying | YES |
+| 105 | sponsor_a_url | character varying | YES |
+| 106 | sponsor_b | character varying | YES |
+| 107 | sponsor_b_url | character varying | YES |
+| 108 | sponsor_c | character varying | YES |
+| 109 | sponsor_c_url | character varying | YES |
+| 110 | association_role | character varying | YES |
+| 111 | a_license_number | integer | YES |
+| 112 | birthdate_public_hide_year | boolean | NO |
+| 113 | birthdate_public_is_private | boolean | NO |
+| 114 | member_class | character varying | NO |
+| 115 | can_enter_official_tournament | boolean | NO |
+| 116 | official_win_count | integer | YES |
+| 117 | official_total_games | integer | YES |
+| 118 | official_total_pins | bigint | YES |
+| 119 | official_total_prize_money | bigint | YES |
+| 120 | official_career_average | numeric | YES |
+| 121 | official_profile_url | character varying | YES |
+| 122 | official_profile_imported_at | timestamp without time zone | YES |
+| 123 | official_profile_import_error | text | YES |
+| 124 | season_trial_win_count | integer | YES |
+| 125 | training_compliance_status | character varying | NO |
+| 126 | training_compliance_checked_at | timestamp without time zone | YES |
 
 ## pro_dsp (7 columns)
 
@@ -1159,6 +1165,44 @@
 | 8 | created_by | character varying | YES |
 | 9 | updated_by | character varying | YES |
 
+## pro_test_candidate_stage_results (9 columns)
+
+| # | column | type | nullable |
+|---:|---|---|---|
+| 1 | id | bigint | NO |
+| 2 | pro_test_candidate_id | bigint | NO |
+| 3 | stage_code | character varying | NO |
+| 4 | result | character varying | NO |
+| 5 | note | text | YES |
+| 6 | decided_by | bigint | YES |
+| 7 | decided_at | timestamp without time zone | YES |
+| 8 | created_at | timestamp without time zone | YES |
+| 9 | updated_at | timestamp without time zone | YES |
+
+## pro_test_candidates (19 columns)
+
+| # | column | type | nullable |
+|---:|---|---|---|
+| 1 | id | bigint | NO |
+| 2 | pro_test_event_id | bigint | NO |
+| 3 | exam_number | character varying | NO |
+| 4 | gender | character varying | NO |
+| 5 | name | character varying | NO |
+| 6 | name_kana | character varying | YES |
+| 7 | resident_prefecture | character varying | YES |
+| 8 | handedness | character varying | YES |
+| 9 | final_result | character varying | NO |
+| 10 | license_no | character varying | YES |
+| 11 | pro_bowler_id | bigint | YES |
+| 12 | created_at | timestamp without time zone | YES |
+| 13 | updated_at | timestamp without time zone | YES |
+| 14 | entry_stage | character varying | NO |
+| 15 | entry_reason | character varying | NO |
+| 16 | previous_candidate_id | bigint | YES |
+| 17 | exemption_approved_at | timestamp without time zone | YES |
+| 18 | exemption_approved_by | bigint | YES |
+| 19 | exemption_note | text | YES |
+
 ## pro_test_category (5 columns)
 
 | # | column | type | nullable |
@@ -1181,6 +1225,90 @@
 | 6 | update_date | timestamp without time zone | YES |
 | 7 | created_by | character varying | YES |
 | 8 | updated_by | character varying | YES |
+
+## pro_test_events (16 columns)
+
+| # | column | type | nullable |
+|---:|---|---|---|
+| 1 | id | bigint | NO |
+| 2 | year | smallint | NO |
+| 3 | name | character varying | NO |
+| 4 | start_date | date | YES |
+| 5 | end_date | date | YES |
+| 6 | application_start | date | YES |
+| 7 | application_end | date | YES |
+| 8 | male_generation | character varying | YES |
+| 9 | female_generation | character varying | YES |
+| 10 | status | character varying | NO |
+| 11 | public_summary | text | YES |
+| 12 | final_results_published_at | timestamp without time zone | YES |
+| 13 | created_by | bigint | YES |
+| 14 | updated_by | bigint | YES |
+| 15 | created_at | timestamp without time zone | YES |
+| 16 | updated_at | timestamp without time zone | YES |
+
+## pro_test_final_result_publication_rows (11 columns)
+
+| # | column | type | nullable |
+|---:|---|---|---|
+| 1 | id | bigint | NO |
+| 2 | pro_test_final_result_publication_id | bigint | NO |
+| 3 | pro_test_candidate_id | bigint | YES |
+| 4 | gender | character varying | NO |
+| 5 | exam_number | character varying | NO |
+| 6 | license_no | character varying | YES |
+| 7 | name | character varying | NO |
+| 8 | name_kana | character varying | YES |
+| 9 | pro_bowler_id | bigint | YES |
+| 10 | created_at | timestamp without time zone | YES |
+| 11 | updated_at | timestamp without time zone | YES |
+
+## pro_test_final_result_publications (8 columns)
+
+| # | column | type | nullable |
+|---:|---|---|---|
+| 1 | id | bigint | NO |
+| 2 | pro_test_event_id | bigint | NO |
+| 3 | revision | integer | NO |
+| 4 | row_count | integer | NO |
+| 5 | published_by | bigint | YES |
+| 6 | published_at | timestamp without time zone | NO |
+| 7 | created_at | timestamp without time zone | YES |
+| 8 | updated_at | timestamp without time zone | YES |
+
+## pro_test_result_publication_rows (16 columns)
+
+| # | column | type | nullable |
+|---:|---|---|---|
+| 1 | id | bigint | NO |
+| 2 | pro_test_result_publication_id | bigint | NO |
+| 3 | pro_test_candidate_id | bigint | YES |
+| 4 | rank | integer | NO |
+| 5 | exam_number | character varying | NO |
+| 6 | name | character varying | NO |
+| 7 | name_kana | character varying | YES |
+| 8 | resident_prefecture | character varying | YES |
+| 9 | handedness | character varying | YES |
+| 10 | games | smallint | NO |
+| 11 | total_pin | integer | NO |
+| 12 | average | numeric | NO |
+| 13 | result_label | character varying | YES |
+| 14 | session_scores | json | YES |
+| 15 | created_at | timestamp without time zone | YES |
+| 16 | updated_at | timestamp without time zone | YES |
+
+## pro_test_result_publications (8 columns)
+
+| # | column | type | nullable |
+|---:|---|---|---|
+| 1 | id | bigint | NO |
+| 2 | pro_test_session_id | bigint | NO |
+| 3 | revision | integer | NO |
+| 4 | row_count | integer | NO |
+| 5 | published_by | bigint | YES |
+| 6 | published_at | timestamp without time zone | NO |
+| 7 | created_at | timestamp without time zone | YES |
+| 8 | updated_at | timestamp without time zone | YES |
 
 ## pro_test_result_status (5 columns)
 
@@ -1233,6 +1361,40 @@
 | 7 | update_date | timestamp without time zone | YES |
 | 8 | created_by | character varying | YES |
 | 9 | updated_by | character varying | YES |
+
+## pro_test_scores_v2 (7 columns)
+
+| # | column | type | nullable |
+|---:|---|---|---|
+| 1 | id | bigint | NO |
+| 2 | pro_test_session_id | bigint | NO |
+| 3 | pro_test_candidate_id | bigint | NO |
+| 4 | game_number | smallint | NO |
+| 5 | score | smallint | NO |
+| 6 | created_at | timestamp without time zone | YES |
+| 7 | updated_at | timestamp without time zone | YES |
+
+## pro_test_sessions (17 columns)
+
+| # | column | type | nullable |
+|---:|---|---|---|
+| 1 | id | bigint | NO |
+| 2 | pro_test_event_id | bigint | NO |
+| 3 | gender | character varying | NO |
+| 4 | stage_code | character varying | NO |
+| 5 | stage_label | character varying | NO |
+| 6 | day_number | smallint | NO |
+| 7 | test_date | date | YES |
+| 8 | venue | character varying | YES |
+| 9 | game_start | smallint | NO |
+| 10 | game_end | smallint | NO |
+| 11 | pass_average | numeric | YES |
+| 12 | is_stage_final | boolean | NO |
+| 13 | status | character varying | NO |
+| 14 | sort_order | integer | NO |
+| 15 | published_at | timestamp without time zone | YES |
+| 16 | created_at | timestamp without time zone | YES |
+| 17 | updated_at | timestamp without time zone | YES |
 
 ## pro_test_status_log (6 columns)
 
@@ -1321,11 +1483,11 @@
 | 3 | approved_ball_id | bigint | NO |
 | 4 | serial_number | character varying | NO |
 | 5 | registered_at | date | NO |
-| 8 | created_at | timestamp without time zone | YES |
-| 9 | updated_at | timestamp without time zone | YES |
-| 10 | expires_at | date | YES |
-| 11 | inspection_number | character varying | YES |
-| 12 | pro_bowler_id | bigint | YES |
+| 6 | created_at | timestamp without time zone | YES |
+| 7 | updated_at | timestamp without time zone | YES |
+| 8 | expires_at | date | YES |
+| 9 | inspection_number | character varying | YES |
+| 10 | pro_bowler_id | bigint | YES |
 
 ## score_import_batches (18 columns)
 

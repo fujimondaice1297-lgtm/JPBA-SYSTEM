@@ -70,7 +70,7 @@
           @endif
         </div>
 
-        <div class="card-text" style="white-space:pre-wrap">{{ $info->body }}</div>
+        <div class="card-text" style="white-space:pre-wrap">{{ ($info->body_format ?? 'plain') === 'html' ? \Illuminate\Support\Str::limit(strip_tags($info->body), 300) : $info->body }}</div>
 
         <div class="mt-3">
           <a href="{{ $showUrl }}" class="btn btn-sm btn-outline-primary">詳細 / 添付を見る</a>

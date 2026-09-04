@@ -162,3 +162,4 @@ Source: `database/migrations`
 - `2026_09_01_000002_create_pro_test_final_result_publications.php`
 - `2026_09_01_000003_add_pro_test_entry_stage_and_exemptions.php`
 - `2026_09_02_000001_migrate_remaining_static_public_pages.php`
+- `2026_09_04_000001_add_archive_source_to_informations.php`

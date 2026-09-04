@@ -119,9 +119,7 @@
       return $link['url'] ?? '#';
   };
 
-  $fileUrl = function ($file) {
-      return asset('storage/' . ltrim((string) $file->file_path, '/'));
-  };
+  $fileUrl = fn ($file) => $file->publicUrl();
 
   $isImage = function ($file) {
       $type = strtolower((string) ($file->type ?? ''));
@@ -155,7 +153,7 @@
           @endphp
           <article class="jpba-topic">
             <div class="jpba-topic-image">
-              @if($image)
+              @if($image && $fileUrl($image))
                 <img src="{{ $fileUrl($image) }}" alt="{{ $topic->title }}">
               @else
                 TOPICS
@@ -178,7 +176,9 @@
               @if($files->count())
                 <div class="jpba-topic-files">
                   @foreach($files->take(4) as $file)
-                    <a href="{{ $fileUrl($file) }}" target="_blank" rel="noopener">{{ $file->title ?: '添付' }}</a>
+                    @if($fileUrl($file))
+                      <a href="{{ $fileUrl($file) }}" target="_blank" rel="noopener">{{ $file->title ?: '添付' }}</a>
+                    @endif
                   @endforeach
                 </div>
               @endif

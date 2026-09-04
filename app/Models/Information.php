@@ -2,8 +2,8 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
@@ -22,6 +22,7 @@ class Information extends Model
     protected $fillable = [
         'title',
         'body',
+        'body_format',
         'is_public',
         'category',
         'published_at',
@@ -29,13 +30,19 @@ class Information extends Model
         'ends_at',
         'audience',
         'required_training_id',
+        'source_type',
+        'source_key',
+        'source_url',
+        'source_fingerprint',
+        'source_synced_at',
     ];
 
     protected $casts = [
         'is_public' => 'bool',
         'published_at' => 'datetime',
         'starts_at' => 'datetime',
-        'ends_at'   => 'datetime',
+        'ends_at' => 'datetime',
+        'source_synced_at' => 'datetime',
     ];
 
     public static function categories(): array
@@ -45,18 +52,19 @@ class Information extends Model
 
     public static function categoryValidationRule(): string
     {
-        return 'nullable|in:' . implode(',', self::CATEGORIES);
+        return 'nullable|in:'.implode(',', self::CATEGORIES);
     }
 
     /** 公開期間内 */
     public function scopeActive(Builder $q): Builder
     {
         $now = now();
-        return $q->where(function($w) use ($now){
-                $w->whereNull('starts_at')->orWhere('starts_at','<=',$now);
-            })->where(function($w) use ($now){
-                $w->whereNull('ends_at')->orWhere('ends_at','>=',$now);
-            });
+
+        return $q->where(function ($w) use ($now) {
+            $w->whereNull('starts_at')->orWhere('starts_at', '<=', $now);
+        })->where(function ($w) use ($now) {
+            $w->whereNull('ends_at')->orWhere('ends_at', '>=', $now);
+        });
     }
 
     /** 一般公開のみ */
@@ -84,32 +92,38 @@ class Information extends Model
     public function scopeForUser(Builder $q, ?\App\Models\User $user): Builder
     {
         // 常に一般公開は含める
-        $q->where(function($w) use ($user){
+        $q->where(function ($w) use ($user) {
             $w->where('is_public', true)
-              ->orWhere(function($m) use ($user){
-                  if (!$user) { $m->whereRaw('1=0'); return; } // 未ログインなら会員向けはゼロ
+                ->orWhere(function ($m) use ($user) {
+                    if (! $user) {
+                        $m->whereRaw('1=0');
 
-                  $isLeader = (bool) optional($user->proBowler)->is_district_leader;
+                        return;
+                    } // 未ログインなら会員向けはゼロ
 
-                  $m->where('is_public', false)
-                    ->where(function($c) use ($isLeader){
-                        $c->where('audience','members');
-                        if ($isLeader) { $c->orWhere('audience','district_leaders'); }
-                        $c->orWhere('audience','needs_training');
-                    });
-              });
+                    $isLeader = (bool) optional($user->proBowler)->is_district_leader;
+
+                    $m->where('is_public', false)
+                        ->where(function ($c) use ($isLeader) {
+                            $c->where('audience', 'members');
+                            if ($isLeader) {
+                                $c->orWhere('audience', 'district_leaders');
+                            }
+                            $c->orWhere('audience', 'needs_training');
+                        });
+                });
         });
 
         // 未受講者向け（pro_bowler_trainings に完了レコードが「無い」ものを表示）
         if ($user && $user->proBowler) {
             $pbId = $user->proBowler->id;
-            $q->where(function($w) use ($pbId){
-                $w->where('audience','!=','needs_training')
-                  ->orWhereNotExists(function($sub) use ($pbId){
-                      $sub->from('pro_bowler_trainings')
-                          ->whereColumn('pro_bowler_trainings.training_id','informations.required_training_id')
-                          ->where('pro_bowler_trainings.pro_bowler_id',$pbId);
-                  });
+            $q->where(function ($w) use ($pbId) {
+                $w->where('audience', '!=', 'needs_training')
+                    ->orWhereNotExists(function ($sub) use ($pbId) {
+                        $sub->from('pro_bowler_trainings')
+                            ->whereColumn('pro_bowler_trainings.training_id', 'informations.required_training_id')
+                            ->where('pro_bowler_trainings.pro_bowler_id', $pbId);
+                    });
             });
         }
 

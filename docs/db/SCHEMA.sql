@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict JPBA20260827
+\restrict vWGGUPoNwJJlb8iFgElhejtW2WMUjeAVtxdhDEEGtT57N5u3gDEdSZL3ZGKOnJ1
 
 -- Dumped from database version 18.2
 -- Dumped by pg_dump version 18.2
@@ -1108,6 +1108,12 @@ CREATE TABLE public.informations (
     updated_at timestamp(0) without time zone,
     category character varying(32) DEFAULT 'NEWS'::character varying NOT NULL,
     published_at timestamp(0) without time zone,
+    source_type character varying(32),
+    source_key character varying(128),
+    source_url text,
+    source_fingerprint character varying(64),
+    source_synced_at timestamp(0) without time zone,
+    body_format character varying(16) DEFAULT 'plain'::character varying NOT NULL,
     CONSTRAINT informations_audience_check CHECK (((audience)::text = ANY (ARRAY[('public'::character varying)::text, ('members'::character varying)::text, ('district_leaders'::character varying)::text, ('needs_training'::character varying)::text]))),
     CONSTRAINT informations_category_check CHECK (((category IS NULL) OR ((category)::text = ANY (ARRAY[('NEWS'::character varying)::text, ('大会'::character varying)::text, ('TV情報'::character varying)::text, ('ｲﾝｽﾄﾗｸﾀｰ'::character varying)::text, ('イベント'::character varying)::text]))))
 );
@@ -7794,6 +7800,14 @@ ALTER TABLE ONLY public.informations
 
 
 --
+-- Name: informations informations_source_key_unique; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.informations
+    ADD CONSTRAINT informations_source_key_unique UNIQUE (source_key);
+
+
+--
 -- Name: instructor_registry instructor_registry_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -9380,6 +9394,13 @@ CREATE INDEX informations_published_at_index ON public.informations USING btree 
 --
 
 CREATE INDEX informations_required_training_id_index ON public.informations USING btree (required_training_id);
+
+
+--
+-- Name: informations_source_type_published_index; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX informations_source_type_published_index ON public.informations USING btree (source_type, published_at);
 
 
 --
@@ -11877,5 +11898,5 @@ ALTER TABLE ONLY public.users
 -- PostgreSQL database dump complete
 --
 
-\unrestrict JPBA20260827
+\unrestrict vWGGUPoNwJJlb8iFgElhejtW2WMUjeAVtxdhDEEGtT57N5u3gDEdSZL3ZGKOnJ1
 

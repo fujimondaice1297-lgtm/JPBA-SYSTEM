@@ -931,23 +931,41 @@ CSV一時取込、行修正、一括修正、`game_scores` への確定反映な
   - 許容値: NEWS / 大会 / TV情報 / ｲﾝｽﾄﾗｸﾀｰ / イベント
   - 備考: DB制約（CHECK）で上記以外は拒否（NULLは許容）
 - body（本文：text）
+- body_format（本文形式：string(16), default `plain`）
+  - `plain`: 通常のお知らせ本文
+  - `html`: 旧サイトから移行した安全化済みHTML本文
 - is_public（公開フラグ：boolean, default true）
+- published_at（記事の公開日時：timestamp, nullable。一覧の年度・並び順の正本）
 - starts_at（公開開始：timestamp, nullable）
 - ends_at（公開終了：timestamp, nullable）
 - audience（公開対象：enum, default 'public'）
   - public / members / district_leaders / needs_training
 - required_training_id（対象講習：bigint, nullable）
   - 備考: 参照先未確定（FKなし。refs_skipped / ADR参照）
+- source_type（移行元種別：string(32), nullable）
+  - `legacy_information` / `legacy_topic`
+- source_key（移行元内の一意キー：string(128), nullable）
+- source_url（取得元URL：text, nullable。内部監査専用で一般画面には表示しない）
+- source_fingerprint（自動取込時点の本文等の指紋：string(64), nullable）
+- source_synced_at（最終自動取込日時：timestamp, nullable）
 - created_at / updated_at
 
 ### 制約
 - informations_category_check（category の許容値制約）
+- informations_source_key_unique（source_key の一意制約）
 
 ### インデックス
 - (is_public, audience)
 - (starts_at, ends_at)
 - required_training_id
 - category
+- (source_type, published_at)
+
+### 旧サイト記事の更新方針
+- 旧サイトから取得した本文・画像・PDFは新サイト内へ保存し、一般画面から旧JPBAドメインへはリンクしない。
+- `source_key` を基準に再取込を冪等化する。
+- 管理画面で手修正された移行記事は `source_fingerprint` の差分で検知し、後続の自動取込で上書きしない。
+- 添付参照を管理画面で外しても、複数記事で共有される可能性がある保存ファイル実体は削除しない。
 
 ---
 
