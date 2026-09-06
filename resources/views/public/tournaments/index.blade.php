@@ -162,6 +162,11 @@
 
 <h1 class="jpba-page-title">トーナメント</h1>
 
+<div class="jpba-panel d-flex justify-content-between align-items-center gap-3 flex-wrap">
+  <div><strong>過去の公式トーナメント</strong><br><span class="text-muted">2016年以降の大会資料・成績を年度別に確認できます。</span></div>
+  <div class="d-flex gap-2 flex-wrap"><a class="jpba-small-button" href="{{ route('public.tournament_archives.index') }}">大会アーカイブを見る</a><a class="jpba-small-button" href="{{ route('public.records.index') }}">シード・資格・公認記録</a></div>
+</div>
+
 <section class="jpba-panel" aria-labelledby="tournament-search-heading">
   <h2 id="tournament-search-heading" class="jpba-section-title">条件検索</h2>
 

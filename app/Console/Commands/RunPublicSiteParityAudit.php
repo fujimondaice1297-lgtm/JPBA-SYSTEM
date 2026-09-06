@@ -7,6 +7,7 @@ use App\Models\ManagedPublicPage;
 use App\Models\ProBowler;
 use App\Models\ProTestEvent;
 use App\Models\Tournament;
+use App\Models\TournamentArchive;
 use App\Models\TournamentEntry;
 use DOMDocument;
 use Illuminate\Console\Command;
@@ -73,8 +74,15 @@ class RunPublicSiteParityAudit extends Command
             ['page' => 'about', 'path' => '/about', 'required' => ['JPBAについて', '協会概要', '事業']],
             ['page' => 'schedule', 'path' => '/schedule', 'required' => ['スケジュール']],
             ['page' => 'players', 'path' => '/players', 'required' => ['選手データ']],
-            ['page' => 'tournaments', 'path' => '/tournament', 'required' => ['トーナメント']],
-            ['page' => 'live-results', 'path' => '/tournament/live-results', 'required' => ['速報・成績', '男子ポイントランキング', '女子賞金ランキング', 'JPBAポイント配分表', 'ST年間ポイントランキング', 'STチャンピオンズ優先出場一覧']],
+            ['page' => 'tournaments', 'path' => '/tournament', 'required' => ['トーナメント', '大会アーカイブを見る', 'シード・資格・公認記録']],
+            ['page' => 'live-results', 'path' => '/tournament/live-results', 'required' => ['速報・成績', '男子ポイントランキング', '女子賞金ランキング', 'JPBAポイント配分表', 'ST年間ポイントランキング', 'STチャンピオンズ優先出場一覧', 'シード・資格・公認記録']],
+            ['page' => 'official-records', 'path' => '/records', 'required' => ['シード・資格・公認記録', 'トーナメントシード', '永久A級ライセンス', '日本プロボウリング殿堂', 'JPBA公認最高記録']],
+            ['page' => 'tournament-seeds', 'path' => '/records/seed', 'required' => ['トーナメントシード']],
+            ['page' => 'a-class-men', 'path' => '/records/a-class/men', 'required' => ['男子 永久A級ライセンス保持者', '取得条件']],
+            ['page' => 'a-class-women', 'path' => '/records/a-class/women', 'required' => ['女子 永久A級ライセンス保持者', '取得条件']],
+            ['page' => 'permanent-seed', 'path' => '/pages/permanent-seed', 'required' => ['永久シードプロ', '獲得条件']],
+            ['page' => 'hall-of-fame', 'path' => '/pages/hall-of-fame', 'required' => ['日本プロボウリング殿堂', '2025年度表彰']],
+            ['page' => 'official-high-records', 'path' => '/pages/official-high-records', 'required' => ['JPBA公認最高記録', 'シリーズ最高記録', '通算タイトル上位']],
             ['page' => 'official-current-ranking', 'path' => '/rankings/current?year=2026&gender=M&type=points', 'required' => ['2026年 男子ポイントランキング', '獲得賞金']],
             ['page' => 'season-trial-ranking', 'path' => '/rankings/season-trial?year=2026', 'required' => ['シーズントライアル年間ポイントランキング', '優先出場一覧']],
             ['page' => 'season-trial-priority', 'path' => '/rankings/season-trial/championship-priority?year=2026', 'required' => ['STチャンピオンズ優先出場一覧', 'ST年間ポイント']],
@@ -107,6 +115,25 @@ class RunPublicSiteParityAudit extends Command
     private function dynamicPublicPages(): array
     {
         $pages = [];
+
+        $archive = TournamentArchive::query()
+            ->publiclyVisible()
+            ->orderByDesc('year')
+            ->orderByRaw('start_on desc nulls last')
+            ->orderByDesc('id')
+            ->first();
+        if ($archive) {
+            $pages[] = [
+                'page' => 'tournament-archive:'.$archive->id,
+                'path' => '/tournament/archive/'.$archive->id,
+                'required' => [(string) $archive->title, '大会情報'],
+            ];
+            $pages[] = [
+                'page' => 'tournament-archive-index',
+                'path' => '/tournament/archive?year='.$archive->year,
+                'required' => ['過去の公式トーナメント', (string) $archive->title],
+            ];
+        }
 
         $player = ProBowler::query()
             ->where('is_visible', true)

@@ -2997,6 +2997,37 @@ JPBA公式ページのような「予選前半成績」「予選通算成績」�
 
 ---
 
+## tournament_archives
+
+### 役割
+2016年以降の旧JPBA公式大会ページを、新サイト内で継続公開するための大会アーカイブ。
+大会名・開催日・説明本文と、保存済みの大会要項・成績・オイルパターン・代表画像を保持する。
+
+### 主キー
+- id (bigint)
+
+### 主要カラム
+- tournament_id（新システムの同一大会へ完全一致した場合の任意参照）
+- year / title / start_on / end_on / status
+- body_html（新サイト内で表示する説明本文）
+- assets（保存済みファイルの相対パス・種別・表示名JSON）
+- source_key（移行元大会ページを一意に識別するキー）
+- source_url（監査・再同期用。一般公開画面には表示しない）
+- source_fingerprint / source_synced_at（同期内容と最終同期日時）
+- is_public
+
+### 注意（運用方針）
+- 現行大会運用の正本 `tournaments` とは分離し、過去資料移行によってエントリー・速報・ランキングへ影響を与えない。
+- 同期時は `source_key` で冪等更新する。
+- 管理画面でタイトル・日程・本文・公開状態を修正した行は、`source_fingerprint` 差分で検知して次回同期時にも上書きしない。
+- 大会資料・成績・オイルパターンは新サイト内へ保存し、旧サイト閉鎖後も閲覧できる構成とする。
+- 既存 `tournaments` と年度・大会名が完全一致する場合だけ `tournament_id` を設定し、推測による結線は行わない。
+
+### 外部キー（FK）
+- tournament_id -> tournaments.id（nullable, ON DELETE SET NULL）
+
+---
+
 ## tournament_files
 
 ### 役割

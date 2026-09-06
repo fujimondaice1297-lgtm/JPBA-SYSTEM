@@ -100,6 +100,7 @@ final class ManagementNavigation
                     $this->item('INFORMATION管理', 'admin.informations.index', '公開・会員向けのお知らせを編集します。', ['admin.informations.*'], true),
                     $this->item('INFORMATION新規作成', 'admin.informations.create', '新しいお知らせを掲載します。', ['admin.informations.create'], true),
                     $this->item('一般公開ページ編集', 'admin.public_pages.index', '規程・方針・制度案内などの固定ページを編集します。', ['admin.public_pages.*'], true),
+                    $this->item('過去大会アーカイブ', 'admin.tournament_archives.index', '2016年以降の大会ページ・資料・成績を確認、修正します。', ['admin.tournament_archives.*'], true),
                     $this->item('カレンダー管理', 'calendar_events.index', '大会・行事の日程を登録します。', ['calendar_events.*']),
                     $this->item('外部速報リンク管理', 'flash_news.index', '特設速報サイトなど外部URLだけを登録・修正します。', ['flash_news.*']),
                     $this->item('殿堂入り管理', 'hof.index', '殿堂入り選手と写真を管理します。', ['hof.*']),

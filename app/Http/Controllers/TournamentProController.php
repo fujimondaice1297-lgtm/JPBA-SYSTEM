@@ -13,6 +13,18 @@ class TournamentProController extends Controller
 {
     public function index(Request $request)
     {
+        return view('tournament_pro.index', $this->viewData($request));
+    }
+
+    public function publicIndex(Request $request)
+    {
+        return view('public.records.seed', $this->viewData($request) + [
+            'publicConfig' => config('jpba_public', []),
+        ]);
+    }
+
+    private function viewData(Request $request): array
+    {
         $currentYear = (int) now()->year;
         $selectedYear = (int) $request->query('year', $currentYear);
         $selectedGender = $request->query('gender');
@@ -50,7 +62,7 @@ class TournamentProController extends Controller
 
         $sections = $this->buildSections($seedLists);
 
-        return view('tournament_pro.index', [
+        return [
             'availableYears' => $availableYears,
             'selectedYear' => $selectedYear,
             'selectedGender' => $selectedGender,
@@ -58,7 +70,7 @@ class TournamentProController extends Controller
             'sectionLabelsByGender' => $this->sectionLabelsByGender(),
             'sections' => $sections,
             'seedLists' => $seedLists,
-        ]);
+        ];
     }
 
     private function buildSections(Collection $seedLists): array
@@ -169,7 +181,6 @@ class TournamentProController extends Controller
         ];
     }
 
-
     private function buildRankingRowsByKey(Collection $seedLists): Collection
     {
         $pairs = collect();
@@ -185,7 +196,7 @@ class TournamentProController extends Controller
             }
         }
 
-        $pairs = $pairs->unique(fn ($pair) => $pair['ranking_snapshot_id'] . ':' . $pair['ranking_rank'])->values();
+        $pairs = $pairs->unique(fn ($pair) => $pair['ranking_snapshot_id'].':'.$pair['ranking_rank'])->values();
 
         if ($pairs->isEmpty()) {
             return collect();
@@ -212,7 +223,7 @@ class TournamentProController extends Controller
 
     private function rankingRowKey(int $rankingSnapshotId, int $rankingRank): string
     {
-        return $rankingSnapshotId . ':' . $rankingRank;
+        return $rankingSnapshotId.':'.$rankingRank;
     }
 
     private function formatKibetsu(mixed $kibetsu): string
@@ -221,7 +232,7 @@ class TournamentProController extends Controller
             return '-';
         }
 
-        return ((int) $kibetsu) . '期';
+        return ((int) $kibetsu).'期';
     }
 
     private function formatPoints(mixed $points): string
@@ -245,7 +256,7 @@ class TournamentProController extends Controller
             return '-';
         }
 
-        return number_format((int) $prizeMoney) . '円';
+        return number_format((int) $prizeMoney).'円';
     }
 
     private function formatLicenseNo(?string $licenseNo): string

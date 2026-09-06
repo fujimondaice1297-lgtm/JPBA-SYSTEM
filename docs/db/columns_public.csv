@@ -1173,6 +1173,22 @@ tournament_aggregate_sources,9,is_required,boolean,NO
 tournament_aggregate_sources,10,sort_order,integer,NO
 tournament_aggregate_sources,11,created_at,timestamp without time zone,YES
 tournament_aggregate_sources,12,updated_at,timestamp without time zone,YES
+tournament_archives,1,id,bigint,NO
+tournament_archives,2,tournament_id,bigint,YES
+tournament_archives,3,year,smallint,NO
+tournament_archives,4,title,character varying,NO
+tournament_archives,5,start_on,date,YES
+tournament_archives,6,end_on,date,YES
+tournament_archives,7,status,character varying,NO
+tournament_archives,8,body_html,text,NO
+tournament_archives,9,assets,jsonb,NO
+tournament_archives,10,source_key,character varying,NO
+tournament_archives,11,source_url,text,YES
+tournament_archives,12,source_fingerprint,character,YES
+tournament_archives,13,source_synced_at,timestamp without time zone,YES
+tournament_archives,14,is_public,boolean,NO
+tournament_archives,15,created_at,timestamp without time zone,YES
+tournament_archives,16,updated_at,timestamp without time zone,YES
 tournament_auto_draw_logs,1,id,bigint,NO
 tournament_auto_draw_logs,2,tournament_id,bigint,NO
 tournament_auto_draw_logs,3,target_type,character varying,NO

@@ -1,4 +1,7 @@
-@extends('layouts.app')
+@extends('public.layout')
+
+@section('title', ($page['title'] ?? '資格者一覧').'｜公益社団法人 日本プロボウリング協会')
+@section('breadcrumb', $page['title'] ?? '資格者一覧')
 
 @section('content')
 @php
@@ -42,9 +45,9 @@
         @foreach($rows as $r)
           @php
             // 表示用ライセンス（英字プレフィックス除去）
-            $licenseDigits = $r['license_no'] ? preg_replace('/^[A-Za-z]+/', '', $r['license_no']) : '';
+            $licenseDigits = $r['license_no'] ? \App\Support\PublicLicenseNumber::format($r['license_no']) : '';
             // 公開プロフィールへ
-            $profileUrl = route('pro_bowlers.public_show', $r['id']) . '?return=' . urlencode($returnUrl);
+            $profileUrl = route('public.players.show', $r['id']) . '?return=' . urlencode($returnUrl);
           @endphp
           <tr>
             <td>

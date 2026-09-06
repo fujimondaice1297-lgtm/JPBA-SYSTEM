@@ -163,3 +163,5 @@ Source: `database/migrations`
 - `2026_09_01_000003_add_pro_test_entry_stage_and_exemptions.php`
 - `2026_09_02_000001_migrate_remaining_static_public_pages.php`
 - `2026_09_04_000001_add_archive_source_to_informations.php`
+- `2026_09_05_000001_create_tournament_archives.php`
+- `2026_09_05_000002_publish_official_reference_pages.php`

@@ -1,5 +1,5 @@
 // Auto-generated from docs/db/data_dictionary.md
-// Generated at: 2026-09-05T07:06:38+09:00
+// Generated at: 2026-09-06T21:56:22+09:00
 
 Project JPBA_SYSTEM {
   database_type: 'PostgreSQL'
@@ -266,6 +266,10 @@ Table tournament_aggregate_definitions {
 }
 
 Table tournament_aggregate_sources {
+  // columns omitted (see docs/db/columns_by_table.md)
+}
+
+Table tournament_archives {
   // columns omitted (see docs/db/columns_by_table.md)
 }
 
@@ -536,6 +540,7 @@ Ref: sessions.user_id > users.id
 Ref: tournament_aggregate_definitions.tournament_id > tournaments.id
 Ref: tournament_aggregate_sources.aggregate_definition_id > tournament_aggregate_definitions.id
 Ref: tournament_aggregate_sources.source_tournament_id > tournaments.id
+Ref: tournament_archives.tournament_id > tournaments.id
 Ref: tournament_auto_draw_logs.tournament_id > tournaments.id
 Ref: tournament_awards.tournament_id > tournaments.id
 Ref: tournament_competitor_group_members.competitor_group_id > tournament_competitor_groups.id

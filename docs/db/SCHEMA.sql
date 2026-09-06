@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict vWGGUPoNwJJlb8iFgElhejtW2WMUjeAVtxdhDEEGtT57N5u3gDEdSZL3ZGKOnJ1
+\restrict 12WvjA4xb8b55eE4I3D3Afs1O3eBq9wLmnhqvAsm1KT0h7pHz9FFlemzgihcdT3
 
 -- Dumped from database version 18.2
 -- Dumped by pg_dump version 18.2
@@ -4430,6 +4430,49 @@ ALTER SEQUENCE public.tournament_aggregate_sources_id_seq OWNED BY public.tourna
 
 
 --
+-- Name: tournament_archives; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.tournament_archives (
+    id bigint NOT NULL,
+    tournament_id bigint,
+    year smallint NOT NULL,
+    title character varying(255) NOT NULL,
+    start_on date,
+    end_on date,
+    status character varying(24) DEFAULT 'completed'::character varying NOT NULL,
+    body_html text NOT NULL,
+    assets jsonb DEFAULT '[]'::jsonb NOT NULL,
+    source_key character varying(190) NOT NULL,
+    source_url text,
+    source_fingerprint character(64),
+    source_synced_at timestamp(0) without time zone,
+    is_public boolean DEFAULT true NOT NULL,
+    created_at timestamp(0) without time zone,
+    updated_at timestamp(0) without time zone
+);
+
+
+--
+-- Name: tournament_archives_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.tournament_archives_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: tournament_archives_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.tournament_archives_id_seq OWNED BY public.tournament_archives.id;
+
+
+--
 -- Name: tournament_auto_draw_logs; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -7107,6 +7150,13 @@ ALTER TABLE ONLY public.tournament_aggregate_sources ALTER COLUMN id SET DEFAULT
 
 
 --
+-- Name: tournament_archives id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.tournament_archives ALTER COLUMN id SET DEFAULT nextval('public.tournament_archives_id_seq'::regclass);
+
+
+--
 -- Name: tournament_auto_draw_logs id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -8621,6 +8671,22 @@ ALTER TABLE ONLY public.tournament_aggregate_definitions
 
 ALTER TABLE ONLY public.tournament_aggregate_sources
     ADD CONSTRAINT tournament_aggregate_sources_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: tournament_archives tournament_archives_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.tournament_archives
+    ADD CONSTRAINT tournament_archives_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: tournament_archives tournament_archives_source_key_unique; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.tournament_archives
+    ADD CONSTRAINT tournament_archives_source_key_unique UNIQUE (source_key);
 
 
 --
@@ -10146,6 +10212,41 @@ CREATE INDEX tmssp_sheet_sort_idx ON public.tournament_match_score_sheet_players
 
 
 --
+-- Name: tournament_archives_is_public_index; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX tournament_archives_is_public_index ON public.tournament_archives USING btree (is_public);
+
+
+--
+-- Name: tournament_archives_start_on_index; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX tournament_archives_start_on_index ON public.tournament_archives USING btree (start_on);
+
+
+--
+-- Name: tournament_archives_status_index; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX tournament_archives_status_index ON public.tournament_archives USING btree (status);
+
+
+--
+-- Name: tournament_archives_year_index; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX tournament_archives_year_index ON public.tournament_archives USING btree (year);
+
+
+--
+-- Name: tournament_archives_year_start_index; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX tournament_archives_year_start_index ON public.tournament_archives USING btree (year, start_on, id);
+
+
+--
 -- Name: tournament_participants_amateur_bowler_id_index; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -11247,6 +11348,14 @@ ALTER TABLE ONLY public.tournament_aggregate_sources
 
 
 --
+-- Name: tournament_archives tournament_archives_tournament_id_foreign; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.tournament_archives
+    ADD CONSTRAINT tournament_archives_tournament_id_foreign FOREIGN KEY (tournament_id) REFERENCES public.tournaments(id) ON DELETE SET NULL;
+
+
+--
 -- Name: tournament_auto_draw_logs tournament_auto_draw_logs_tournament_id_foreign; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -11898,5 +12007,5 @@ ALTER TABLE ONLY public.users
 -- PostgreSQL database dump complete
 --
 
-\unrestrict vWGGUPoNwJJlb8iFgElhejtW2WMUjeAVtxdhDEEGtT57N5u3gDEdSZL3ZGKOnJ1
+\unrestrict 12WvjA4xb8b55eE4I3D3Afs1O3eBq9wLmnhqvAsm1KT0h7pHz9FFlemzgihcdT3
 

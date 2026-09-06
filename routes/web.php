@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\AdminHomeController;
 use App\Http\Controllers\Admin\InformationAdminController;
 use App\Http\Controllers\Admin\ManagedPublicPageController;
 use App\Http\Controllers\Admin\PlayerAccountAdminController;
+use App\Http\Controllers\Admin\TournamentArchiveController as AdminTournamentArchiveController;
 use App\Http\Controllers\AnnualScheduleController;
 use App\Http\Controllers\ApprovedBallController;
 use App\Http\Controllers\ApprovedBallImportController;
@@ -28,6 +29,7 @@ use App\Http\Controllers\HofManageController;
 use App\Http\Controllers\InformationController;
 use App\Http\Controllers\InstructorController;
 use App\Http\Controllers\MemberDashboardController;
+use App\Http\Controllers\OfficialRecordsController;
 use App\Http\Controllers\PerfectRecordController;
 use App\Http\Controllers\PointDistributionController;
 use App\Http\Controllers\PrizeDistributionController;
@@ -43,6 +45,7 @@ use App\Http\Controllers\PublicPageController;
 use App\Http\Controllers\PublicPlayerController;
 use App\Http\Controllers\PublicProfileController;
 use App\Http\Controllers\PublicProTestResultController;
+use App\Http\Controllers\PublicTournamentArchiveController;
 use App\Http\Controllers\PublicTournamentController;
 use App\Http\Controllers\PublicTournamentResultController;
 use App\Http\Controllers\RankingController;
@@ -230,6 +233,9 @@ Route::get('/players/{id}', [PublicProfileController::class, 'show'])
 Route::redirect('/player', '/players', 301);
 Route::redirect('/player/index.html', '/players', 301);
 Route::get('/tournament', [PublicTournamentController::class, 'index'])->name('public.tournaments.index');
+Route::get('/tournament/archive', [PublicTournamentArchiveController::class, 'index'])->name('public.tournament_archives.index');
+Route::get('/tournament/archive/{archive}', [PublicTournamentArchiveController::class, 'show'])
+    ->whereNumber('archive')->name('public.tournament_archives.show');
 Route::get('/tournament/live-results', [PublicTournamentResultController::class, 'index'])
     ->name('public.tournaments.live_results');
 Route::get('/rankings/season-trial', [RankingController::class, 'seasonTrial'])
@@ -242,6 +248,10 @@ Route::get('/rankings/women-tournament-priority', [RankingController::class, 'wo
     ->name('rankings.women_tournament_priority');
 Route::get('/rankings/point-distribution', [RankingController::class, 'pointDistribution'])
     ->name('rankings.point_distribution');
+Route::get('/records', [OfficialRecordsController::class, 'index'])->name('public.records.index');
+Route::get('/records/seed', [TournamentProController::class, 'publicIndex'])->name('public.records.seed');
+Route::get('/records/a-class/men', [EligibilityController::class, 'aClassMen'])->name('public.records.a_class.m');
+Route::get('/records/a-class/women', [EligibilityController::class, 'aClassWomen'])->name('public.records.a_class.f');
 Route::get('/tournament/{tournament}', [PublicTournamentController::class, 'show'])
     ->whereNumber('tournament')
     ->name('public.tournaments.show');
@@ -850,6 +860,10 @@ Route::prefix('admin')->name('admin.')
         Route::post('/public-pages', [ManagedPublicPageController::class, 'store'])->name('public_pages.store');
         Route::get('/public-pages/{publicPage}/edit', [ManagedPublicPageController::class, 'edit'])->name('public_pages.edit');
         Route::put('/public-pages/{publicPage}', [ManagedPublicPageController::class, 'update'])->name('public_pages.update');
+
+        Route::get('/tournament-archives', [AdminTournamentArchiveController::class, 'index'])->name('tournament_archives.index');
+        Route::get('/tournament-archives/{archive}/edit', [AdminTournamentArchiveController::class, 'edit'])->name('tournament_archives.edit');
+        Route::put('/tournament-archives/{archive}', [AdminTournamentArchiveController::class, 'update'])->name('tournament_archives.update');
 
         Route::get('/pro-bowlers/{bowler}/account', [PlayerAccountAdminController::class, 'show'])->name('player_accounts.show');
         Route::post('/pro-bowlers/{bowler}/account/issue', [PlayerAccountAdminController::class, 'issue'])->name('player_accounts.issue');
