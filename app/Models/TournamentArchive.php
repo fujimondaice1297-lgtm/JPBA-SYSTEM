@@ -10,10 +10,14 @@ class TournamentArchive extends Model
 {
     protected $fillable = [
         'tournament_id',
+        'classification',
         'year',
         'title',
         'start_on',
         'end_on',
+        'venue_name',
+        'organizer_name',
+        'approval_number',
         'status',
         'body_html',
         'assets',
@@ -41,5 +45,13 @@ class TournamentArchive extends Model
     public function scopePubliclyVisible(Builder $query): Builder
     {
         return $query->where('is_public', true);
+    }
+
+    public function getClassificationLabelAttribute(): string
+    {
+        return match ($this->classification) {
+            'approved_event' => '承認イベント',
+            default => '公認トーナメント',
+        };
     }
 }

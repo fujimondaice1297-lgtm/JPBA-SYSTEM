@@ -1,7 +1,7 @@
 # Columns by table (generated)
 
 - Source: `docs/db/columns_public.csv`
-- Generated: 2026-09-06 21:56:22
+- Generated: 2026-09-08 19:36:42
 
 > ⚠️ このファイルは自動生成です。手で編集しないでください。
 
@@ -1674,7 +1674,7 @@
 | 11 | created_at | timestamp without time zone | YES |
 | 12 | updated_at | timestamp without time zone | YES |
 
-## tournament_archives (16 columns)
+## tournament_archives (20 columns)
 
 | # | column | type | nullable |
 |---:|---|---|---|
@@ -1694,6 +1694,10 @@
 | 14 | is_public | boolean | NO |
 | 15 | created_at | timestamp without time zone | YES |
 | 16 | updated_at | timestamp without time zone | YES |
+| 17 | classification | character varying | NO |
+| 18 | venue_name | character varying | YES |
+| 19 | organizer_name | character varying | YES |
+| 20 | approval_number | character varying | YES |
 
 ## tournament_auto_draw_logs (11 columns)
 

@@ -74,7 +74,8 @@ class RunPublicSiteParityAudit extends Command
             ['page' => 'about', 'path' => '/about', 'required' => ['JPBAについて', '協会概要', '事業']],
             ['page' => 'schedule', 'path' => '/schedule', 'required' => ['スケジュール']],
             ['page' => 'players', 'path' => '/players', 'required' => ['選手データ']],
-            ['page' => 'tournaments', 'path' => '/tournament', 'required' => ['トーナメント', '大会アーカイブを見る', 'シード・資格・公認記録']],
+            ['page' => 'tournaments', 'path' => '/tournament', 'required' => ['トーナメント', '公認大会・承認イベント', '公認オイルパターン', 'シード・資格・公認記録']],
+            ['page' => 'oil-patterns', 'path' => '/tournament/oil-patterns', 'required' => ['公認オイルパターン', '大会・年度・会場']],
             ['page' => 'live-results', 'path' => '/tournament/live-results', 'required' => ['速報・成績', '男子ポイントランキング', '女子賞金ランキング', 'JPBAポイント配分表', 'ST年間ポイントランキング', 'STチャンピオンズ優先出場一覧', 'シード・資格・公認記録']],
             ['page' => 'official-records', 'path' => '/records', 'required' => ['シード・資格・公認記録', 'トーナメントシード', '永久A級ライセンス', '日本プロボウリング殿堂', 'JPBA公認最高記録']],
             ['page' => 'tournament-seeds', 'path' => '/records/seed', 'required' => ['トーナメントシード']],
@@ -131,7 +132,7 @@ class RunPublicSiteParityAudit extends Command
             $pages[] = [
                 'page' => 'tournament-archive-index',
                 'path' => '/tournament/archive?year='.$archive->year,
-                'required' => ['過去の公式トーナメント', (string) $archive->title],
+                'required' => ['公認大会・承認イベント', (string) $archive->title],
             ];
         }
 

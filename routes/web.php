@@ -41,6 +41,7 @@ use App\Http\Controllers\ProGroupController;
 use App\Http\Controllers\ProTestOperationController;
 use App\Http\Controllers\PublicHomeController;
 use App\Http\Controllers\PublicInstructorController;
+use App\Http\Controllers\PublicOilPatternController;
 use App\Http\Controllers\PublicPageController;
 use App\Http\Controllers\PublicPlayerController;
 use App\Http\Controllers\PublicProfileController;
@@ -236,6 +237,8 @@ Route::get('/tournament', [PublicTournamentController::class, 'index'])->name('p
 Route::get('/tournament/archive', [PublicTournamentArchiveController::class, 'index'])->name('public.tournament_archives.index');
 Route::get('/tournament/archive/{archive}', [PublicTournamentArchiveController::class, 'show'])
     ->whereNumber('archive')->name('public.tournament_archives.show');
+Route::get('/tournament/oil-patterns', [PublicOilPatternController::class, 'index'])
+    ->name('public.oil_patterns.index');
 Route::get('/tournament/live-results', [PublicTournamentResultController::class, 'index'])
     ->name('public.tournaments.live_results');
 Route::get('/rankings/season-trial', [RankingController::class, 'seasonTrial'])
@@ -864,6 +867,7 @@ Route::prefix('admin')->name('admin.')
         Route::get('/tournament-archives', [AdminTournamentArchiveController::class, 'index'])->name('tournament_archives.index');
         Route::get('/tournament-archives/{archive}/edit', [AdminTournamentArchiveController::class, 'edit'])->name('tournament_archives.edit');
         Route::put('/tournament-archives/{archive}', [AdminTournamentArchiveController::class, 'update'])->name('tournament_archives.update');
+        Route::get('/oil-patterns', [\App\Http\Controllers\Admin\OilPatternController::class, 'index'])->name('oil_patterns.index');
 
         Route::get('/pro-bowlers/{bowler}/account', [PlayerAccountAdminController::class, 'show'])->name('player_accounts.show');
         Route::post('/pro-bowlers/{bowler}/account/issue', [PlayerAccountAdminController::class, 'issue'])->name('player_accounts.issue');

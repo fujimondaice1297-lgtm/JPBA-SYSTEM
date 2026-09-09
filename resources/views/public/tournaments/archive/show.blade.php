@@ -1,7 +1,7 @@
 @extends('public.layout')
 
-@section('title', $archive->title . '｜大会アーカイブ｜公益社団法人 日本プロボウリング協会')
-@section('breadcrumb', '大会アーカイブ')
+@section('title', $archive->title . '｜公認大会・承認イベント｜公益社団法人 日本プロボウリング協会')
+@section('breadcrumb', '公認大会・承認イベント')
 
 @push('styles')
 <style>
@@ -16,7 +16,7 @@
   <h1 class="jpba-page-title flex-grow-1">{{ $archive->title }}</h1>
   <a class="jpba-small-button" href="{{ route('public.tournament_archives.index', ['year' => $archive->year]) }}">{{ $archive->year }}年一覧へ</a>
 </div>
-<section class="jpba-panel"><table class="jpba-data-table"><tr><th>開催年度</th><td>{{ $archive->year }}年</td></tr><tr><th>開催日</th><td>{{ $archive->start_on?->format('Y年n月j日') ?: '-' }}@if($archive->end_on) ～ {{ $archive->end_on->format('Y年n月j日') }}@endif</td></tr></table></section>
+<section class="jpba-panel"><table class="jpba-data-table"><tr><th>大会区分</th><td>{{ $archive->classification_label }}</td></tr><tr><th>開催年度</th><td>{{ $archive->year }}年</td></tr><tr><th>開催日</th><td>{{ $archive->start_on?->format('Y年n月j日') ?: '-' }}@if($archive->end_on) ～ {{ $archive->end_on->format('Y年n月j日') }}@endif</td></tr><tr><th>会場</th><td>{{ $venueName ?: '-' }}</td></tr>@if($organizerName)<tr><th>主催者</th><td>{{ $organizerName }}</td></tr>@endif @if($archive->approval_number)<tr><th>承認番号</th><td>{{ $archive->approval_number }}</td></tr>@endif</table></section>
 
 @php($files = collect($archive->assets ?: [])->where('type', '!=', 'image'))
 @if($files->isNotEmpty())

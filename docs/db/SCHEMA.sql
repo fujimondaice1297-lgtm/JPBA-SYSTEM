@@ -4449,7 +4449,11 @@ CREATE TABLE public.tournament_archives (
     source_synced_at timestamp(0) without time zone,
     is_public boolean DEFAULT true NOT NULL,
     created_at timestamp(0) without time zone,
-    updated_at timestamp(0) without time zone
+    updated_at timestamp(0) without time zone,
+    classification character varying(32) DEFAULT 'official_tournament'::character varying NOT NULL,
+    venue_name character varying(255),
+    organizer_name character varying(255),
+    approval_number character varying(64)
 );
 
 
@@ -10212,6 +10216,13 @@ CREATE INDEX tmssp_sheet_sort_idx ON public.tournament_match_score_sheet_players
 
 
 --
+-- Name: tournament_archives_classification_index; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX tournament_archives_classification_index ON public.tournament_archives USING btree (classification);
+
+
+--
 -- Name: tournament_archives_is_public_index; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -12008,4 +12019,3 @@ ALTER TABLE ONLY public.users
 --
 
 \unrestrict 12WvjA4xb8b55eE4I3D3Afs1O3eBq9wLmnhqvAsm1KT0h7pHz9FFlemzgihcdT3
-

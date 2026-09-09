@@ -1189,6 +1189,10 @@ tournament_archives,13,source_synced_at,timestamp without time zone,YES
 tournament_archives,14,is_public,boolean,NO
 tournament_archives,15,created_at,timestamp without time zone,YES
 tournament_archives,16,updated_at,timestamp without time zone,YES
+tournament_archives,17,classification,character varying,NO
+tournament_archives,18,venue_name,character varying,YES
+tournament_archives,19,organizer_name,character varying,YES
+tournament_archives,20,approval_number,character varying,YES
 tournament_auto_draw_logs,1,id,bigint,NO
 tournament_auto_draw_logs,2,tournament_id,bigint,NO
 tournament_auto_draw_logs,3,target_type,character varying,NO
