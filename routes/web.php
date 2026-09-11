@@ -509,6 +509,8 @@ Route::middleware(['auth', 'role:editor,admin'])->group(function () {
         ->name('tournaments.aggregate_results.sources.destroy');
     Route::post('/tournaments/{tournament}/aggregate-results/definitions/{definition}/calculate', [\App\Http\Controllers\TournamentAggregateController::class, 'calculate'])
         ->name('tournaments.aggregate_results.calculate');
+    Route::post('/tournaments/{tournament}/aggregate-results/japan-open-advancement', [\App\Http\Controllers\TournamentAggregateController::class, 'syncJapanOpenAdvancement'])
+        ->name('tournaments.aggregate_results.japan_open_advancement');
 
     Route::get('/scores/input', [ScoreController::class, 'input'])->name('scores.input');
     Route::post('/scores/store', [ScoreController::class, 'store']);

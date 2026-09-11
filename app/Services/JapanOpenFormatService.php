@@ -49,6 +49,10 @@ final class JapanOpenFormatService
                 'doubles_max_professionals' => 1,
                 'all_events_sources' => ['team', 'doubles', 'singles'],
                 'all_events_games_per_player' => 9,
+                'masters_field_size' => 125,
+                'queens_field_size' => 100,
+                'masters_qualifier_selection' => 'per_shift_excluding_direct_seeds',
+                'queens_qualifier_selection' => 'overall_excluding_direct_seeds',
                 'masters_queens_preliminary_games' => 8,
                 'masters_queens_semifinal_games' => 6,
                 'masters_queens_semifinal_total_games' => 14,
@@ -305,6 +309,16 @@ final class JapanOpenFormatService
                     : ($component['competition_type'] === 'doubles' ? 1 : null),
                 'official_accounting' => in_array($code, ['masters', 'queens'], true),
                 'final_format' => in_array($code, ['masters', 'queens'], true) ? 'double_elimination' : null,
+                'advancement_field_size' => match ($code) {
+                    'men_all_events', 'masters' => 125,
+                    'women_all_events', 'queens' => 100,
+                    default => null,
+                },
+                'advancement_selection_mode' => match ($code) {
+                    'men_all_events', 'masters' => 'per_shift_excluding_direct_seeds',
+                    'women_all_events', 'queens' => 'overall_excluding_direct_seeds',
+                    default => null,
+                },
                 'aggregate_results_do_not_publish_to_individual_rankings' => true,
             ],
         ];

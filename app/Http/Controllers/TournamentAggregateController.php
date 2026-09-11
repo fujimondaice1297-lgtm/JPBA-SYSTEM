@@ -7,6 +7,7 @@ use App\Models\TournamentAggregateDefinition;
 use App\Models\TournamentAggregateSource;
 use App\Models\TournamentCompetitorGroup;
 use App\Models\TournamentCompetitorGroupMember;
+use App\Services\JapanOpenAdvancementService;
 use App\Services\JapanOpenRosterImportService;
 use App\Services\TournamentAggregateResultService;
 use Illuminate\Http\Request;
@@ -17,7 +18,7 @@ use InvalidArgumentException;
 
 final class TournamentAggregateController extends Controller
 {
-    public function index(Tournament $tournament)
+    public function index(Tournament $tournament, JapanOpenAdvancementService $advancementService)
     {
         $groups = TournamentCompetitorGroup::query()
             ->where('tournament_id', $tournament->id)
@@ -93,6 +94,8 @@ final class TournamentAggregateController extends Controller
             ->groupBy('tournament_id')
             ->map(fn ($rows) => $rows->pluck('stage')->values()->all());
 
+        $japanOpenAdvancementStatus = $advancementService->status($tournament);
+
         return view('tournament_aggregates.index', compact(
             'tournament',
             'groups',
@@ -101,6 +104,7 @@ final class TournamentAggregateController extends Controller
             'definitions',
             'candidateTournaments',
             'stagesByTournament',
+            'japanOpenAdvancementStatus',
         ));
     }
 
@@ -386,6 +390,38 @@ final class TournamentAggregateController extends Controller
             'success',
             sprintf('%sを再計算しました（%d件）。', $definition->name, $snapshot->rows->count())
         );
+    }
+
+    public function syncJapanOpenAdvancement(
+        Request $request,
+        Tournament $tournament,
+        JapanOpenAdvancementService $service,
+    ) {
+        $data = $request->validate([
+            'field_size' => ['required', 'integer', 'min:1', 'max:500'],
+            'shift_a_count' => ['nullable', 'integer', 'min:0', 'max:500', 'required_with:shift_b_count'],
+            'shift_b_count' => ['nullable', 'integer', 'min:0', 'max:500', 'required_with:shift_a_count'],
+        ]);
+
+        try {
+            $result = $service->sync(
+                $tournament,
+                (int) $data['field_size'],
+                isset($data['shift_a_count']) ? (int) $data['shift_a_count'] : null,
+                isset($data['shift_b_count']) ? (int) $data['shift_b_count'] : null,
+                Auth::id(),
+            );
+        } catch (InvalidArgumentException $exception) {
+            return back()->withErrors(['advancement' => $exception->getMessage()])->withInput();
+        }
+
+        return back()->with('success', sprintf(
+            '%sへオールエベンツ通過者%d名を反映しました（シード・手動枠%d名、削除%d名）。',
+            $result['target_name'],
+            $result['qualifier_count'],
+            $result['reserved_entry_count'],
+            $result['removed_count'],
+        ));
     }
 
     private function guardGroupTournament(Tournament $tournament, TournamentCompetitorGroup $group): void

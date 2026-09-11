@@ -9,6 +9,7 @@
   $allStages = collect($stagesByTournament)->flatten()->filter()->unique()->sort()->values();
   $japanOpenComponent = data_get($tournament->template_snapshot, 'japan_open.component_code');
   $isJapanOpenTeam = in_array($japanOpenComponent, ['men_team', 'women_team'], true);
+  $isJapanOpenAllEvents = in_array($japanOpenComponent, ['men_all_events', 'women_all_events'], true);
 @endphp
 
 <style>
@@ -56,6 +57,81 @@
     <div class="alert alert-success">{{ session('success') }}</div>
   @endif
 
+  @if ($isJapanOpenAllEvents && $japanOpenAdvancementStatus)
+    @php
+      $advancement = $japanOpenAdvancementStatus;
+      $isPerShiftAdvancement = $advancement['mode'] === 'per_shift';
+      $lastSync = (array) ($advancement['last_sync'] ?? []);
+    @endphp
+    <section class="aggregate-section">
+      <div class="aggregate-panel border-primary mb-0">
+        <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
+          <div>
+            <h3 class="h5 mb-1">{{ $isPerShiftAdvancement ? 'マスターズ' : 'クイーンズ' }}予選進出者を反映</h3>
+            <p class="small text-muted mb-0">
+              公開中の最新オールエベンツ9G成績から、シード・手動登録者を除いた進出者だけを同期します。
+            </p>
+          </div>
+          <div class="text-end small">
+            <div>反映先：{{ $advancement['target']?->name ?? '未作成' }}</div>
+            <div class="text-muted">
+              現在 {{ $advancement['synced_qualifier_count'] }}名／シード・手動枠 {{ $advancement['reserved_entry_count'] }}名
+            </div>
+          </div>
+        </div>
+
+        @if (! $advancement['source_snapshot'])
+          <div class="alert alert-warning mb-0">
+            「オールエベンツ 9G成績」を再計算すると、ここから進出者を反映できます。
+          </div>
+        @elseif (! $advancement['target'])
+          <div class="alert alert-danger mb-0">同年度の反映先大会を確認できません。</div>
+        @else
+          <div class="small mb-3">
+            選出元：成績 #{{ $advancement['source_snapshot']->id }}（{{ $advancement['source_row_count'] }}名）
+            ／残り進出枠 {{ $advancement['required_qualifier_count'] }}名
+            @if (! empty($lastSync['synced_at']))
+              ／前回反映 {{ $lastSync['synced_at'] }}
+            @endif
+          </div>
+          <form method="POST" action="{{ route('tournaments.aggregate_results.japan_open_advancement', $tournament) }}"
+                class="row g-3 align-items-end">
+            @csrf
+            <div class="col-md-3">
+              <label class="form-label">予選進出定員（シードを含む）</label>
+              <input type="number" name="field_size" class="form-control" min="1" max="500"
+                     value="{{ old('field_size', $advancement['field_size']) }}" required>
+            </div>
+            @if ($isPerShiftAdvancement)
+              <div class="col-md-2">
+                <label class="form-label">Aシフト進出</label>
+                <input type="number" name="shift_a_count" class="form-control" min="0" max="500"
+                       value="{{ old('shift_a_count', $advancement['suggested_shift_a_count']) }}"
+                       placeholder="自動">
+              </div>
+              <div class="col-md-2">
+                <label class="form-label">Bシフト進出</label>
+                <input type="number" name="shift_b_count" class="form-control" min="0" max="500"
+                       value="{{ old('shift_b_count', $advancement['suggested_shift_b_count']) }}"
+                       placeholder="自動">
+              </div>
+            @endif
+            <div class="col-md-4">
+              <button type="submit" class="btn btn-primary"
+                      onclick="return confirm('現在のオールエベンツ順位で進出者を同期します。よろしいですか？')">
+                {{ $isPerShiftAdvancement ? 'マスターズ' : 'クイーンズ' }}予選へ同期
+              </button>
+            </div>
+          </form>
+          <div class="small text-muted mt-3">
+            男子は大会シードを除いてA・Bシフト別、女子は大会シードを除いて総合順位から選出します。
+            境界が同ピンの場合や9G未完了者がいる場合は自動反映せず、確認メッセージを表示します。
+          </div>
+        @endif
+      </div>
+    </section>
+  @endif
+
   @if ($isGroupCompetition)
     <section class="aggregate-section">
       <div class="d-flex justify-content-between align-items-center mb-3">
@@ -67,17 +143,18 @@
         <div class="aggregate-panel border-primary mb-4">
           <h4 class="h6">ジャパンオープン編成を一括反映</h4>
           <p class="small mb-2">
-            Excelから「チームコード・チーム名・順番・ライセンスNo.・選手名」の5列を貼り付けると、
+            Excelから「チームコード・チーム名・順番・ライセンスNo.・選手名・シフト」の6列を貼り付けると、
             4人チーム、1・2番／3・4番のダブルス2組、シングルス参加者を同時作成します。
           </p>
           <div class="small text-muted mb-2">
             1チームは4名・プロ2名まで、各ダブルス組はプロ1名までです。アマチュアはライセンスNo.を空欄にしてください。
+            男子のシフトはAまたはBを指定します（女子は空欄でも構いません）。
           </div>
           <form method="POST" action="{{ route('tournaments.aggregate_results.japan_open_roster', $tournament) }}">
             @csrf
             <label class="form-label" for="japan-open-roster">編成データ</label>
             <textarea id="japan-open-roster" name="roster_text" class="form-control font-monospace" rows="7"
-                      placeholder="チームコード&#9;チーム名&#9;順番&#9;ライセンスNo.&#9;選手名&#10;A01&#9;JPBAチームA&#9;1&#9;1297&#9;藤川大輔&#10;A01&#9;JPBAチームA&#9;2&#9;&#9;山田太郎">{{ old('roster_text') }}</textarea>
+                      placeholder="チームコード&#9;チーム名&#9;順番&#9;ライセンスNo.&#9;選手名&#9;シフト&#10;A01&#9;JPBAチームA&#9;1&#9;1297&#9;藤川大輔&#9;A&#10;A01&#9;JPBAチームA&#9;2&#9;&#9;山田太郎&#9;A">{{ old('roster_text') }}</textarea>
             <button type="submit" class="btn btn-primary mt-3">チーム・ダブルス・シングルスへ反映</button>
           </form>
         </div>

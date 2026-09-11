@@ -121,7 +121,8 @@ final class JapanOpenRosterImportService
                 continue;
             }
 
-            [$teamCode, $teamName, $memberOrder, $license, $displayName] = array_slice($columns, 0, 5);
+            [$teamCode, $teamName, $memberOrder, $license, $displayName] = array_pad(array_slice($columns, 0, 6), 6, '');
+            $shift = $this->normalizeShift($columns[5] ?? '');
             $order = (int) $memberOrder;
             if ($teamCode === '' || $teamName === '' || $order < 1 || $order > 4) {
                 $errors[] = ($lineNumber + 1).'行目のチームコード・チーム名・順番（1～4）を確認してください。';
@@ -146,6 +147,11 @@ final class JapanOpenRosterImportService
 
                 continue;
             }
+            if ($teamTournament->gender === 'M' && ($columns[5] ?? '') !== '' && $shift === null) {
+                $errors[] = ($lineNumber + 1).'行目のシフトはAまたはBで指定してください。';
+
+                continue;
+            }
 
             $rows[] = [
                 'team_code' => $normalizedTeamCode,
@@ -155,6 +161,7 @@ final class JapanOpenRosterImportService
                 'pro_bowler_id' => $bowler?->id,
                 'license_no' => $bowler?->license_no,
                 'display_name' => $bowler?->name_kanji ?: $displayName,
+                'shift' => $shift,
             ];
         }
 
@@ -227,6 +234,14 @@ final class JapanOpenRosterImportService
         return trim($normalized, '-');
     }
 
+    private function normalizeShift(string $value): ?string
+    {
+        $normalized = strtoupper(trim($value));
+        $normalized = str_replace(['Ａ', 'Ｂ', 'シフト', 'SHIFT'], ['A', 'B', '', ''], $normalized);
+
+        return in_array($normalized, ['A', 'B'], true) ? $normalized : null;
+    }
+
     /** @param array<string,mixed> $member */
     private function upsertParticipant(Tournament $tournament, array $member): int
     {
@@ -240,6 +255,9 @@ final class JapanOpenRosterImportService
                 $member['team_code'],
                 $member['member_order'],
             );
+        $amateurBowlerId = $isProfessional
+            ? null
+            : $this->upsertAmateurBowler($internalLicense, (string) $member['display_name'], $tournament->gender);
         $query = DB::table('tournament_participants')->where('tournament_id', $tournament->id);
         $isProfessional
             ? $query->where('pro_bowler_id', $member['pro_bowler_id'])
@@ -248,10 +266,12 @@ final class JapanOpenRosterImportService
         $payload = [
             'pro_bowler_license_no' => $internalLicense,
             'pro_bowler_id' => $member['pro_bowler_id'],
+            'amateur_bowler_id' => $amateurBowlerId,
             'participant_type' => $isProfessional ? 'pro' : 'amateur',
             'display_name' => $member['display_name'],
             'display_license_no' => $isProfessional ? $member['license_no'] : null,
             'gender' => $tournament->gender,
+            'shift' => $member['shift'],
             'source_note' => 'ジャパンオープン編成一括取込',
             'is_temporary' => ! $isProfessional,
             'updated_at' => now(),
@@ -265,6 +285,28 @@ final class JapanOpenRosterImportService
 
         return (int) DB::table('tournament_participants')->insertGetId($payload + [
             'tournament_id' => $tournament->id,
+            'created_at' => now(),
+        ]);
+    }
+
+    private function upsertAmateurBowler(string $amateurNo, string $name, string $gender): int
+    {
+        $existing = DB::table('amateur_bowlers')->where('amateur_no', $amateurNo)->first();
+        $payload = [
+            'name' => $name,
+            'gender' => $gender,
+            'note' => 'ジャパンオープン編成一括取込',
+            'is_active' => true,
+            'updated_at' => now(),
+        ];
+        if ($existing) {
+            DB::table('amateur_bowlers')->where('id', $existing->id)->update($payload);
+
+            return (int) $existing->id;
+        }
+
+        return (int) DB::table('amateur_bowlers')->insertGetId($payload + [
+            'amateur_no' => $amateurNo,
             'created_at' => now(),
         ]);
     }

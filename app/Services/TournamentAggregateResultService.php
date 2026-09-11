@@ -86,7 +86,7 @@ final class TournamentAggregateResultService
                     'amateur_name' => $row['amateur_name'] ?? null,
                     'display_name' => $row['display_name'],
                     'gender' => $row['gender'] ?? null,
-                    'shift' => null,
+                    'shift' => $row['shift'] ?? null,
                     'entry_number' => $row['entry_number'] ?? null,
                     'identity_key' => $row['identity_key'],
                     'scratch_pin' => $row['total_pin'],
@@ -189,6 +189,15 @@ final class TournamentAggregateResultService
                         'score_values' => [],
                         'source_breakdown' => [],
                     ]);
+                } else {
+                    $existingShift = trim((string) ($subjects[$key]['shift'] ?? ''));
+                    $incomingShift = trim((string) ($identity['shift'] ?? ''));
+                    if ($existingShift !== '' && $incomingShift !== '' && $existingShift !== $incomingShift) {
+                        throw new InvalidArgumentException($identity['display_name'].'さんのシフトが競技間で一致しません。');
+                    }
+                    if ($existingShift === '' && $incomingShift !== '') {
+                        $subjects[$key]['shift'] = $incomingShift;
+                    }
                 }
 
                 $this->addScore($subjects[$key], $source, $row, $key);
@@ -328,6 +337,7 @@ final class TournamentAggregateResultService
                 'tp.display_name as participant_display_name',
                 'tp.participant_type',
                 'tp.gender as participant_gender',
+                'tp.shift as participant_shift',
             ])
             ->orderBy('g.id')
             ->get();
@@ -344,6 +354,7 @@ final class TournamentAggregateResultService
             $row->license_number,
         ]);
         $gender = trim((string) ($row->score_gender ?: $row->participant_gender ?: '')) ?: null;
+        $shift = trim((string) ($row->participant_shift ?? '')) ?: null;
 
         if ($proBowlerId > 0) {
             return [
@@ -354,6 +365,7 @@ final class TournamentAggregateResultService
                 'amateur_name' => null,
                 'display_name' => $displayName ?: ('プロ #'.$proBowlerId),
                 'gender' => $gender,
+                'shift' => $shift,
                 'entry_number' => $row->entry_number,
                 'identity_verified' => true,
             ];
@@ -368,6 +380,7 @@ final class TournamentAggregateResultService
                 'amateur_name' => $displayName ?: ('アマチュア #'.$amateurBowlerId),
                 'display_name' => $displayName ?: ('アマチュア #'.$amateurBowlerId),
                 'gender' => $gender,
+                'shift' => $shift,
                 'entry_number' => $row->entry_number,
                 'identity_verified' => true,
             ];
@@ -382,6 +395,7 @@ final class TournamentAggregateResultService
                 'amateur_name' => null,
                 'display_name' => $displayName ?: $license,
                 'gender' => $gender,
+                'shift' => $shift,
                 'entry_number' => $row->entry_number,
                 'identity_verified' => false,
             ];
@@ -399,6 +413,7 @@ final class TournamentAggregateResultService
             'amateur_name' => $displayName,
             'display_name' => $displayName,
             'gender' => $gender,
+            'shift' => $shift,
             'entry_number' => $row->entry_number,
             'identity_verified' => false,
         ];
