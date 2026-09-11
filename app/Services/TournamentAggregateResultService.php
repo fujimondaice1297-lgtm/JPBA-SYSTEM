@@ -19,50 +19,11 @@ final class TournamentAggregateResultService
         TournamentAggregateDefinition $definition,
         ?int $reflectedBy = null,
     ): TournamentResultSnapshot {
-        $definition->load(['tournament', 'sources.sourceTournament']);
-        $sources = $definition->sources->values();
-
-        if ($sources->isEmpty()) {
-            throw new InvalidArgumentException('合算元の競技を1件以上登録してください。');
-        }
-
-        if (! in_array($definition->subject_type, ['individual', 'group'], true)) {
-            throw new InvalidArgumentException('合算対象は individual / group のみ対応しています。');
-        }
-
-        if ($definition->subject_type === 'group') {
-            $invalidSource = $sources->first(
-                fn ($source) => (int) $source->source_tournament_id !== (int) $definition->tournament_id
-            );
-            if ($invalidSource) {
-                throw new InvalidArgumentException('チーム合算では、この大会自身のスコアだけを合算元に指定してください。');
-            }
-        }
-
-        [$subjects, $diagnostics] = $definition->subject_type === 'group'
-            ? $this->collectGroupSubjects($definition, $sources->all())
-            : $this->collectIndividualSubjects($definition, $sources->all());
-
-        $sourceDefinitions = $sources->map(fn ($source): array => [
-            'id' => (int) $source->id,
-            'label' => $source->label,
-            'source_tournament_id' => (int) $source->source_tournament_id,
-            'stage' => $source->stage,
-            'game_from' => $source->game_from,
-            'game_to' => $source->game_to,
-            'expected_games_per_member' => $source->expected_games_per_member,
-            'is_required' => (bool) $source->is_required,
-        ])->all();
-
-        $rankedRows = $this->calculator->finalize(
-            $subjects,
-            $sourceDefinitions,
-            $definition->subject_type,
-            (bool) $definition->require_all_sources,
-            $definition->tie_break_policy ?: 'shared_rank',
-        );
-
-        $gamesCount = $this->expectedGamesCount($definition, $sourceDefinitions);
+        $preview = $this->preview($definition);
+        $sourceDefinitions = $preview['sources'];
+        $rankedRows = $preview['rows'];
+        $diagnostics = $preview['diagnostics'];
+        $gamesCount = $preview['games_count'];
 
         return DB::transaction(function () use (
             $definition,
@@ -144,6 +105,62 @@ final class TournamentAggregateResultService
 
             return $snapshot->load(['rows', 'aggregateDefinition.sources.sourceTournament']);
         });
+    }
+
+    /** @return array{rows:array<int,array<string,mixed>>,sources:array<int,array<string,mixed>>,diagnostics:array<string,mixed>,games_count:int} */
+    public function preview(TournamentAggregateDefinition $definition): array
+    {
+        $definition->load(['tournament', 'sources.sourceTournament']);
+        $sources = $definition->sources->values();
+
+        if ($sources->isEmpty()) {
+            throw new InvalidArgumentException('合算元の競技を1件以上登録してください。');
+        }
+
+        if (! in_array($definition->subject_type, ['individual', 'group'], true)) {
+            throw new InvalidArgumentException('合算対象は individual / group のみ対応しています。');
+        }
+
+        if ($definition->subject_type === 'group') {
+            $invalidSource = $sources->first(
+                fn ($source) => (int) $source->source_tournament_id !== (int) $definition->tournament_id
+            );
+            if ($invalidSource) {
+                throw new InvalidArgumentException('チーム合算では、この大会自身のスコアだけを合算元に指定してください。');
+            }
+        }
+
+        [$subjects, $diagnostics] = $definition->subject_type === 'group'
+            ? $this->collectGroupSubjects($definition, $sources->all())
+            : $this->collectIndividualSubjects($definition, $sources->all());
+
+        $sourceDefinitions = $sources->map(fn ($source): array => [
+            'id' => (int) $source->id,
+            'label' => $source->label,
+            'source_tournament_id' => (int) $source->source_tournament_id,
+            'stage' => $source->stage,
+            'game_from' => $source->game_from,
+            'game_to' => $source->game_to,
+            'expected_games_per_member' => $source->expected_games_per_member,
+            'is_required' => (bool) $source->is_required,
+        ])->all();
+
+        $rankedRows = $this->calculator->finalize(
+            $subjects,
+            $sourceDefinitions,
+            $definition->subject_type,
+            (bool) $definition->require_all_sources,
+            $definition->tie_break_policy ?: 'shared_rank',
+        );
+
+        $gamesCount = $this->expectedGamesCount($definition, $sourceDefinitions);
+
+        return [
+            'rows' => $rankedRows,
+            'sources' => $sourceDefinitions,
+            'diagnostics' => $diagnostics,
+            'games_count' => $gamesCount,
+        ];
     }
 
     private function collectIndividualSubjects(TournamentAggregateDefinition $definition, array $sources): array

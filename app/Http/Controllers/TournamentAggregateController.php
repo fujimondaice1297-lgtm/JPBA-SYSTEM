@@ -7,6 +7,7 @@ use App\Models\TournamentAggregateDefinition;
 use App\Models\TournamentAggregateSource;
 use App\Models\TournamentCompetitorGroup;
 use App\Models\TournamentCompetitorGroupMember;
+use App\Services\JapanOpenRosterImportService;
 use App\Services\TournamentAggregateResultService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -176,6 +177,29 @@ final class TournamentAggregateController extends Controller
             return back()->withErrors(['tournament_participant_id' => 'この編成は定員に達しています。']);
         }
 
+        $maxProfessionals = (int) data_get($tournament->template_snapshot, 'japan_open.max_pro_per_group', 0);
+        if ($maxProfessionals > 0) {
+            $participant = DB::table('tournament_participants')->find($participantId);
+            $isProfessional = $participant
+                && ($participant->pro_bowler_id !== null || $participant->participant_type === 'pro');
+            if ($isProfessional) {
+                $professionalCount = DB::table('tournament_competitor_group_members as member')
+                    ->join('tournament_participants as participant', 'participant.id', '=', 'member.tournament_participant_id')
+                    ->where('member.competitor_group_id', $group->id)
+                    ->where(function ($query): void {
+                        $query->whereNotNull('participant.pro_bowler_id')
+                            ->orWhere('participant.participant_type', 'pro');
+                    })
+                    ->count();
+
+                if ($professionalCount >= $maxProfessionals) {
+                    return back()->withErrors([
+                        'tournament_participant_id' => "この編成に登録できるプロは{$maxProfessionals}名までです。",
+                    ]);
+                }
+            }
+        }
+
         if (TournamentCompetitorGroupMember::query()->where('tournament_participant_id', $participantId)->exists()) {
             return back()->withErrors(['tournament_participant_id' => 'この参加者はすでに別の編成へ登録済みです。']);
         }
@@ -186,6 +210,29 @@ final class TournamentAggregateController extends Controller
         ]);
 
         return back()->with('success', '編成メンバーを追加しました。');
+    }
+
+    public function importJapanOpenRoster(
+        Request $request,
+        Tournament $tournament,
+        JapanOpenRosterImportService $service,
+    ) {
+        $data = $request->validate([
+            'roster_text' => ['required', 'string', 'max:1000000'],
+        ]);
+
+        try {
+            $result = $service->import($tournament, $data['roster_text']);
+        } catch (InvalidArgumentException $exception) {
+            return back()->withErrors(['roster_text' => $exception->getMessage()])->withInput();
+        }
+
+        return back()->with('success', sprintf(
+            'ジャパンオープン編成を反映しました（4人チーム%d組、ダブルス%d組、選手%d名）。',
+            $result['team_count'],
+            $result['doubles_count'],
+            $result['member_count'],
+        ));
     }
 
     public function destroyGroupMember(

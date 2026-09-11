@@ -14,6 +14,75 @@
     <div class="alert alert-success">{{ session('success') }}</div>
   @endif
 
+  @if($errors->any())
+    <div class="alert alert-danger">
+      <ul class="mb-0">
+        @foreach($errors->all() as $error)
+          <li>{{ $error }}</li>
+        @endforeach
+      </ul>
+    </div>
+  @endif
+
+  @if(auth()->user()?->role === 'admin')
+    <section class="card border-primary mb-4">
+      <div class="card-header bg-primary text-white">
+        <strong>ジャパンオープン標準構成を作成</strong>
+      </div>
+      <div class="card-body">
+        <p class="mb-3">
+          大会総合案内、男女のチーム戦・ダブルス戦・シングルス戦・9Gオールエベンツ、
+          マスターズ／クイーンズの計11競技を一括作成します。選手・スコアは複製しません。
+        </p>
+        <form method="POST" action="{{ route('tournament_templates.japan_open.store') }}" class="row g-3 align-items-end">
+          @csrf
+          <div class="col-sm-3 col-lg-2">
+            <label class="form-label">年度</label>
+            <input type="number" name="year" class="form-control" min="2000" max="2100"
+                   value="{{ old('year', now()->year) }}" required>
+          </div>
+          <div class="col-sm-3 col-lg-2">
+            <label class="form-label">開催回</label>
+            <input type="number" name="edition_no" class="form-control" min="1" max="999"
+                   value="{{ old('edition_no') }}" placeholder="任意">
+          </div>
+          <div class="col-sm-6 col-lg-4">
+            <label class="form-label">大会名称</label>
+            <input type="text" name="name" class="form-control" maxlength="255"
+                   value="{{ old('name') }}" placeholder="空欄なら年度・開催回から自動作成">
+          </div>
+          <div class="col-sm-6 col-lg-2">
+            <label class="form-label">開始日</label>
+            <input type="date" name="start_date" class="form-control" value="{{ old('start_date') }}">
+          </div>
+          <div class="col-sm-6 col-lg-2">
+            <label class="form-label">終了日</label>
+            <input type="date" name="end_date" class="form-control" value="{{ old('end_date') }}">
+          </div>
+          <div class="col-sm-6 col-lg-4">
+            <label class="form-label">会場名</label>
+            <input type="text" name="venue_name" class="form-control" maxlength="255" value="{{ old('venue_name') }}">
+          </div>
+          <div class="col-sm-6 col-lg-4">
+            <label class="form-label">会場住所</label>
+            <input type="text" name="venue_address" class="form-control" maxlength="255" value="{{ old('venue_address') }}">
+          </div>
+          <div class="col-sm-4 col-lg-2">
+            <label class="form-label">登録ボール上限</label>
+            <input type="number" name="ball_registration_limit" class="form-control" min="1" max="99"
+                   value="{{ old('ball_registration_limit', 12) }}" required>
+          </div>
+          <div class="col-sm-8 col-lg-2">
+            <button type="submit" class="btn btn-primary w-100">年度構成を作成</button>
+          </div>
+        </form>
+        <div class="small text-muted mt-3">
+          同じ年度へ再実行した場合は既存構成を更新し、二重作成しません。各競技は下書きで作成されます。
+        </div>
+      </div>
+    </section>
+  @endif
+
   <div class="table-responsive">
     <table class="table table-striped align-middle">
       <thead>

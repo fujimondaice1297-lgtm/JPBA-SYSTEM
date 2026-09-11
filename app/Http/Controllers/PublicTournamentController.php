@@ -22,6 +22,7 @@ class PublicTournamentController extends Controller
         $query = Tournament::query()
             ->with(['files' => fn ($q) => $q->where('visibility', 'public')->orderBy('sort_order'), 'venue'])
             ->withCount(['gameScores', 'officialResults']);
+        $this->onlyPublicIndexTournaments($query);
 
         if (in_array($filters['type'], ['official', 'approved', 'other'], true)) {
             $query->where('official_type', $filters['type']);
@@ -71,6 +72,42 @@ class PublicTournamentController extends Controller
             'venue',
         ])->loadCount(['gameScores', 'officialResults']);
 
+        $aggregateLinks = $tournament->aggregateDefinitions()
+            ->where('is_active', true)
+            ->where('is_published', true)
+            ->with(['snapshots' => fn ($query) => $query
+                ->where('is_current', true)
+                ->where('is_published', true)
+                ->latest('id')])
+            ->orderBy('id')
+            ->get();
+
+        $editionComponents = collect();
+        if ($tournament->tournament_edition_id
+            && data_get($tournament->template_snapshot, 'japan_open.component_code') === 'overview') {
+            $componentOrder = array_flip([
+                'men_team', 'men_doubles', 'men_singles', 'men_all_events', 'masters',
+                'women_team', 'women_doubles', 'women_singles', 'women_all_events', 'queens',
+            ]);
+            $editionComponents = Tournament::query()
+                ->where('tournament_edition_id', $tournament->tournament_edition_id)
+                ->where('id', '<>', $tournament->id)
+                ->whereIn('setup_status', ['in_progress', 'provisional', 'final', 'archived', 'completed'])
+                ->withCount(['gameScores', 'officialResults'])
+                ->with(['aggregateDefinitions' => fn ($query) => $query
+                    ->where('is_active', true)
+                    ->where('is_published', true)
+                    ->with(['snapshots' => fn ($snapshotQuery) => $snapshotQuery
+                        ->where('is_current', true)
+                        ->where('is_published', true)
+                        ->latest('id')])])
+                ->get()
+                ->sortBy(fn (Tournament $component) => $componentOrder[
+                    (string) data_get($component->template_snapshot, 'japan_open.component_code')
+                ] ?? 99)
+                ->values();
+        }
+
         return view('public.tournaments.show', [
             'publicConfig' => config('jpba_public', []),
             'tournament' => $tournament,
@@ -78,6 +115,8 @@ class PublicTournamentController extends Controller
             'scheduleLinks' => $this->scheduleLinks($tournament),
             'resultCards' => $this->resultCards($tournament),
             'resultRows' => $this->resultRows($tournament),
+            'aggregateLinks' => $aggregateLinks,
+            'editionComponents' => $editionComponents,
             'entryCount' => DB::table('tournament_entries')
                 ->where('tournament_id', $tournament->id)
                 ->where('status', 'entry')
@@ -90,7 +129,10 @@ class PublicTournamentController extends Controller
 
     private function availableYears(): array
     {
-        return Tournament::query()
+        $query = Tournament::query();
+        $this->onlyPublicIndexTournaments($query);
+
+        return $query
             ->selectRaw('coalesce(year, extract(year from start_date)::int) as display_year')
             ->where(function ($q) {
                 $q->whereNotNull('year')->orWhereNotNull('start_date');
@@ -102,6 +144,15 @@ class PublicTournamentController extends Controller
             ->map(fn ($year) => (int) $year)
             ->values()
             ->all();
+    }
+
+    private function onlyPublicIndexTournaments($query): void
+    {
+        $query->where(function ($visibilityQuery): void {
+            $visibilityQuery->whereNull('template_snapshot')
+                ->orWhereNull('template_snapshot->japan_open->hidden_from_public_index')
+                ->orWhere('template_snapshot->japan_open->hidden_from_public_index', false);
+        });
     }
 
     private function fileLinks(Tournament $tournament): array

@@ -264,6 +264,12 @@ Route::get('/tournament/{tournament}/live', [PublicTournamentResultController::c
 Route::get('/tournament/{tournament}/results', [PublicTournamentResultController::class, 'results'])
     ->whereNumber('tournament')
     ->name('public.tournaments.results');
+Route::get('/tournament/{tournament}/aggregate-results/{definition}', [\App\Http\Controllers\PublicTournamentAggregateController::class, 'show'])
+    ->whereNumber(['tournament', 'definition'])
+    ->name('public.tournaments.aggregate');
+Route::get('/tournament/{tournament}/aggregate-results/{definition}/pdf', [\App\Http\Controllers\PublicTournamentAggregateController::class, 'pdf'])
+    ->whereNumber(['tournament', 'definition'])
+    ->name('public.tournaments.aggregate.pdf');
 Route::redirect('/tournament/index.html', '/tournament', 301);
 Route::get('/flash-news/{id}', [FlashNewsPublicController::class, 'show'])
     ->whereNumber('id')
@@ -485,6 +491,8 @@ Route::middleware(['auth', 'role:editor,admin'])->group(function () {
         ->name('tournaments.aggregate_results.index');
     Route::post('/tournaments/{tournament}/aggregate-results/groups', [\App\Http\Controllers\TournamentAggregateController::class, 'storeGroup'])
         ->name('tournaments.aggregate_results.groups.store');
+    Route::post('/tournaments/{tournament}/aggregate-results/japan-open-roster', [\App\Http\Controllers\TournamentAggregateController::class, 'importJapanOpenRoster'])
+        ->name('tournaments.aggregate_results.japan_open_roster');
     Route::delete('/tournaments/{tournament}/aggregate-results/groups/{group}', [\App\Http\Controllers\TournamentAggregateController::class, 'destroyGroup'])
         ->name('tournaments.aggregate_results.groups.destroy');
     Route::post('/tournaments/{tournament}/aggregate-results/groups/{group}/members', [\App\Http\Controllers\TournamentAggregateController::class, 'storeGroupMember'])
@@ -545,6 +553,9 @@ Route::middleware(['auth', 'role:editor,admin'])->group(function () {
         ->name('tournament_templates.create');
     Route::post('/tournament-templates', [\App\Http\Controllers\TournamentTemplateController::class, 'store'])
         ->name('tournament_templates.store');
+    Route::post('/tournament-templates/japan-open', [\App\Http\Controllers\JapanOpenFormatController::class, 'store'])
+        ->middleware('role:admin')
+        ->name('tournament_templates.japan_open.store');
     Route::get('/tournament-template-versions/{version}/apply', [\App\Http\Controllers\TournamentTemplateController::class, 'apply'])
         ->name('tournament_templates.apply');
 

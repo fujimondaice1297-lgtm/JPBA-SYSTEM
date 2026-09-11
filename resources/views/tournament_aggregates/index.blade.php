@@ -7,6 +7,8 @@
   $defaultCode = $isGroupCompetition ? 'team-total' : 'all-events';
   $defaultName = $isGroupCompetition ? 'チーム合算成績' : 'オールエベンツ';
   $allStages = collect($stagesByTournament)->flatten()->filter()->unique()->sort()->values();
+  $japanOpenComponent = data_get($tournament->template_snapshot, 'japan_open.component_code');
+  $isJapanOpenTeam = in_array($japanOpenComponent, ['men_team', 'women_team'], true);
 @endphp
 
 <style>
@@ -60,6 +62,26 @@
         <h3 class="h5 mb-0">{{ $tournament->competition_type === 'doubles' ? 'ダブルス編成' : 'チーム編成' }}</h3>
         <span class="badge text-bg-light border">{{ $groups->count() }}組</span>
       </div>
+
+      @if($isJapanOpenTeam)
+        <div class="aggregate-panel border-primary mb-4">
+          <h4 class="h6">ジャパンオープン編成を一括反映</h4>
+          <p class="small mb-2">
+            Excelから「チームコード・チーム名・順番・ライセンスNo.・選手名」の5列を貼り付けると、
+            4人チーム、1・2番／3・4番のダブルス2組、シングルス参加者を同時作成します。
+          </p>
+          <div class="small text-muted mb-2">
+            1チームは4名・プロ2名まで、各ダブルス組はプロ1名までです。アマチュアはライセンスNo.を空欄にしてください。
+          </div>
+          <form method="POST" action="{{ route('tournaments.aggregate_results.japan_open_roster', $tournament) }}">
+            @csrf
+            <label class="form-label" for="japan-open-roster">編成データ</label>
+            <textarea id="japan-open-roster" name="roster_text" class="form-control font-monospace" rows="7"
+                      placeholder="チームコード&#9;チーム名&#9;順番&#9;ライセンスNo.&#9;選手名&#10;A01&#9;JPBAチームA&#9;1&#9;1297&#9;藤川大輔&#10;A01&#9;JPBAチームA&#9;2&#9;&#9;山田太郎">{{ old('roster_text') }}</textarea>
+            <button type="submit" class="btn btn-primary mt-3">チーム・ダブルス・シングルスへ反映</button>
+          </form>
+        </div>
+      @endif
 
       <form method="POST" action="{{ route('tournaments.aggregate_results.groups.store', $tournament) }}" class="row g-2 align-items-end mb-4">
         @csrf
@@ -226,6 +248,16 @@
             <div class="small text-muted mt-1">{{ $definition->code }}</div>
           </div>
           <div class="aggregate-actions">
+            @if($definition->is_published)
+              <a href="{{ route('public.tournaments.aggregate', [$tournament, $definition, 'mode' => 'live']) }}"
+                 class="btn btn-outline-primary btn-sm" target="_blank">公開速報</a>
+              @if($currentSnapshot?->is_published)
+                <a href="{{ route('public.tournaments.aggregate', [$tournament, $definition, 'mode' => 'official']) }}"
+                   class="btn btn-outline-primary btn-sm" target="_blank">公開正式成績</a>
+                <a href="{{ route('public.tournaments.aggregate.pdf', [$tournament, $definition, 'mode' => 'official']) }}"
+                   class="btn btn-outline-secondary btn-sm">PDF</a>
+              @endif
+            @endif
             <form method="POST" action="{{ route('tournaments.aggregate_results.calculate', [$tournament, $definition]) }}">
               @csrf
               <button type="submit" class="btn btn-success btn-sm">合算を再計算</button>

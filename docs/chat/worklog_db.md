@@ -10406,3 +10406,22 @@ User::where('email','domaine-d@i.softbank.jp')->exists(); // true
 - オイルパターンPDFの実内容を標本確認し、旧アーカイブ上の誤った「開催要項」等の表示名を「オイルパターン」へ正規化した。会場抽出も見出し・日付行を除外し、241資料で不審な会場名0件を確認した。
 - 実ブラウザで承認イベント一覧・詳細、資料30件、オイルパターン241件、会場検索を確認した。旧JPBAリンク0、コンソールエラー0、横方向の表示崩れ0だった。
 - 標準コマンド `php artisan test` で全276テスト15,450 assertionsに成功した。Bladeキャッシュ、一般公開監査（全対象HTTP 200・欠落表示0・欠落アセット0）、本番準備監査（OK 13・WARN 7・NG 0）にも成功した。WARN 7件はローカル環境・HTTPS・SMTP等の本番直前設定である。
+# 2026-09-11 ジャパンオープン標準大会構成
+
+- 目的: 例年同一のジャパンオープン競技方式を、年度ごとに安全に再利用する。
+- DB変更: なし。新規マイグレーションなし。
+- 使用する既存テーブル:
+  - `tournament_series`, `tournament_editions`
+  - `tournament_templates`, `tournament_template_versions`
+  - `tournaments`, `stage_settings`, `tournament_result_outputs`
+  - `tournament_participants`
+  - `tournament_competitor_groups`, `tournament_competitor_group_members`
+  - `tournament_aggregate_definitions`, `tournament_aggregate_sources`
+  - `tournament_result_snapshots`, `tournament_result_snapshot_rows`
+- 作成処理は年度＋シリーズ＋season keyで既存開催回を再利用し、各競技は`template_snapshot.japan_open.component_code`で識別する。
+- 初回作成時に選手・スコア・公式結果は登録しない。
+- 団体合算スナップショットは既存の公式個人成績公開処理で拒否されるため、ポイント・賞金・タイトルの二重計上を防止する。
+- 実投球のあるチーム・ダブルス・シングルスは平均対象、9Gの再集計であるオールエベンツは平均対象外。
+- チーム12G、ダブルス各組6G、オールエベンツ個人9Gと編成上限を専用テストで確認した。
+- 全280テスト・15,552 assertions、Bladeキャッシュ、一般公開監査、本番準備監査NG 0に成功した。
+- 詳細: `docs/operations/japan_open_format_20260911.md`

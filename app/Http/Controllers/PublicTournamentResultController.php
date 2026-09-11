@@ -34,6 +34,7 @@ class PublicTournamentResultController extends Controller
 
         $query = $this->publishedTournamentQuery()
             ->withCount(['gameScores', 'officialResults']);
+        $this->onlyPublicIndexTournaments($query);
 
         if ($filters['year'] !== '' && ctype_digit($filters['year'])) {
             $year = (int) $filters['year'];
@@ -57,7 +58,9 @@ class PublicTournamentResultController extends Controller
             ->paginate(15)
             ->withQueryString();
 
-        $years = $this->publishedTournamentQuery()
+        $yearQuery = $this->publishedTournamentQuery();
+        $this->onlyPublicIndexTournaments($yearQuery);
+        $years = $yearQuery
             ->selectRaw('coalesce(year, extract(year from start_date)::int) as display_year')
             ->distinct()
             ->orderByDesc('display_year')
@@ -74,6 +77,15 @@ class PublicTournamentResultController extends Controller
             'years' => $years,
             'externalLinks' => FlashNews::query()->latest('updated_at')->latest('id')->get(),
         ]);
+    }
+
+    private function onlyPublicIndexTournaments($query): void
+    {
+        $query->where(function ($visibilityQuery): void {
+            $visibilityQuery->whereNull('template_snapshot')
+                ->orWhereNull('template_snapshot->japan_open->hidden_from_public_index')
+                ->orWhere('template_snapshot->japan_open->hidden_from_public_index', false);
+        });
     }
 
     public function live(

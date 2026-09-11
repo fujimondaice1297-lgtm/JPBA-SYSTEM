@@ -188,10 +188,47 @@
   </div>
 </section>
 
+@if($editionComponents->isNotEmpty())
+  <section class="jpba-panel" aria-labelledby="japan-open-components-heading">
+    <h2 id="japan-open-components-heading" class="jpba-section-title">競技別ページ</h2>
+    <p class="text-muted">男子・女子の各競技の速報、正式成績、PDFを確認できます。</p>
+    <div class="jpba-result-cards">
+      @foreach($editionComponents as $component)
+        @php
+          $componentLabel = data_get($component->template_snapshot, 'japan_open.component_label', $component->name);
+          $aggregateDefinition = $component->aggregateDefinitions->first();
+          $hasOfficialAggregate = $aggregateDefinition?->snapshots?->isNotEmpty() ?? false;
+        @endphp
+        <article class="jpba-result-card">
+          <h3 class="jpba-result-card-title">
+            <a href="{{ route('public.tournaments.show', $component) }}">{{ $componentLabel }}</a>
+          </h3>
+          <div class="d-flex flex-wrap gap-2 mt-2">
+            @if($aggregateDefinition)
+              <a class="jpba-small-button" href="{{ route('public.tournaments.aggregate', [$component, $aggregateDefinition, 'mode' => 'live']) }}">速報</a>
+              @if($hasOfficialAggregate)
+                <a class="jpba-small-button" href="{{ route('public.tournaments.aggregate', [$component, $aggregateDefinition, 'mode' => 'official']) }}">正式成績</a>
+                <a class="jpba-small-button" href="{{ route('public.tournaments.aggregate.pdf', [$component, $aggregateDefinition, 'mode' => 'official']) }}">PDF</a>
+              @endif
+            @else
+              @if((int)$component->game_scores_count > 0)
+                <a class="jpba-small-button" href="{{ route('public.tournaments.live', $component) }}">速報</a>
+              @endif
+              @if((int)$component->official_results_count > 0)
+                <a class="jpba-small-button" href="{{ route('public.tournaments.results', $component) }}">正式成績</a>
+              @endif
+            @endif
+          </div>
+        </article>
+      @endforeach
+    </div>
+  </section>
+@endif
+
 <section class="jpba-panel" aria-labelledby="file-heading">
   <h2 id="file-heading" class="jpba-section-title">資料・速報・成績</h2>
 
-  @if(!empty($fileLinks) || !empty($scheduleLinks) || $entryCount > 0 || ($canPublishScores && ((int) $tournament->game_scores_count > 0 || (int) $tournament->official_results_count > 0)))
+  @if(!empty($fileLinks) || !empty($scheduleLinks) || $entryCount > 0 || $aggregateLinks->isNotEmpty() || ($canPublishScores && ((int) $tournament->game_scores_count > 0 || (int) $tournament->official_results_count > 0)))
     <div class="jpba-link-list">
       @if($canPublishScores && (int) $tournament->game_scores_count > 0)
         <a href="{{ route('public.tournaments.live', $tournament) }}" style="background:#174a8b;color:#fff;border-color:#174a8b;">
@@ -208,6 +245,21 @@
           エントリープロ・大会登録ボール（{{ number_format($entryCount) }}名）
         </a>
       @endif
+      @foreach($aggregateLinks as $aggregateDefinition)
+        <a href="{{ route('public.tournaments.aggregate', [$tournament, $aggregateDefinition, 'mode' => 'live']) }}"
+           style="background:#174a8b;color:#fff;border-color:#174a8b;">
+          {{ $aggregateDefinition->name }}（速報）
+        </a>
+        @if($aggregateDefinition->snapshots->isNotEmpty())
+          <a href="{{ route('public.tournaments.aggregate', [$tournament, $aggregateDefinition, 'mode' => 'official']) }}"
+             style="background:#c5282f;color:#fff;border-color:#c5282f;">
+            {{ $aggregateDefinition->name }}（正式成績）
+          </a>
+          <a href="{{ route('public.tournaments.aggregate.pdf', [$tournament, $aggregateDefinition, 'mode' => 'official']) }}">
+            {{ $aggregateDefinition->name }} PDF
+          </a>
+        @endif
+      @endforeach
       @foreach($fileLinks as $link)
         <a href="{{ $link['url'] }}" target="_blank" rel="noopener">{{ $link['label'] }}</a>
       @endforeach
