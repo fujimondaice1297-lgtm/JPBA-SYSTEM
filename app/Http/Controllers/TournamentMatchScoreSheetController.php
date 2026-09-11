@@ -6,6 +6,7 @@ use App\Models\ProBowler;
 use App\Models\Tournament;
 use App\Models\TournamentMatchScoreSheet;
 use App\Services\AchievementDetectionService;
+use App\Services\JapanOpenDoubleEliminationService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -30,11 +31,12 @@ class TournamentMatchScoreSheetController extends Controller
 
     public function store(Request $request, Tournament $tournament): RedirectResponse
     {
-        $this->saveSheet($request, $tournament, null);
+        $sheet = $this->saveSheet($request, $tournament, null);
+        $message = $this->syncJapanOpenBracket($tournament, $sheet, 'スコアシートを保存しました。');
 
         return redirect()
             ->route('tournaments.match_score_sheets.index', $tournament)
-            ->with('success', 'スコアシートを保存しました。');
+            ->with('success', $message);
     }
 
     public function edit(Tournament $tournament, TournamentMatchScoreSheet $scoreSheet): View
@@ -61,11 +63,12 @@ class TournamentMatchScoreSheetController extends Controller
     {
         abort_unless((int) $scoreSheet->tournament_id === (int) $tournament->id, 404);
 
-        $this->saveSheet($request, $tournament, $scoreSheet);
+        $sheet = $this->saveSheet($request, $tournament, $scoreSheet);
+        $message = $this->syncJapanOpenBracket($tournament, $sheet, 'スコアシートを更新しました。');
 
         return redirect()
             ->route('tournaments.match_score_sheets.index', $tournament)
-            ->with('success', 'スコアシートを更新しました。');
+            ->with('success', $message);
     }
 
     private function saveSheet(Request $request, Tournament $tournament, ?TournamentMatchScoreSheet $scoreSheet): TournamentMatchScoreSheet
@@ -97,6 +100,12 @@ class TournamentMatchScoreSheetController extends Controller
             'players.*.frames.*.throw3' => ['nullable', 'string', 'max:2'],
             'players.*.frames.*.remaining_pins' => ['nullable', 'string', 'max:80'],
         ]);
+
+        if ($scoreSheet && app(JapanOpenDoubleEliminationService::class)->isBracketSheet($scoreSheet)) {
+            foreach (['sheet_type', 'stage_code', 'match_code', 'match_label', 'match_order', 'game_number'] as $managedField) {
+                $validated[$managedField] = $scoreSheet->{$managedField};
+            }
+        }
 
         $savedSheet = DB::transaction(function () use ($validated, $tournament, $scoreSheet) {
             $this->saveShootoutWinnerNote($tournament, $validated['winner_note'] ?? null);
@@ -247,6 +256,33 @@ class TournamentMatchScoreSheetController extends Controller
         $tournament->forceFill([
             'shootout_settings' => $settings,
         ])->save();
+    }
+
+    private function syncJapanOpenBracket(
+        Tournament $tournament,
+        TournamentMatchScoreSheet $sheet,
+        string $message,
+    ): string {
+        $service = app(JapanOpenDoubleEliminationService::class);
+        if (! $service->isBracketSheet($sheet)) {
+            return $message;
+        }
+
+        try {
+            $state = $service->syncAvailableMatches($tournament->fresh());
+        } catch (\InvalidArgumentException $exception) {
+            return $message.' 決勝対戦表の自動更新は保留: '.$exception->getMessage();
+        }
+
+        $message .= sprintf(' 決勝対戦表も更新しました（完了%d試合）。', $state['completed_match_count']);
+        if ($state['reset_required']) {
+            $message .= ' 再優勝決定戦が必要です。';
+        }
+        if ($state['is_complete']) {
+            $message .= ' 優勝者: '.$state['champion']['display_name'];
+        }
+
+        return $message;
     }
 
     private function normalizeWinnerNote(mixed $value): string

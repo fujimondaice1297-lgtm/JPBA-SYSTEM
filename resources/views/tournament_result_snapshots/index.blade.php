@@ -138,6 +138,161 @@
         </div>
     @endif
 
+    @if($japanOpenDoubleEliminationStatus && $japanOpenDoubleEliminationStatus['supported'])
+        @php
+            $deStatusLabels = [
+                'waiting' => ['待機', 'text-bg-secondary'],
+                'ready' => ['入力可', 'text-bg-primary'],
+                'in_progress' => ['入力中', 'text-bg-warning'],
+                'tied' => ['同点確認', 'text-bg-danger'],
+                'complete' => ['完了', 'text-bg-success'],
+                'invalid' => ['要確認', 'text-bg-danger'],
+            ];
+        @endphp
+        <div class="card border-danger mb-4">
+            <div class="card-header bg-danger-subtle fw-bold">ジャパンオープン 決勝ダブルエリミネーション</div>
+            <div class="card-body">
+                <div class="row g-4 mb-4">
+                    <div class="col-lg-6">
+                        <h2 class="h5">④ 14G上位8名を決勝へ</h2>
+                        <p class="small text-muted mb-2">
+                            予選8G＋準決勝6Gの通算成績から上位8名を選び、1位対8位、4位対5位、2位対7位、3位対6位の決勝1回戦を作ります。
+                        </p>
+                        <div class="d-flex flex-wrap gap-2 mb-3">
+                            <span class="badge text-bg-light">
+                                14Gスナップショット
+                                {{ $japanOpenDoubleEliminationStatus['source_snapshot'] ? '#'.$japanOpenDoubleEliminationStatus['source_snapshot']->id : '未反映' }}
+                            </span>
+                            <span class="badge text-bg-light">決勝同期済み {{ $japanOpenDoubleEliminationStatus['seed_count'] }}/8名</span>
+                        </div>
+                        <form method="POST" action="{{ route('tournaments.result_snapshots.japan_open_finalists', $tournament) }}">
+                            @csrf
+                            <button type="submit" class="btn btn-danger" @disabled(!$japanOpenDoubleEliminationStatus['source_snapshot'])>
+                                14G上位8名を決勝へ同期
+                            </button>
+                        </form>
+                    </div>
+                    <div class="col-lg-6 border-start-lg">
+                        <h2 class="h5">⑤・⑥ 対戦進行と再優勝決定戦</h2>
+                        <p class="small text-muted mb-2">
+                            通常戦は2G合計、第3位決定戦と優勝決定戦は1Gです。優勝決定戦で無敗側が敗れた場合だけ、再優勝決定戦を自動追加します。
+                        </p>
+                        <div class="d-flex flex-wrap gap-2 mb-3">
+                            <span class="badge text-bg-light">完了 {{ $japanOpenDoubleEliminationStatus['completed_match_count'] }}試合</span>
+                            <span class="badge text-bg-light">入力可能 {{ $japanOpenDoubleEliminationStatus['ready_match_count'] }}試合</span>
+                            <span class="badge {{ $japanOpenDoubleEliminationStatus['reset_required'] ? 'text-bg-warning' : 'text-bg-light' }}">
+                                再決定戦 {{ $japanOpenDoubleEliminationStatus['reset_required'] ? '必要' : '未発生' }}
+                            </span>
+                        </div>
+                        <div class="d-flex flex-wrap gap-2">
+                            <form method="POST" action="{{ route('tournaments.result_snapshots.japan_open_double_elimination', $tournament) }}">
+                                @csrf
+                                <button type="submit" class="btn btn-danger" @disabled($japanOpenDoubleEliminationStatus['seed_count'] !== 8)>
+                                    対戦表を更新
+                                </button>
+                            </form>
+                            <a href="{{ route('tournaments.match_score_sheets.index', $tournament) }}" class="btn btn-outline-secondary">決勝スコア入力へ</a>
+                        </div>
+                        @if($japanOpenDoubleEliminationStatus['champion'])
+                            <div class="alert alert-success mt-3 mb-0 py-2">
+                                優勝者確定: <strong>{{ $japanOpenDoubleEliminationStatus['champion']['display_name'] }}</strong>
+                            </div>
+                        @endif
+                    </div>
+                </div>
+
+                @if($japanOpenDoubleEliminationStatus['seed_count'] === 8)
+                    <div class="table-responsive mb-4">
+                        <table class="table table-sm table-bordered align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width: 5rem;">順位</th>
+                                    <th>選手</th>
+                                    <th style="width: 8rem;">14G</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach(collect(data_get($tournament->template_snapshot, 'japan_open.double_elimination.seeds', []))->sortBy('seed') as $seed)
+                                    <tr>
+                                        <td>{{ $seed['seed'] }}位</td>
+                                        <td>{{ $seed['display_name'] }}</td>
+                                        <td>{{ number_format($seed['source_total_pin']) }}</td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                @endif
+
+                <div class="table-responsive">
+                    <table class="table table-sm table-bordered align-middle mb-0">
+                        <thead class="table-dark">
+                            <tr>
+                                <th style="width: 8rem;">対戦</th>
+                                <th>組合せ・2G合計</th>
+                                <th style="width: 9rem;">状態</th>
+                                <th style="width: 12rem;">入力</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($japanOpenDoubleEliminationStatus['matches'] as $match)
+                                @php
+                                    [$statusLabel, $statusClass] = $deStatusLabels[$match['status']] ?? [$match['status'], 'text-bg-secondary'];
+                                @endphp
+                                <tr>
+                                    <td>
+                                        <div class="fw-bold">{{ $match['label'] }}</div>
+                                        <div class="small text-muted">{{ $match['games'] }}G</div>
+                                    </td>
+                                    <td>
+                                        @forelse($match['participants'] as $participant)
+                                            <div class="d-flex justify-content-between gap-3">
+                                                <span>{{ $participant['display_name'] }}</span>
+                                                <strong>
+                                                    {{ array_key_exists($participant['identity'], $match['totals']) ? number_format($match['totals'][$participant['identity']]) : '—' }}
+                                                </strong>
+                                            </div>
+                                        @empty
+                                            <span class="text-muted">{{ $match['message'] }}</span>
+                                        @endforelse
+                                        @if($match['winner'])
+                                            <div class="small text-success mt-1">勝者: {{ $match['winner']['display_name'] }}</div>
+                                        @elseif($match['message'] && $match['participants'])
+                                            <div class="small text-danger mt-1">{{ $match['message'] }}</div>
+                                        @endif
+                                        @if($match['status'] === 'tied')
+                                            <form method="POST" action="{{ route('tournaments.result_snapshots.japan_open_double_elimination_tie', $tournament) }}" class="d-flex flex-wrap gap-2 mt-2">
+                                                @csrf
+                                                <input type="hidden" name="match_code" value="{{ $match['code'] }}">
+                                                <select name="winner_identity" class="form-select form-select-sm" style="max-width: 16rem;" required>
+                                                    <option value="">タイブレーク勝者を選択</option>
+                                                    @foreach($match['participants'] as $participant)
+                                                        <option value="{{ $participant['identity'] }}">{{ $participant['display_name'] }}</option>
+                                                    @endforeach
+                                                </select>
+                                                <button class="btn btn-sm btn-danger" type="submit">勝者を確定</button>
+                                            </form>
+                                        @endif
+                                    </td>
+                                    <td><span class="badge {{ $statusClass }}">{{ $statusLabel }}</span></td>
+                                    <td>
+                                        <div class="d-flex flex-wrap gap-1">
+                                            @foreach($match['sheets'] as $sheet)
+                                                <a href="{{ route('tournaments.match_score_sheets.edit', [$tournament, $sheet]) }}" class="btn btn-sm btn-outline-primary">
+                                                    {{ $sheet->game_number }}G{{ $sheet->confirmed_at ? ' ✓' : '' }}
+                                                </a>
+                                            @endforeach
+                                        </div>
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    @endif
+
     @if($currentFinalSnapshot)
         <div class="alert alert-info d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
             <div>

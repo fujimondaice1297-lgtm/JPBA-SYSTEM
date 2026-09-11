@@ -3,10 +3,12 @@
 use App\Models\ProBowler;
 use App\Models\Tournament;
 use App\Models\TournamentAggregateDefinition;
+use App\Models\TournamentMatchScoreSheet;
 use App\Models\TournamentResultSnapshot;
 use App\Models\TournamentResultSnapshotRow;
 use App\Models\User;
 use App\Services\JapanOpenAdvancementService;
+use App\Services\JapanOpenDoubleEliminationService;
 use App\Services\JapanOpenFormatService;
 use App\Services\JapanOpenRosterImportService;
 use App\Services\ProBowlerSeedService;
@@ -127,6 +129,92 @@ function insertJapanOpenChampionshipPrelimScores(
 
         return $pro;
     });
+}
+
+/** @return \Illuminate\Support\Collection<int,ProBowler> */
+function createJapanOpenSemifinalSnapshot(Tournament $tournament, int $playerCount = 9): \Illuminate\Support\Collection
+{
+    $pros = collect(range(1, $playerCount))->map(function (int $position) use ($tournament): ProBowler {
+        $pro = ProBowler::query()->create([
+            'license_no' => sprintf('M00004%03d', $position),
+            'name_kanji' => sprintf('決勝候補%02d', $position),
+            'sex' => $tournament->gender === 'F' ? 2 : 1,
+        ]);
+        DB::table('tournament_participants')->insert([
+            'tournament_id' => $tournament->id,
+            'pro_bowler_license_no' => $pro->license_no,
+            'pro_bowler_id' => $pro->id,
+            'participant_type' => 'pro',
+            'display_name' => $pro->name_kanji,
+            'display_license_no' => $pro->license_no,
+            'gender' => $tournament->gender,
+            'source_note' => '決勝同期テスト',
+            'is_temporary' => false,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        return $pro;
+    });
+
+    $snapshot = TournamentResultSnapshot::query()->create([
+        'tournament_id' => $tournament->id,
+        'result_code' => 'semifinal_total',
+        'result_name' => '予選＋準決勝14G通算成績',
+        'result_type' => 'total_pin',
+        'stage_name' => '準決勝',
+        'games_count' => 14,
+        'carry_game_count' => 8,
+        'calculation_definition' => ['source_sets' => []],
+        'is_final' => false,
+        'is_published' => false,
+        'is_current' => true,
+        'reflected_at' => now(),
+    ]);
+
+    foreach ($pros as $index => $pro) {
+        $position = $index + 1;
+        TournamentResultSnapshotRow::query()->create([
+            'snapshot_id' => $snapshot->id,
+            'ranking' => $position,
+            'pro_bowler_id' => $pro->id,
+            'pro_bowler_license_no' => $pro->license_no,
+            'display_name' => $pro->name_kanji,
+            'gender' => $tournament->gender,
+            'total_pin' => 3100 - ($position * 10),
+            'games' => 14,
+            'average' => (3100 - ($position * 10)) / 14,
+            'is_complete' => true,
+        ]);
+    }
+
+    return $pros;
+}
+
+function completeJapanOpenDoubleEliminationMatch(
+    Tournament $tournament,
+    string $matchCode,
+    string $winnerName,
+): void {
+    $sheets = TournamentMatchScoreSheet::query()
+        ->with('players')
+        ->where('tournament_id', $tournament->id)
+        ->where('stage_code', JapanOpenDoubleEliminationService::STAGE_CODE)
+        ->where('match_code', $matchCode)
+        ->get();
+
+    expect($sheets)->not->toBeEmpty();
+    foreach ($sheets as $sheet) {
+        foreach ($sheet->players as $player) {
+            $player->update([
+                'final_score' => $player->display_name === $winnerName ? 220 : 190,
+                'is_winner' => $player->display_name === $winnerName,
+            ]);
+        }
+        $sheet->update(['confirmed_at' => now()]);
+    }
+
+    app(JapanOpenDoubleEliminationService::class)->syncAvailableMatches($tournament->fresh());
 }
 
 test('admin creates an idempotent eleven component japan open edition without player data', function () {
@@ -594,4 +682,132 @@ test('all events advancement stops when a tie crosses the qualifier boundary', f
         1,
         1,
     ))->toThrow(InvalidArgumentException::class, '進出境界が同ピン');
+});
+
+test('semifinal top eight seed the official japan open first round pairings', function () {
+    $admin = User::factory()->create(['role' => 'admin', 'is_admin' => true]);
+    $components = japanOpenComponents(setupJapanOpenForTest(2089));
+    createJapanOpenSemifinalSnapshot($components['masters']);
+
+    $response = $this->actingAs($admin)->post(
+        route('tournaments.result_snapshots.japan_open_finalists', $components['masters']),
+    );
+    $response->assertRedirect()->assertSessionHasNoErrors();
+
+    $sheets = TournamentMatchScoreSheet::query()
+        ->with('players')
+        ->where('tournament_id', $components['masters']->id)
+        ->where('stage_code', JapanOpenDoubleEliminationService::STAGE_CODE)
+        ->orderBy('match_order')
+        ->get()
+        ->groupBy('match_code');
+
+    expect(data_get(
+        $components['masters']->fresh()->template_snapshot,
+        'japan_open.double_elimination.seed_sync.finalist_count',
+    ))->toBe(8)
+        ->and($sheets->keys()->all())->toBe(['W1', 'W2', 'W3', 'W4'])
+        ->and($sheets['W1'])->toHaveCount(2)
+        ->and($sheets['W1']->first()->players->pluck('display_name')->all())->toBe(['決勝候補01', '決勝候補08'])
+        ->and($sheets['W2']->first()->players->pluck('display_name')->all())->toBe(['決勝候補04', '決勝候補05'])
+        ->and($sheets['W3']->first()->players->pluck('display_name')->all())->toBe(['決勝候補02', '決勝候補07'])
+        ->and($sheets['W4']->first()->players->pluck('display_name')->all())->toBe(['決勝候補03', '決勝候補06']);
+
+    $this->actingAs($admin)
+        ->get(route('tournaments.result_snapshots.index', $components['masters']))
+        ->assertOk()
+        ->assertSee('④ 14G上位8名を決勝へ')
+        ->assertSee('⑤・⑥ 対戦進行と再優勝決定戦')
+        ->assertSee('決勝候補01');
+});
+
+test('japan open double elimination advances winners and ends without an unnecessary reset', function () {
+    $components = japanOpenComponents(setupJapanOpenForTest(2088));
+    createJapanOpenSemifinalSnapshot($components['queens']);
+    app(JapanOpenDoubleEliminationService::class)->syncFinalists($components['queens']);
+
+    foreach ([
+        'W1' => '決勝候補01', 'W2' => '決勝候補04',
+        'W3' => '決勝候補02', 'W4' => '決勝候補03',
+        'W5' => '決勝候補01', 'W6' => '決勝候補02',
+        'L1' => '決勝候補08', 'L2' => '決勝候補07',
+        'L3' => '決勝候補08', 'L4' => '決勝候補07',
+        'W7' => '決勝候補01', 'L5' => '決勝候補08',
+        'TP' => '決勝候補08', 'GF1' => '決勝候補01',
+    ] as $matchCode => $winnerName) {
+        completeJapanOpenDoubleEliminationMatch($components['queens'], $matchCode, $winnerName);
+    }
+
+    $state = app(JapanOpenDoubleEliminationService::class)->status($components['queens']->fresh());
+    expect($state['is_complete'])->toBeTrue()
+        ->and($state['champion']['display_name'])->toBe('決勝候補01')
+        ->and($state['runner_up']['display_name'])->toBe('決勝候補08')
+        ->and($state['third_place']['display_name'])->toBe('決勝候補02')
+        ->and($state['reset_required'])->toBeFalse()
+        ->and(TournamentMatchScoreSheet::query()
+            ->where('tournament_id', $components['queens']->id)
+            ->where('match_code', 'GF2')
+            ->exists())->toBeFalse();
+});
+
+test('japan open creates and resolves a reset final only when the unbeaten player first loses', function () {
+    $components = japanOpenComponents(setupJapanOpenForTest(2087));
+    createJapanOpenSemifinalSnapshot($components['masters']);
+    app(JapanOpenDoubleEliminationService::class)->syncFinalists($components['masters']);
+
+    foreach ([
+        'W1' => '決勝候補01', 'W2' => '決勝候補04',
+        'W3' => '決勝候補02', 'W4' => '決勝候補03',
+        'W5' => '決勝候補01', 'W6' => '決勝候補02',
+        'L1' => '決勝候補08', 'L2' => '決勝候補07',
+        'L3' => '決勝候補08', 'L4' => '決勝候補07',
+        'W7' => '決勝候補01', 'L5' => '決勝候補08',
+        'TP' => '決勝候補08', 'GF1' => '決勝候補08',
+    ] as $matchCode => $winnerName) {
+        completeJapanOpenDoubleEliminationMatch($components['masters'], $matchCode, $winnerName);
+    }
+
+    $beforeReset = app(JapanOpenDoubleEliminationService::class)->status($components['masters']->fresh());
+    expect($beforeReset['reset_required'])->toBeTrue()
+        ->and($beforeReset['is_complete'])->toBeFalse()
+        ->and($beforeReset['matches']['GF2']['status'])->toBe('ready')
+        ->and($beforeReset['matches']['GF2']['sheets'])->toHaveCount(1);
+
+    completeJapanOpenDoubleEliminationMatch($components['masters'], 'GF2', '決勝候補01');
+    $afterReset = app(JapanOpenDoubleEliminationService::class)->status($components['masters']->fresh());
+    expect($afterReset['is_complete'])->toBeTrue()
+        ->and($afterReset['champion']['display_name'])->toBe('決勝候補01')
+        ->and($afterReset['runner_up']['display_name'])->toBe('決勝候補08');
+});
+
+test('two game aggregate tie waits for an explicit tiebreak winner', function () {
+    $components = japanOpenComponents(setupJapanOpenForTest(2086));
+    createJapanOpenSemifinalSnapshot($components['masters']);
+    $service = app(JapanOpenDoubleEliminationService::class);
+    $service->syncFinalists($components['masters']);
+
+    $sheets = TournamentMatchScoreSheet::query()
+        ->with('players')
+        ->where('tournament_id', $components['masters']->id)
+        ->where('match_code', 'W1')
+        ->orderBy('game_number')
+        ->get();
+    foreach ($sheets as $index => $sheet) {
+        foreach ($sheet->players as $playerIndex => $player) {
+            $player->update([
+                'final_score' => ($index + $playerIndex) % 2 === 0 ? 220 : 200,
+                'is_winner' => ($index + $playerIndex) % 2 === 0,
+            ]);
+        }
+        $sheet->update(['confirmed_at' => now()]);
+    }
+
+    $tied = $service->syncAvailableMatches($components['masters']->fresh());
+    expect($tied['matches']['W1']['status'])->toBe('tied')
+        ->and($tied['matches']['W5']['status'])->toBe('waiting');
+
+    $winnerIdentity = $tied['matches']['W1']['participants'][0]['identity'];
+    $resolved = $service->setTieWinner($components['masters']->fresh(), 'W1', $winnerIdentity);
+    expect($resolved['matches']['W1']['status'])->toBe('complete')
+        ->and($resolved['matches']['W1']['winner']['identity'])->toBe($winnerIdentity);
 });

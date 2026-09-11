@@ -83,7 +83,12 @@
             <h1 class="h3 mb-1">{{ $tournament->year }}年 {{ $tournament->name }}：スコアシート入力</h1>
             <p class="text-muted mb-0">シュートアウト・優勝決定戦など、PDFに載せる1Gスコア表を入力します。</p>
         </div>
-        <a href="{{ route('tournaments.results.index', $tournament) }}" class="btn btn-outline-secondary">大会成績へ戻る</a>
+        <div class="d-flex flex-wrap gap-2">
+            @if(data_get($tournament->template_snapshot, 'japan_open.component_code') && in_array(data_get($tournament->template_snapshot, 'japan_open.component_code'), ['masters', 'queens'], true))
+                <a href="{{ route('tournaments.result_snapshots.index', $tournament) }}" class="btn btn-outline-danger">決勝対戦表へ戻る</a>
+            @endif
+            <a href="{{ route('tournaments.results.index', $tournament) }}" class="btn btn-outline-secondary">大会成績へ戻る</a>
+        </div>
     </div>
 
     @if (session('success'))
@@ -121,6 +126,7 @@
                             <option value="step_ladder" @selected($sheetType === 'step_ladder')>ステップラダー</option>
                             <option value="round_robin" @selected($sheetType === 'round_robin')>ラウンドロビン</option>
                             <option value="single_elimination" @selected($sheetType === 'single_elimination')>トーナメント</option>
+                            <option value="double_elimination" @selected($sheetType === 'double_elimination')>ダブルエリミネーション</option>
                             <option value="custom" @selected($sheetType === 'custom')>その他</option>
                         </select>
                     </div>

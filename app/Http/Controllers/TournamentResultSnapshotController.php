@@ -8,6 +8,7 @@ use App\Models\Tournament;
 use App\Models\TournamentResultSnapshot;
 use App\Models\TournamentResultSnapshotRow;
 use App\Services\JapanOpenAdvancementService;
+use App\Services\JapanOpenDoubleEliminationService;
 use App\Services\RoundRobinService;
 use App\Services\ShootoutService;
 use App\Services\StepLadderService;
@@ -25,9 +26,13 @@ final class TournamentResultSnapshotController extends Controller
         Request $request,
         $tournament,
         JapanOpenAdvancementService $japanOpenAdvancementService,
+        JapanOpenDoubleEliminationService $japanOpenDoubleEliminationService,
     ): View {
         $tournament = $this->resolveTournament($tournament);
         $japanOpenChampionshipStatus = $japanOpenAdvancementService->championshipStatus($tournament);
+        $japanOpenDoubleEliminationStatus = $japanOpenChampionshipStatus
+            ? $japanOpenDoubleEliminationService->status($tournament)
+            : null;
 
         $gender = $this->normalizeGender($request->query('gender'));
         $shift = $this->normalizeText($request->query('shift'));
@@ -131,6 +136,7 @@ final class TournamentResultSnapshotController extends Controller
             'currentSnapshotsByCode' => $currentSnapshotsByCode,
             'finalResultsCount' => $finalResultsCount,
             'japanOpenChampionshipStatus' => $japanOpenChampionshipStatus,
+            'japanOpenDoubleEliminationStatus' => $japanOpenDoubleEliminationStatus,
         ]);
     }
 
@@ -142,6 +148,7 @@ final class TournamentResultSnapshotController extends Controller
         StepLadderService $stepLadderService,
         ShootoutService $shootoutService,
         JapanOpenAdvancementService $japanOpenAdvancementService,
+        JapanOpenDoubleEliminationService $japanOpenDoubleEliminationService,
     ): RedirectResponse {
         $tournament = $this->resolveTournament($tournament);
 
@@ -199,6 +206,18 @@ final class TournamentResultSnapshotController extends Controller
                 $message .= sprintf('／準決勝進出者%d名も自動同期しました。', $sync['qualifier_count']);
             } catch (\InvalidArgumentException $exception) {
                 $message .= '／準決勝進出者の自動同期は保留: '.$exception->getMessage();
+            }
+        }
+        if ($presetKey === 'semifinal_total' && $japanOpenDoubleEliminationService->supports($tournament)) {
+            try {
+                $sync = $japanOpenDoubleEliminationService->syncFinalists(
+                    $tournament,
+                    auth()->id(),
+                    $snapshot,
+                );
+                $message .= sprintf('／14G上位%d名と決勝1回戦も自動同期しました。', $sync['finalist_count']);
+            } catch (\InvalidArgumentException $exception) {
+                $message .= '／決勝進出者の自動同期は保留: '.$exception->getMessage();
             }
         }
         if ($snapshot->is_final) {
@@ -261,6 +280,77 @@ final class TournamentResultSnapshotController extends Controller
             $result['created_count'],
             $result['updated_count'],
         ));
+    }
+
+    public function syncJapanOpenFinalists(
+        $tournament,
+        JapanOpenDoubleEliminationService $japanOpenDoubleEliminationService,
+    ): RedirectResponse {
+        $tournament = $this->resolveTournament($tournament);
+
+        try {
+            $result = $japanOpenDoubleEliminationService->syncFinalists($tournament, auth()->id());
+        } catch (\InvalidArgumentException $exception) {
+            return back()->withErrors(['japan_open_finalists' => $exception->getMessage()]);
+        }
+
+        return back()->with('ok', sprintf(
+            '予選＋準決勝14G上位%d名を決勝へ同期し、入力可能なスコアシートを%d枚作成しました。',
+            $result['finalist_count'],
+            $result['created_sheet_count'],
+        ));
+    }
+
+    public function syncJapanOpenDoubleElimination(
+        $tournament,
+        JapanOpenDoubleEliminationService $japanOpenDoubleEliminationService,
+    ): RedirectResponse {
+        $tournament = $this->resolveTournament($tournament);
+
+        try {
+            $state = $japanOpenDoubleEliminationService->syncAvailableMatches($tournament);
+        } catch (\InvalidArgumentException $exception) {
+            return back()->withErrors(['japan_open_double_elimination' => $exception->getMessage()]);
+        }
+
+        $message = sprintf(
+            '決勝対戦表を更新しました（完了%d試合／入力可能%d試合／新規スコアシート%d枚）。',
+            $state['completed_match_count'],
+            $state['ready_match_count'],
+            $state['created_sheet_count'],
+        );
+        if ($state['reset_required']) {
+            $message .= ' 無敗側選手が優勝決定戦で敗れたため、再優勝決定戦を追加しました。';
+        }
+        if ($state['is_complete']) {
+            $message .= ' 優勝者: '.$state['champion']['display_name'];
+        }
+
+        return back()->with('ok', $message);
+    }
+
+    public function resolveJapanOpenDoubleEliminationTie(
+        Request $request,
+        $tournament,
+        JapanOpenDoubleEliminationService $japanOpenDoubleEliminationService,
+    ): RedirectResponse {
+        $tournament = $this->resolveTournament($tournament);
+        $data = $request->validate([
+            'match_code' => ['required', 'string', 'max:20'],
+            'winner_identity' => ['required', 'string', 'max:255'],
+        ]);
+
+        try {
+            $japanOpenDoubleEliminationService->setTieWinner(
+                $tournament,
+                $data['match_code'],
+                $data['winner_identity'],
+            );
+        } catch (\InvalidArgumentException $exception) {
+            return back()->withErrors(['japan_open_double_elimination_tie' => $exception->getMessage()]);
+        }
+
+        return back()->with('ok', 'タイブレーク後の勝者を反映し、次の対戦を更新しました。');
     }
 
     public function show(Request $request, $tournament, $snapshot): View

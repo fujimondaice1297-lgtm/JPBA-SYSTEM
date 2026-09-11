@@ -676,6 +676,12 @@ Route::middleware(['auth', 'role:editor,admin'])->group(function () {
         ->name('tournaments.result_snapshots.japan_open_seeds');
     Route::post('/tournaments/{tournament}/result-snapshots/japan-open-semifinalists', [\App\Http\Controllers\TournamentResultSnapshotController::class, 'syncJapanOpenSemifinalists'])
         ->name('tournaments.result_snapshots.japan_open_semifinalists');
+    Route::post('/tournaments/{tournament}/result-snapshots/japan-open-finalists', [\App\Http\Controllers\TournamentResultSnapshotController::class, 'syncJapanOpenFinalists'])
+        ->name('tournaments.result_snapshots.japan_open_finalists');
+    Route::post('/tournaments/{tournament}/result-snapshots/japan-open-double-elimination', [\App\Http\Controllers\TournamentResultSnapshotController::class, 'syncJapanOpenDoubleElimination'])
+        ->name('tournaments.result_snapshots.japan_open_double_elimination');
+    Route::post('/tournaments/{tournament}/result-snapshots/japan-open-double-elimination/tie', [\App\Http\Controllers\TournamentResultSnapshotController::class, 'resolveJapanOpenDoubleEliminationTie'])
+        ->name('tournaments.result_snapshots.japan_open_double_elimination_tie');
 
     Route::get('/tournaments/{tournament}/seed-players', [\App\Http\Controllers\TournamentSeedPlayerController::class, 'index'])
         ->name('tournaments.seed_players.index');
