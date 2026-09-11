@@ -56,6 +56,8 @@ final class JapanOpenFormatService
                 'masters_queens_preliminary_games' => 8,
                 'masters_queens_semifinal_games' => 6,
                 'masters_queens_semifinal_total_games' => 14,
+                'masters_semifinal_qualifier_count' => 46,
+                'queens_semifinal_qualifier_count' => 32,
                 'final_format' => 'double_elimination',
             ],
             'accounting_policy' => [
@@ -317,6 +319,11 @@ final class JapanOpenFormatService
                 'advancement_selection_mode' => match ($code) {
                     'men_all_events', 'masters' => 'per_shift_excluding_direct_seeds',
                     'women_all_events', 'queens' => 'overall_excluding_direct_seeds',
+                    default => null,
+                },
+                'semifinal_qualifier_count' => match ($code) {
+                    'masters' => 46,
+                    'queens' => 32,
                     default => null,
                 },
                 'aggregate_results_do_not_publish_to_individual_rankings' => true,

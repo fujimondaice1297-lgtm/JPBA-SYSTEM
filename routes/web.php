@@ -672,6 +672,10 @@ Route::middleware(['auth', 'role:editor,admin'])->group(function () {
         ->name('tournaments.result_snapshots.index');
     Route::post('/tournaments/{tournament}/result-snapshots/reflect', [\App\Http\Controllers\TournamentResultSnapshotController::class, 'reflect'])
         ->name('tournaments.result_snapshots.reflect');
+    Route::post('/tournaments/{tournament}/result-snapshots/japan-open-seeds', [\App\Http\Controllers\TournamentResultSnapshotController::class, 'syncJapanOpenSeeds'])
+        ->name('tournaments.result_snapshots.japan_open_seeds');
+    Route::post('/tournaments/{tournament}/result-snapshots/japan-open-semifinalists', [\App\Http\Controllers\TournamentResultSnapshotController::class, 'syncJapanOpenSemifinalists'])
+        ->name('tournaments.result_snapshots.japan_open_semifinalists');
 
     Route::get('/tournaments/{tournament}/seed-players', [\App\Http\Controllers\TournamentSeedPlayerController::class, 'index'])
         ->name('tournaments.seed_players.index');

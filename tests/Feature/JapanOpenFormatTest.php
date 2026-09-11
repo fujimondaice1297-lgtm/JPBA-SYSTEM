@@ -3,6 +3,8 @@
 use App\Models\ProBowler;
 use App\Models\Tournament;
 use App\Models\TournamentAggregateDefinition;
+use App\Models\TournamentResultSnapshot;
+use App\Models\TournamentResultSnapshotRow;
 use App\Models\User;
 use App\Services\JapanOpenAdvancementService;
 use App\Services\JapanOpenFormatService;
@@ -80,6 +82,53 @@ function insertJapanOpenScoresByName(Tournament $tournament, string $stage, arra
     }
 }
 
+/** @return \Illuminate\Support\Collection<int,ProBowler> */
+function insertJapanOpenChampionshipPrelimScores(
+    Tournament $tournament,
+    int $playerCount,
+    string $gender = 'M',
+): \Illuminate\Support\Collection {
+    return collect(range(1, $playerCount))->map(function (int $position) use ($tournament, $gender): ProBowler {
+        $isFemale = $gender === 'F';
+        $pro = ProBowler::query()->create([
+            'license_no' => sprintf('%s00003%03d', $gender, $position),
+            'name_kanji' => sprintf('%s予選選手%02d', $isFemale ? '女子' : '', $position),
+            'sex' => $isFemale ? 2 : 1,
+        ]);
+        $participantId = DB::table('tournament_participants')->insertGetId([
+            'tournament_id' => $tournament->id,
+            'pro_bowler_license_no' => $pro->license_no,
+            'pro_bowler_id' => $pro->id,
+            'participant_type' => 'pro',
+            'display_name' => $pro->name_kanji,
+            'display_license_no' => $pro->license_no,
+            'gender' => $gender,
+            'source_note' => 'テスト参加者',
+            'is_temporary' => false,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        foreach (range(1, 8) as $gameNumber) {
+            DB::table('game_scores')->insert([
+                'tournament_id' => $tournament->id,
+                'stage' => '予選',
+                'license_number' => $pro->license_no,
+                'name' => $pro->name_kanji,
+                'game_number' => $gameNumber,
+                'score' => $gameNumber === 1 ? 301 - $position : 200,
+                'gender' => $gender,
+                'pro_bowler_id' => $pro->id,
+                'tournament_participant_id' => $participantId,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
+
+        return $pro;
+    });
+}
+
 test('admin creates an idempotent eleven component japan open edition without player data', function () {
     $admin = User::factory()->create(['role' => 'admin', 'is_admin' => true]);
 
@@ -115,7 +164,9 @@ test('admin creates an idempotent eleven component japan open edition without pl
         ->and($components['masters']->counts_for_official_points)->toBeTrue()
         ->and($components['queens']->counts_for_official_points)->toBeTrue()
         ->and(data_get($components['men_all_events']->template_snapshot, 'japan_open.advancement_field_size'))->toBe(125)
-        ->and(data_get($components['women_all_events']->template_snapshot, 'japan_open.advancement_field_size'))->toBe(100);
+        ->and(data_get($components['women_all_events']->template_snapshot, 'japan_open.advancement_field_size'))->toBe(100)
+        ->and(data_get($components['masters']->template_snapshot, 'japan_open.semifinal_qualifier_count'))->toBe(46)
+        ->and(data_get($components['queens']->template_snapshot, 'japan_open.semifinal_qualifier_count'))->toBe(32);
 
     Tournament::query()->whereIn('id', array_values($report['component_ids']))
         ->update(['setup_status' => 'in_progress']);
@@ -222,6 +273,148 @@ test('team and all events results calculate publish and remain outside individua
         ->assertHeader('content-type', 'application/pdf');
 });
 
+test('masters direct seeds sync into participants without duplicates', function () {
+    $admin = User::factory()->create(['role' => 'admin', 'is_admin' => true]);
+    $components = japanOpenComponents(setupJapanOpenForTest(2094));
+    $seed = ProBowler::query()->create([
+        'license_no' => 'M00002101',
+        'name_kanji' => '大会シード一郎',
+        'sex' => 1,
+    ]);
+    app(ProBowlerSeedService::class)->addTournamentSeed(
+        $components['masters'],
+        $seed,
+        ProBowlerSeedService::SOURCE_CURRENT_YEAR_WINNER,
+    );
+
+    $this->actingAs($admin)
+        ->get(route('tournaments.result_snapshots.index', $components['masters']))
+        ->assertOk()
+        ->assertSee('大会シードを参加者へ追加')
+        ->assertSee('予選8Gから準決勝6Gへ');
+
+    $route = route('tournaments.result_snapshots.japan_open_seeds', $components['masters']);
+    $this->actingAs($admin)->post($route)->assertRedirect()->assertSessionHasNoErrors();
+    $this->actingAs($admin)->post($route)->assertRedirect()->assertSessionHasNoErrors();
+
+    $participants = DB::table('tournament_participants')
+        ->where('tournament_id', $components['masters']->id)
+        ->where('pro_bowler_id', $seed->id)
+        ->get();
+
+    expect($participants)->toHaveCount(1)
+        ->and($participants->first()->source_note)->toStartWith(JapanOpenAdvancementService::DIRECT_SEED_SOURCE_NOTE)
+        ->and(data_get(
+            $components['masters']->fresh()->template_snapshot,
+            'japan_open.direct_seed_sync.candidate_count',
+        ))->toBe(1);
+});
+
+test('masters prelim total automatically syncs the top forty six semifinalists', function () {
+    $admin = User::factory()->create(['role' => 'admin', 'is_admin' => true]);
+    $components = japanOpenComponents(setupJapanOpenForTest(2093));
+    $pros = insertJapanOpenChampionshipPrelimScores($components['masters'], 48);
+
+    $response = $this->actingAs($admin)->post(
+        route('tournaments.result_snapshots.reflect', $components['masters']),
+        ['preset_key' => 'prelim_total', 'gender' => '', 'shift' => ''],
+    );
+
+    $response->assertRedirect()
+        ->assertSessionHasNoErrors()
+        ->assertSessionHas('ok', fn (string $message): bool => str_contains($message, '準決勝進出者46名も自動同期'));
+
+    $assignments = DB::table('tournament_round_lane_assignments')
+        ->where('tournament_id', $components['masters']->id)
+        ->where('stage', JapanOpenAdvancementService::SEMIFINAL_STAGE)
+        ->where('round_label', JapanOpenAdvancementService::SEMIFINAL_ROUND_LABEL)
+        ->orderBy('seed_rank')
+        ->get();
+
+    expect($assignments)->toHaveCount(46)
+        ->and($assignments->first()->display_name)->toBe('予選選手01')
+        ->and($assignments->last()->display_name)->toBe('予選選手46')
+        ->and($assignments->every(fn (object $row): bool => (int) $row->source_games === 8))->toBeTrue()
+        ->and($assignments->pluck('pro_bowler_id'))->not->toContain($pros[46]->id)
+        ->and($assignments->pluck('pro_bowler_id'))->not->toContain($pros[47]->id)
+        ->and(data_get(
+            $components['masters']->fresh()->template_snapshot,
+            'japan_open.semifinal_sync.qualifier_count',
+        ))->toBe(46);
+});
+
+test('queens prelim total automatically syncs the top thirty two semifinalists', function () {
+    $admin = User::factory()->create(['role' => 'admin', 'is_admin' => true]);
+    $components = japanOpenComponents(setupJapanOpenForTest(2091));
+    $pros = insertJapanOpenChampionshipPrelimScores($components['queens'], 34, 'F');
+
+    $response = $this->actingAs($admin)->post(
+        route('tournaments.result_snapshots.reflect', $components['queens']),
+        ['preset_key' => 'prelim_total', 'gender' => '', 'shift' => ''],
+    );
+
+    $response->assertRedirect()
+        ->assertSessionHasNoErrors()
+        ->assertSessionHas('ok', fn (string $message): bool => str_contains($message, '準決勝進出者32名も自動同期'));
+
+    $assignments = DB::table('tournament_round_lane_assignments')
+        ->where('tournament_id', $components['queens']->id)
+        ->where('stage', JapanOpenAdvancementService::SEMIFINAL_STAGE)
+        ->where('round_label', JapanOpenAdvancementService::SEMIFINAL_ROUND_LABEL)
+        ->orderBy('seed_rank')
+        ->get();
+
+    expect($assignments)->toHaveCount(32)
+        ->and($assignments->first()->display_name)->toBe('女子予選選手01')
+        ->and($assignments->last()->display_name)->toBe('女子予選選手32')
+        ->and($assignments->every(fn (object $row): bool => (int) $row->source_games === 8))->toBeTrue()
+        ->and($assignments->pluck('pro_bowler_id'))->not->toContain($pros[32]->id)
+        ->and($assignments->pluck('pro_bowler_id'))->not->toContain($pros[33]->id)
+        ->and(data_get(
+            $components['queens']->fresh()->template_snapshot,
+            'japan_open.semifinal_sync.qualifier_count',
+        ))->toBe(32);
+});
+
+test('semifinalist sync stops when the qualification boundary is tied', function () {
+    $components = japanOpenComponents(setupJapanOpenForTest(2092));
+    $settings = (array) $components['queens']->template_snapshot;
+    data_set($settings, 'japan_open.semifinal_qualifier_count', 2);
+    $components['queens']->template_snapshot = $settings;
+    $components['queens']->save();
+
+    $snapshot = TournamentResultSnapshot::query()->create([
+        'tournament_id' => $components['queens']->id,
+        'result_code' => 'prelim_total',
+        'result_name' => '女子予選8G',
+        'result_type' => 'total_pin',
+        'stage_name' => '予選',
+        'games_count' => 8,
+        'carry_game_count' => 0,
+        'calculation_definition' => ['source_sets' => []],
+        'is_final' => false,
+        'is_published' => false,
+        'is_current' => true,
+        'reflected_at' => now(),
+    ]);
+
+    foreach ([1800, 1700, 1700] as $index => $totalPin) {
+        TournamentResultSnapshotRow::query()->create([
+            'snapshot_id' => $snapshot->id,
+            'ranking' => $index + 1,
+            'display_name' => '女子選手'.($index + 1),
+            'gender' => 'F',
+            'total_pin' => $totalPin,
+            'games' => 8,
+            'average' => $totalPin / 8,
+            'is_complete' => true,
+        ]);
+    }
+
+    expect(fn () => app(JapanOpenAdvancementService::class)->syncSemifinalists($components['queens']))
+        ->toThrow(InvalidArgumentException::class, '進出境界が同ピン');
+});
+
 test('all events qualifiers sync to masters by shift while preserving direct seeds', function () {
     $admin = User::factory()->create(['role' => 'admin', 'is_admin' => true]);
     $components = japanOpenComponents(setupJapanOpenForTest(2097));
@@ -287,6 +480,11 @@ test('all events qualifiers sync to masters by shift while preserving direct see
         ->and($qualifiers->pluck('display_name')->all())->toBe(['Ｂプロ一', 'Ａアマ一', 'Ｂアマ一', 'Ａプロ'])
         ->and($qualifiers->pluck('shift')->sort()->values()->all())->toBe(['A', 'A', 'B', 'B'])
         ->and($qualifiers->pluck('display_name'))->not->toContain('シード一郎')
+        ->and(DB::table('tournament_participants')
+            ->where('tournament_id', $components['masters']->id)
+            ->where('pro_bowler_id', $pros[0]->id)
+            ->where('source_note', 'like', JapanOpenAdvancementService::DIRECT_SEED_SOURCE_NOTE.'%')
+            ->exists())->toBeTrue()
         ->and(data_get(
             $components['men_all_events']->fresh()->template_snapshot,
             'japan_open.advancement_sync.source_snapshot_id',

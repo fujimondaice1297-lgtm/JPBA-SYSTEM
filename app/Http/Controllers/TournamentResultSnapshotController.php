@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace App\Http\Controllers;
@@ -6,22 +7,27 @@ namespace App\Http\Controllers;
 use App\Models\Tournament;
 use App\Models\TournamentResultSnapshot;
 use App\Models\TournamentResultSnapshotRow;
+use App\Services\JapanOpenAdvancementService;
 use App\Services\RoundRobinService;
-use App\Services\StepLadderService;
 use App\Services\ShootoutService;
+use App\Services\StepLadderService;
 use App\Services\TournamentResultSnapshotService;
+use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 final class TournamentResultSnapshotController extends Controller
 {
-    public function index(Request $request, $tournament): View
-    {
+    public function index(
+        Request $request,
+        $tournament,
+        JapanOpenAdvancementService $japanOpenAdvancementService,
+    ): View {
         $tournament = $this->resolveTournament($tournament);
+        $japanOpenChampionshipStatus = $japanOpenAdvancementService->championshipStatus($tournament);
 
         $gender = $this->normalizeGender($request->query('gender'));
         $shift = $this->normalizeText($request->query('shift'));
@@ -124,6 +130,7 @@ final class TournamentResultSnapshotController extends Controller
             'currentFinalSnapshot' => $currentFinalSnapshot,
             'currentSnapshotsByCode' => $currentSnapshotsByCode,
             'finalResultsCount' => $finalResultsCount,
+            'japanOpenChampionshipStatus' => $japanOpenChampionshipStatus,
         ]);
     }
 
@@ -133,7 +140,8 @@ final class TournamentResultSnapshotController extends Controller
         TournamentResultSnapshotService $service,
         RoundRobinService $roundRobinService,
         StepLadderService $stepLadderService,
-        ShootoutService $shootoutService
+        ShootoutService $shootoutService,
+        JapanOpenAdvancementService $japanOpenAdvancementService,
     ): RedirectResponse {
         $tournament = $this->resolveTournament($tournament);
 
@@ -163,7 +171,7 @@ final class TournamentResultSnapshotController extends Controller
         $presetKey = (string) $request->input('preset_key');
         $preset = $presets->get($presetKey);
 
-        if (!$preset) {
+        if (! $preset) {
             return back()->withErrors(['preset_key' => '反映対象が見つかりません。'])->withInput();
         }
 
@@ -179,7 +187,20 @@ final class TournamentResultSnapshotController extends Controller
             $snapshot = $service->createTotalPinSnapshot($preset['definition']);
         }
 
-        $message = '正式成績スナップショットを作成しました: ' . $snapshot->result_name;
+        $message = '正式成績スナップショットを作成しました: '.$snapshot->result_name;
+        if ($presetKey === 'prelim_total' && $japanOpenAdvancementService->championshipStatus($tournament) !== null) {
+            try {
+                $sync = $japanOpenAdvancementService->syncSemifinalists(
+                    $tournament,
+                    null,
+                    auth()->id(),
+                    $snapshot,
+                );
+                $message .= sprintf('／準決勝進出者%d名も自動同期しました。', $sync['qualifier_count']);
+            } catch (\InvalidArgumentException $exception) {
+                $message .= '／準決勝進出者の自動同期は保留: '.$exception->getMessage();
+            }
+        }
         if ($snapshot->is_final) {
             $message .= '（承認待ちです。「公式結果の確定・公開」で内容を確認してください）';
         }
@@ -191,6 +212,55 @@ final class TournamentResultSnapshotController extends Controller
                 'shift' => $shift,
             ])
             ->with('ok', $message);
+    }
+
+    public function syncJapanOpenSeeds(
+        $tournament,
+        JapanOpenAdvancementService $japanOpenAdvancementService,
+    ): RedirectResponse {
+        $tournament = $this->resolveTournament($tournament);
+
+        try {
+            $result = $japanOpenAdvancementService->syncDirectSeeds($tournament, auth()->id());
+        } catch (\InvalidArgumentException $exception) {
+            return back()->withErrors(['japan_open_seeds' => $exception->getMessage()]);
+        }
+
+        return back()->with('ok', sprintf(
+            '大会シードを参加者へ同期しました（対象%d名／新規%d名／更新%d名／既存参加者%d名）。',
+            $result['candidate_count'],
+            $result['created_count'],
+            $result['updated_count'],
+            $result['already_present_count'],
+        ));
+    }
+
+    public function syncJapanOpenSemifinalists(
+        Request $request,
+        $tournament,
+        JapanOpenAdvancementService $japanOpenAdvancementService,
+    ): RedirectResponse {
+        $tournament = $this->resolveTournament($tournament);
+        $data = $request->validate([
+            'qualifier_count' => ['required', 'integer', 'min:1', 'max:200'],
+        ]);
+
+        try {
+            $result = $japanOpenAdvancementService->syncSemifinalists(
+                $tournament,
+                (int) $data['qualifier_count'],
+                auth()->id(),
+            );
+        } catch (\InvalidArgumentException $exception) {
+            return back()->withErrors(['japan_open_semifinalists' => $exception->getMessage()])->withInput();
+        }
+
+        return back()->with('ok', sprintf(
+            '予選8Gから準決勝6G進出者%d名を同期しました（新規%d名／更新%d名）。',
+            $result['qualifier_count'],
+            $result['created_count'],
+            $result['updated_count'],
+        ));
     }
 
     public function show(Request $request, $tournament, $snapshot): View
@@ -207,27 +277,27 @@ final class TournamentResultSnapshotController extends Controller
         $stageColumns = [
             [
                 'stage' => '決勝',
-                'label' => '決勝（' . ((int) ($stageCounts['決勝'] ?? 0)) . 'ゲーム）',
+                'label' => '決勝（'.((int) ($stageCounts['決勝'] ?? 0)).'ゲーム）',
                 'games' => (int) ($stageCounts['決勝'] ?? 0),
             ],
             [
                 'stage' => 'ラウンドロビン',
-                'label' => 'ラウンドロビン（' . ((int) ($stageCounts['ラウンドロビン'] ?? 0)) . 'ゲーム）',
+                'label' => 'ラウンドロビン（'.((int) ($stageCounts['ラウンドロビン'] ?? 0)).'ゲーム）',
                 'games' => (int) ($stageCounts['ラウンドロビン'] ?? 0),
             ],
             [
                 'stage' => '準決勝',
-                'label' => '準決勝（' . ((int) ($stageCounts['準決勝'] ?? 0)) . 'ゲーム）',
+                'label' => '準決勝（'.((int) ($stageCounts['準決勝'] ?? 0)).'ゲーム）',
                 'games' => (int) ($stageCounts['準決勝'] ?? 0),
             ],
             [
                 'stage' => '準々決勝',
-                'label' => '準々決勝（' . ((int) ($stageCounts['準々決勝'] ?? 0)) . 'ゲーム）',
+                'label' => '準々決勝（'.((int) ($stageCounts['準々決勝'] ?? 0)).'ゲーム）',
                 'games' => (int) ($stageCounts['準々決勝'] ?? 0),
             ],
             [
                 'stage' => '予選',
-                'label' => '予選（' . ((int) ($stageCounts['予選'] ?? 0)) . 'ゲーム）',
+                'label' => '予選（'.((int) ($stageCounts['予選'] ?? 0)).'ゲーム）',
                 'games' => (int) ($stageCounts['予選'] ?? 0),
             ],
         ];
@@ -427,7 +497,7 @@ final class TournamentResultSnapshotController extends Controller
                         ['stage' => '予選', 'game_from' => 1, 'game_to' => $half, 'bucket' => 'scratch'],
                     ],
                     descriptionLines: [
-                        'scratch: 予選 1G-' . $half . 'G',
+                        'scratch: 予選 1G-'.$half.'G',
                     ],
                 );
 
@@ -443,7 +513,7 @@ final class TournamentResultSnapshotController extends Controller
                         ['stage' => '予選', 'game_from' => $half + 1, 'game_to' => $prelimGames, 'bucket' => 'scratch'],
                     ],
                     descriptionLines: [
-                        'scratch: 予選 ' . ($half + 1) . 'G-' . $prelimGames . 'G',
+                        'scratch: 予選 '.($half + 1).'G-'.$prelimGames.'G',
                     ],
                 );
             }
@@ -460,7 +530,7 @@ final class TournamentResultSnapshotController extends Controller
                     ['stage' => '予選', 'game_from' => 1, 'game_to' => $prelimGames, 'bucket' => 'scratch'],
                 ],
                 descriptionLines: [
-                    'scratch: 予選 1G-' . $prelimGames . 'G',
+                    'scratch: 予選 1G-'.$prelimGames.'G',
                 ],
             );
         }
@@ -478,7 +548,7 @@ final class TournamentResultSnapshotController extends Controller
                     ['stage' => '準々決勝', 'game_from' => 1, 'game_to' => $quarterGames, 'bucket' => 'scratch'],
                 ],
                 descriptionLines: [
-                    'scratch: 準々決勝 1G-' . $quarterGames . 'G',
+                    'scratch: 準々決勝 1G-'.$quarterGames.'G',
                 ],
             );
 
@@ -496,8 +566,8 @@ final class TournamentResultSnapshotController extends Controller
                         ['stage' => '準々決勝', 'game_from' => 1, 'game_to' => $quarterGames, 'bucket' => 'scratch'],
                     ],
                     descriptionLines: [
-                        'carry: 予選 1G-' . $prelimGames . 'G',
-                        'scratch: 準々決勝 1G-' . $quarterGames . 'G',
+                        'carry: 予選 1G-'.$prelimGames.'G',
+                        'scratch: 準々決勝 1G-'.$quarterGames.'G',
                     ],
                 );
             }
@@ -516,7 +586,7 @@ final class TournamentResultSnapshotController extends Controller
                     ['stage' => '準決勝', 'game_from' => 1, 'game_to' => $semiGames, 'bucket' => 'scratch'],
                 ],
                 descriptionLines: [
-                    'scratch: 準決勝 1G-' . $semiGames . 'G',
+                    'scratch: 準決勝 1G-'.$semiGames.'G',
                 ],
             );
 
@@ -524,14 +594,14 @@ final class TournamentResultSnapshotController extends Controller
             $descriptionLines = [];
             if ($prelimGames > 0) {
                 $sourceSets[] = ['stage' => '予選', 'game_from' => 1, 'game_to' => $prelimGames, 'bucket' => 'carry'];
-                $descriptionLines[] = 'carry: 予選 1G-' . $prelimGames . 'G';
+                $descriptionLines[] = 'carry: 予選 1G-'.$prelimGames.'G';
             }
             if ($quarterGames > 0) {
                 $sourceSets[] = ['stage' => '準々決勝', 'game_from' => 1, 'game_to' => $quarterGames, 'bucket' => 'carry'];
-                $descriptionLines[] = 'carry: 準々決勝 1G-' . $quarterGames . 'G';
+                $descriptionLines[] = 'carry: 準々決勝 1G-'.$quarterGames.'G';
             }
             $sourceSets[] = ['stage' => '準決勝', 'game_from' => 1, 'game_to' => $semiGames, 'bucket' => 'scratch'];
-            $descriptionLines[] = 'scratch: 準決勝 1G-' . $semiGames . 'G';
+            $descriptionLines[] = 'scratch: 準決勝 1G-'.$semiGames.'G';
 
             $presets[] = $this->makePreset(
                 tournamentId: $tournamentId,
@@ -546,21 +616,20 @@ final class TournamentResultSnapshotController extends Controller
             );
         }
 
-
         if ($roundRobinGames > 0) {
             $sourceSets = [];
             $descriptionLines = [];
 
             if ($quarterGames > 0) {
                 $sourceSets[] = ['stage' => '準々決勝', 'game_from' => 1, 'game_to' => $quarterGames, 'bucket' => 'carry'];
-                $descriptionLines[] = 'carry: 準々決勝 1G-' . $quarterGames . 'G';
+                $descriptionLines[] = 'carry: 準々決勝 1G-'.$quarterGames.'G';
             } elseif ($prelimGames > 0) {
                 $sourceSets[] = ['stage' => '予選', 'game_from' => 1, 'game_to' => $prelimGames, 'bucket' => 'carry'];
-                $descriptionLines[] = 'carry: 予選 1G-' . $prelimGames . 'G';
+                $descriptionLines[] = 'carry: 予選 1G-'.$prelimGames.'G';
             }
 
             $sourceSets[] = ['stage' => 'ラウンドロビン', 'game_from' => 1, 'game_to' => $roundRobinGames, 'bucket' => 'scratch'];
-            $descriptionLines[] = 'scratch: ラウンドロビン 1G-' . $roundRobinGames . 'G';
+            $descriptionLines[] = 'scratch: ラウンドロビン 1G-'.$roundRobinGames.'G';
             $descriptionLines[] = 'bonus: 勝敗ボーナス込みで順位を確定';
 
             $presets[] = $this->makePreset(
@@ -591,7 +660,7 @@ final class TournamentResultSnapshotController extends Controller
                 ],
                 descriptionLines: [
                     'seed: ラウンドロビン最終成績 上位3名',
-                    'scratch: 決勝ステップラダー 1G-' . $finalGames . 'G',
+                    'scratch: 決勝ステップラダー 1G-'.$finalGames.'G',
                     'ranking: 優勝 / 準優勝 / 3位 を正式順位として反映',
                 ],
                 isFinal: true,
@@ -615,7 +684,7 @@ final class TournamentResultSnapshotController extends Controller
                     ['stage' => 'シュートアウト', 'game_from' => 1, 'game_to' => $shootoutGames, 'bucket' => 'scratch'],
                 ],
                 descriptionLines: [
-                    'seed: ' . $this->shootoutSeedSourceLabel($seedSourceResultCode) . ' 上位8名',
+                    'seed: '.$this->shootoutSeedSourceLabel($seedSourceResultCode).' 上位8名',
                     'scratch: シュートアウト 1st / 2nd / 優勝決定戦',
                     'ranking: 勝者は次マッチへ進出、敗退者順位は元通過順位を引き継ぎ',
                 ],
@@ -624,7 +693,7 @@ final class TournamentResultSnapshotController extends Controller
             );
         }
 
-        if ($finalGames > 0 && !$usesStepLadderFinal) {
+        if ($finalGames > 0 && ! $usesStepLadderFinal) {
             $presets[] = $this->makePreset(
                 tournamentId: $tournamentId,
                 resultCode: 'final_stage',
@@ -637,7 +706,7 @@ final class TournamentResultSnapshotController extends Controller
                     ['stage' => '決勝', 'game_from' => 1, 'game_to' => $finalGames, 'bucket' => 'scratch'],
                 ],
                 descriptionLines: [
-                    'scratch: 決勝 1G-' . $finalGames . 'G',
+                    'scratch: 決勝 1G-'.$finalGames.'G',
                 ],
             );
 
@@ -645,18 +714,18 @@ final class TournamentResultSnapshotController extends Controller
             $descriptionLines = [];
             if ($prelimGames > 0) {
                 $sourceSets[] = ['stage' => '予選', 'game_from' => 1, 'game_to' => $prelimGames, 'bucket' => 'carry'];
-                $descriptionLines[] = 'carry: 予選 1G-' . $prelimGames . 'G';
+                $descriptionLines[] = 'carry: 予選 1G-'.$prelimGames.'G';
             }
             if ($quarterGames > 0) {
                 $sourceSets[] = ['stage' => '準々決勝', 'game_from' => 1, 'game_to' => $quarterGames, 'bucket' => 'carry'];
-                $descriptionLines[] = 'carry: 準々決勝 1G-' . $quarterGames . 'G';
+                $descriptionLines[] = 'carry: 準々決勝 1G-'.$quarterGames.'G';
             }
             if ($semiGames > 0) {
                 $sourceSets[] = ['stage' => '準決勝', 'game_from' => 1, 'game_to' => $semiGames, 'bucket' => 'carry'];
-                $descriptionLines[] = 'carry: 準決勝 1G-' . $semiGames . 'G';
+                $descriptionLines[] = 'carry: 準決勝 1G-'.$semiGames.'G';
             }
             $sourceSets[] = ['stage' => '決勝', 'game_from' => 1, 'game_to' => $finalGames, 'bucket' => 'scratch'];
-            $descriptionLines[] = 'scratch: 決勝 1G-' . $finalGames . 'G';
+            $descriptionLines[] = 'scratch: 決勝 1G-'.$finalGames.'G';
 
             $presets[] = $this->makePreset(
                 tournamentId: $tournamentId,
@@ -672,7 +741,7 @@ final class TournamentResultSnapshotController extends Controller
             );
         }
 
-        if (!empty($resultCarrySettings)) {
+        if (! empty($resultCarrySettings)) {
             $presets = array_map(
                 fn (array $preset): array => $this->applyResultCarrySettingsToPreset(
                     preset: $preset,
@@ -686,13 +755,11 @@ final class TournamentResultSnapshotController extends Controller
         return $presets;
     }
 
-
     /**
-     * @param array<int,array<string,mixed>> $sourceSets
-     * @param array<int,string> $descriptionLines
+     * @param  array<int,array<string,mixed>>  $sourceSets
+     * @param  array<int,string>  $descriptionLines
      * @return array<string,mixed>
      */
-
     private function loadResultCarrySettings(int $tournamentId): array
     {
         $raw = DB::table('tournaments')
@@ -703,7 +770,7 @@ final class TournamentResultSnapshotController extends Controller
             return $raw;
         }
 
-        if (!is_string($raw) || trim($raw) === '') {
+        if (! is_string($raw) || trim($raw) === '') {
             return [];
         }
 
@@ -729,7 +796,7 @@ final class TournamentResultSnapshotController extends Controller
 
         $setting = $carrySettings[$resultCode] ?? null;
 
-        if (!is_array($setting)) {
+        if (! is_array($setting)) {
             return $preset;
         }
 
@@ -778,7 +845,7 @@ final class TournamentResultSnapshotController extends Controller
                 'bucket' => $bucket,
             ];
 
-            $descriptionLines[] = $bucket . ': ' . $stage . ' 1G-' . $games . 'G';
+            $descriptionLines[] = $bucket.': '.$stage.' 1G-'.$games.'G';
         }
 
         $calculationDefinition = (array) ($definition['calculation_definition'] ?? []);
@@ -831,7 +898,6 @@ final class TournamentResultSnapshotController extends Controller
             ],
         ];
     }
-
 
     private function createRoundRobinSnapshot(array $definition, RoundRobinService $roundRobinService): TournamentResultSnapshot
     {
@@ -909,7 +975,7 @@ final class TournamentResultSnapshotController extends Controller
             foreach ($sourceSets as $set) {
                 $stage = trim((string) ($set['stage'] ?? ''));
 
-                if (!in_array($stage, ['予選'], true)) {
+                if (! in_array($stage, ['予選'], true)) {
                     continue;
                 }
 
@@ -1061,7 +1127,6 @@ final class TournamentResultSnapshotController extends Controller
         });
     }
 
-
     private function createStepLadderSnapshot(array $definition, StepLadderService $stepLadderService): TournamentResultSnapshot
     {
         $tournamentId = (int) ($definition['tournament_id'] ?? 0);
@@ -1174,7 +1239,7 @@ final class TournamentResultSnapshotController extends Controller
         $shift = $this->normalizeText($definition['shift'] ?? null);
 
         $tournament = Tournament::query()->find($tournamentId);
-        if (!$tournament) {
+        if (! $tournament) {
             throw new \InvalidArgumentException('大会が見つかりません。');
         }
 
@@ -1183,8 +1248,8 @@ final class TournamentResultSnapshotController extends Controller
             ?: $this->defaultShootoutSeedSourceResultCode($flowType);
 
         $seedSnapshot = $this->findCurrentSnapshotByCode($tournamentId, $seedSourceResultCode, $gender, $shift);
-        if (!$seedSnapshot) {
-            throw new \InvalidArgumentException('シュートアウト進出元 snapshot（' . $seedSourceResultCode . '）が見つかりません。先に進出元ステージの正式成績反映を実行してください。');
+        if (! $seedSnapshot) {
+            throw new \InvalidArgumentException('シュートアウト進出元 snapshot（'.$seedSourceResultCode.'）が見つかりません。先に進出元ステージの正式成績反映を実行してください。');
         }
 
         $seedEntries = $this->buildShootoutSeedEntriesFromSnapshot((int) $seedSnapshot->id, 8);
@@ -1201,10 +1266,10 @@ final class TournamentResultSnapshotController extends Controller
         foreach (['SO1' => '1stマッチ', 'SO2' => '2ndマッチ', 'SO3' => '優勝決定戦'] as $matchKey => $label) {
             $match = (array) ($matches->get($matchKey) ?? []);
             if (($match['is_tied'] ?? false) === true) {
-                throw new \InvalidArgumentException($label . ' が同点です。勝者を確定できるスコアに修正してください。');
+                throw new \InvalidArgumentException($label.' が同点です。勝者を確定できるスコアに修正してください。');
             }
             if (($match['is_complete'] ?? false) !== true) {
-                throw new \InvalidArgumentException($label . ' が未確定です。先にスコアを入力してください。');
+                throw new \InvalidArgumentException($label.' が未確定です。先にスコアを入力してください。');
             }
         }
 
@@ -1217,7 +1282,7 @@ final class TournamentResultSnapshotController extends Controller
         $baseRowsByIdentity = [];
         foreach ($baseRows as $row) {
             $key = $this->identityKeyFromSnapshotArray($row);
-            if ($key !== '' && !isset($baseRowsByIdentity[$key])) {
+            if ($key !== '' && ! isset($baseRowsByIdentity[$key])) {
                 $baseRowsByIdentity[$key] = $row;
             }
         }
@@ -1408,7 +1473,7 @@ final class TournamentResultSnapshotController extends Controller
                 $displayName = trim((string) ($row->amateur_name ?? ''));
             }
             if ($displayName === '') {
-                $displayName = trim((string) ($row->pro_bowler_license_no ?? ('seed' . $seed)));
+                $displayName = trim((string) ($row->pro_bowler_license_no ?? ('seed'.$seed)));
             }
 
             $entries[] = [
@@ -1445,7 +1510,7 @@ final class TournamentResultSnapshotController extends Controller
         $scores = [];
         foreach ($rows as $row) {
             $entryNumber = trim((string) ($row->entry_number ?? ''));
-            if (!preg_match('/^SO:(SO[123]):([ABCD])$/', $entryNumber, $m)) {
+            if (! preg_match('/^SO:(SO[123]):([ABCD])$/', $entryNumber, $m)) {
                 continue;
             }
 
@@ -1465,20 +1530,20 @@ final class TournamentResultSnapshotController extends Controller
     {
         $proBowlerId = (int) ($row->pro_bowler_id ?? 0);
         if ($proBowlerId > 0) {
-            return 'pro_bowler:' . $proBowlerId;
+            return 'pro_bowler:'.$proBowlerId;
         }
 
         $license = trim((string) ($row->pro_bowler_license_no ?? ''));
         if ($license !== '') {
-            return 'license:' . strtoupper($license);
+            return 'license:'.strtoupper($license);
         }
 
         $displayName = $this->normalizeNameForMatch($row->display_name ?? $row->amateur_name ?? null);
         if ($displayName !== '') {
-            return 'name:' . $displayName;
+            return 'name:'.$displayName;
         }
 
-        return 'seed:' . $seed;
+        return 'seed:'.$seed;
     }
 
     private function identityKeyFromShootoutNode(array $node): string
@@ -1510,7 +1575,7 @@ final class TournamentResultSnapshotController extends Controller
     }
 
     /**
-     * @param array<int,array<string,mixed>> $standings
+     * @param  array<int,array<string,mixed>>  $standings
      * @return array<int,array<string,mixed>>
      */
     private function buildStepLadderFinalSnapshotRows(
@@ -1527,7 +1592,7 @@ final class TournamentResultSnapshotController extends Controller
             ? DB::table('tournament_result_snapshots')->where('id', $seedSnapshotId)->first()
             : null;
 
-        if (!$roundRobinSnapshot) {
+        if (! $roundRobinSnapshot) {
             $roundRobinSnapshot = $this->findCurrentSnapshotByCode($tournamentId, 'round_robin_total', $gender, $shift);
         }
 
@@ -1563,7 +1628,7 @@ final class TournamentResultSnapshotController extends Controller
         $lookupRows = [];
         foreach (array_merge($roundRobinRows, $baseRows) as $row) {
             $key = $this->identityKeyFromSnapshotArray($row);
-            if ($key !== '' && !isset($lookupRows[$key])) {
+            if ($key !== '' && ! isset($lookupRows[$key])) {
                 $lookupRows[$key] = $row;
             }
         }
@@ -1842,22 +1907,21 @@ final class TournamentResultSnapshotController extends Controller
     private function identityKeyFromValues(int $proBowlerId, ?string $licenseNo, ?string $displayName): string
     {
         if ($proBowlerId > 0) {
-            return 'pro:' . $proBowlerId;
+            return 'pro:'.$proBowlerId;
         }
 
         $digits = preg_replace('/\D+/', '', (string) $licenseNo);
         if (is_string($digits) && $digits !== '') {
-            return 'lic:' . $digits;
+            return 'lic:'.$digits;
         }
 
         $name = $this->normalizeNameForMatch($displayName);
         if ($name !== '') {
-            return 'name:' . $name;
+            return 'name:'.$name;
         }
 
         return '';
     }
-
 
     /**
      * @return array{pin:?int,games:int}
@@ -1957,6 +2021,7 @@ final class TournamentResultSnapshotController extends Controller
 
             if ((bool) ($set['use_snapshot_carry_pin'] ?? false)) {
                 $carryPinDisplayStages[$stage] = true;
+
                 continue;
             }
 
@@ -2021,7 +2086,7 @@ final class TournamentResultSnapshotController extends Controller
                 }
             }
 
-            if (!$matchedRange) {
+            if (! $matchedRange) {
                 continue;
             }
 
@@ -2030,7 +2095,7 @@ final class TournamentResultSnapshotController extends Controller
                 continue;
             }
 
-            if (!array_key_exists($stage, $result[$rowId])) {
+            if (! array_key_exists($stage, $result[$rowId])) {
                 continue;
             }
 
@@ -2106,7 +2171,7 @@ final class TournamentResultSnapshotController extends Controller
     private function extractLast4Digits(mixed $value): string
     {
         $digits = preg_replace('/\D+/', '', (string) $value);
-        if (!is_string($digits) || $digits === '') {
+        if (! is_string($digits) || $digits === '') {
             return '';
         }
 
@@ -2116,18 +2181,21 @@ final class TournamentResultSnapshotController extends Controller
     private function normalizeNameForMatch(mixed $value): string
     {
         $name = preg_replace('/\s+/u', '', trim((string) $value));
+
         return is_string($name) ? $name : '';
     }
 
     private function normalizeGender(mixed $value): ?string
     {
         $gender = trim((string) $value);
+
         return in_array($gender, ['M', 'F'], true) ? $gender : null;
     }
 
     private function normalizeText(mixed $value): ?string
     {
         $text = trim((string) $value);
+
         return $text === '' ? null : $text;
     }
 
@@ -2165,11 +2233,12 @@ final class TournamentResultSnapshotController extends Controller
             if ((int) $routeValue->tournament_id !== (int) $tournament->id) {
                 abort(404);
             }
+
             return $routeValue;
         }
 
         $value = trim((string) $routeValue);
-        if ($value === '' || !ctype_digit($value)) {
+        if ($value === '' || ! ctype_digit($value)) {
             abort(404);
         }
 

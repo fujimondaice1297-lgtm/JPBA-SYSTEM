@@ -67,6 +67,77 @@
         </div>
     @endif
 
+    @if($japanOpenChampionshipStatus)
+        <div class="card border-primary mb-4">
+            <div class="card-header bg-primary-subtle fw-bold">ジャパンオープン 進出者同期</div>
+            <div class="card-body">
+                <div class="row g-4">
+                    <div class="col-lg-6">
+                        <h2 class="h5">② 大会シードを参加者へ追加</h2>
+                        <p class="small text-muted">
+                            大会別・年度別シード台帳の対象者を、マスターズ／クイーンズの参加者へ同期します。
+                            すでに手動登録済みの選手は重複登録しません。
+                        </p>
+                        <div class="d-flex flex-wrap gap-2 mb-3">
+                            <span class="badge text-bg-light">シード台帳 {{ $japanOpenChampionshipStatus['seed_candidate_count'] }}名</span>
+                            <span class="badge text-bg-light">参加者へ反映済み {{ $japanOpenChampionshipStatus['linked_seed_count'] }}名</span>
+                        </div>
+                        @if($japanOpenChampionshipStatus['seed_error'])
+                            <div class="alert alert-warning py-2 small">{{ $japanOpenChampionshipStatus['seed_error'] }}</div>
+                        @endif
+                        <div class="d-flex flex-wrap gap-2">
+                            <form method="POST" action="{{ route('tournaments.result_snapshots.japan_open_seeds', $tournament) }}">
+                                @csrf
+                                <button type="submit" class="btn btn-primary">大会シードを参加者へ同期</button>
+                            </form>
+                            <a href="{{ route('tournaments.seed_players.index', $tournament) }}" class="btn btn-outline-secondary">シード台帳を確認</a>
+                        </div>
+                    </div>
+
+                    <div class="col-lg-6 border-start-lg">
+                        <h2 class="h5">③ 予選8Gから準決勝6Gへ</h2>
+                        <p class="small text-muted">
+                            予選8G通算成績の上位者を準決勝進出者として同期し、レーン割当の初期行を作ります。
+                            予選通算成績を反映した直後にも自動実行されます。
+                        </p>
+                        <div class="d-flex flex-wrap gap-2 mb-3">
+                            <span class="badge text-bg-light">
+                                予選スナップショット
+                                {{ $japanOpenChampionshipStatus['prelim_snapshot'] ? '#'.$japanOpenChampionshipStatus['prelim_snapshot']->id : '未反映' }}
+                            </span>
+                            <span class="badge text-bg-light">成績 {{ $japanOpenChampionshipStatus['prelim_row_count'] }}名</span>
+                            <span class="badge text-bg-light">準決勝へ同期済み {{ $japanOpenChampionshipStatus['semifinal_assignment_count'] }}名</span>
+                        </div>
+                        <form method="POST" action="{{ route('tournaments.result_snapshots.japan_open_semifinalists', $tournament) }}" class="row g-2 align-items-end mb-2">
+                            @csrf
+                            <div class="col-sm-5">
+                                <label class="form-label">準決勝進出人数</label>
+                                <input type="number"
+                                       name="qualifier_count"
+                                       class="form-control"
+                                       min="1"
+                                       max="200"
+                                       value="{{ old('qualifier_count', $japanOpenChampionshipStatus['semifinal_qualifier_count']) }}"
+                                       required>
+                            </div>
+                            <div class="col-sm-7 d-flex flex-wrap gap-2">
+                                <button type="submit" class="btn btn-primary" @disabled(!$japanOpenChampionshipStatus['prelim_snapshot'])>
+                                    準決勝進出者を同期
+                                </button>
+                                <a href="{{ route('tournaments.round_lane_assignments.index', [
+                                    'tournament' => $tournament->id,
+                                    'stage' => \App\Services\JapanOpenAdvancementService::SEMIFINAL_STAGE,
+                                    'round_label' => \App\Services\JapanOpenAdvancementService::SEMIFINAL_ROUND_LABEL,
+                                ]) }}" class="btn btn-outline-secondary">準決勝レーン割当へ</a>
+                            </div>
+                        </form>
+                        <div class="small text-muted">初期値: マスターズ46名／クイーンズ32名。年度の大会要項に応じて変更できます。</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    @endif
+
     @if($currentFinalSnapshot)
         <div class="alert alert-info d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
             <div>

@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\ProBowler;
 use App\Models\Tournament;
 use App\Models\TournamentResultSnapshot;
 use App\Models\TournamentResultSnapshotRow;
@@ -12,6 +13,14 @@ use InvalidArgumentException;
 final class JapanOpenAdvancementService
 {
     public const QUALIFIER_SOURCE_NOTE = 'ジャパンオープン オールエベンツ通過';
+
+    public const DIRECT_SEED_SOURCE_NOTE = 'ジャパンオープン 大会シード';
+
+    public const SEMIFINAL_SOURCE_NOTE = 'ジャパンオープン 予選8G通過';
+
+    public const SEMIFINAL_STAGE = '準決勝';
+
+    public const SEMIFINAL_ROUND_LABEL = '準決勝6G進出者';
 
     public function __construct(
         private readonly ProBowlerSeedService $seedService,
@@ -52,6 +61,252 @@ final class JapanOpenAdvancementService
         ];
     }
 
+    /** @return array<string,mixed>|null */
+    public function championshipStatus(Tournament $tournament): ?array
+    {
+        if (! in_array($this->componentCode($tournament), ['masters', 'queens'], true)) {
+            return null;
+        }
+
+        $seedError = null;
+        try {
+            $seedCandidates = $this->directSeedCandidates($tournament);
+        } catch (InvalidArgumentException $exception) {
+            $seedCandidates = collect();
+            $seedError = $exception->getMessage();
+        }
+
+        $participants = DB::table('tournament_participants')
+            ->where('tournament_id', $tournament->id)
+            ->get();
+        $participantLookup = $participants
+            ->mapWithKeys(fn (object $row): array => [$this->participantIdentity($row) => true])
+            ->all();
+        $linkedSeeds = $seedCandidates
+            ->filter(fn (array $candidate): bool => isset($participantLookup[$candidate['identity']]))
+            ->count();
+        $prelimSnapshot = $this->currentChampionshipPrelimSnapshot($tournament);
+        $qualifierCount = $this->configuredSemifinalQualifierCount($tournament);
+        $assignments = DB::table('tournament_round_lane_assignments')
+            ->where('tournament_id', $tournament->id)
+            ->where('stage', self::SEMIFINAL_STAGE)
+            ->where('round_label', self::SEMIFINAL_ROUND_LABEL)
+            ->count();
+
+        return [
+            'component' => $this->componentCode($tournament),
+            'seed_candidate_count' => $seedCandidates->count(),
+            'linked_seed_count' => $linkedSeeds,
+            'owned_seed_participant_count' => $participants
+                ->filter(fn (object $row): bool => str_starts_with((string) $row->source_note, self::DIRECT_SEED_SOURCE_NOTE))
+                ->count(),
+            'seed_error' => $seedError,
+            'prelim_snapshot' => $prelimSnapshot,
+            'prelim_row_count' => $prelimSnapshot?->rows()->count() ?? 0,
+            'semifinal_qualifier_count' => $qualifierCount,
+            'semifinal_assignment_count' => $assignments,
+            'last_seed_sync' => (array) data_get($tournament->template_snapshot, 'japan_open.direct_seed_sync', []),
+            'last_semifinal_sync' => (array) data_get($tournament->template_snapshot, 'japan_open.semifinal_sync', []),
+        ];
+    }
+
+    /** @return array<string,mixed> */
+    public function syncDirectSeeds(Tournament $tournament, ?int $syncedBy = null): array
+    {
+        if (! in_array($this->componentCode($tournament), ['masters', 'queens'], true)) {
+            throw new InvalidArgumentException('ジャパンオープンのマスターズ／クイーンズで実行してください。');
+        }
+
+        $candidates = $this->directSeedCandidates($tournament);
+
+        return DB::transaction(function () use ($tournament, $candidates, $syncedBy): array {
+            $participants = DB::table('tournament_participants')
+                ->where('tournament_id', $tournament->id)
+                ->lockForUpdate()
+                ->get();
+            $owned = $participants
+                ->filter(fn (object $row): bool => str_starts_with((string) $row->source_note, self::DIRECT_SEED_SOURCE_NOTE))
+                ->values();
+            $ownedByIdentity = $owned->groupBy(fn (object $row): string => $this->participantIdentity($row));
+            $allByIdentity = $participants->groupBy(fn (object $row): string => $this->participantIdentity($row));
+            $retainedIds = [];
+            $created = 0;
+            $updated = 0;
+            $alreadyPresent = 0;
+
+            foreach ($candidates as $position => $candidate) {
+                $identity = $candidate['identity'];
+                $matched = $ownedByIdentity->get($identity)?->shift();
+
+                if ($matched) {
+                    DB::table('tournament_participants')
+                        ->where('id', $matched->id)
+                        ->update($this->directSeedParticipantPayload($tournament, $candidate, $position + 1));
+                    $retainedIds[] = (int) $matched->id;
+                    $updated++;
+
+                    continue;
+                }
+
+                $existing = $allByIdentity->get($identity)?->first();
+                if ($existing) {
+                    $alreadyPresent++;
+
+                    continue;
+                }
+
+                $retainedIds[] = (int) DB::table('tournament_participants')->insertGetId(
+                    $this->directSeedParticipantPayload($tournament, $candidate, $position + 1) + [
+                        'tournament_id' => $tournament->id,
+                        'created_at' => now(),
+                    ],
+                );
+                $created++;
+            }
+
+            $stale = $owned->whereNotIn('id', $retainedIds)->values();
+            $this->guardStaleParticipants($stale);
+            if ($stale->isNotEmpty()) {
+                DB::table('tournament_participants')->whereIn('id', $stale->pluck('id')->all())->delete();
+            }
+
+            $metadata = [
+                'candidate_count' => $candidates->count(),
+                'created_count' => $created,
+                'updated_count' => $updated,
+                'already_present_count' => $alreadyPresent,
+                'removed_count' => $stale->count(),
+                'synced_at' => now()->toIso8601String(),
+                'synced_by' => $syncedBy,
+            ];
+            $settings = (array) ($tournament->template_snapshot ?? []);
+            data_set($settings, 'japan_open.direct_seed_sync', $metadata);
+            $tournament->template_snapshot = $settings;
+            $tournament->save();
+
+            return $metadata;
+        });
+    }
+
+    /** @return array<string,mixed> */
+    public function syncSemifinalists(
+        Tournament $tournament,
+        ?int $qualifierCount = null,
+        ?int $syncedBy = null,
+        ?TournamentResultSnapshot $sourceSnapshot = null,
+    ): array {
+        if (! in_array($this->componentCode($tournament), ['masters', 'queens'], true)) {
+            throw new InvalidArgumentException('ジャパンオープンのマスターズ／クイーンズで実行してください。');
+        }
+
+        $qualifierCount ??= $this->configuredSemifinalQualifierCount($tournament);
+        if ($qualifierCount < 1 || $qualifierCount > 200) {
+            throw new InvalidArgumentException('準決勝進出人数は1～200名で指定してください。');
+        }
+
+        $sourceSnapshot ??= $this->currentChampionshipPrelimSnapshot($tournament);
+        if (! $sourceSnapshot
+            || (int) $sourceSnapshot->tournament_id !== (int) $tournament->id
+            || (string) $sourceSnapshot->result_code !== 'prelim_total'
+            || ! $sourceSnapshot->is_current) {
+            throw new InvalidArgumentException('最新の予選8G通算成績を先に反映してください。');
+        }
+        if ((int) $sourceSnapshot->games_count !== 8) {
+            throw new InvalidArgumentException('準決勝進出者の選出元は予選8G通算成績にしてください。');
+        }
+
+        $rows = $sourceSnapshot->rows()
+            ->orderBy('ranking')
+            ->orderByDesc('total_pin')
+            ->orderBy('id')
+            ->get();
+        $selected = $this->selectWithBoundaryGuard($rows, $qualifierCount, '準決勝');
+        if ($selected->contains(fn (TournamentResultSnapshotRow $row): bool => ! $row->is_complete || (int) $row->games !== 8)) {
+            throw new InvalidArgumentException('進出圏内に予選8G未完了の選手がいるため、準決勝進出者を確定できません。');
+        }
+
+        $resolved = $selected->map(function (TournamentResultSnapshotRow $row) use ($tournament): array {
+            $participant = $this->resolveParticipantForSnapshotRow($tournament, $row);
+            if (! $participant) {
+                throw new InvalidArgumentException(sprintf(
+                    '%sさんを大会参加者へ紐づけられません。参加者情報を確認してください。',
+                    $row->display_name,
+                ));
+            }
+
+            return ['row' => $row, 'participant' => $participant];
+        });
+
+        return DB::transaction(function () use ($tournament, $sourceSnapshot, $resolved, $qualifierCount, $syncedBy): array {
+            $existing = DB::table('tournament_round_lane_assignments')
+                ->where('tournament_id', $tournament->id)
+                ->where('stage', self::SEMIFINAL_STAGE)
+                ->where('round_label', self::SEMIFINAL_ROUND_LABEL)
+                ->lockForUpdate()
+                ->get();
+            $existingByIdentity = $existing->groupBy(fn (object $row): string => $this->assignmentIdentity($row));
+            $retainedIds = [];
+            $created = 0;
+            $updated = 0;
+
+            foreach ($resolved as $position => $item) {
+                $row = $item['row'];
+                $participant = $item['participant'];
+                $identity = $this->assignmentIdentity($participant, true);
+                $matched = $existingByIdentity->get($identity)?->shift();
+                $payload = $this->semifinalAssignmentPayload(
+                    $tournament,
+                    $sourceSnapshot,
+                    $row,
+                    $participant,
+                    $position + 1,
+                );
+
+                if ($matched) {
+                    DB::table('tournament_round_lane_assignments')->where('id', $matched->id)->update($payload);
+                    $retainedIds[] = (int) $matched->id;
+                    $updated++;
+                } else {
+                    $retainedIds[] = (int) DB::table('tournament_round_lane_assignments')->insertGetId($payload + [
+                        'tournament_id' => $tournament->id,
+                        'stage' => self::SEMIFINAL_STAGE,
+                        'round_label' => self::SEMIFINAL_ROUND_LABEL,
+                        'movement_direction' => 'left',
+                        'movement_box_step' => 1,
+                        'note' => self::SEMIFINAL_SOURCE_NOTE,
+                        'created_at' => now(),
+                    ]);
+                    $created++;
+                }
+            }
+
+            $stale = $existing->whereNotIn('id', $retainedIds)->values();
+            $this->guardStaleSemifinalAssignments($tournament, $stale);
+            if ($stale->isNotEmpty()) {
+                DB::table('tournament_round_lane_assignments')->whereIn('id', $stale->pluck('id')->all())->delete();
+            }
+
+            $metadata = [
+                'source_snapshot_id' => (int) $sourceSnapshot->id,
+                'qualifier_count' => $qualifierCount,
+                'created_count' => $created,
+                'updated_count' => $updated,
+                'removed_count' => $stale->count(),
+                'stage' => self::SEMIFINAL_STAGE,
+                'round_label' => self::SEMIFINAL_ROUND_LABEL,
+                'synced_at' => now()->toIso8601String(),
+                'synced_by' => $syncedBy,
+            ];
+            $settings = (array) ($tournament->template_snapshot ?? []);
+            data_set($settings, 'japan_open.semifinal_qualifier_count', $qualifierCount);
+            data_set($settings, 'japan_open.semifinal_sync', $metadata);
+            $tournament->template_snapshot = $settings;
+            $tournament->save();
+
+            return $metadata;
+        });
+    }
+
     /** @return array<string,mixed> */
     public function sync(
         Tournament $allEventsTournament,
@@ -72,6 +327,10 @@ final class JapanOpenAdvancementService
         if (! $target) {
             throw new InvalidArgumentException('同年度のマスターズ／クイーンズ大会を確認できません。');
         }
+
+        // マスターズ／クイーンズの大会シードを先に参加者へ実体化し、
+        // オールエベンツ通過枠から確実に除外する。
+        $this->syncDirectSeeds($target, $syncedBy);
 
         $snapshot = $this->currentSnapshot($allEventsTournament);
         if (! $snapshot) {
@@ -140,7 +399,12 @@ final class JapanOpenAdvancementService
             foreach ($selected as $position => $row) {
                 $identity = $this->snapshotRowIdentity($row);
                 $matched = $existingByIdentity->get($identity)?->shift();
-                $payload = $this->participantPayload($target, $snapshot, $row, $position + 1);
+                $payload = $this->participantPayload(
+                    $target,
+                    $snapshot,
+                    $row,
+                    (int) $reserved['count'] + $position + 1,
+                );
 
                 if ($matched) {
                     DB::table('tournament_participants')->where('id', $matched->id)->update($payload);
@@ -179,6 +443,273 @@ final class JapanOpenAdvancementService
                 'removed_count' => $stale->count(),
             ];
         });
+    }
+
+    /** @return Collection<int,array{row:object,pro:ProBowler,identity:string,label:string,priority:int}> */
+    private function directSeedCandidates(Tournament $tournament): Collection
+    {
+        $expectedSex = $tournament->gender === 'F' ? 2 : 1;
+
+        return collect(array_values($this->seedService->seedMapForTournament((int) $tournament->id)))
+            ->unique(function (object $row): string {
+                if ($row->pro_bowler_id) {
+                    return 'pro:'.(int) $row->pro_bowler_id;
+                }
+
+                return 'license:'.$this->normalizeLicense($row->license_no);
+            })
+            ->map(function (object $row) use ($tournament, $expectedSex): array {
+                $license = $this->normalizeLicense($row->license_no);
+                $pro = $row->pro_bowler_id
+                    ? ProBowler::query()->find((int) $row->pro_bowler_id)
+                    : null;
+                if (! $pro && $license !== '') {
+                    $pro = ProBowler::query()
+                        ->whereRaw('UPPER(TRIM(license_no)) = ?', [$license])
+                        ->first();
+                }
+                if (! $pro) {
+                    throw new InvalidArgumentException(sprintf(
+                        '大会シード（%s）を選手台帳へ紐づけられません。シード設定を確認してください。',
+                        $license !== '' ? $license : 'ライセンス番号なし',
+                    ));
+                }
+                if ((int) $pro->sex !== $expectedSex) {
+                    throw new InvalidArgumentException(sprintf(
+                        '%sさんの性別が大会区分（%s）と一致しません。シード設定を確認してください。',
+                        $pro->name_kanji,
+                        $tournament->gender === 'F' ? '女子' : '男子',
+                    ));
+                }
+
+                $priority = (int) ($row->priority_order ?? $row->seed_rank ?? $row->ranking_rank ?? 9999);
+                $label = trim((string) ($row->display_label ?? $row->seed_category ?? $row->seed_source_type ?? ''));
+
+                return [
+                    'row' => $row,
+                    'pro' => $pro,
+                    'identity' => 'pro:'.(int) $pro->id,
+                    'label' => $label !== '' ? $label : '大会シード',
+                    'priority' => $priority > 0 ? $priority : 9999,
+                ];
+            })
+            ->sortBy([['priority', 'asc'], ['pro.license_no', 'asc']])
+            ->values();
+    }
+
+    /** @param array{row:object,pro:ProBowler,identity:string,label:string,priority:int} $candidate */
+    private function directSeedParticipantPayload(Tournament $tournament, array $candidate, int $sortOrder): array
+    {
+        /** @var ProBowler $pro */
+        $pro = $candidate['pro'];
+        $license = $this->normalizeLicense($pro->license_no);
+
+        return [
+            'pro_bowler_license_no' => $license,
+            'pro_bowler_id' => $pro->id,
+            'amateur_bowler_id' => null,
+            'participant_type' => 'pro',
+            'display_name' => $pro->name_kanji,
+            'display_license_no' => $license,
+            'gender' => $tournament->gender,
+            'shift' => null,
+            'sort_order' => $sortOrder,
+            'source_note' => self::DIRECT_SEED_SOURCE_NOTE.'（'.$candidate['label'].'）',
+            'is_temporary' => false,
+            'updated_at' => now(),
+        ];
+    }
+
+    private function currentChampionshipPrelimSnapshot(Tournament $tournament): ?TournamentResultSnapshot
+    {
+        return TournamentResultSnapshot::query()
+            ->where('tournament_id', $tournament->id)
+            ->where('result_code', 'prelim_total')
+            ->where('is_current', true)
+            ->whereNull('shift')
+            ->where(function ($query) use ($tournament): void {
+                $query->whereNull('gender')->orWhere('gender', $tournament->gender);
+            })
+            ->orderByRaw('CASE WHEN gender IS NULL THEN 0 ELSE 1 END')
+            ->orderByDesc('id')
+            ->first();
+    }
+
+    private function configuredSemifinalQualifierCount(Tournament $tournament): int
+    {
+        $configured = (int) data_get($tournament->template_snapshot, 'japan_open.semifinal_qualifier_count', 0);
+        if ($configured > 0) {
+            return $configured;
+        }
+
+        return $this->componentCode($tournament) === 'masters' ? 46 : 32;
+    }
+
+    private function resolveParticipantForSnapshotRow(Tournament $tournament, TournamentResultSnapshotRow $row): ?object
+    {
+        $query = DB::table('tournament_participants')->where('tournament_id', $tournament->id);
+
+        if ($row->pro_bowler_id) {
+            $participant = (clone $query)->where('pro_bowler_id', $row->pro_bowler_id)->first();
+            if ($participant) {
+                return $participant;
+            }
+        }
+        if ($row->amateur_bowler_id) {
+            $participant = (clone $query)->where('amateur_bowler_id', $row->amateur_bowler_id)->first();
+            if ($participant) {
+                return $participant;
+            }
+        }
+
+        $license = $this->normalizeLicense($row->pro_bowler_license_no);
+        if ($license !== '') {
+            $participant = (clone $query)
+                ->whereRaw('UPPER(TRIM(pro_bowler_license_no)) = ?', [$license])
+                ->first();
+            if ($participant) {
+                return $participant;
+            }
+        }
+
+        $name = $this->normalizeName((string) $row->display_name);
+        if ($name === '') {
+            return null;
+        }
+
+        $matches = (clone $query)
+            ->whereRaw("replace(replace(replace(replace(display_name, '　', ''), ' ', ''), '･', ''), '・', '') = ?", [$name])
+            ->limit(2)
+            ->get();
+
+        return $matches->count() === 1 ? $matches->first() : null;
+    }
+
+    private function semifinalAssignmentPayload(
+        Tournament $tournament,
+        TournamentResultSnapshot $snapshot,
+        TournamentResultSnapshotRow $row,
+        object $participant,
+        int $sortOrder,
+    ): array {
+        $pro = $row->pro_bowler_id
+            ? ProBowler::query()->find((int) $row->pro_bowler_id)
+            : null;
+        $license = $this->normalizeLicense($participant->pro_bowler_license_no ?? $row->pro_bowler_license_no);
+        $organization = trim((string) ($pro?->organization_name ?? ''));
+        $equipment = trim((string) ($pro?->equipment_contract ?? ''));
+        $affiliation = implode('/', array_values(array_filter([$organization, $equipment], fn (string $value): bool => $value !== '')));
+
+        return [
+            'source_result_snapshot_id' => $snapshot->id,
+            'tournament_participant_id' => $participant->id,
+            'pro_bowler_id' => $row->pro_bowler_id ?: $participant->pro_bowler_id,
+            'pro_bowler_license_no' => $license !== '' ? $license : null,
+            'display_license_no' => $row->pro_bowler_id ? $this->shortLicense($license) : 'アマ',
+            'display_name' => $row->display_name,
+            'period_label' => $pro?->kibetsu !== null ? (string) $pro->kibetsu : null,
+            'dominant_arm' => $this->normalizeArmLabel($pro?->dominant_arm),
+            'affiliation_display' => $affiliation !== '' ? $affiliation : null,
+            'source_total_pin' => (int) $row->total_pin,
+            'source_games' => (int) $row->games,
+            'source_average' => $row->average !== null ? round((float) $row->average, 3) : null,
+            'game_from' => 1,
+            'game_to' => 6,
+            'seed_rank' => (int) $row->ranking,
+            'sort_order' => $sortOrder,
+            'updated_at' => now(),
+        ];
+    }
+
+    private function assignmentIdentity(object $row, bool $participant = false): string
+    {
+        if ($participant) {
+            return 'participant:'.(int) $row->id;
+        }
+        if ($row->tournament_participant_id) {
+            return 'participant:'.(int) $row->tournament_participant_id;
+        }
+        if ($row->pro_bowler_id) {
+            return 'pro:'.(int) $row->pro_bowler_id;
+        }
+
+        $license = $this->normalizeLicense($row->pro_bowler_license_no);
+        if ($license !== '') {
+            return 'license:'.$license;
+        }
+
+        return 'name:'.$this->normalizeName((string) $row->display_name);
+    }
+
+    private function guardStaleSemifinalAssignments(Tournament $tournament, Collection $stale): void
+    {
+        if ($stale->isEmpty()) {
+            return;
+        }
+
+        $hasLaneWork = $stale->contains(function (object $row): bool {
+            return $row->start_lane !== null
+                || $row->lane_slot !== null
+                || $row->start_lane_label !== null
+                || $row->box_no !== null
+                || $row->movement_boxes !== null
+                || $row->game_start_time !== null
+                || $row->tv_lane_from !== null
+                || $row->tv_lane_to !== null;
+        });
+        $participantIds = $stale->pluck('tournament_participant_id')->filter()->map(fn ($id): int => (int) $id)->all();
+        $proIds = $stale->pluck('pro_bowler_id')->filter()->map(fn ($id): int => (int) $id)->all();
+        $hasScores = DB::table('game_scores')
+            ->where('tournament_id', $tournament->id)
+            ->where('stage', self::SEMIFINAL_STAGE)
+            ->where(function ($query) use ($participantIds, $proIds): void {
+                if ($participantIds !== []) {
+                    $query->whereIn('tournament_participant_id', $participantIds);
+                }
+                if ($proIds !== []) {
+                    $participantIds !== []
+                        ? $query->orWhereIn('pro_bowler_id', $proIds)
+                        : $query->whereIn('pro_bowler_id', $proIds);
+                }
+            })
+            ->exists();
+
+        if ($hasLaneWork || $hasScores) {
+            throw new InvalidArgumentException('前回の準決勝進出者にレーン設定または準決勝スコアがあるため再同期できません。大会運用担当者が確認してください。');
+        }
+    }
+
+    private function shortLicense(string $license): ?string
+    {
+        if ($license === '') {
+            return null;
+        }
+
+        $digits = preg_replace('/\D+/', '', $license);
+        if ($digits === '') {
+            return $license;
+        }
+
+        $last = ltrim(substr($digits, -4), '0');
+
+        return $last !== '' ? $last : '0';
+    }
+
+    private function normalizeArmLabel(mixed $arm): ?string
+    {
+        $arm = trim((string) $arm);
+
+        return match ($arm) {
+            '' => null,
+            'R', '右投げ' => '右',
+            'L', '左投げ' => '左',
+            default => $arm,
+        };
+    }
+
+    private function normalizeName(string $name): string
+    {
+        return str_replace(['　', ' ', '･', '・'], '', trim($name));
     }
 
     /** @return array{0:int,1:int} */
