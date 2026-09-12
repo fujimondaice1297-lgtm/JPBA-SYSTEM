@@ -218,6 +218,142 @@ final class JapanOpenDoubleEliminationService
         return $this->syncAvailableMatches($tournament->fresh());
     }
 
+    public function createFinalSnapshot(Tournament $tournament, ?int $reflectedBy = null): TournamentResultSnapshot
+    {
+        $this->assertSupported($tournament);
+        $sourceSnapshot = $this->currentSemifinalSnapshot($tournament);
+        if (! $sourceSnapshot) {
+            throw new InvalidArgumentException('予選＋準決勝14G通算成績を先に反映してください。');
+        }
+
+        $seeds = collect($this->settings($tournament)['seeds'] ?? [])->keyBy('seed');
+        $state = $this->buildState($tournament, $seeds, false);
+        if (! $state['is_complete'] || count($state['final_rankings']) !== self::FINALIST_COUNT) {
+            throw new InvalidArgumentException('決勝ダブルエリミネーションの全順位がまだ確定していません。');
+        }
+
+        $sourceRows = $sourceSnapshot->rows()->orderBy('ranking')->get();
+        $matchTotals = $this->confirmedMatchTotals($tournament);
+
+        return DB::transaction(function () use (
+            $tournament,
+            $sourceSnapshot,
+            $sourceRows,
+            $matchTotals,
+            $state,
+            $reflectedBy,
+        ): TournamentResultSnapshot {
+            TournamentResultSnapshot::query()
+                ->where('tournament_id', $tournament->id)
+                ->where('is_final', true)
+                ->where('is_current', true)
+                ->update(['is_current' => false]);
+
+            $snapshot = TournamentResultSnapshot::query()->create([
+                'tournament_id' => $tournament->id,
+                'result_code' => 'final_total',
+                'result_name' => '決勝ダブルエリミネーション 最終成績',
+                'result_type' => self::SHEET_TYPE,
+                'stage_name' => '決勝',
+                'gender' => $sourceSnapshot->gender,
+                'shift' => null,
+                'games_count' => (int) collect($state['final_rankings'])
+                    ->max(fn (array $ranked): int => (int) ($ranked['player']['source_games'] ?? 0)
+                        + (int) data_get($matchTotals, $ranked['player']['identity'].'.games', 0)),
+                'carry_game_count' => 14,
+                'carry_stage_names' => ['予選', '準決勝'],
+                'calculation_definition' => [
+                    'format' => 'jpba_japan_open_8_player',
+                    'source_snapshot_id' => (int) $sourceSnapshot->id,
+                    'source_result_code' => (string) $sourceSnapshot->result_code,
+                    'ranking_policy' => [
+                        1 => '優勝者',
+                        2 => '優勝決定戦敗者',
+                        3 => '第3位決定戦敗者',
+                        4 => '敗者復活3回戦敗者',
+                        5 => '敗者復活2回戦第1試合敗者',
+                        6 => '敗者復活2回戦第2試合敗者',
+                        7 => '敗者復活1回戦第2試合敗者',
+                        8 => '敗者復活1回戦第1試合敗者',
+                    ],
+                    'reset_required' => (bool) $state['reset_required'],
+                    'completed_match_count' => (int) $state['completed_match_count'],
+                ],
+                'reflected_at' => now(),
+                'reflected_by' => $reflectedBy,
+                'is_final' => true,
+                'is_published' => false,
+                'is_current' => true,
+                'notes' => '決勝対戦表の確定結果から自動生成。公式公開前にポイント・賞金配分を確認してください。',
+            ]);
+
+            foreach ($state['final_rankings'] as $ranked) {
+                $rank = (int) $ranked['ranking'];
+                $player = (array) $ranked['player'];
+                $sourceRow = $this->findSourceRow($sourceRows, $player);
+                if (! $sourceRow) {
+                    throw new InvalidArgumentException($player['display_name'].'さんの14G成績を特定できません。');
+                }
+
+                $match = (array) ($matchTotals[$player['identity']] ?? []);
+                $matchPin = (int) ($match['total_pin'] ?? 0);
+                $matchGames = (int) ($match['games'] ?? 0);
+                $carryPin = (int) $sourceRow->total_pin;
+                $carryGames = (int) $sourceRow->games;
+                $totalPin = $carryPin + $matchPin;
+                $games = $carryGames + $matchGames;
+
+                TournamentResultSnapshotRow::query()->create([
+                    'snapshot_id' => $snapshot->id,
+                    'ranking' => $rank,
+                    'subject_type' => 'individual',
+                    'pro_bowler_id' => $sourceRow->pro_bowler_id,
+                    'amateur_bowler_id' => $sourceRow->amateur_bowler_id,
+                    'pro_bowler_license_no' => $sourceRow->pro_bowler_license_no,
+                    'amateur_name' => $sourceRow->amateur_name,
+                    'display_name' => $sourceRow->display_name,
+                    'gender' => $sourceRow->gender ?: $tournament->gender,
+                    'shift' => null,
+                    'entry_number' => $sourceRow->entry_number,
+                    'identity_key' => $sourceRow->identity_key,
+                    'scratch_pin' => $matchPin,
+                    'carry_pin' => $carryPin,
+                    'total_pin' => $totalPin,
+                    'games' => $games,
+                    'source_count' => 1 + $matchGames,
+                    'is_complete' => true,
+                    'breakdown' => [
+                        'official_points_eligible' => true,
+                        'source_snapshot_id' => (int) $sourceSnapshot->id,
+                        'source_total_pin' => $carryPin,
+                        'source_games' => $carryGames,
+                        'double_elimination' => [
+                            'total_pin' => $matchPin,
+                            'games' => $matchGames,
+                            'matches' => array_values((array) ($match['matches'] ?? [])),
+                        ],
+                    ],
+                    'average' => $games > 0 ? round($totalPin / $games, 3) : null,
+                    'tie_break_value' => 100000 - $rank,
+                    'points' => null,
+                    'prize_money' => null,
+                ]);
+            }
+
+            $settings = (array) ($tournament->fresh()->template_snapshot ?? []);
+            data_set($settings, 'japan_open.double_elimination.final_snapshot', [
+                'snapshot_id' => (int) $snapshot->id,
+                'source_snapshot_id' => (int) $sourceSnapshot->id,
+                'champion_identity' => (string) $state['champion']['identity'],
+                'created_at' => now()->toIso8601String(),
+                'created_by' => $reflectedBy,
+            ]);
+            $tournament->forceFill(['template_snapshot' => $settings])->save();
+
+            return $snapshot->load('rows');
+        });
+    }
+
     public function isBracketSheet(TournamentMatchScoreSheet $sheet): bool
     {
         return $sheet->sheet_type === self::SHEET_TYPE && $sheet->stage_code === self::STAGE_CODE;
@@ -297,7 +433,90 @@ final class JapanOpenDoubleEliminationService
             'runner_up' => $runnerUp,
             'third_place' => $results['TP']['loser'] ?? null,
             'is_complete' => $champion !== null,
+            'final_rankings' => $champion !== null
+                ? $this->finalRankings($results, $champion, $runnerUp)
+                : [],
         ];
+    }
+
+    /** @return array<int,array{ranking:int,player:array<string,mixed>}> */
+    private function finalRankings(array $results, array $champion, array $runnerUp): array
+    {
+        $rankedPlayers = [
+            1 => $champion,
+            2 => $runnerUp,
+            3 => $results['TP']['loser'] ?? null,
+            4 => $results['L5']['loser'] ?? null,
+            5 => $results['L3']['loser'] ?? null,
+            6 => $results['L4']['loser'] ?? null,
+            7 => $results['L2']['loser'] ?? null,
+            8 => $results['L1']['loser'] ?? null,
+        ];
+
+        if (collect($rankedPlayers)->filter()->count() !== self::FINALIST_COUNT
+            || collect($rankedPlayers)->filter()->pluck('identity')->unique()->count() !== self::FINALIST_COUNT) {
+            return [];
+        }
+
+        return collect($rankedPlayers)
+            ->map(fn (array $player, int $ranking): array => compact('ranking', 'player'))
+            ->values()
+            ->all();
+    }
+
+    /** @return array<string,array{total_pin:int,games:int,matches:array<int,array<string,mixed>>}> */
+    private function confirmedMatchTotals(Tournament $tournament): array
+    {
+        $totals = [];
+        $sheets = TournamentMatchScoreSheet::query()
+            ->with('players')
+            ->where('tournament_id', $tournament->id)
+            ->where('sheet_type', self::SHEET_TYPE)
+            ->where('stage_code', self::STAGE_CODE)
+            ->whereNotNull('confirmed_at')
+            ->orderBy('match_order')
+            ->orderBy('game_number')
+            ->get();
+
+        foreach ($sheets as $sheet) {
+            foreach ($sheet->players as $player) {
+                $identity = $this->scoreSheetPlayerIdentity($player);
+                $totals[$identity] ??= ['total_pin' => 0, 'games' => 0, 'matches' => []];
+                $totals[$identity]['total_pin'] += (int) $player->final_score;
+                $totals[$identity]['games']++;
+                $totals[$identity]['matches'][] = [
+                    'match_code' => (string) $sheet->match_code,
+                    'match_label' => (string) $sheet->match_label,
+                    'game_number' => (int) $sheet->game_number,
+                    'score' => (int) $player->final_score,
+                ];
+            }
+        }
+
+        return $totals;
+    }
+
+    private function findSourceRow(Collection $rows, array $player): ?TournamentResultSnapshotRow
+    {
+        $proBowlerId = (int) ($player['pro_bowler_id'] ?? 0);
+        if ($proBowlerId > 0) {
+            $row = $rows->first(fn (TournamentResultSnapshotRow $candidate): bool => (int) $candidate->pro_bowler_id === $proBowlerId);
+            if ($row) {
+                return $row;
+            }
+        }
+
+        $license = strtoupper(trim((string) ($player['license_no'] ?? '')));
+        if ($license !== '') {
+            $row = $rows->first(fn (TournamentResultSnapshotRow $candidate): bool => strtoupper(trim((string) $candidate->pro_bowler_license_no)) === $license);
+            if ($row) {
+                return $row;
+            }
+        }
+
+        $name = $this->normalizeName((string) ($player['display_name'] ?? ''));
+
+        return $rows->first(fn (TournamentResultSnapshotRow $candidate): bool => $this->normalizeName((string) $candidate->display_name) === $name);
     }
 
     /** @param array<string,mixed> $definition @param Collection<int,array<string,mixed>> $participants */

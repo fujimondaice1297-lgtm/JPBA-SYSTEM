@@ -353,6 +353,29 @@ final class TournamentResultSnapshotController extends Controller
         return back()->with('ok', 'タイブレーク後の勝者を反映し、次の対戦を更新しました。');
     }
 
+    public function finalizeJapanOpenDoubleElimination(
+        $tournament,
+        JapanOpenDoubleEliminationService $japanOpenDoubleEliminationService,
+    ): RedirectResponse {
+        $tournament = $this->resolveTournament($tournament);
+
+        try {
+            $snapshot = $japanOpenDoubleEliminationService->createFinalSnapshot(
+                $tournament,
+                auth()->id(),
+            );
+        } catch (\InvalidArgumentException $exception) {
+            return back()->withErrors(['japan_open_double_elimination_final' => $exception->getMessage()]);
+        }
+
+        return redirect()
+            ->route('tournaments.result_publications.index', [
+                'tournament' => $tournament->id,
+                'snapshot_id' => $snapshot->id,
+            ])
+            ->with('ok', '決勝1～8位の最終成績を作成しました。ポイント・賞金・タイトルの反映内容を確認して確定してください。');
+    }
+
     public function show(Request $request, $tournament, $snapshot): View
     {
         $tournament = $this->resolveTournament($tournament);

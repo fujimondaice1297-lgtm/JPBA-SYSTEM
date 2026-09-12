@@ -197,9 +197,39 @@
                             <div class="alert alert-success mt-3 mb-0 py-2">
                                 優勝者確定: <strong>{{ $japanOpenDoubleEliminationStatus['champion']['display_name'] }}</strong>
                             </div>
+                            <form method="POST" action="{{ route('tournaments.result_snapshots.japan_open_double_elimination_finalize', $tournament) }}" class="mt-3">
+                                @csrf
+                                <button type="submit" class="btn btn-danger">
+                                    ⑦ 1～8位を最終成績へ反映
+                                </button>
+                                <div class="small text-muted mt-1">
+                                    反映後、既存の確定画面で公式ポイント・賞金・タイトルを確認して一般公開します。
+                                </div>
+                            </form>
                         @endif
                     </div>
                 </div>
+
+                @if(!empty($japanOpenDoubleEliminationStatus['final_rankings']))
+                    <div class="table-responsive mb-4">
+                        <table class="table table-sm table-bordered align-middle mb-0">
+                            <thead class="table-danger">
+                                <tr>
+                                    <th style="width: 6rem;">最終順位</th>
+                                    <th>選手</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach($japanOpenDoubleEliminationStatus['final_rankings'] as $ranked)
+                                    <tr>
+                                        <td class="fw-bold">{{ $ranked['ranking'] }}位</td>
+                                        <td>{{ $ranked['player']['display_name'] }}</td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                @endif
 
                 @if($japanOpenDoubleEliminationStatus['seed_count'] === 8)
                     <div class="table-responsive mb-4">

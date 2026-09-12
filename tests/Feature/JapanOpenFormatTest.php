@@ -140,7 +140,7 @@ function createJapanOpenSemifinalSnapshot(Tournament $tournament, int $playerCou
             'name_kanji' => sprintf('決勝候補%02d', $position),
             'sex' => $tournament->gender === 'F' ? 2 : 1,
         ]);
-        DB::table('tournament_participants')->insert([
+        $participantId = DB::table('tournament_participants')->insertGetId([
             'tournament_id' => $tournament->id,
             'pro_bowler_license_no' => $pro->license_no,
             'pro_bowler_id' => $pro->id,
@@ -153,6 +153,25 @@ function createJapanOpenSemifinalSnapshot(Tournament $tournament, int $playerCou
             'created_at' => now(),
             'updated_at' => now(),
         ]);
+
+        $totalPin = 3100 - ($position * 10);
+        $baseScore = intdiv($totalPin, 14);
+        $remainder = $totalPin % 14;
+        foreach (range(1, 14) as $gameIndex) {
+            DB::table('game_scores')->insert([
+                'tournament_id' => $tournament->id,
+                'stage' => $gameIndex <= 8 ? '予選' : '準決勝',
+                'license_number' => $pro->license_no,
+                'name' => $pro->name_kanji,
+                'game_number' => $gameIndex <= 8 ? $gameIndex : $gameIndex - 8,
+                'score' => $baseScore + ($gameIndex <= $remainder ? 1 : 0),
+                'gender' => $tournament->gender,
+                'pro_bowler_id' => $pro->id,
+                'tournament_participant_id' => $participantId,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
 
         return $pro;
     });
@@ -743,11 +762,114 @@ test('japan open double elimination advances winners and ends without an unneces
         ->and($state['champion']['display_name'])->toBe('決勝候補01')
         ->and($state['runner_up']['display_name'])->toBe('決勝候補08')
         ->and($state['third_place']['display_name'])->toBe('決勝候補02')
+        ->and(collect($state['final_rankings'])->pluck('player.display_name', 'ranking')->all())->toBe([
+            1 => '決勝候補01',
+            2 => '決勝候補08',
+            3 => '決勝候補02',
+            4 => '決勝候補07',
+            5 => '決勝候補03',
+            6 => '決勝候補04',
+            7 => '決勝候補06',
+            8 => '決勝候補05',
+        ])
         ->and($state['reset_required'])->toBeFalse()
         ->and(TournamentMatchScoreSheet::query()
             ->where('tournament_id', $components['queens']->id)
             ->where('match_code', 'GF2')
             ->exists())->toBeFalse();
+});
+
+test('japan open final bracket publishes points prize title public result and pdf end to end', function () {
+    $admin = User::factory()->create(['role' => 'admin', 'is_admin' => true]);
+    $components = japanOpenComponents(setupJapanOpenForTest(2085));
+    $tournament = $components['masters'];
+    createJapanOpenSemifinalSnapshot($tournament);
+    app(JapanOpenDoubleEliminationService::class)->syncFinalists($tournament);
+
+    foreach ([
+        'W1' => '決勝候補01', 'W2' => '決勝候補04',
+        'W3' => '決勝候補02', 'W4' => '決勝候補03',
+        'W5' => '決勝候補01', 'W6' => '決勝候補02',
+        'L1' => '決勝候補08', 'L2' => '決勝候補07',
+        'L3' => '決勝候補08', 'L4' => '決勝候補07',
+        'W7' => '決勝候補01', 'L5' => '決勝候補08',
+        'TP' => '決勝候補08', 'GF1' => '決勝候補01',
+    ] as $matchCode => $winnerName) {
+        completeJapanOpenDoubleEliminationMatch($tournament, $matchCode, $winnerName);
+    }
+
+    foreach (range(1, 9) as $rank) {
+        DB::table('point_distributions')->insert([
+            'tournament_id' => $tournament->id,
+            'rank' => $rank,
+            'points' => 1100 - ($rank * 100),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        DB::table('prize_distributions')->insert([
+            'tournament_id' => $tournament->id,
+            'rank' => $rank,
+            'amount' => 110000 - ($rank * 10000),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+    }
+
+    $reflect = $this->actingAs($admin)->post(
+        route('tournaments.result_snapshots.japan_open_double_elimination_finalize', $tournament),
+    );
+    $snapshot = TournamentResultSnapshot::query()
+        ->where('tournament_id', $tournament->id)
+        ->where('is_final', true)
+        ->where('is_current', true)
+        ->firstOrFail();
+    $reflect->assertRedirect(route('tournaments.result_publications.index', [
+        'tournament' => $tournament->id,
+        'snapshot_id' => $snapshot->id,
+    ]))->assertSessionHasNoErrors();
+
+    expect($snapshot->result_type)->toBe(JapanOpenDoubleEliminationService::SHEET_TYPE)
+        ->and($snapshot->rows)->toHaveCount(8)
+        ->and($snapshot->rows->sortBy('ranking')->pluck('display_name')->values()->all())->toBe([
+            '決勝候補01', '決勝候補08', '決勝候補02', '決勝候補07',
+            '決勝候補03', '決勝候補04', '決勝候補06', '決勝候補05',
+        ])
+        ->and($snapshot->rows->firstWhere('ranking', 1)->games)->toBe(21)
+        ->and($snapshot->rows->firstWhere('ranking', 1)->total_pin)->toBe(4630);
+
+    $publicationService = app(TournamentResultPublicationService::class);
+    $preview = $publicationService->preview($tournament->fresh(), $snapshot->fresh());
+    expect($preview['can_publish'])->toBeTrue()
+        ->and($preview['summary']['row_count'])->toBe(9)
+        ->and($preview['rows'][0]['points'])->toBe(1000)
+        ->and($preview['rows'][0]['prize_money'])->toBe(100000)
+        ->and($preview['rows'][0]['games'])->toBe(21)
+        ->and($preview['rows'][0]['total_pin'])->toBe(4630);
+
+    $publish = $this->actingAs($admin)->post(
+        route('tournaments.result_publications.publish', $tournament),
+        [
+            'snapshot_id' => $snapshot->id,
+            'expected_checksum' => $preview['result_checksum'],
+            'confirm_publish' => '1',
+        ],
+    );
+    $publish->assertRedirect()->assertSessionHasNoErrors();
+
+    $tournament->update(['setup_status' => 'final']);
+    expect(DB::table('tournament_result_publications')->where('tournament_id', $tournament->id)->count())->toBe(1)
+        ->and(DB::table('tournament_results')->where('tournament_id', $tournament->id)->count())->toBe(9)
+        ->and((int) DB::table('tournament_results')->where('tournament_id', $tournament->id)->where('ranking', 1)->value('points'))->toBe(1000)
+        ->and((int) DB::table('tournament_results')->where('tournament_id', $tournament->id)->where('ranking', 1)->value('prize_money'))->toBe(100000)
+        ->and(DB::table('pro_bowler_titles')->where('tournament_id', $tournament->id)->count())->toBe(1);
+
+    $this->get(route('public.tournaments.results', $tournament))
+        ->assertOk()
+        ->assertSee('決勝候補01')
+        ->assertSee('1,000');
+    $this->actingAs($admin)->get(route('tournaments.results.pdf', $tournament))
+        ->assertOk()
+        ->assertHeader('content-type', 'application/pdf');
 });
 
 test('japan open creates and resolves a reset final only when the unbeaten player first loses', function () {

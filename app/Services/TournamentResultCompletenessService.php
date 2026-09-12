@@ -14,6 +14,7 @@ final class TournamentResultCompletenessService
     public function __construct(
         private readonly ShootoutService $shootoutService,
         private readonly StepLadderService $stepLadderService,
+        private readonly ?JapanOpenDoubleEliminationService $japanOpenDoubleEliminationService = null,
     ) {}
 
     /**
@@ -72,7 +73,7 @@ final class TournamentResultCompletenessService
             'snapshot_gaps' => $this->snapshotGaps($snapshots, $scoreRows),
             'flow_errors' => $this->flowErrors($tournament, $snapshots, $scoreRows),
             'publication_stat_mismatches' => $includePublishedStatCheck && $publication !== null
-                ? $this->publicationStatMismatches($publication, $scoreRows)
+                ? $this->publicationStatMismatches($tournament, $publication, $scoreRows)
                 : [],
         ];
 
@@ -133,6 +134,7 @@ final class TournamentResultCompletenessService
             ->where('tournament_id', $tournament->id)
             ->get();
         $totals = $this->actualTotalsFromScores($scoreRows);
+        $totals = $this->mergeDoubleEliminationTotals($tournament, $totals);
 
         foreach ($rows as &$row) {
             $actual = $this->findByAliases($totals, $this->rowAliases($row));
@@ -260,6 +262,40 @@ final class TournamentResultCompletenessService
             $expectedScoreCount = $qualifierCount > 1 ? ($qualifierCount - 1) * 2 : 0;
             if ($expectedScoreCount === 0 || $matchScoreCount < $expectedScoreCount) {
                 $errors[] = 'トーナメント決勝の全対戦スコアがありません。';
+            }
+        }
+
+        $doubleEliminationService = $this->japanOpenDoubleEliminationService
+            ?? app(JapanOpenDoubleEliminationService::class);
+        if ($doubleEliminationService->supports($tournament)) {
+            try {
+                $state = $doubleEliminationService->status($tournament);
+                if (! ($state['is_complete'] ?? false)
+                    || count((array) ($state['final_rankings'] ?? [])) !== JapanOpenDoubleEliminationService::FINALIST_COUNT) {
+                    $errors[] = '決勝ダブルエリミネーションの全対戦・最終順位が確定していません。';
+                }
+
+                $finalSnapshot = $snapshots->first(fn ($snapshot): bool => (bool) $snapshot->is_final);
+                if ($finalSnapshot !== null) {
+                    $officialRankings = $finalSnapshot->rows
+                        ->sortBy('ranking')
+                        ->take(JapanOpenDoubleEliminationService::FINALIST_COUNT)
+                        ->mapWithKeys(fn ($row): array => [
+                            (int) $row->ranking => $this->normalizeName((string) $row->display_name),
+                        ])
+                        ->all();
+                    $calculatedRankings = collect($state['final_rankings'] ?? [])
+                        ->mapWithKeys(fn (array $ranked): array => [
+                            (int) $ranked['ranking'] => $this->normalizeName((string) data_get($ranked, 'player.display_name')),
+                        ])
+                        ->all();
+
+                    if ($officialRankings !== $calculatedRankings) {
+                        $errors[] = '決勝対戦表の最終順位が公式最終成績と一致しません。最終成績を再反映してください。';
+                    }
+                }
+            } catch (Throwable $exception) {
+                $errors[] = '決勝ダブルエリミネーションを再現できません: '.$exception->getMessage();
             }
         }
 
@@ -484,10 +520,12 @@ final class TournamentResultCompletenessService
      * @return array<int,array<string,mixed>>
      */
     private function publicationStatMismatches(
+        Tournament $tournament,
         TournamentResultPublication $publication,
         Collection $scoreRows,
     ): array {
         $totals = $this->actualTotalsFromScores($scoreRows);
+        $totals = $this->mergeDoubleEliminationTotals($tournament, $totals);
         $mismatches = [];
 
         foreach ($publication->rows()->orderBy('ranking')->get() as $row) {
@@ -508,6 +546,73 @@ final class TournamentResultCompletenessService
         }
 
         return $mismatches;
+    }
+
+    /**
+     * @param  array<string,array{total_pin:int,games:int,average:float}>  $totals
+     * @return array<string,array{total_pin:int,games:int,average:float}>
+     */
+    private function mergeDoubleEliminationTotals(Tournament $tournament, array $totals): array
+    {
+        $doubleEliminationService = $this->japanOpenDoubleEliminationService
+            ?? app(JapanOpenDoubleEliminationService::class);
+        if (! $doubleEliminationService->supports($tournament)) {
+            return $totals;
+        }
+
+        $rows = DB::table('tournament_match_score_sheet_players as players')
+            ->join('tournament_match_score_sheets as sheets', 'sheets.id', '=', 'players.score_sheet_id')
+            ->where('sheets.tournament_id', $tournament->id)
+            ->where('sheets.sheet_type', JapanOpenDoubleEliminationService::SHEET_TYPE)
+            ->where('sheets.stage_code', JapanOpenDoubleEliminationService::STAGE_CODE)
+            ->whereNotNull('sheets.confirmed_at')
+            ->select([
+                'players.pro_bowler_id',
+                'players.pro_bowler_license_no',
+                'players.display_name',
+                'players.final_score',
+            ])
+            ->get();
+
+        $matchGroups = [];
+        foreach ($rows as $row) {
+            $aliases = $this->aliases(
+                (int) ($row->pro_bowler_id ?? 0),
+                (string) ($row->pro_bowler_license_no ?? ''),
+                (string) ($row->display_name ?? ''),
+            );
+            $canonical = $aliases[0] ?? null;
+            if ($canonical === null) {
+                continue;
+            }
+
+            $matchGroups[$canonical] ??= [
+                'total_pin' => 0,
+                'games' => 0,
+                'aliases' => [],
+            ];
+            $matchGroups[$canonical]['total_pin'] += (int) $row->final_score;
+            $matchGroups[$canonical]['games']++;
+            foreach ($aliases as $alias) {
+                $matchGroups[$canonical]['aliases'][$alias] = true;
+            }
+        }
+
+        foreach ($matchGroups as $group) {
+            $aliases = array_keys($group['aliases']);
+            $base = $this->findByAliases($totals, $aliases) ?? ['total_pin' => 0, 'games' => 0];
+            $combined = [
+                'total_pin' => (int) $base['total_pin'] + (int) $group['total_pin'],
+                'games' => (int) $base['games'] + (int) $group['games'],
+            ];
+            $combined['average'] = round($combined['total_pin'] / max(1, $combined['games']), 3);
+
+            foreach ($aliases as $alias) {
+                $totals[$alias] = $combined;
+            }
+        }
+
+        return $totals;
     }
 
     /** @param array{games:int,total_pin:int}|null $actual */

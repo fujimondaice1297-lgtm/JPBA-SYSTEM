@@ -682,6 +682,8 @@ Route::middleware(['auth', 'role:editor,admin'])->group(function () {
         ->name('tournaments.result_snapshots.japan_open_double_elimination');
     Route::post('/tournaments/{tournament}/result-snapshots/japan-open-double-elimination/tie', [\App\Http\Controllers\TournamentResultSnapshotController::class, 'resolveJapanOpenDoubleEliminationTie'])
         ->name('tournaments.result_snapshots.japan_open_double_elimination_tie');
+    Route::post('/tournaments/{tournament}/result-snapshots/japan-open-double-elimination/finalize', [\App\Http\Controllers\TournamentResultSnapshotController::class, 'finalizeJapanOpenDoubleElimination'])
+        ->name('tournaments.result_snapshots.japan_open_double_elimination_finalize');
 
     Route::get('/tournaments/{tournament}/seed-players', [\App\Http\Controllers\TournamentSeedPlayerController::class, 'index'])
         ->name('tournaments.seed_players.index');
