@@ -214,6 +214,7 @@ function completeJapanOpenDoubleEliminationMatch(
     Tournament $tournament,
     string $matchCode,
     string $winnerName,
+    int $loserScore = 190,
 ): void {
     $sheets = TournamentMatchScoreSheet::query()
         ->with('players')
@@ -226,7 +227,7 @@ function completeJapanOpenDoubleEliminationMatch(
     foreach ($sheets as $sheet) {
         foreach ($sheet->players as $player) {
             $player->update([
-                'final_score' => $player->display_name === $winnerName ? 220 : 190,
+                'final_score' => $player->display_name === $winnerName ? 220 : $loserScore,
                 'is_winner' => $player->display_name === $winnerName,
             ]);
         }
@@ -743,7 +744,16 @@ test('semifinal top eight seed the official japan open first round pairings', fu
 test('japan open double elimination advances winners and ends without an unnecessary reset', function () {
     $components = japanOpenComponents(setupJapanOpenForTest(2088));
     createJapanOpenSemifinalSnapshot($components['queens']);
-    app(JapanOpenDoubleEliminationService::class)->syncFinalists($components['queens']);
+    $service = app(JapanOpenDoubleEliminationService::class);
+    $service->syncFinalists($components['queens']);
+
+    $entryState = $service->status($components['queens']->fresh());
+    expect(collect($entryState['matches']['W1']['participants'])->pluck('display_name')->all())->toBe(['決勝候補01', '決勝候補08'])
+        ->and(collect($entryState['matches']['W2']['participants'])->pluck('display_name')->all())->toBe(['決勝候補04', '決勝候補05'])
+        ->and(collect($entryState['matches']['W3']['participants'])->pluck('display_name')->all())->toBe(['決勝候補02', '決勝候補07'])
+        ->and(collect($entryState['matches']['W4']['participants'])->pluck('display_name')->all())->toBe(['決勝候補03', '決勝候補06']);
+
+    $loserScores = ['L1' => 180, 'L2' => 195, 'L3' => 170, 'L4' => 200];
 
     foreach ([
         'W1' => '決勝候補01', 'W2' => '決勝候補04',
@@ -754,10 +764,15 @@ test('japan open double elimination advances winners and ends without an unneces
         'W7' => '決勝候補01', 'L5' => '決勝候補08',
         'TP' => '決勝候補08', 'GF1' => '決勝候補01',
     ] as $matchCode => $winnerName) {
-        completeJapanOpenDoubleEliminationMatch($components['queens'], $matchCode, $winnerName);
+        completeJapanOpenDoubleEliminationMatch(
+            $components['queens'],
+            $matchCode,
+            $winnerName,
+            $loserScores[$matchCode] ?? 190,
+        );
     }
 
-    $state = app(JapanOpenDoubleEliminationService::class)->status($components['queens']->fresh());
+    $state = $service->status($components['queens']->fresh());
     expect($state['is_complete'])->toBeTrue()
         ->and($state['champion']['display_name'])->toBe('決勝候補01')
         ->and($state['runner_up']['display_name'])->toBe('決勝候補08')
@@ -767,8 +782,8 @@ test('japan open double elimination advances winners and ends without an unneces
             2 => '決勝候補08',
             3 => '決勝候補02',
             4 => '決勝候補07',
-            5 => '決勝候補03',
-            6 => '決勝候補04',
+            5 => '決勝候補04',
+            6 => '決勝候補03',
             7 => '決勝候補06',
             8 => '決勝候補05',
         ])
@@ -785,6 +800,7 @@ test('japan open final bracket publishes points prize title public result and pd
     $tournament = $components['masters'];
     createJapanOpenSemifinalSnapshot($tournament);
     app(JapanOpenDoubleEliminationService::class)->syncFinalists($tournament);
+    $loserScores = ['L1' => 180, 'L2' => 195, 'L3' => 170, 'L4' => 200];
 
     foreach ([
         'W1' => '決勝候補01', 'W2' => '決勝候補04',
@@ -795,7 +811,12 @@ test('japan open final bracket publishes points prize title public result and pd
         'W7' => '決勝候補01', 'L5' => '決勝候補08',
         'TP' => '決勝候補08', 'GF1' => '決勝候補01',
     ] as $matchCode => $winnerName) {
-        completeJapanOpenDoubleEliminationMatch($tournament, $matchCode, $winnerName);
+        completeJapanOpenDoubleEliminationMatch(
+            $tournament,
+            $matchCode,
+            $winnerName,
+            $loserScores[$matchCode] ?? 190,
+        );
     }
 
     foreach (range(1, 9) as $rank) {
@@ -832,7 +853,7 @@ test('japan open final bracket publishes points prize title public result and pd
         ->and($snapshot->rows)->toHaveCount(8)
         ->and($snapshot->rows->sortBy('ranking')->pluck('display_name')->values()->all())->toBe([
             '決勝候補01', '決勝候補08', '決勝候補02', '決勝候補07',
-            '決勝候補03', '決勝候補04', '決勝候補06', '決勝候補05',
+            '決勝候補04', '決勝候補03', '決勝候補06', '決勝候補05',
         ])
         ->and($snapshot->rows->firstWhere('ranking', 1)->games)->toBe(21)
         ->and($snapshot->rows->firstWhere('ranking', 1)->total_pin)->toBe(4630);
@@ -876,6 +897,7 @@ test('japan open creates and resolves a reset final only when the unbeaten playe
     $components = japanOpenComponents(setupJapanOpenForTest(2087));
     createJapanOpenSemifinalSnapshot($components['masters']);
     app(JapanOpenDoubleEliminationService::class)->syncFinalists($components['masters']);
+    $loserScores = ['L1' => 205, 'L2' => 180, 'L3' => 210, 'L4' => 175];
 
     foreach ([
         'W1' => '決勝候補01', 'W2' => '決勝候補04',
@@ -886,7 +908,12 @@ test('japan open creates and resolves a reset final only when the unbeaten playe
         'W7' => '決勝候補01', 'L5' => '決勝候補08',
         'TP' => '決勝候補08', 'GF1' => '決勝候補08',
     ] as $matchCode => $winnerName) {
-        completeJapanOpenDoubleEliminationMatch($components['masters'], $matchCode, $winnerName);
+        completeJapanOpenDoubleEliminationMatch(
+            $components['masters'],
+            $matchCode,
+            $winnerName,
+            $loserScores[$matchCode] ?? 190,
+        );
     }
 
     $beforeReset = app(JapanOpenDoubleEliminationService::class)->status($components['masters']->fresh());
@@ -899,7 +926,17 @@ test('japan open creates and resolves a reset final only when the unbeaten playe
     $afterReset = app(JapanOpenDoubleEliminationService::class)->status($components['masters']->fresh());
     expect($afterReset['is_complete'])->toBeTrue()
         ->and($afterReset['champion']['display_name'])->toBe('決勝候補01')
-        ->and($afterReset['runner_up']['display_name'])->toBe('決勝候補08');
+        ->and($afterReset['runner_up']['display_name'])->toBe('決勝候補08')
+        ->and(collect($afterReset['final_rankings'])->pluck('player.display_name', 'ranking')->all())->toBe([
+            1 => '決勝候補01',
+            2 => '決勝候補08',
+            3 => '決勝候補02',
+            4 => '決勝候補07',
+            5 => '決勝候補03',
+            6 => '決勝候補04',
+            7 => '決勝候補05',
+            8 => '決勝候補06',
+        ]);
 });
 
 test('two game aggregate tie waits for an explicit tiebreak winner', function () {

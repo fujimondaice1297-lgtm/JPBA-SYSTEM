@@ -271,10 +271,10 @@ final class JapanOpenDoubleEliminationService
                         2 => '優勝決定戦敗者',
                         3 => '第3位決定戦敗者',
                         4 => '敗者復活3回戦敗者',
-                        5 => '敗者復活2回戦第1試合敗者',
-                        6 => '敗者復活2回戦第2試合敗者',
-                        7 => '敗者復活1回戦第2試合敗者',
-                        8 => '敗者復活1回戦第1試合敗者',
+                        5 => '敗者復活2回戦敗者の当該2G合計上位',
+                        6 => '敗者復活2回戦敗者の当該2G合計下位',
+                        7 => '敗者復活1回戦敗者の当該2G合計上位',
+                        8 => '敗者復活1回戦敗者の当該2G合計下位',
                     ],
                     'reset_required' => (bool) $state['reset_required'],
                     'completed_match_count' => (int) $state['completed_match_count'],
@@ -409,6 +409,7 @@ final class JapanOpenDoubleEliminationService
                 $results[$code] = [
                     'winner' => $outcome['winner'],
                     'loser' => $outcome['loser'],
+                    'totals' => $outcome['totals'],
                 ];
             }
         }
@@ -442,15 +443,17 @@ final class JapanOpenDoubleEliminationService
     /** @return array<int,array{ranking:int,player:array<string,mixed>}> */
     private function finalRankings(array $results, array $champion, array $runnerUp): array
     {
+        $fifthAndSixth = $this->rankSameEliminationRound($results, ['L3', 'L4']);
+        $seventhAndEighth = $this->rankSameEliminationRound($results, ['L1', 'L2']);
         $rankedPlayers = [
             1 => $champion,
             2 => $runnerUp,
             3 => $results['TP']['loser'] ?? null,
             4 => $results['L5']['loser'] ?? null,
-            5 => $results['L3']['loser'] ?? null,
-            6 => $results['L4']['loser'] ?? null,
-            7 => $results['L2']['loser'] ?? null,
-            8 => $results['L1']['loser'] ?? null,
+            5 => $fifthAndSixth[0] ?? null,
+            6 => $fifthAndSixth[1] ?? null,
+            7 => $seventhAndEighth[0] ?? null,
+            8 => $seventhAndEighth[1] ?? null,
         ];
 
         if (collect($rankedPlayers)->filter()->count() !== self::FINALIST_COUNT
@@ -460,6 +463,45 @@ final class JapanOpenDoubleEliminationService
 
         return collect($rankedPlayers)
             ->map(fn (array $player, int $ranking): array => compact('ranking', 'player'))
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @param  array<int,string>  $matchCodes
+     * @return array<int,array<string,mixed>>
+     */
+    private function rankSameEliminationRound(array $results, array $matchCodes): array
+    {
+        return collect($matchCodes)
+            ->map(function (string $matchCode) use ($results): ?array {
+                $loser = $results[$matchCode]['loser'] ?? null;
+                if (! is_array($loser)) {
+                    return null;
+                }
+
+                $identity = (string) ($loser['identity'] ?? '');
+
+                return [
+                    'player' => $loser,
+                    'elimination_score' => (int) ($results[$matchCode]['totals'][$identity] ?? 0),
+                    'match_code' => $matchCode,
+                ];
+            })
+            ->filter()
+            ->sort(function (array $left, array $right): int {
+                $scoreOrder = $right['elimination_score'] <=> $left['elimination_score'];
+                if ($scoreOrder !== 0) {
+                    return $scoreOrder;
+                }
+
+                $leftSeed = (int) ($left['player']['source_ranking'] ?? PHP_INT_MAX);
+                $rightSeed = (int) ($right['player']['source_ranking'] ?? PHP_INT_MAX);
+
+                return ($leftSeed <=> $rightSeed)
+                    ?: strcmp((string) $left['match_code'], (string) $right['match_code']);
+            })
+            ->pluck('player')
             ->values()
             ->all();
     }
