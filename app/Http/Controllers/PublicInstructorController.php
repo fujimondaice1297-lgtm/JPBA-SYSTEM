@@ -95,6 +95,48 @@ class PublicInstructorController extends Controller
         ]);
     }
 
+    public function trainingArchive(Request $request): View
+    {
+        $year = $request->integer('year');
+        $keyword = trim((string) $request->query('q', ''));
+        $baseQuery = Information::query()
+            ->active()
+            ->public()
+            ->where('category', 'ｲﾝｽﾄﾗｸﾀｰ')
+            ->where(function ($query): void {
+                $query->where('title', 'like', '%講習%')
+                    ->orWhere('title', 'like', '%研修%')
+                    ->orWhere('title', 'like', '%資格%');
+            });
+
+        $availableYears = (clone $baseQuery)
+            ->selectRaw('EXTRACT(YEAR FROM published_at)::int AS archive_year')
+            ->whereNotNull('published_at')
+            ->distinct()
+            ->orderByDesc('archive_year')
+            ->pluck('archive_year');
+
+        $informations = $baseQuery
+            ->with(['files' => fn ($query) => $query
+                ->where('visibility', 'public')
+                ->orderBy('sort_order')
+                ->orderBy('id')])
+            ->when($year > 0, fn ($query) => $query->whereYear('published_at', $year))
+            ->when($keyword !== '', fn ($query) => $query->where('title', 'like', "%{$keyword}%"))
+            ->orderByDesc('published_at')
+            ->orderByDesc('id')
+            ->paginate(20)
+            ->withQueryString();
+
+        return view('public.instructors.training_archive', [
+            'publicConfig' => config('jpba_public', []),
+            'availableYears' => $availableYears,
+            'selectedYear' => $year > 0 ? $year : null,
+            'keyword' => $keyword,
+            'informations' => $informations,
+        ]);
+    }
+
     private function categoryOptions(): array
     {
         return [

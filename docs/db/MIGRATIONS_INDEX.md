@@ -166,3 +166,5 @@ Source: `database/migrations`
 - `2026_09_05_000001_create_tournament_archives.php`
 - `2026_09_05_000002_publish_official_reference_pages.php`
 - `2026_09_08_000001_add_classification_metadata_to_tournament_archives.php`
+- `2026_09_13_000001_enhance_sponsors_for_public_banners.php`
+- `2026_09_13_000002_seed_pro_wappen_public_page.php`

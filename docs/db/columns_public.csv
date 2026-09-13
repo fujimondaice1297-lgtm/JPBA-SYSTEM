@@ -1141,6 +1141,13 @@ sponsors,4,website,character varying,YES
 sponsors,5,description,text,YES
 sponsors,6,created_at,timestamp without time zone,YES
 sponsors,7,updated_at,timestamp without time zone,YES
+sponsors,8,alt_text,character varying,YES
+sponsors,9,is_published,boolean,NO
+sponsors,10,starts_at,timestamp without time zone,YES
+sponsors,11,ends_at,timestamp without time zone,YES
+sponsors,12,sort_order,smallint,NO
+sponsors,13,created_by_user_id,bigint,YES
+sponsors,14,updated_by_user_id,bigint,YES
 stage_settings,1,id,bigint,NO
 stage_settings,2,tournament_id,bigint,NO
 stage_settings,3,stage,character varying,NO

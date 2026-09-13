@@ -278,6 +278,31 @@
       margin-top: 22px;
     }
 
+    .jpba-sponsor-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 22px;
+    }
+
+    .jpba-sponsor-card {
+      min-height: 94px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 12px;
+      border: 1px solid var(--jpba-line);
+      border-radius: 6px;
+      background: #fff;
+      text-decoration: none;
+    }
+
+    .jpba-sponsor-card img {
+      max-width: 100%;
+      max-height: 72px;
+      object-fit: contain;
+    }
+
     .jpba-empty {
       padding: 16px;
       border: 1px solid var(--jpba-line);
@@ -307,6 +332,7 @@
       .jpba-tournament-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .jpba-layout { grid-template-columns: 1fr; }
       .jpba-related-grid { grid-template-columns: 1fr; }
+      .jpba-sponsor-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .jpba-info-row { grid-template-columns: 1fr; gap: 4px; }
     }
 
@@ -318,6 +344,7 @@
       .jpba-title { font-size: 1.15rem; }
       .jpba-utility { justify-content: flex-start; }
       .jpba-tournament-grid { grid-template-columns: 1fr; }
+      .jpba-sponsor-grid { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -520,6 +547,25 @@
         </div>
       </aside>
     </div>
+
+    @if(($sponsors ?? collect())->isNotEmpty())
+      <section aria-labelledby="sponsors-heading">
+        <h2 id="sponsors-heading" class="jpba-section-title mt-4">協賛</h2>
+        <div class="jpba-sponsor-grid">
+          @foreach($sponsors as $sponsor)
+            @if($sponsor->website)
+              <a class="jpba-sponsor-card" href="{{ $sponsor->website }}" target="_blank" rel="noopener sponsored">
+                <img src="{{ $sponsor->logo_url }}" alt="{{ $sponsor->alt_text ?: $sponsor->name }}">
+              </a>
+            @else
+              <div class="jpba-sponsor-card">
+                <img src="{{ $sponsor->logo_url }}" alt="{{ $sponsor->alt_text ?: $sponsor->name }}">
+              </div>
+            @endif
+          @endforeach
+        </div>
+      </section>
+    @endif
 
     <div class="jpba-related-grid">
       <section class="jpba-side-block" aria-labelledby="sns-heading">

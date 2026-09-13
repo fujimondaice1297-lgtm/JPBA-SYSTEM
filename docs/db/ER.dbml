@@ -1,5 +1,5 @@
 // Auto-generated from docs/db/data_dictionary.md
-// Generated at: 2026-09-08T19:36:42+09:00
+// Generated at: 2026-09-13T08:54:36+09:00
 
 Project JPBA_SYSTEM {
   database_type: 'PostgreSQL'
@@ -258,6 +258,10 @@ Table sessions {
 }
 
 Table sexes {
+  // columns omitted (see docs/db/columns_by_table.md)
+}
+
+Table sponsors {
   // columns omitted (see docs/db/columns_by_table.md)
 }
 
@@ -537,6 +541,8 @@ Ref: score_import_rows.score_import_batch_id > score_import_batches.id
 Ref: score_import_rows.tournament_participant_id > tournament_participants.id
 Ref: score_series_definitions.tournament_id > tournaments.id
 Ref: sessions.user_id > users.id
+Ref: sponsors.created_by_user_id > users.id
+Ref: sponsors.updated_by_user_id > users.id
 Ref: tournament_aggregate_definitions.tournament_id > tournaments.id
 Ref: tournament_aggregate_sources.aggregate_definition_id > tournament_aggregate_definitions.id
 Ref: tournament_aggregate_sources.source_tournament_id > tournaments.id

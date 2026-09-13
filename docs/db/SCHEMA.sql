@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict 12WvjA4xb8b55eE4I3D3Afs1O3eBq9wLmnhqvAsm1KT0h7pHz9FFlemzgihcdT3
+\restrict l04gNkCHfoSmobt8d1tVUiofb7qQtcCPJSljmUoG8oYeRV2NfQK9D1dfbnE5F0c
 
 -- Dumped from database version 18.2
 -- Dumped by pg_dump version 18.2
@@ -4293,7 +4293,14 @@ CREATE TABLE public.sponsors (
     website character varying(255),
     description text,
     created_at timestamp(0) without time zone,
-    updated_at timestamp(0) without time zone
+    updated_at timestamp(0) without time zone,
+    alt_text character varying(255),
+    is_published boolean DEFAULT true NOT NULL,
+    starts_at timestamp(0) without time zone,
+    ends_at timestamp(0) without time zone,
+    sort_order smallint DEFAULT '100'::smallint NOT NULL,
+    created_by_user_id bigint,
+    updated_by_user_id bigint
 );
 
 
@@ -10055,6 +10062,20 @@ CREATE INDEX sirc_row_selected_idx ON public.score_import_row_candidates USING b
 
 
 --
+-- Name: sponsors_public_period_index; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX sponsors_public_period_index ON public.sponsors USING btree (starts_at, ends_at);
+
+
+--
+-- Name: sponsors_public_sort_index; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX sponsors_public_sort_index ON public.sponsors USING btree (is_published, sort_order);
+
+
+--
 -- Name: t_entries_bowler_idx; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -11327,6 +11348,22 @@ ALTER TABLE ONLY public.score_series_definitions
 
 
 --
+-- Name: sponsors sponsors_created_by_user_id_foreign; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.sponsors
+    ADD CONSTRAINT sponsors_created_by_user_id_foreign FOREIGN KEY (created_by_user_id) REFERENCES public.users(id) ON DELETE SET NULL;
+
+
+--
+-- Name: sponsors sponsors_updated_by_user_id_foreign; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.sponsors
+    ADD CONSTRAINT sponsors_updated_by_user_id_foreign FOREIGN KEY (updated_by_user_id) REFERENCES public.users(id) ON DELETE SET NULL;
+
+
+--
 -- Name: stage_settings stage_settings_tournament_id_foreign; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -12018,4 +12055,4 @@ ALTER TABLE ONLY public.users
 -- PostgreSQL database dump complete
 --
 
-\unrestrict 12WvjA4xb8b55eE4I3D3Afs1O3eBq9wLmnhqvAsm1KT0h7pHz9FFlemzgihcdT3
+\unrestrict l04gNkCHfoSmobt8d1tVUiofb7qQtcCPJSljmUoG8oYeRV2NfQK9D1dfbnE5F0c

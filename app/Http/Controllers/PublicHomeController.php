@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Information;
+use App\Models\Sponsor;
 use App\Models\Tournament;
 use Illuminate\View\View;
 
@@ -45,6 +46,12 @@ class PublicHomeController extends Controller
         return view('public.home', [
             'tournaments' => $tournaments,
             'informations' => $informations,
+            'sponsors' => Sponsor::query()
+                ->publiclyVisible()
+                ->whereNotNull('logo_path')
+                ->orderBy('sort_order')
+                ->orderBy('name')
+                ->get(),
             'publicConfig' => config('jpba_public', []),
         ]);
     }

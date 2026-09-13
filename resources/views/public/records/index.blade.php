@@ -15,6 +15,7 @@
   @if($page=$managedPages->get('permanent-seed'))<article class="record-card"><h2>永久シードプロ</h2><p>永久シード権の条件と取得者を掲載します。</p><a class="jpba-small-button" href="{{ route('public.managed_pages.show',$page) }}">永久シード一覧</a></article>@endif
   <article class="record-card"><h2>男子 永久A級ライセンス</h2><p>取得条件と取得順による保持者一覧です。</p><a class="jpba-small-button" href="{{ route('public.records.a_class.m') }}">男子一覧</a></article>
   <article class="record-card"><h2>女子 永久A級ライセンス</h2><p>取得条件と取得順による保持者一覧です。</p><a class="jpba-small-button" href="{{ route('public.records.a_class.f') }}">女子一覧</a></article>
+  @if($page=$managedPages->get('pro-wappen'))<article class="record-card"><h2>プロワッペン</h2><p>赤枠・金枠・金ワッペンの対象と着用区分をご案内します。</p><a class="jpba-small-button" href="{{ route('public.managed_pages.show',$page) }}">ワッペン案内</a></article>@endif
   @if($page=$managedPages->get('hall-of-fame'))<article class="record-card"><h2>日本プロボウリング殿堂</h2><p>年度別の殿堂表彰者を掲載します。</p><a class="jpba-small-button" href="{{ route('public.managed_pages.show',$page) }}">殿堂入り一覧</a></article>@endif
   @if($page=$managedPages->get('official-high-records'))<article class="record-card"><h2>JPBA公認最高記録</h2><p>男女別のシリーズ最高記録と通算タイトル記録を掲載します。</p><a class="jpba-small-button" href="{{ route('public.managed_pages.show',$page) }}">最高記録一覧</a></article>@endif
 </div>

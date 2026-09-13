@@ -19,7 +19,7 @@ class OfficialRecordsController extends Controller
             'publicConfig' => config('jpba_public', []),
             'managedPages' => ManagedPublicPage::query()
                 ->published()
-                ->whereIn('slug', ['permanent-seed', 'hall-of-fame', 'official-high-records'])
+                ->whereIn('slug', ['permanent-seed', 'hall-of-fame', 'official-high-records', 'pro-wappen'])
                 ->get()
                 ->keyBy('slug'),
             'recordCounts' => $recordCounts,

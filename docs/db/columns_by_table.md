@@ -1,7 +1,7 @@
 # Columns by table (generated)
 
 - Source: `docs/db/columns_public.csv`
-- Generated: 2026-09-08 19:36:42
+- Generated: 2026-09-13 08:54:36
 
 > ⚠️ このファイルは自動生成です。手で編集しないでください。
 
@@ -1615,7 +1615,7 @@
 | 4 | created_by | character varying | YES |
 | 5 | updated_by | character varying | YES |
 
-## sponsors (7 columns)
+## sponsors (14 columns)
 
 | # | column | type | nullable |
 |---:|---|---|---|
@@ -1626,6 +1626,13 @@
 | 5 | description | text | YES |
 | 6 | created_at | timestamp without time zone | YES |
 | 7 | updated_at | timestamp without time zone | YES |
+| 8 | alt_text | character varying | YES |
+| 9 | is_published | boolean | NO |
+| 10 | starts_at | timestamp without time zone | YES |
+| 11 | ends_at | timestamp without time zone | YES |
+| 12 | sort_order | smallint | NO |
+| 13 | created_by_user_id | bigint | YES |
+| 14 | updated_by_user_id | bigint | YES |
 
 ## stage_settings (7 columns)
 

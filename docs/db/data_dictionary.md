@@ -84,6 +84,7 @@ JPBA SYSTEM Database Data Dictionary
   - [score_series_definitions](#score_series_definitions)
   - [sessions](#sessions)
   - [sexes](#sexes)
+  - [sponsors](#sponsors)
   - [stage_settings](#stage_settings)
   - [tournament_awards](#tournament_awards)
   - [tournament_entries](#tournament_entries)
@@ -3384,6 +3385,35 @@ JPBA公式ページのような「予選前半成績」「予選通算成績」�
 ### 外部キー（FK）
 - user_id -> users.id（ON DELETE CASCADE）
 - changed_by -> users.id（ON DELETE SET NULL）
+
+---
+
+## sponsors
+
+### 役割
+一般公開トップに掲載する協賛バナーを保持する。画像、リンク、公開可否、公開期間、表示順を管理し、過去画像は自動削除せず監査可能な状態を保つ。
+
+### 主キー
+- id (bigint)
+
+### 主要カラム
+- name（協賛名）
+- logo_path（public disk 内のバナー画像パス）
+- alt_text（画像の代替テキスト）
+- website（リンク先URL）
+- description（管理メモ）
+- is_published（公開可否）
+- starts_at / ends_at（公開開始・終了日時）
+- sort_order（一般公開トップの表示順）
+- created_by_user_id / updated_by_user_id（登録・更新管理者）
+
+### 外部キー（FK）
+- created_by_user_id -> users.id（ON DELETE SET NULL）
+- updated_by_user_id -> users.id（ON DELETE SET NULL）
+
+### インデックス
+- is_published + sort_order
+- starts_at + ends_at
 
 ---
 

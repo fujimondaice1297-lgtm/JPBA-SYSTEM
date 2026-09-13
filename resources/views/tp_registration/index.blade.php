@@ -45,6 +45,29 @@
   @endforeach
 </div>
 
+<section class="card shadow-sm border-0 mb-4"><div class="card-body p-4">
+  <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
+    <div><div class="small fw-bold text-primary">JPBA公式開催回・実在受講者</div><h2 class="h5 mb-1">公式修了者一覧</h2><p class="text-muted mb-0">第9回以降の公式資料から確認できた開催回と受講者です。資料に個別受講日がない回は日付を推測せず、公式サイクルの有効期間を資格判定に使用します。</p></div>
+  </div>
+  <div class="table-responsive"><table class="table align-middle mb-0">
+    <thead class="table-light"><tr><th>開催回</th><th>資料掲載日</th><th>資格判定期間</th><th>実在受講者</th><th>照合</th><th></th></tr></thead>
+    <tbody>
+      @forelse($officialLists as $officialList)
+        <tr>
+          <td><strong>{{ $officialList->title }}</strong>@if($officialList->is_current)<span class="badge text-bg-success ms-1">現行</span>@endif</td>
+          <td>{{ $officialList->source_published_at?->format('Y/m/d') }}</td>
+          <td>{{ $officialList->valid_from?->format('Y/m/d') }} ～ {{ $officialList->valid_through?->format('Y/m/d') }}</td>
+          <td>{{ number_format($officialList->entries_count) }}名</td>
+          <td>{{ number_format($officialList->matched_count) }}名</td>
+          <td class="text-nowrap"><a class="btn btn-sm btn-outline-primary" href="{{ route('tp_registration.official_lists.show', $officialList) }}">受講者を見る</a></td>
+        </tr>
+      @empty
+        <tr><td colspan="6" class="text-muted">公式修了者一覧はまだ取り込まれていません。</td></tr>
+      @endforelse
+    </tbody>
+  </table></div>
+</div></section>
+
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
   <div class="d-flex gap-2 flex-wrap">
     @foreach($availableYears as $candidateYear)

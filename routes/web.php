@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\AdminHomeController;
 use App\Http\Controllers\Admin\InformationAdminController;
 use App\Http\Controllers\Admin\ManagedPublicPageController;
 use App\Http\Controllers\Admin\PlayerAccountAdminController;
+use App\Http\Controllers\Admin\SponsorController;
 use App\Http\Controllers\Admin\TournamentArchiveController as AdminTournamentArchiveController;
 use App\Http\Controllers\AnnualScheduleController;
 use App\Http\Controllers\ApprovedBallController;
@@ -275,6 +276,8 @@ Route::get('/flash-news/{id}', [FlashNewsPublicController::class, 'show'])
     ->whereNumber('id')
     ->name('flash_news.public');
 Route::get('/instructor', [PublicInstructorController::class, 'index'])->name('public.instructors.index');
+Route::get('/instructor/training-archive', [PublicInstructorController::class, 'trainingArchive'])
+    ->name('public.instructors.training_archive');
 Route::redirect('/instructor/index.html', '/instructor', 301);
 Route::get('/protest', [PublicPageController::class, 'protest'])->name('public.protest');
 Route::get('/protest/history/{year}', [PublicProTestResultController::class, 'history'])
@@ -749,6 +752,10 @@ Route::middleware(['auth', 'role:editor,admin'])->group(function () {
         ->name('trainings.reports');
 
     Route::get('/tp-registration', [TpRegistrationController::class, 'index'])->name('tp_registration.index');
+    Route::get('/tp-registration/official-lists/{trainingOfficialList}', [TpRegistrationController::class, 'officialList'])
+        ->name('tp_registration.official_lists.show');
+    Route::get('/tp-registration/official-lists/{trainingOfficialList}/export', [TpRegistrationController::class, 'exportOfficialList'])
+        ->name('tp_registration.official_lists.export');
     Route::post('/tp-registration/sessions', [TpRegistrationController::class, 'storeSession'])->name('tp_registration.sessions.store');
     Route::post('/tp-registration/sessions/{trainingSession}/participants', [TpRegistrationController::class, 'addParticipants'])->name('tp_registration.sessions.participants.add');
     Route::put('/tp-registration/sessions/{trainingSession}/participants', [TpRegistrationController::class, 'updateParticipants'])->name('tp_registration.sessions.participants.update');
@@ -888,6 +895,12 @@ Route::prefix('admin')->name('admin.')
         Route::post('/public-pages', [ManagedPublicPageController::class, 'store'])->name('public_pages.store');
         Route::get('/public-pages/{publicPage}/edit', [ManagedPublicPageController::class, 'edit'])->name('public_pages.edit');
         Route::put('/public-pages/{publicPage}', [ManagedPublicPageController::class, 'update'])->name('public_pages.update');
+
+        Route::get('/sponsors', [SponsorController::class, 'index'])->name('sponsors.index');
+        Route::get('/sponsors/create', [SponsorController::class, 'create'])->name('sponsors.create');
+        Route::post('/sponsors', [SponsorController::class, 'store'])->name('sponsors.store');
+        Route::get('/sponsors/{sponsor}/edit', [SponsorController::class, 'edit'])->name('sponsors.edit');
+        Route::put('/sponsors/{sponsor}', [SponsorController::class, 'update'])->name('sponsors.update');
 
         Route::get('/tournament-archives', [AdminTournamentArchiveController::class, 'index'])->name('tournament_archives.index');
         Route::get('/tournament-archives/{archive}/edit', [AdminTournamentArchiveController::class, 'edit'])->name('tournament_archives.edit');

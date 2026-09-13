@@ -115,10 +115,10 @@ return [
         ],
         'feature_links' => [
             [
-                'label' => 'インストラクター講習情報',
-                'description' => '講習会・研修会など、インストラクター向けのお知らせを確認できます。',
-                'route' => 'informations.index',
-                'params' => ['category' => 'ｲﾝｽﾄﾗｸﾀｰ'],
+                'label' => '講習資料アーカイブ',
+                'description' => '資格取得講習会・専門講習会・研修会の過年度案内と保存資料を年度別に確認できます。',
+                'route' => 'public.instructors.training_archive',
+                'params' => [],
             ],
             [
                 'label' => 'ボウリングスクール開講のご案内',

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\ProBowler;
+use App\Models\TrainingOfficialList;
 use App\Models\TrainingSession;
 use App\Models\TrainingSessionParticipant;
 use App\Services\TrainingComplianceService;
@@ -48,6 +49,11 @@ class TpRegistrationController extends Controller
                 ->unique()->sortDesc()->values(),
             'sessions' => $sessions,
             'selectedSession' => $selectedSession,
+            'officialLists' => TrainingOfficialList::query()
+                ->withCount('entries')
+                ->orderByDesc('edition_number')
+                ->orderByDesc('source_published_at')
+                ->get(),
             'statusCounts' => ProBowler::query()
                 ->where('is_active', true)
                 ->where('member_class', 'player')
@@ -55,6 +61,62 @@ class TpRegistrationController extends Controller
                 ->groupBy('training_compliance_status')
                 ->pluck('total', 'training_compliance_status'),
         ]);
+    }
+
+    public function officialList(Request $request, TrainingOfficialList $trainingOfficialList): View
+    {
+        $gender = strtoupper(trim((string) $request->query('gender', '')));
+        $keyword = trim((string) $request->query('q', ''));
+        $entries = $trainingOfficialList->entries()
+            ->with('bowler')
+            ->when(in_array($gender, ['M', 'F'], true), fn ($query) => $query->where('gender', $gender))
+            ->when($keyword !== '', function ($query) use ($keyword): void {
+                $query->where(function ($query) use ($keyword): void {
+                    $query->where('source_name', 'like', "%{$keyword}%")
+                        ->orWhereHas('bowler', function ($query) use ($keyword): void {
+                            $query->where('name_kanji', 'like', "%{$keyword}%")
+                                ->orWhere('name_kana', 'like', "%{$keyword}%")
+                                ->orWhere('license_no', 'like', "%{$keyword}%");
+                        });
+                    if (ctype_digit($keyword)) {
+                        $query->orWhere('license_no_num', (int) $keyword);
+                    }
+                });
+            })
+            ->orderBy('source_order')
+            ->paginate(100)
+            ->withQueryString();
+
+        return view('tp_registration.official_list', [
+            'officialList' => $trainingOfficialList->load('training'),
+            'entries' => $entries,
+            'gender' => $gender,
+            'keyword' => $keyword,
+        ]);
+    }
+
+    public function exportOfficialList(TrainingOfficialList $trainingOfficialList): StreamedResponse
+    {
+        $trainingOfficialList->load(['entries.bowler']);
+        $filename = sprintf('tp_official_list_%02d.csv', $trainingOfficialList->edition_number);
+
+        return response()->streamDownload(function () use ($trainingOfficialList): void {
+            $stream = fopen('php://output', 'wb');
+            fwrite($stream, "\xEF\xBB\xBF");
+            fputcsv($stream, ['掲載順', '性別', 'ライセンスNo', '氏名', '照合状態']);
+            foreach ($trainingOfficialList->entries as $entry) {
+                fputcsv($stream, [
+                    $entry->source_order,
+                    $entry->gender === 'M' ? '男子' : '女子',
+                    $entry->bowler
+                        ? \App\Support\PublicLicenseNumber::format($entry->bowler->license_no)
+                        : str_pad((string) $entry->license_no_num, 4, '0', STR_PAD_LEFT),
+                    $entry->bowler?->name_kanji ?: $entry->source_name,
+                    $entry->match_status,
+                ]);
+            }
+            fclose($stream);
+        }, $filename, ['Content-Type' => 'text/csv; charset=UTF-8']);
     }
 
     public function storeSession(Request $request, TrainingComplianceService $service): RedirectResponse
@@ -106,11 +168,12 @@ class TpRegistrationController extends Controller
         $notFound = [];
         foreach ($tokens as $token) {
             $bowler = $bowlers->get($token);
-            if (!$bowler && ctype_digit($token)) {
+            if (! $bowler && ctype_digit($token)) {
                 $bowler = $bowlers->first(fn (ProBowler $candidate) => (int) $candidate->license_no_num === (int) $token);
             }
-            if (!$bowler) {
+            if (! $bowler) {
                 $notFound[] = $token;
+
                 continue;
             }
 
