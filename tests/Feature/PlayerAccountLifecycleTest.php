@@ -75,6 +75,24 @@ test('dry run and repeat issuance never create duplicate accounts', function () 
         ->and(User::query()->where('pro_bowler_id', $this->bowler->id)->count())->toBe(1);
 });
 
+test('account issuance holds every active player sharing the same profile email', function () {
+    $other = ProBowler::query()->create([
+        'license_no' => 'M00001220',
+        'name_kanji' => '重複確認選手',
+        'sex' => 1,
+        'email' => mb_strtoupper($this->bowler->email),
+        'is_active' => true,
+    ]);
+
+    $service = app(PlayerAccountService::class);
+    $first = $service->issue($this->bowler);
+    $second = $service->issue($other);
+
+    expect($first['status'])->toBe('skipped')
+        ->and($second['status'])->toBe('skipped')
+        ->and(User::query()->where('role', 'member')->count())->toBe(0);
+});
+
 test('repeat issuance synchronizes the latest profile email without touching admin accounts', function () {
     $service = app(PlayerAccountService::class);
     $account = $service->issue($this->bowler, changedBy: $this->admin->id)['user'];
@@ -173,4 +191,17 @@ test('all account issuance requires a bounded batch and supports cursor continua
     ])->assertSuccessful();
 
     expect(User::query()->where('role', 'member')->count())->toBe(4);
+});
+
+test('summary only account preview hides player names while preserving totals and cursor', function () {
+    $this->artisan('seed:users-from-bowlers', [
+        '--all' => true,
+        '--dry-run' => true,
+        '--limit' => 1,
+        '--summary-only' => true,
+    ])
+        ->doesntExpectOutputToContain('川添奨太')
+        ->expectsOutputToContain('DRY-RUN: 新規 1件 / 更新 0件 / 見送り 0件')
+        ->expectsOutputToContain('次回カーソル: --after-id=')
+        ->assertSuccessful();
 });

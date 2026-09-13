@@ -31,6 +31,15 @@ class PlayerAccountService
             return $this->skipped("{$licenseNo} は有効なメールアドレスがありません。");
         }
 
+        $duplicateProfileEmail = ProBowler::query()
+            ->where('is_active', true)
+            ->whereKeyNot($bowler->id)
+            ->whereRaw('lower(trim(email)) = ?', [$email])
+            ->exists();
+        if ($duplicateProfileEmail) {
+            return $this->skipped("{$licenseNo} のメールアドレスは別の現役選手プロフィールでも使用中です。");
+        }
+
         $account = User::query()
             ->where('pro_bowler_id', $bowler->id)
             ->orWhere('pro_bowler_license_no', $licenseNo)

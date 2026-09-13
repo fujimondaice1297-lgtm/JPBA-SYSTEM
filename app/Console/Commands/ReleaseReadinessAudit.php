@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use DateTimeImmutable;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
@@ -109,6 +110,22 @@ class ReleaseReadinessAudit extends Command
         $mailHost = (string) config('mail.mailers.smtp.host');
         $pgsql = config('database.connections.pgsql', []);
         $backupKeyPath = (string) config('jpba_backup.key_path');
+        $cutoverDate = trim((string) config('achievements.cutover_date'));
+        $requiredInfrastructureTables = [];
+        if (config('queue.default') === 'database') {
+            array_push($requiredInfrastructureTables, 'jobs', 'job_batches', 'failed_jobs');
+        }
+        if (config('cache.default') === 'database') {
+            array_push($requiredInfrastructureTables, 'cache', 'cache_locks');
+        }
+        if (config('session.driver') === 'database') {
+            $requiredInfrastructureTables[] = 'sessions';
+        }
+        $missingInfrastructureTables = collect($requiredInfrastructureTables)
+            ->unique()
+            ->reject(fn (string $table) => Schema::hasTable($table))
+            ->values()
+            ->all();
         $checks = [
             ['本番環境', app()->environment('production'), (string) app()->environment()],
             ['デバッグ無効', config('app.debug') === false, config('app.debug') ? 'APP_DEBUG=true' : 'APP_DEBUG=false'],
@@ -127,6 +144,13 @@ class ReleaseReadinessAudit extends Command
             ['非同期queue', config('queue.default') !== 'sync', (string) config('queue.default')],
             ['永続cache', config('cache.default') !== 'array', (string) config('cache.default')],
             ['永続session', config('session.driver') !== 'array', (string) config('session.driver')],
+            [
+                '非同期処理・保存テーブル',
+                $missingInfrastructureTables === [],
+                $missingInfrastructureTables === []
+                    ? count(array_unique($requiredInfrastructureTables)).'表を確認'
+                    : '不足: '.implode(', ', $missingInfrastructureTables),
+            ],
             ['PostgreSQL', config('database.default') === 'pgsql', (string) config('database.default')],
             [
                 'PostgreSQL認証情報',
@@ -147,7 +171,11 @@ class ReleaseReadinessAudit extends Command
                     ? '開発用public/hotあり（本番配置から除外）'
                     : (File::exists(public_path('build/manifest.json')) ? 'manifestあり' : 'npm run buildが必要'),
             ],
-            ['公認記録切替日', filled(config('achievements.cutover_date')), filled(config('achievements.cutover_date')) ? (string) config('achievements.cutover_date') : '公開日確定後に設定'],
+            [
+                '公認記録切替日',
+                $this->isIsoDate($cutoverDate),
+                $cutoverDate === '' ? '公開日確定後に設定' : $cutoverDate,
+            ],
         ];
 
         return array_map(function (array $check) use ($production): array {
@@ -159,6 +187,17 @@ class ReleaseReadinessAudit extends Command
 
             return $this->result($production ? 'NG' : 'WARN', $label, $detail);
         }, $checks);
+    }
+
+    private function isIsoDate(string $value): bool
+    {
+        if (! preg_match('/^\d{4}-\d{2}-\d{2}$/', $value)) {
+            return false;
+        }
+
+        $date = DateTimeImmutable::createFromFormat('!Y-m-d', $value);
+
+        return $date !== false && $date->format('Y-m-d') === $value;
     }
 
     private function pendingMigrations(): ?int

@@ -19,6 +19,7 @@ class PlayerAccountBallLinkageSourceTest extends TestCase
         $this->assertStringContainsString('{--after-id=0', $command);
         $this->assertStringContainsString('{--limit=', $command);
         $this->assertStringContainsString('{--dry-run', $command);
+        $this->assertStringContainsString('{--summary-only', $command);
         $this->assertStringContainsString('{--send-setup-link', $command);
         $this->assertStringContainsString('全選手の一括確定は禁止しています', $command);
         $this->assertStringContainsString('次回カーソル: --after-id=', $command);
@@ -30,6 +31,7 @@ class PlayerAccountBallLinkageSourceTest extends TestCase
         $this->assertStringContainsString("in_array(\$account->role, ['admin', 'editor'], true)", $service);
         $this->assertStringContainsString("'pro_bowler_id' => \$bowler->id", $service);
         $this->assertStringContainsString("'license_no' => \$licenseNo", $service);
+        $this->assertStringContainsString('別の現役選手プロフィールでも使用中', $service);
         $this->assertStringContainsString('Str::random(48)', $service);
         $this->assertStringContainsString('changeStatus(', $service);
 

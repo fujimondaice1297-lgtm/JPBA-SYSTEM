@@ -10500,3 +10500,15 @@ User::where('email','domaine-d@i.softbank.jp')->exists(); // true
 - 公式名簿に個別の正確な受講日がないため、名簿公表日を受講日として流用しない。実日付と当日名簿が得られた開催回は、既存のTP受講セッション／参加者登録から追加する。
 - `2026_09_13_000001_enhance_sponsors_for_public_banners` と `2026_09_13_000002_seed_pro_wappen_public_page` を開発DBへ適用した。`docs/db/SCHEMA.sql`、項目一覧、データ辞書、ER、migration索引を現DBへ同期した。
 - 専用4テスト35 assertions、関連7テスト106 assertions、全296テスト15,746 assertionsに成功した。Pint、Bladeキャッシュ、一般公開監査は成功し、本番準備監査はOK 13・WARN 7・NG 0だった。WARNは従来どおりローカル環境・HTTPS・SMTP等の本番直前設定である。
+
+## 2026-09-13 選手アカウント全体発行・本番直前ゲート
+
+- DB変更前に暗号化バックアップ `storage/backups/automated/backup_20260913_174041` を作成した。DB SHA-256は `0ec6945d8ae84ed0d558938fe087268234f7f055ce9e9fabd8aa0c3b1a206308`。
+- 現役1,239名のうち、有効メール941名、メール不足・不正298名、重複メール1組2名を確認した。重複メールは片方だけを先行発行せず、両名を保留する判定へ修正した。
+- 全2,286名を100名以下の23バッチでdry-run、確定、所有者結線監査の順に処理した。新規938名、既存更新1名、見送り1,347名。選手会員アカウント939名は全件選手ID結線済みで、ライセンス不一致0件だった。
+- 発行処理では初期設定メールを送信していない。再dry-runは新規0名、更新939名、見送り1,347名で冪等性を確認した。
+- `seed:users-from-bowlers` に個人名を表示しない `--summary-only` を追加した。
+- `jpba:mail-readiness` を追加し、既定では設定監査だけ、`--send --recipient=...` を明示した場合だけ1宛先へ疎通確認メールを送る。
+- `jpba:release-readiness --production` はdatabase方式のqueue・cache・sessionに必要な6テーブルと、公認記録切替日の実在日を追加監査する。
+- DBスキーマ変更と新規migrationはない。本番SMTP送信、queue worker・scheduler常駐、HTTPS、実際の切替日入力は本番設備値・公開日確定後まで保留する。
+- 全303テスト15,772 assertions、Pint、Bladeキャッシュに成功した。通常の本番準備監査はOK 14・WARN 7・NG 0で、WARNはローカル環境と本番直前の外部設定だけだった。

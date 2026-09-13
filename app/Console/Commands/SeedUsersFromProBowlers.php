@@ -16,6 +16,7 @@ class SeedUsersFromProBowlers extends Command
         {--after-id=0 : --all使用時、このpro_bowlers.idより後を対象にする}
         {--limit= : --all使用時の最大処理人数（確定時は必須、最大100名）}
         {--dry-run : DBを変更せず対象と処理内容だけ確認する}
+        {--summary-only : 個人名を表示せず件数と次回カーソルだけを表示する}
         {--send-setup-link : 発行・更新後に初回パスワード設定メールを送信する}';
 
     protected $description = '選手プロフィールから会員アカウントを段階発行し、選手IDとライセンス番号を結線する';
@@ -37,6 +38,7 @@ class SeedUsersFromProBowlers extends Command
         $limitOption = trim((string) $this->option('limit'));
         $limit = $limitOption === '' ? null : (int) $limitOption;
         $dryRun = (bool) $this->option('dry-run');
+        $summaryOnly = (bool) $this->option('summary-only');
         $sendSetupLink = (bool) $this->option('send-setup-link');
 
         if (! $all && $bowlerIds->isEmpty() && $licenses->isEmpty()) {
@@ -106,6 +108,7 @@ class SeedUsersFromProBowlers extends Command
         $bowlers->chunk(200)->each(function ($chunk) use (
             $accounts,
             $dryRun,
+            $summaryOnly,
             $sendSetupLink,
             &$created,
             &$updated,
@@ -117,7 +120,9 @@ class SeedUsersFromProBowlers extends Command
             foreach ($chunk as $bowler) {
                 $lastProcessedId = (int) $bowler->id;
                 $result = $accounts->issue($bowler, $dryRun);
-                $this->{$result['status'] === 'skipped' ? 'warn' : 'line'}($result['message']);
+                if (! $summaryOnly) {
+                    $this->{$result['status'] === 'skipped' ? 'warn' : 'line'}($result['message']);
+                }
                 match ($result['status']) {
                     'created' => $created++,
                     'updated' => $updated++,
@@ -128,7 +133,9 @@ class SeedUsersFromProBowlers extends Command
                     continue;
                 }
                 if ($dryRun) {
-                    $this->comment('送信予定: '.$bowler->email);
+                    if (! $summaryOnly) {
+                        $this->comment('送信予定: '.$bowler->email);
+                    }
 
                     continue;
                 }

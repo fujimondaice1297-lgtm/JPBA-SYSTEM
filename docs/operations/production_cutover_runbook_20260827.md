@@ -29,8 +29,10 @@
 - `SESSION_SECURE_COOKIE=true`
 - PostgreSQL、永続cache・session、非同期queue
 - `MAIL_MAILER` は `log` / `array` 以外
-- 公開日に `JPBA_ACHIEVEMENT_CUTOVER_DATE=YYYY-MM-DD`
+- 公開日に、実在する日付を `JPBA_ACHIEVEMENT_CUTOVER_DATE=YYYY-MM-DD` で設定
 - `npm run build` 済みのVite manifest
+
+database方式のqueue、cache、sessionを使う場合、監査は `jobs`、`job_batches`、`failed_jobs`、`cache`、`cache_locks`、`sessions` の不足もNGにする。設定値だけ正しくても必要テーブルがなければ公開しない。
 
 `APP_KEY` は新規環境で一度だけ生成する。既存暗号化データがある環境では変更しない。
 
@@ -61,6 +63,22 @@ php artisan schedule:list
 - OS schedulerから `php artisan schedule:run` を毎分実行する。
 - デプロイ後は `php artisan queue:restart` を実行し、新コードへ切り替える。
 - `schedule:list` でバックアップ、講習会期限通知、ボール期限処理等の登録時刻を確認する。
+
+## 4.1 SMTP疎通確認
+
+開発環境では外部送信しない。本番SMTP情報を設定して設定キャッシュを更新した後、まず設定値だけを監査する。
+
+```powershell
+php artisan jpba:mail-readiness
+```
+
+このコマンドは `--send` を付けない限り送信しない。設定監査がOKになった後、事務局が受信確認できる明示した1宛先だけへ疎通確認メールを送る。
+
+```powershell
+php artisan jpba:mail-readiness --send --recipient=受信確認用メールアドレス
+```
+
+成功表示だけで完了にせず、受信日時、送信元、迷惑メール判定を受信側で確認する。その後も選手アカウントの初期設定メールは `--all` で送らず、本人確認済みライセンス番号を指定した小単位だけへ送る。
 
 ## 5. 公開直前の正本差分
 
@@ -115,3 +133,5 @@ php artisan public:parity-audit
 - 公開日時、`JPBA_ACHIEVEMENT_CUTOVER_DATE`、旧サイト停止担当
 
 これらはコードだけでは確定できないため、公開作業日に入力・確認する。
+
+2026-09-13時点で、選手アカウント939名の発行、1宛先限定SMTP疎通コマンド、本番保存テーブル監査、切替日の形式・実在日検証までは完了している。外部送信、本番プロセス常駐、公開日の値設定は上記の実設備値が確定した日に行う。
