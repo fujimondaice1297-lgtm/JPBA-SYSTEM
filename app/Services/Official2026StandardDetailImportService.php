@@ -23,9 +23,9 @@ final class Official2026StandardDetailImportService
 
     private const FINAL_MARKER = 'jpba_official_2026_standard_final';
 
-    private const EXPECTED_EVENT_COUNT = 13;
+    private const EXPECTED_EVENT_COUNT = 15;
 
-    private const EXPECTED_SCORE_COUNT = 15978;
+    private const EXPECTED_SCORE_COUNT = 16957;
 
     public function __construct(
         private readonly Official2026TournamentResultsImportService $officialResults,
@@ -41,8 +41,7 @@ final class Official2026StandardDetailImportService
         string $adminEmail = 'yamaguchi@jpba.or.jp',
         ?string $eventKey = null,
         bool $deferIncompleteFinalPublication = false,
-    ): array
-    {
+    ): array {
         $detail = $this->dataset();
         $selectedEvents = $eventKey === null
             ? $detail['events']
@@ -274,7 +273,7 @@ final class Official2026StandardDetailImportService
 
         $payload = json_decode((string) file_get_contents($path), true, flags: JSON_THROW_ON_ERROR);
         if (count($payload['events'] ?? []) !== self::EXPECTED_EVENT_COUNT) {
-            throw new RuntimeException('Standard-tournament detail dataset must contain 13 events.');
+            throw new RuntimeException('Standard-tournament detail dataset must contain '.self::EXPECTED_EVENT_COUNT.' events.');
         }
 
         $scoreCount = array_sum(array_map(
@@ -282,7 +281,7 @@ final class Official2026StandardDetailImportService
             $payload['events'],
         ));
         if ($scoreCount !== self::EXPECTED_SCORE_COUNT) {
-            throw new RuntimeException('Standard-tournament detail dataset must contain 14,595 scores.');
+            throw new RuntimeException('Standard-tournament detail dataset must contain '.self::EXPECTED_SCORE_COUNT.' scores.');
         }
 
         return $payload;
@@ -303,6 +302,7 @@ final class Official2026StandardDetailImportService
             $hash = strtolower(trim((string) ($source['sha256'] ?? '')));
             if (preg_match('/^[a-f0-9]{64}$/', $hash) !== 1) {
                 $errors[] = "Source hash is invalid: {$source['alias']}";
+
                 continue;
             }
             if ((bool) ($source['aggregate_hash_verified'] ?? false)) {
@@ -319,6 +319,7 @@ final class Official2026StandardDetailImportService
             $stageName = trim((string) ($stage['stage'] ?? ''));
             if ($stageName === '' || ($stage['rows'] ?? []) === []) {
                 $errors[] = 'A score stage is empty.';
+
                 continue;
             }
 
@@ -359,8 +360,7 @@ final class Official2026StandardDetailImportService
         string $eventKey,
         bool $lock = false,
         ?array $aggregateEvent = null,
-    ): ?Tournament
-    {
+    ): ?Tournament {
         $publication = TournamentResultPublication::query()
             ->where('status', TournamentResultPublication::STATUS_CURRENT)
             ->whereIn('notes', [
@@ -484,8 +484,7 @@ final class Official2026StandardDetailImportService
         Tournament $tournament,
         array $event,
         array $participantLicenseMap,
-    ): array
-    {
+    ): array {
         $expected = $this->expectedScoreMap($event, $participantLicenseMap);
         $ownedStages = collect($event['stages'])
             ->pluck('stage')
@@ -772,8 +771,7 @@ final class Official2026StandardDetailImportService
         Tournament $tournament,
         array $event,
         array $participantLicenseMap,
-    ): array
-    {
+    ): array {
         $snapshots = TournamentResultSnapshot::query()
             ->with('rows')
             ->where('tournament_id', $tournament->id)

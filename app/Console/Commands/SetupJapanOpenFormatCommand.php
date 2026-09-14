@@ -16,6 +16,7 @@ final class SetupJapanOpenFormatCommand extends Command
         {--venue-name= : Venue name}
         {--venue-address= : Venue address}
         {--ball-limit=12 : Ball registration limit}
+        {--final-format=double_elimination : double_elimination or round_robin_stepladder}
         {--force : Write changes; otherwise dry-run}
         {--json : Output JSON}';
 
@@ -32,6 +33,7 @@ final class SetupJapanOpenFormatCommand extends Command
             'venue_name' => $this->option('venue-name'),
             'venue_address' => $this->option('venue-address'),
             'ball_registration_limit' => (int) $this->option('ball-limit'),
+            'final_format' => $this->option('final-format'),
         ], (bool) $this->option('force'));
 
         if ($this->option('json')) {

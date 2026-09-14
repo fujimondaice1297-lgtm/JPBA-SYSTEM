@@ -117,10 +117,13 @@ final class JapanOpenFormatService
             $edition->fill([
                 'name' => $normalized['name'],
                 'edition_no' => $normalized['edition_no'],
-                'status' => 'draft',
+                'status' => $edition->status ?: 'draft',
                 'start_date' => $normalized['start_date'],
                 'end_date' => $normalized['end_date'],
-                'notes' => '大会総合案内と男女各5競技を同一年度開催として管理する。',
+                'notes' => sprintf(
+                    '大会総合案内と男女各5競技を同一年度開催として管理する。決勝方式: %s',
+                    $normalized['final_format'],
+                ),
             ]);
             $edition->save();
 
@@ -133,7 +136,10 @@ final class JapanOpenFormatService
             foreach ($this->components() as $code => $component) {
                 $tournament = $existingComponents[$code] ?? new Tournament;
                 $wasNew = ! $tournament->exists;
-                $settings = $this->tournamentSettings($code, $component);
+                $settings = array_replace_recursive(
+                    (array) $tournament->template_snapshot,
+                    $this->tournamentSettings($code, $component, $normalized['final_format']),
+                );
 
                 $tournament->fill([
                     'tournament_series_id' => $series->id,
@@ -237,6 +243,10 @@ final class JapanOpenFormatService
             ? (int) $options['edition_no']
             : null;
         $defaultName = ($editionNo ? '第'.$editionNo.'回 ' : '').$year.'ジャパンオープンボウリング選手権';
+        $finalFormat = trim((string) ($options['final_format'] ?? 'double_elimination'));
+        if (! in_array($finalFormat, ['double_elimination', 'round_robin_stepladder'], true)) {
+            throw new InvalidArgumentException('決勝方式は double_elimination または round_robin_stepladder を指定してください。');
+        }
 
         return [
             'year' => $year,
@@ -247,6 +257,7 @@ final class JapanOpenFormatService
             'venue_name' => trim((string) ($options['venue_name'] ?? '')) ?: null,
             'venue_address' => trim((string) ($options['venue_address'] ?? '')) ?: null,
             'ball_registration_limit' => max(1, min(99, (int) ($options['ball_registration_limit'] ?? 12))),
+            'final_format' => $finalFormat,
         ];
     }
 
@@ -296,7 +307,7 @@ final class JapanOpenFormatService
     }
 
     /** @param array<string,mixed> $component */
-    private function tournamentSettings(string $code, array $component): array
+    private function tournamentSettings(string $code, array $component, string $finalFormat): array
     {
         return [
             'schema_version' => 1,
@@ -310,7 +321,7 @@ final class JapanOpenFormatService
                     ? 2
                     : ($component['competition_type'] === 'doubles' ? 1 : null),
                 'official_accounting' => in_array($code, ['masters', 'queens'], true),
-                'final_format' => in_array($code, ['masters', 'queens'], true) ? 'double_elimination' : null,
+                'final_format' => in_array($code, ['masters', 'queens'], true) ? $finalFormat : null,
                 'advancement_field_size' => match ($code) {
                     'men_all_events', 'masters' => 125,
                     'women_all_events', 'queens' => 100,

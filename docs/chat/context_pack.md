@@ -538,3 +538,13 @@
 - 一般公開INFORMATION一覧・詳細は公開共通レイアウトへ統一し、会員用INFORMATION詳細の会員レイアウトは維持した。
 - 固定19ページ＋現行DB動的7ページは全件HTTP 200、欠落ラベル0、欠落アセット0。全240テスト13,765 assertions、release-readiness NG 0。
 - 運用手順は `docs/operations/public_dynamic_page_audit_20260902.md`。
+
+## 2026-09-15 再開用メモ：⑨・⑩
+
+- 今回差分取込済み。公式結果27公開単位79snapshots、男子新人戦208（676G）、KOREAN CUP男子209（303G）。公式男性9/8・女性7/27の540名全統計値差分0。実DB公開28大会すべて完全性OK。
+- 2026JOは開催回6／競技196～206、10/31～11/3稲沢、下書き。確定名簿男子213チーム852名・女子106チーム424名を3競技へ同期済み。未発表5チーム20名・シフト・未来スコアは未入力。
+- 重要：今年の公式決勝はRR8名→ステップラダー3名＋再優勝決定戦。DEではない。final_format=round_robin_stepladderを設定し、DE操作を無効化、TournamentResultCompletenessServiceで今年の最終公開を停止中。**今年の決勝運用自体はまだ未実装、次の最優先作業。**
+- 従来DEは過年度用に維持。名簿の検証・原子性・冪等性、setup時の同期履歴保持、アーカイブの部分更新マージを追加。
+- 全314テスト17,111 assertions、公開46ページ欠落0、readiness OK14/WARN7/NG0、実DB主要7表ハッシュ不変。
+- backup_20260915_082129を検証済み、世代削除0。SMTP・本番切替・当日差分は未実施。
+- 詳細: docs/operations/legacy_delta_and_japan_open_20260915.md。無関係なget()・storage/backups/・tmp/はコミット対象外。

@@ -78,6 +78,9 @@ class JpbaApprovedEventArchiveService
             'archives' => $archives,
         ];
 
+        if (File::exists(base_path(self::SNAPSHOT_PATH))) {
+            $snapshot = (new JpbaArchiveSnapshotMerger)->merge($this->loadSnapshot(), $snapshot);
+        }
         File::ensureDirectoryExists(dirname(base_path(self::SNAPSHOT_PATH)));
         File::put(
             base_path(self::SNAPSHOT_PATH),

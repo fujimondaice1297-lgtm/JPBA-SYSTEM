@@ -11,10 +11,10 @@ test('the committed public content archive is complete and self contained', func
     $sourceKeys = $articles->pluck('source_key');
 
     expect($snapshot['schema_version'] ?? null)->toBe(1)
-        ->and($articles)->toHaveCount(978)
-        ->and($articles->where('source_type', 'legacy_information'))->toHaveCount(395)
-        ->and($articles->where('source_type', 'legacy_topic'))->toHaveCount(583)
-        ->and($sourceKeys->unique())->toHaveCount(978)
+        ->and($articles)->toHaveCount(982)
+        ->and($articles->where('source_type', 'legacy_information'))->toHaveCount(396)
+        ->and($articles->where('source_type', 'legacy_topic'))->toHaveCount(586)
+        ->and($sourceKeys->unique())->toHaveCount(982)
         ->and($articles->filter(fn (array $article): bool => trim((string) ($article['title'] ?? '')) === ''))->toBeEmpty()
         ->and($articles->filter(fn (array $article): bool => trim((string) ($article['body_html'] ?? '')) === ''))->toBeEmpty()
         ->and($articles->filter(fn (array $article): bool => str_contains((string) ($article['body_html'] ?? ''), 'jpba.or.jp')))->toBeEmpty()
@@ -29,7 +29,7 @@ test('the committed public content archive is complete and self contained', func
         ->unique()
         ->values();
 
-    expect($assetPaths)->toHaveCount(1756);
+    expect($assetPaths)->toHaveCount(1762);
 
     $invalidPaths = [];
     $missingFiles = [];

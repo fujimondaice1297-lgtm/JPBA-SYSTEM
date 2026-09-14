@@ -1,0 +1,48 @@
+{
+  "dataset": "JPBA official 2026 Japan Open confirmed team rosters",
+  "source_checked_at": "2026-09-13",
+  "official_page": "https://www.jpba.or.jp/information/tournament/tournament2026/16_JO/JapanOpen2026.html",
+  "as_of": {
+    "men_pro": "2026-09-03",
+    "women_pro": "2026-09-03",
+    "sponsor_amateur": "2026-08-07",
+    "men_amateur": "2026-09-10",
+    "women_amateur": "2026-09-04"
+  },
+  "sources": {
+    "men_pro": {
+      "file": "aa1ee09df140a98a93d3caed6be09d0f55de417d.pdf",
+      "sha256": "03ff1c057d1649f4da3bb86d137f5c6906b87e568227dcacd70e64725bf7b70e"
+    },
+    "women_pro": {
+      "file": "fab1a520b1fb074e7ef371fdce9296561aae6378.pdf",
+      "sha256": "44db66ae6572f659f80fb1b9678f3fbe3de32c116f86d9a887da1a919e7046ae"
+    },
+    "sponsor_amateur": {
+      "file": "7c05a0363bc082063ac68cf39edaef7f3c53d94f.pdf",
+      "sha256": "c15015cee9512aedaae15cca8e378162ee18ac4ad8ba07b472c20de49611adc9"
+    },
+    "men_amateur": {
+      "file": "d68aef363fca930fca6903f57946e0c60073d70e.pdf",
+      "sha256": "a2d1b440cde53f13ea424e5a5b82c584c4265973590dcd05cdb51dd570ee965f"
+    },
+    "women_amateur": {
+      "file": "dd67b82ee4c0102633fbc834c756330c783257f8.pdf",
+      "sha256": "c23dea265a4277b4236da989b62ab4b32fc8327230fba0ad5ee8e4f223a7943d"
+    }
+  },
+  "rows": {
+    "men": 852,
+    "women": 424,
+    "total": 1276,
+    "men_teams": 213,
+    "women_teams": 106
+  },
+  "pending": {
+    "men_overseas_sponsor_pro_teams": 1,
+    "men_overseas_sponsor_pro_receipt_no": 192,
+    "men_overseas_amateur_teams": 2,
+    "women_overseas_amateur_teams": 2,
+    "reason": "男子プロ受付192はスポンサー推薦①(海外)の枠だけで4名の氏名が空欄。男女各2アマチームも公式ページ上の海外推薦枠のみで氏名未掲載。合計5チーム20名は推測せず未登録。"
+  }
+}

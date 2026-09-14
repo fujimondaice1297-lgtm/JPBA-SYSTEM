@@ -2,6 +2,7 @@
 
 namespace Tests\Unit;
 
+use App\Models\Tournament;
 use App\Services\ShootoutService;
 use App\Services\StepLadderService;
 use App\Services\TournamentResultCompletenessService;
@@ -83,5 +84,21 @@ final class TournamentResultCompletenessServiceTest extends TestCase
             new ShootoutService,
             new StepLadderService,
         );
+    }
+
+    public function test_japan_open_new_final_format_cannot_publish_through_generic_flow(): void
+    {
+        $method = new ReflectionMethod(TournamentResultCompletenessService::class, 'flowErrors');
+        foreach (['masters', 'queens'] as $component) {
+            $tournament = new Tournament;
+            $tournament->result_flow_type = 'legacy_standard';
+            $tournament->template_snapshot = ['japan_open' => [
+                'component_code' => $component,
+                'final_format' => 'round_robin_stepladder',
+            ]];
+            $errors = $method->invoke($this->service(), $tournament, collect(), collect());
+            self::assertCount(1, $errors);
+            self::assertStringContainsString('最終成績は確定公開できません', $errors[0]);
+        }
     }
 }

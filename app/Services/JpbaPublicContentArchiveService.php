@@ -108,6 +108,9 @@ class JpbaPublicContentArchiveService
             'articles' => $articles,
         ];
 
+        if (File::exists(base_path(self::SNAPSHOT_PATH))) {
+            $snapshot = (new JpbaArchiveSnapshotMerger)->mergeContent($this->loadSnapshot(), $snapshot);
+        }
         File::ensureDirectoryExists(dirname(base_path(self::SNAPSHOT_PATH)));
         File::put(
             base_path(self::SNAPSHOT_PATH),

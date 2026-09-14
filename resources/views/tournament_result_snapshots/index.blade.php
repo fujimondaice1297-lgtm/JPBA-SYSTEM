@@ -138,6 +138,15 @@
         </div>
     @endif
 
+    @if(in_array(data_get($tournament->template_snapshot, 'japan_open.component_code'), ['masters', 'queens'], true)
+        && data_get($tournament->template_snapshot, 'japan_open.final_format') === 'round_robin_stepladder')
+        <div class="alert alert-warning" role="alert">
+            <strong>この年度の決勝方式：ラウンドロビン → ステップラダー（再優勝決定戦あり）</strong>
+            <div class="mt-1">8名ラウンドロビン・3名ステップラダーの運用対応待ちです。
+                従来のダブルエリミネーションは使用しません。対応と通しテストが完了するまで、最終成績の確定公開を停止しています。</div>
+        </div>
+    @endif
+
     @if($japanOpenDoubleEliminationStatus && $japanOpenDoubleEliminationStatus['supported'])
         @php
             $deStatusLabels = [

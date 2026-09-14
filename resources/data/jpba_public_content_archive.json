@@ -1,20 +1,20 @@
 {
     "schema_version": 1,
-    "generated_at": "2026-09-05T06:58:23+09:00",
+    "generated_at": "2026-09-13T18:29:33+09:00",
     "source_sites": [
         "https://www.jpba1.jp/information/",
         "https://www.jpba.or.jp/topics.html"
     ],
     "summary": {
-        "article_count": 978,
-        "information_count": 395,
-        "topic_count": 583,
+        "article_count": 982,
+        "information_count": 396,
+        "topic_count": 586,
         "source_page_counts": {
-            "information": 395,
-            "topics": 94
+            "information": 396,
+            "topics": 95
         },
-        "asset_count": 1756,
-        "asset_bytes": 458841553,
+        "asset_count": 1762,
+        "asset_bytes": 460432241,
         "missing_asset_count": 14
     },
     "missing_assets": [
@@ -78,6 +78,80 @@
     "articles": [
         {
             "source_type": "legacy_information",
+            "source_key": "legacy-information-412",
+            "source_url": "https://www.jpba1.jp/information/detail.html?id=412",
+            "title": "「第19回MKチャリティカップ」有料観覧席協賛　決勝当日（9/19）抽選開催決定！",
+            "category": "大会",
+            "published_on": "2026-09-10",
+            "body_html": "<p>「第19回MKチャリティカップ」の有料観覧席協賛について、事前の申込期間は終了となっておりましたが、TV決勝当日（9/19）抽選開催が決定いたしました。（当日販売）</p>\n<p>詳細については下記サイトをご確認ください。</p>\n<p>【決勝当日抽選受付期間：2026年9月19日(土) 午前9:00～午後12:00】</p>\n<p>→ 有料観覧席協賛募集ページ (MKチャリティカップ特設サイト)</p>\n<p>MKチャリティカップ実行委員会</p>\n<h3>関連リンク</h3>\n<ul><li><a href=\"https://www.mk-group.co.jp/charitycup/charity/seat\" target=\"_blank\" rel=\"noopener\">有料観覧席協賛募集ページ (MKチャリティカップ特設サイト)</a></li></ul>",
+            "assets": [
+                {
+                    "path": "documents/jpba/content-archive/assets/6d/6db6b97f85af63341fae7ce250d4ef083cb22e2f.jpg",
+                    "type": "image",
+                    "title": "有料観覧席協賛　当日販売.jpg"
+                },
+                {
+                    "path": "documents/jpba/content-archive/assets/bc/bc0f4ed3f4ede5793082fb1d76d1976eb08e55a3.pdf",
+                    "type": "pdf",
+                    "title": "有料観覧席協賛　当日販売.pdf"
+                }
+            ]
+        },
+        {
+            "source_type": "legacy_topic",
+            "source_key": "legacy-topic-20260907-54ffdc2a0971fc25f050-01",
+            "source_url": "https://www.jpba.or.jp/topics.html",
+            "title": "「第28回DSD三湖コリアンカップ インターナショナルボウリングトーナメント」終了",
+            "category": "大会",
+            "published_on": "2026-09-07",
+            "body_html": "<p>　</p>\n<p>「第28回DSD三湖コリアンカップ インターナショナルボウリングトーナメント」本日競技日程4日間を終了しました。</p>\n<p>JPBAからは男女34名が参戦、うち9名が予選を通過し、安里秀策(59期 No.1423 株式会社コロナワールド)、藤井信人(52期 No.1287 ITカンファー/HI-SP)が準決勝トーナメント3回戦進出を果たすも、両名とも敗退となり、最終は藤井が第9位、安里が第13位で終了しました。</p>\n<p>[パーフェクトゲーム達成者(JPBA)]</p>\n<p>安里秀策(59期 No.1423 株式会社コロナワールド)</p>\n<p>予選Dシフト10G目 / JPBA公認第1801号</p>\n<p>準決勝トーナメント2回戦 1G目 / JPBA公認第1802号</p>\n<p>[7-10スプリットメイド達成者(JPBA)]</p>\n<p>内藤広人(61期 No.1452 相模原パークレーンズ/サンブリッジ)</p>\n<p>予選Cシフト6G目38L3F / JPBA公認第217号</p>\n<p>決勝トーナメントファイナルマッチは DAVID KROL vs ARTURO QUINTERO のPBA同士の対戦となり、 DAVID KROL がチャンピオンとなりました。</p>",
+            "assets": [
+                {
+                    "path": "documents/jpba/content-archive/assets/b7/b74389f1e7e980477f57f948df1545118322b809.jpg",
+                    "type": "image",
+                    "title": "WINNER2.jpg"
+                }
+            ]
+        },
+        {
+            "source_type": "legacy_topic",
+            "source_key": "legacy-topic-20260906-0ccf8e8953f86fcb3075-01",
+            "source_url": "https://www.jpba.or.jp/topics.html",
+            "title": "安里秀策 今大会2回目の公認パーフェクトゲーム達成！",
+            "category": "大会",
+            "published_on": "2026-09-06",
+            "body_html": "<p>　</p>\n<p>「第28回DSD三湖コリアンカップ インターナショナルボウリングトーナメント」大会3日目 準決勝トーナメント2回戦1G目に安里秀策(59期 No.1423 株式会社コロナワールド)が今大会2回目、自身5回目となるJPBA公認パーフェクトゲーム、第1802号を達成しました。</p>\n<p>安里秀策(59期 No.1423 株式会社コロナワールド)</p>\n<p>達成ボール：ION PRO SOLID / STORM(ハイ・スポーツ社)</p>",
+            "assets": [
+                {
+                    "path": "documents/jpba/content-archive/assets/59/59ec06aca779abc7affa7d5fa566015e57de0d8f.jpg",
+                    "type": "image",
+                    "title": "52575.jpg"
+                }
+            ]
+        },
+        {
+            "source_type": "legacy_topic",
+            "source_key": "legacy-topic-20260905-332c12feca2657226dcf-01",
+            "source_url": "https://www.jpba.or.jp/topics.html",
+            "title": "内藤広人 公認7-10スプリットメイド達成！",
+            "category": "大会",
+            "published_on": "2026-09-05",
+            "body_html": "<p>　</p>\n<p>続いて 予選Cシフト6G目38L3Fに内藤広人(61期 No.1452 相模原パークレーンズ/サンブリッジ)が自身初となるJPBA公認7-10スプリットメイド、第217号を達成しました。</p>\n<p>内藤広人(61期 No.1452 相模原パークレーンズ/サンブリッジ)</p>\n<p>安里秀策 公認パーフェクトゲーム達成！　</p>\n<p>「第28回DSD三湖コリアンカップ インターナショナルボウリングトーナメント」大会2日目 予選Dシフト10G目に安里秀策(59期 No.1423 株式会社コロナワールド)が自身4回目となるJPBA公認パーフェクトゲーム、第1801号を達成しました。</p>\n<p>安里秀策(59期 No.1423 株式会社コロナワールド)</p>\n<p>達成ボール：ION PRO SOLID / STORM(ハイ・スポーツ社)</p>",
+            "assets": [
+                {
+                    "path": "documents/jpba/content-archive/assets/dc/dc8a7bbdaad50933860afd627af4db3a65b49981.jpg",
+                    "type": "image",
+                    "title": "7-10_Naito.jpg"
+                },
+                {
+                    "path": "documents/jpba/content-archive/assets/32/320ebaf3dae0377f76a634db2cf08e12e13645f8.jpg",
+                    "type": "image",
+                    "title": "300_Asato.jpg"
+                }
+            ]
+        },
+        {
+            "source_type": "legacy_information",
             "source_key": "legacy-information-411",
             "source_url": "https://www.jpba1.jp/information/detail.html?id=411",
             "title": "「第19回MKチャリティカップ」一般入場に関して",
@@ -89,7 +163,7 @@
         {
             "source_type": "legacy_topic",
             "source_key": "legacy-topic-20260830-b593984694cad7f8d788-01",
-            "source_url": "https://www.jpba.or.jp/topics.html",
+            "source_url": "https://www.jpba.or.jp/topics/2026/08.html",
             "title": "瀬戸 翔選手 大会第1号パーフェクトゲーム達成！",
             "category": "大会",
             "published_on": "2026-08-30",
@@ -105,7 +179,7 @@
         {
             "source_type": "legacy_topic",
             "source_key": "legacy-topic-20260830-03565d2ff027e656c2b1-01",
-            "source_url": "https://www.jpba.or.jp/topics.html",
+            "source_url": "https://www.jpba.or.jp/topics/2026/08.html",
             "title": "「コロナワールドカップ 2026プロボウリング男子新人戦」終了",
             "category": "大会",
             "published_on": "2026-08-30",

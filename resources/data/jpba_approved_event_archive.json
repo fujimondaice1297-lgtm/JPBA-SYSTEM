@@ -1,6 +1,6 @@
 {
     "schema_version": 1,
-    "generated_at": "2026-09-08T19:10:37+09:00",
+    "generated_at": "2026-09-13T18:29:56+09:00",
     "source_site": "https://www.jpba.or.jp/information/tournament/Approval.html",
     "year_from": 2015,
     "year_to": 2026,
@@ -9717,5 +9717,17 @@
             "source_key": "legacy-approved-event-722105afd3413b4019ecc80213105e49",
             "source_url": "https://www.jpba.or.jp/information/tournament/tournament2026/event_result.html#20260829"
         }
-    ]
+    ],
+    "last_refresh": {
+        "year_from": 2026,
+        "year_to": 2026,
+        "summary": {
+            "year_page_count": 1,
+            "archive_count": 13,
+            "page_failure_count": 0,
+            "asset_count": 30,
+            "asset_bytes": 21336788,
+            "asset_failure_count": 0
+        }
+    }
 }

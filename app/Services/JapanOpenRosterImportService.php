@@ -16,23 +16,6 @@ final class JapanOpenRosterImportService
         $rows = $this->parse($teamTournament, $text);
         $grouped = collect($rows)->groupBy('team_code');
 
-        foreach ($grouped as $teamCode => $members) {
-            if ($members->count() !== 4 || $members->pluck('member_order')->unique()->count() !== 4) {
-                throw new InvalidArgumentException("{$teamCode} は1～4番の4名をそろえてください。");
-            }
-            if ($members->where('is_professional', true)->count() > 2) {
-                throw new InvalidArgumentException("{$teamCode} はプロ2名までです。");
-            }
-            foreach ([[1, 2], [3, 4]] as $pairOrders) {
-                $proCount = $members->whereIn('member_order', $pairOrders)->where('is_professional', true)->count();
-                if ($proCount > 1) {
-                    throw new InvalidArgumentException(
-                        "{$teamCode} のダブルス組（{$pairOrders[0]}・{$pairOrders[1]}番）はプロ1名までです。"
-                    );
-                }
-            }
-        }
-
         $components = $this->editionComponents($teamTournament);
         $genderPrefix = $teamTournament->gender === 'F' ? 'women' : 'men';
         foreach ([$genderPrefix.'_team', $genderPrefix.'_doubles', $genderPrefix.'_singles'] as $required) {
@@ -101,6 +84,7 @@ final class JapanOpenRosterImportService
     /** @return array<int,array<string,mixed>> */
     public function parse(Tournament $teamTournament, string $text): array
     {
+        $this->assertTeamComponent($teamTournament);
         $rows = [];
         $errors = [];
         $lines = preg_split('/\R/u', trim($text)) ?: [];
@@ -188,6 +172,24 @@ final class JapanOpenRosterImportService
             throw new InvalidArgumentException('同じプロが複数行に登録されています: '.$names);
         }
 
+        // Dry-run and actual imports must apply the same team and doubles rules.
+        foreach (collect($rows)->groupBy('team_code') as $teamCode => $members) {
+            if ($members->count() !== 4 || $members->pluck('member_order')->unique()->count() !== 4) {
+                throw new InvalidArgumentException("{$teamCode} は1～4番の4名をそろえてください。");
+            }
+            if ($members->pluck('team_name')->unique()->count() !== 1 || $members->pluck('shift')->unique()->count() !== 1) {
+                throw new InvalidArgumentException("{$teamCode} のチーム名・シフトを4名で統一してください。");
+            }
+            if ($members->where('is_professional', true)->count() > 2) {
+                throw new InvalidArgumentException("{$teamCode} はプロ2名までです。");
+            }
+            foreach ([[1, 2], [3, 4]] as $pairOrders) {
+                if ($members->whereIn('member_order', $pairOrders)->where('is_professional', true)->count() > 1) {
+                    throw new InvalidArgumentException("{$teamCode} のダブルス組（{$pairOrders[0]}・{$pairOrders[1]}番）はプロ1名までです。");
+                }
+            }
+        }
+
         return $rows;
     }
 
@@ -214,6 +216,9 @@ final class JapanOpenRosterImportService
     private function resolveProBowler(Tournament $tournament, string $license): ?ProBowler
     {
         $normalized = strtoupper(preg_replace('/\s+/u', '', $license) ?? $license);
+        if (preg_match('/^[MF]/', $normalized) && $normalized[0] !== $tournament->gender) {
+            return null;
+        }
         if (preg_match('/^[MF]\d{8}$/', $normalized)) {
             return ProBowler::query()->where('license_no', $normalized)->first();
         }

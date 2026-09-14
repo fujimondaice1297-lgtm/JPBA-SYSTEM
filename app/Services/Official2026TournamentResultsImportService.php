@@ -19,9 +19,9 @@ final class Official2026TournamentResultsImportService
 {
     private const DATASET_PATH = 'data/jpba_official_2026_results.json';
 
-    private const EXPECTED_EVENT_COUNT = 25;
+    private const EXPECTED_EVENT_COUNT = 27;
 
-    private const EXPECTED_SNAPSHOT_COUNT = 77;
+    private const EXPECTED_SNAPSHOT_COUNT = 79;
 
     private const IMPORT_MARKER = 'jpba_official_2026_results';
 
@@ -81,8 +81,7 @@ final class Official2026TournamentResultsImportService
         bool $write = false,
         string $adminEmail = 'yamaguchi@jpba.or.jp',
         bool $deferIncompletePublications = false,
-    ): array
-    {
+    ): array {
         $payload = $this->dataset();
         $admin = User::query()->where('email', $adminEmail)->first();
         $bowlerResolution = $this->resolveBowlers($payload);
@@ -167,6 +166,7 @@ final class Official2026TournamentResultsImportService
                 $tournament = $this->persistTournament(
                     $event,
                     $venueResolution['map'],
+                    (string) $payload['source_checked_at'],
                 );
                 $preserved = $this->shouldPreserveExistingResults($event, $tournament);
 
@@ -185,6 +185,7 @@ final class Official2026TournamentResultsImportService
                         $event,
                         $bowlerResolution['map'],
                         (int) $admin->id,
+                        (string) $payload['source_checked_at'],
                     );
                 } else {
                     $finalSnapshot = TournamentResultSnapshot::query()
@@ -285,7 +286,7 @@ final class Official2026TournamentResultsImportService
             }
         }
         if (count($payload['events']) !== self::EXPECTED_EVENT_COUNT) {
-            throw new RuntimeException('Official result dataset must contain 25 completed event publications.');
+            throw new RuntimeException('Official result dataset must contain '.self::EXPECTED_EVENT_COUNT.' completed event publications.');
         }
 
         $snapshotCount = 0;
@@ -306,7 +307,7 @@ final class Official2026TournamentResultsImportService
             }
         }
         if ($snapshotCount !== self::EXPECTED_SNAPSHOT_COUNT) {
-            throw new RuntimeException('Official result dataset must contain 77 snapshots.');
+            throw new RuntimeException('Official result dataset must contain '.self::EXPECTED_SNAPSHOT_COUNT.' snapshots.');
         }
 
         $rankingCounts = [];
@@ -421,6 +422,8 @@ final class Official2026TournamentResultsImportService
                     'counts_for_points' => $isSeasonTrial || (bool) ($event['tournament']['counts_for_official_points'] ?? false),
                     'counts_for_prize' => $isSeasonTrial || (bool) ($event['tournament']['counts_for_prize'] ?? false),
                     'semifinal_qualifier_count' => $this->semifinalCount($event),
+                    'use_snapshot_points' => (bool) ($event['use_snapshot_points'] ?? false),
+                    'use_snapshot_prize' => (bool) ($event['use_snapshot_prize'] ?? false),
                 ],
             );
 
@@ -536,7 +539,7 @@ final class Official2026TournamentResultsImportService
     }
 
     /** @param array<string,mixed> $event */
-    private function persistTournament(array $event, array $venueMap): Tournament
+    private function persistTournament(array $event, array $venueMap, string $sourceCheckedAt): Tournament
     {
         $existing = $this->findTournament($event);
         if (! isset($event['tournament'])) {
@@ -581,7 +584,7 @@ final class Official2026TournamentResultsImportService
             '_official_import' => self::IMPORT_MARKER,
             'event_key' => $event['key'],
             'source_url' => $source['source_url'],
-            'source_checked_at' => '2026-07-22',
+            'source_checked_at' => $sourceCheckedAt,
         ];
         $existingTemplateSnapshot = is_array($existing?->template_snapshot)
             ? $existing->template_snapshot
@@ -845,7 +848,7 @@ final class Official2026TournamentResultsImportService
     }
 
     /** @param array<string,mixed> $event */
-    private function insertSnapshots(Tournament $tournament, array $event, array $bowlerMap, int $adminId): TournamentResultSnapshot
+    private function insertSnapshots(Tournament $tournament, array $event, array $bowlerMap, int $adminId, string $sourceCheckedAt): TournamentResultSnapshot
     {
         $finalSnapshot = null;
         $eventGender = $this->eventGender($event);
@@ -864,7 +867,8 @@ final class Official2026TournamentResultsImportService
                 'calculation_definition' => [
                     'source' => self::IMPORT_MARKER,
                     'event_key' => $event['key'],
-                    'source_checked_at' => '2026-07-22',
+                    'source_checked_at' => $sourceCheckedAt,
+                    'source_url' => $event['tournament']['source_url'] ?? null,
                 ],
                 'reflected_at' => now(),
                 'reflected_by' => $adminId,

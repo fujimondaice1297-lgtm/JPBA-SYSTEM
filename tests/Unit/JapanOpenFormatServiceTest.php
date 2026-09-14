@@ -1,5 +1,7 @@
 <?php
 
+use App\Models\Tournament;
+use App\Services\JapanOpenDoubleEliminationService;
 use App\Services\JapanOpenFormatService;
 
 test('japan open blueprint keeps the reusable official competition structure', function () {
@@ -38,4 +40,26 @@ test('japan open blueprint keeps the reusable official competition structure', f
             ->and($components[$code]['counts_for_prize'])->toBeTrue()
             ->and($components[$code]['counts_for_title'])->toBeTrue();
     }
+});
+
+test('double elimination is enabled only for an edition configured to use it', function () {
+    $service = new JapanOpenDoubleEliminationService;
+    $tournament = new Tournament;
+    $tournament->template_snapshot = [
+        'japan_open' => [
+            'component_code' => 'masters',
+            'final_format' => 'double_elimination',
+        ],
+    ];
+
+    expect($service->supports($tournament))->toBeTrue();
+
+    $tournament->template_snapshot = [
+        'japan_open' => [
+            'component_code' => 'masters',
+            'final_format' => 'round_robin_stepladder',
+        ],
+    ];
+
+    expect($service->supports($tournament))->toBeFalse();
 });

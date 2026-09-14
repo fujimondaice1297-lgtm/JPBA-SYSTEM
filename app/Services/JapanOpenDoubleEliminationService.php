@@ -42,11 +42,12 @@ final class JapanOpenDoubleEliminationService
 
     public function supports(Tournament $tournament): bool
     {
-        return in_array(
-            (string) data_get($tournament->template_snapshot, 'japan_open.component_code'),
-            ['masters', 'queens'],
-            true,
-        );
+        return data_get($tournament->template_snapshot, 'japan_open.final_format') === 'double_elimination'
+            && in_array(
+                (string) data_get($tournament->template_snapshot, 'japan_open.component_code'),
+                ['masters', 'queens'],
+                true,
+            );
     }
 
     /** @return array<string,mixed> */

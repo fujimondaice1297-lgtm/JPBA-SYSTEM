@@ -1,7 +1,7 @@
 {
   "dataset": "JPBA official 2026 standard tournament per-game scores",
-  "source_checked_at": "2026-07-28",
-  "event_count": 13,
+  "source_checked_at": "2026-09-14",
+  "event_count": 15,
   "events": [
     {
       "key": "antol_2026",
@@ -86825,6 +86825,6136 @@
       ],
       "expected_score_count": 1383,
       "expected_player_count": 100
+    },
+    {
+      "key": "rookies_m_2026",
+      "tournament": {
+        "name": "コロナワールドカップ2026プロボウリング男子新人戦",
+        "gender": "M",
+        "start_date": "2026-08-29",
+        "end_date": "2026-08-30",
+        "year": 2026,
+        "venue_name": "コロナキャットボウル中川店",
+        "competition_type": "singles",
+        "official_type": "official",
+        "counts_for_official_points": false,
+        "counts_for_average": true,
+        "counts_for_prize": true,
+        "title_scope": "official",
+        "title_category": "rookie",
+        "source_url": "https://www.jpba.or.jp/information/tournament/tournament2026/11_RookiesM/RookiesM_2026.html"
+      },
+      "sources": [
+        {
+          "alias": "rookies_m_score_html",
+          "filename": "RookiesM_2026_GameScore.html",
+          "sha256": "f8fc55c56719322f72c1530e350aeef8828c80c22c608e1323081cbb2293ea84",
+          "aggregate_hash_verified": true,
+          "url": "https://www.jpba.or.jp/information/tournament/tournament2026/11_RookiesM/Result/RookiesM_2026_GameScore.html"
+        },
+        {
+          "alias": "rookies_m_round_robin_image",
+          "filename": "RR_8G_RookiesM_PRO.png",
+          "sha256": "b04bc8de52ea41c084ed3a0b79a4b7af920bd639944c82496bcc249b634d778f",
+          "aggregate_hash_verified": true,
+          "url": "https://www.jpba.or.jp/information/tournament/tournament2026/11_RookiesM/img/RR_8G_RookiesM_PRO.png"
+        },
+        {
+          "alias": "rookies_m_final_pdf",
+          "filename": "RookiesM_2026_final.pdf",
+          "sha256": "b17fb4666728b46abb968d424b6b4f44fd7f08bfa5d8b4741cd6f3abc4d06559",
+          "aggregate_hash_verified": true,
+          "url": "https://www.jpba.or.jp/information/tournament/tournament2026/11_RookiesM/Result/FinalResult.pdf"
+        },
+        {
+          "alias": "rookies_m_ab8g.pdf",
+          "filename": "RookiesM_AB8G.pdf",
+          "sha256": "0cf846262bdc91297a005002fb11a25d8c111b8949f3b861c2f55e2965af7383",
+          "aggregate_hash_verified": true,
+          "url": "https://www.jpba.or.jp/information/tournament/tournament2026/11_RookiesM/Result/EliminationsAB_8G.pdf"
+        }
+      ],
+      "stages": [
+        {
+          "stage": "予選",
+          "rows": [
+            {
+              "identity": "P:M00001451",
+              "license_no": "M00001451",
+              "display_name": "小野 在由",
+              "is_amateur": false,
+              "ranking": 1,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 279
+                },
+                {
+                  "game_number": 2,
+                  "score": 189
+                },
+                {
+                  "game_number": 3,
+                  "score": 244
+                },
+                {
+                  "game_number": 4,
+                  "score": 222
+                },
+                {
+                  "game_number": 5,
+                  "score": 202
+                },
+                {
+                  "game_number": 6,
+                  "score": 279
+                },
+                {
+                  "game_number": 7,
+                  "score": 279
+                },
+                {
+                  "game_number": 8,
+                  "score": 225
+                }
+              ],
+              "source_aliases": [
+                "rookies_m_score_html",
+                "rookies_m_ab8g.pdf"
+              ],
+              "stage_total_pin": 1919,
+              "games_count": 8
+            },
+            {
+              "identity": "P:M00001459",
+              "license_no": "M00001459",
+              "display_name": "山本 義達",
+              "is_amateur": false,
+              "ranking": 3,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 276
+                },
+                {
+                  "game_number": 2,
+                  "score": 204
+                },
+                {
+                  "game_number": 3,
+                  "score": 230
+                },
+                {
+                  "game_number": 4,
+                  "score": 225
+                },
+                {
+                  "game_number": 5,
+                  "score": 201
+                },
+                {
+                  "game_number": 6,
+                  "score": 179
+                },
+                {
+                  "game_number": 7,
+                  "score": 212
+                },
+                {
+                  "game_number": 8,
+                  "score": 268
+                }
+              ],
+              "source_aliases": [
+                "rookies_m_score_html",
+                "rookies_m_ab8g.pdf"
+              ],
+              "stage_total_pin": 1795,
+              "games_count": 8
+            },
+            {
+              "identity": "P:M00001453",
+              "license_no": "M00001453",
+              "display_name": "石田 智輝",
+              "is_amateur": false,
+              "ranking": 4,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 219
+                },
+                {
+                  "game_number": 2,
+                  "score": 225
+                },
+                {
+                  "game_number": 3,
+                  "score": 233
+                },
+                {
+                  "game_number": 4,
+                  "score": 233
+                },
+                {
+                  "game_number": 5,
+                  "score": 262
+                },
+                {
+                  "game_number": 6,
+                  "score": 212
+                },
+                {
+                  "game_number": 7,
+                  "score": 187
+                },
+                {
+                  "game_number": 8,
+                  "score": 223
+                }
+              ],
+              "source_aliases": [
+                "rookies_m_score_html",
+                "rookies_m_ab8g.pdf"
+              ],
+              "stage_total_pin": 1794,
+              "games_count": 8
+            },
+            {
+              "identity": "P:M00001490",
+              "license_no": "M00001490",
+              "display_name": "栗原 翔",
+              "is_amateur": false,
+              "ranking": 5,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 203
+                },
+                {
+                  "game_number": 2,
+                  "score": 266
+                },
+                {
+                  "game_number": 3,
+                  "score": 224
+                },
+                {
+                  "game_number": 4,
+                  "score": 192
+                },
+                {
+                  "game_number": 5,
+                  "score": 258
+                },
+                {
+                  "game_number": 6,
+                  "score": 186
+                },
+                {
+                  "game_number": 7,
+                  "score": 214
+                },
+                {
+                  "game_number": 8,
+                  "score": 234
+                }
+              ],
+              "source_aliases": [
+                "rookies_m_score_html",
+                "rookies_m_ab8g.pdf"
+              ],
+              "stage_total_pin": 1777,
+              "games_count": 8
+            },
+            {
+              "identity": "P:M00001443",
+              "license_no": "M00001443",
+              "display_name": "藤永 北斗",
+              "is_amateur": false,
+              "ranking": 8,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 227
+                },
+                {
+                  "game_number": 2,
+                  "score": 222
+                },
+                {
+                  "game_number": 3,
+                  "score": 243
+                },
+                {
+                  "game_number": 4,
+                  "score": 195
+                },
+                {
+                  "game_number": 5,
+                  "score": 223
+                },
+                {
+                  "game_number": 6,
+                  "score": 247
+                },
+                {
+                  "game_number": 7,
+                  "score": 225
+                },
+                {
+                  "game_number": 8,
+                  "score": 192
+                }
+              ],
+              "source_aliases": [
+                "rookies_m_score_html",
+                "rookies_m_ab8g.pdf"
+              ],
+              "stage_total_pin": 1774,
+              "games_count": 8
+            },
+            {
+              "identity": "P:M00001505",
+              "license_no": "M00001505",
+              "display_name": "久冨木 広",
+              "is_amateur": false,
+              "ranking": 13,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 212
+                },
+                {
+                  "game_number": 2,
+                  "score": 220
+                },
+                {
+                  "game_number": 3,
+                  "score": 244
+                },
+                {
+                  "game_number": 4,
+                  "score": 235
+                },
+                {
+                  "game_number": 5,
+                  "score": 204
+                },
+                {
+                  "game_number": 6,
+                  "score": 217
+                },
+                {
+                  "game_number": 7,
+                  "score": 215
+                },
+                {
+                  "game_number": 8,
+                  "score": 202
+                }
+              ],
+              "source_aliases": [
+                "rookies_m_score_html",
+                "rookies_m_ab8g.pdf"
+              ],
+              "stage_total_pin": 1749,
+              "games_count": 8
+            },
+            {
+              "identity": "P:M00001445",
+              "license_no": "M00001445",
+              "display_name": "宮澤 拓哉",
+              "is_amateur": false,
+              "ranking": 14,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 234
+                },
+                {
+                  "game_number": 2,
+                  "score": 150
+                },
+                {
+                  "game_number": 3,
+                  "score": 221
+                },
+                {
+                  "game_number": 4,
+                  "score": 240
+                },
+                {
+                  "game_number": 5,
+                  "score": 156
+                },
+                {
+                  "game_number": 6,
+                  "score": 258
+                },
+                {
+                  "game_number": 7,
+                  "score": 213
+                },
+                {
+                  "game_number": 8,
+                  "score": 265
+                }
+              ],
+              "source_aliases": [
+                "rookies_m_score_html",
+                "rookies_m_ab8g.pdf"
+              ],
+              "stage_total_pin": 1737,
+              "games_count": 8
+            },
+            {
+              "identity": "P:M00001503",
+              "license_no": "M00001503",
+              "display_name": "山下 秀人",
+              "is_amateur": false,
+              "ranking": 16,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 235
+                },
+                {
+                  "game_number": 2,
+                  "score": 177
+                },
+                {
+                  "game_number": 3,
+                  "score": 233
+                },
+                {
+                  "game_number": 4,
+                  "score": 216
+                },
+                {
+                  "game_number": 5,
+                  "score": 236
+                },
+                {
+                  "game_number": 6,
+                  "score": 204
+                },
+                {
+                  "game_number": 7,
+                  "score": 197
+                },
+                {
+                  "game_number": 8,
+                  "score": 236
+                }
+              ],
+              "source_aliases": [
+                "rookies_m_score_html",
+                "rookies_m_ab8g.pdf"
+              ],
+              "stage_total_pin": 1734,
+              "games_count": 8
+            },
+            {
+              "identity": "P:M00001477",
+              "license_no": "M00001477",
+              "display_name": "西山 翔悟",
+              "is_amateur": false,
+              "ranking": 20,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 195
+                },
+                {
+                  "game_number": 2,
+                  "score": 212
+                },
+                {
+                  "game_number": 3,
+                  "score": 205
+                },
+                {
+                  "game_number": 4,
+                  "score": 256
+                },
+                {
+                  "game_number": 5,
+                  "score": 234
+                },
+                {
+                  "game_number": 6,
+                  "score": 202
+                },
+                {
+                  "game_number": 7,
+                  "score": 213
+                },
+                {
+                  "game_number": 8,
+                  "score": 194
+                }
+              ],
+              "source_aliases": [
+                "rookies_m_score_html",
+                "rookies_m_ab8g.pdf"
+              ],
+              "stage_total_pin": 1711,
+              "games_count": 8
+            },
+            {
+              "identity": "P:M00001487",
+              "license_no": "M00001487",
+              "display_name": "御手洗彰彦",
+              "is_amateur": false,
+              "ranking": 22,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 203
+                },
+                {
+                  "game_number": 2,
+                  "score": 214
+                },
+                {
+                  "game_number": 3,
+                  "score": 214
+                },
+                {
+                  "game_number": 4,
+                  "score": 208
+                },
+                {
+                  "game_number": 5,
+                  "score": 203
+                },
+                {
+                  "game_number": 6,
+                  "score": 234
+                },
+                {
+                  "game_number": 7,
+                  "score": 203
+                },
+                {
+                  "game_number": 8,
+                  "score": 215
+                }
+              ],
+              "source_aliases": [
+                "rookies_m_score_html",
+                "rookies_m_ab8g.pdf"
+              ],
+              "stage_total_pin": 1694,
+              "games_count": 8
+            },
+            {
+              "identity": "P:M00001461",
+              "license_no": "M00001461",
+              "display_name": "鶴見 亮剛",
+              "is_amateur": false,
+              "ranking": 23,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 248
+                },
+                {
+                  "game_number": 2,
+                  "score": 150
+                },
+                {
+                  "game_number": 3,
+                  "score": 202
+                },
+                {
+                  "game_number": 4,
+                  "score": 237
+                },
+                {
+                  "game_number": 5,
+                  "score": 192
+                },
+                {
+                  "game_number": 6,
+                  "score": 216
+                },
+                {
+                  "game_number": 7,
+                  "score": 227
+                },
+                {
+                  "game_number": 8,
+                  "score": 210
+                }
+              ],
+              "source_aliases": [
+                "rookies_m_score_html",
+                "rookies_m_ab8g.pdf"
+              ],
+              "stage_total_pin": 1682,
+              "games_count": 8
+            },
+            {
+              "identity": "P:M00001492",
+              "license_no": "M00001492",
+              "display_name": "横地 優輝",
+              "is_amateur": false,
+              "ranking": 24,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 200
+                },
+                {
+                  "game_number": 2,
+                  "score": 205
+                },
+                {
+                  "game_number": 3,
+                  "score": 166
+                },
+                {
+                  "game_number": 4,
+                  "score": 206
+                },
+                {
+                  "game_number": 5,
+                  "score": 257
+                },
+                {
+                  "game_number": 6,
+                  "score": 246
+                },
+                {
+                  "game_number": 7,
+                  "score": 186
+                },
+                {
+                  "game_number": 8,
+                  "score": 213
+                }
+              ],
+              "source_aliases": [
+                "rookies_m_score_html",
+                "rookies_m_ab8g.pdf"
+              ],
+              "stage_total_pin": 1679,
+              "games_count": 8
+            },
+            {
+              "identity": "P:M00001463",
+              "license_no": "M00001463",
+              "display_name": "藤 博文",
+              "is_amateur": false,
+              "ranking": 32,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 210
+                },
+                {
+                  "game_number": 2,
+                  "score": 196
+                },
+                {
+                  "game_number": 3,
+                  "score": 212
+                },
+                {
+                  "game_number": 4,
+                  "score": 227
+                },
+                {
+                  "game_number": 5,
+                  "score": 226
+                },
+                {
+                  "game_number": 6,
+                  "score": 205
+                },
+                {
+                  "game_number": 7,
+                  "score": 176
+                },
+                {
+                  "game_number": 8,
+                  "score": 216
+                }
+              ],
+              "source_aliases": [
+                "rookies_m_score_html",
+                "rookies_m_ab8g.pdf"
+              ],
+              "stage_total_pin": 1668,
+              "games_count": 8
+            },
+            {
+              "identity": "P:M00001455",
+              "license_no": "M00001455",
+              "display_name": "村上 裕一",
+              "is_amateur": false,
+              "ranking": 33,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 143
+                },
+                {
+                  "game_number": 2,
+                  "score": 243
+                },
+                {
+                  "game_number": 3,
+                  "score": 193
+                },
+                {
+                  "game_number": 4,
+                  "score": 234
+                },
+                {
+                  "game_number": 5,
+                  "score": 201
+                },
+                {
+                  "game_number": 6,
+                  "score": 226
+                },
+                {
+                  "game_number": 7,
+                  "score": 213
+                },
+                {
+                  "game_number": 8,
+                  "score": 207
+                }
+              ],
+              "source_aliases": [
+                "rookies_m_score_html",
+                "rookies_m_ab8g.pdf"
+              ],
+              "stage_total_pin": 1660,
+              "games_count": 8
+            },
+            {
+              "identity": "P:M00001488",
+              "license_no": "M00001488",
+              "display_name": "渡邊 元造",
+              "is_amateur": false,
+              "ranking": 39,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 197
+                },
+                {
+                  "game_number": 2,
+                  "score": 182
+                },
+                {
+                  "game_number": 3,
+                  "score": 247
+                },
+                {
+                  "game_number": 4,
+                  "score": 174
+                },
+                {
+                  "game_number": 5,
+                  "score": 181
+                },
+                {
+                  "game_number": 6,
+                  "score": 243
+                },
+                {
+                  "game_number": 7,
+                  "score": 224
+                },
+                {
+                  "game_number": 8,
+                  "score": 181
+                }
+              ],
+              "source_aliases": [
+                "rookies_m_score_html",
+                "rookies_m_ab8g.pdf"
+              ],
+              "stage_total_pin": 1629,
+              "games_count": 8
+            },
+            {
+              "identity": "P:M00001476",
+              "license_no": "M00001476",
+              "display_name": "山本 晃",
+              "is_amateur": false,
+              "ranking": 41,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 204
+                },
+                {
+                  "game_number": 2,
+                  "score": 202
+                },
+                {
+                  "game_number": 3,
+                  "score": 180
+                },
+                {
+                  "game_number": 4,
+                  "score": 195
+                },
+                {
+                  "game_number": 5,
+                  "score": 185
+                },
+                {
+                  "game_number": 6,
+                  "score": 211
+                },
+                {
+                  "game_number": 7,
+                  "score": 229
+                },
+                {
+                  "game_number": 8,
+                  "score": 205
+                }
+              ],
+              "source_aliases": [
+                "rookies_m_score_html",
+                "rookies_m_ab8g.pdf"
+              ],
+              "stage_total_pin": 1611,
+              "games_count": 8
+            },
+            {
+              "identity": "P:M00001465",
+              "license_no": "M00001465",
+              "display_name": "田村 翼",
+              "is_amateur": false,
+              "ranking": 43,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 164
+                },
+                {
+                  "game_number": 2,
+                  "score": 184
+                },
+                {
+                  "game_number": 3,
+                  "score": 163
+                },
+                {
+                  "game_number": 4,
+                  "score": 213
+                },
+                {
+                  "game_number": 5,
+                  "score": 186
+                },
+                {
+                  "game_number": 6,
+                  "score": 161
+                },
+                {
+                  "game_number": 7,
+                  "score": 256
+                },
+                {
+                  "game_number": 8,
+                  "score": 276
+                }
+              ],
+              "source_aliases": [
+                "rookies_m_score_html",
+                "rookies_m_ab8g.pdf"
+              ],
+              "stage_total_pin": 1603,
+              "games_count": 8
+            },
+            {
+              "identity": "P:M00001507",
+              "license_no": "M00001507",
+              "display_name": "須田 光翼",
+              "is_amateur": false,
+              "ranking": 44,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 154
+                },
+                {
+                  "game_number": 2,
+                  "score": 204
+                },
+                {
+                  "game_number": 3,
+                  "score": 178
+                },
+                {
+                  "game_number": 4,
+                  "score": 259
+                },
+                {
+                  "game_number": 5,
+                  "score": 194
+                },
+                {
+                  "game_number": 6,
+                  "score": 215
+                },
+                {
+                  "game_number": 7,
+                  "score": 149
+                },
+                {
+                  "game_number": 8,
+                  "score": 245
+                }
+              ],
+              "source_aliases": [
+                "rookies_m_score_html",
+                "rookies_m_ab8g.pdf"
+              ],
+              "stage_total_pin": 1598,
+              "games_count": 8
+            },
+            {
+              "identity": "P:M00001481",
+              "license_no": "M00001481",
+              "display_name": "福原 尊",
+              "is_amateur": false,
+              "ranking": 45,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 233
+                },
+                {
+                  "game_number": 2,
+                  "score": 180
+                },
+                {
+                  "game_number": 3,
+                  "score": 192
+                },
+                {
+                  "game_number": 4,
+                  "score": 227
+                },
+                {
+                  "game_number": 5,
+                  "score": 183
+                },
+                {
+                  "game_number": 6,
+                  "score": 196
+                },
+                {
+                  "game_number": 7,
+                  "score": 198
+                },
+                {
+                  "game_number": 8,
+                  "score": 181
+                }
+              ],
+              "source_aliases": [
+                "rookies_m_score_html",
+                "rookies_m_ab8g.pdf"
+              ],
+              "stage_total_pin": 1590,
+              "games_count": 8
+            },
+            {
+              "identity": "P:M00001474",
+              "license_no": "M00001474",
+              "display_name": "部谷 嘉朗",
+              "is_amateur": false,
+              "ranking": 46,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 180
+                },
+                {
+                  "game_number": 2,
+                  "score": 147
+                },
+                {
+                  "game_number": 3,
+                  "score": 179
+                },
+                {
+                  "game_number": 4,
+                  "score": 230
+                },
+                {
+                  "game_number": 5,
+                  "score": 234
+                },
+                {
+                  "game_number": 6,
+                  "score": 190
+                },
+                {
+                  "game_number": 7,
+                  "score": 203
+                },
+                {
+                  "game_number": 8,
+                  "score": 227
+                }
+              ],
+              "source_aliases": [
+                "rookies_m_score_html",
+                "rookies_m_ab8g.pdf"
+              ],
+              "stage_total_pin": 1590,
+              "games_count": 8
+            },
+            {
+              "identity": "P:M00001475",
+              "license_no": "M00001475",
+              "display_name": "積田 蒼生",
+              "is_amateur": false,
+              "ranking": 48,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 203
+                },
+                {
+                  "game_number": 2,
+                  "score": 213
+                },
+                {
+                  "game_number": 3,
+                  "score": 157
+                },
+                {
+                  "game_number": 4,
+                  "score": 210
+                },
+                {
+                  "game_number": 5,
+                  "score": 208
+                },
+                {
+                  "game_number": 6,
+                  "score": 201
+                },
+                {
+                  "game_number": 7,
+                  "score": 208
+                },
+                {
+                  "game_number": 8,
+                  "score": 183
+                }
+              ],
+              "source_aliases": [
+                "rookies_m_score_html",
+                "rookies_m_ab8g.pdf"
+              ],
+              "stage_total_pin": 1583,
+              "games_count": 8
+            },
+            {
+              "identity": "P:M00001509",
+              "license_no": "M00001509",
+              "display_name": "上江洲琉心",
+              "is_amateur": false,
+              "ranking": 49,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 235
+                },
+                {
+                  "game_number": 2,
+                  "score": 192
+                },
+                {
+                  "game_number": 3,
+                  "score": 210
+                },
+                {
+                  "game_number": 4,
+                  "score": 193
+                },
+                {
+                  "game_number": 5,
+                  "score": 215
+                },
+                {
+                  "game_number": 6,
+                  "score": 196
+                },
+                {
+                  "game_number": 7,
+                  "score": 165
+                },
+                {
+                  "game_number": 8,
+                  "score": 174
+                }
+              ],
+              "source_aliases": [
+                "rookies_m_score_html",
+                "rookies_m_ab8g.pdf"
+              ],
+              "stage_total_pin": 1580,
+              "games_count": 8
+            },
+            {
+              "identity": "P:M00001471",
+              "license_no": "M00001471",
+              "display_name": "千葉 幸太",
+              "is_amateur": false,
+              "ranking": 50,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 163
+                },
+                {
+                  "game_number": 2,
+                  "score": 184
+                },
+                {
+                  "game_number": 3,
+                  "score": 167
+                },
+                {
+                  "game_number": 4,
+                  "score": 165
+                },
+                {
+                  "game_number": 5,
+                  "score": 168
+                },
+                {
+                  "game_number": 6,
+                  "score": 246
+                },
+                {
+                  "game_number": 7,
+                  "score": 238
+                },
+                {
+                  "game_number": 8,
+                  "score": 248
+                }
+              ],
+              "source_aliases": [
+                "rookies_m_score_html",
+                "rookies_m_ab8g.pdf"
+              ],
+              "stage_total_pin": 1579,
+              "games_count": 8
+            },
+            {
+              "identity": "P:M00001450",
+              "license_no": "M00001450",
+              "display_name": "森岡 昌嵩",
+              "is_amateur": false,
+              "ranking": 51,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 201
+                },
+                {
+                  "game_number": 2,
+                  "score": 172
+                },
+                {
+                  "game_number": 3,
+                  "score": 173
+                },
+                {
+                  "game_number": 4,
+                  "score": 187
+                },
+                {
+                  "game_number": 5,
+                  "score": 212
+                },
+                {
+                  "game_number": 6,
+                  "score": 212
+                },
+                {
+                  "game_number": 7,
+                  "score": 221
+                },
+                {
+                  "game_number": 8,
+                  "score": 191
+                }
+              ],
+              "source_aliases": [
+                "rookies_m_score_html",
+                "rookies_m_ab8g.pdf"
+              ],
+              "stage_total_pin": 1569,
+              "games_count": 8
+            },
+            {
+              "identity": "P:M00001493",
+              "license_no": "M00001493",
+              "display_name": "豊田 晃平",
+              "is_amateur": false,
+              "ranking": 52,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 170
+                },
+                {
+                  "game_number": 2,
+                  "score": 178
+                },
+                {
+                  "game_number": 3,
+                  "score": 197
+                },
+                {
+                  "game_number": 4,
+                  "score": 208
+                },
+                {
+                  "game_number": 5,
+                  "score": 210
+                },
+                {
+                  "game_number": 6,
+                  "score": 163
+                },
+                {
+                  "game_number": 7,
+                  "score": 216
+                },
+                {
+                  "game_number": 8,
+                  "score": 224
+                }
+              ],
+              "source_aliases": [
+                "rookies_m_score_html",
+                "rookies_m_ab8g.pdf"
+              ],
+              "stage_total_pin": 1566,
+              "games_count": 8
+            },
+            {
+              "identity": "P:M00001482",
+              "license_no": "M00001482",
+              "display_name": "井之上准己",
+              "is_amateur": false,
+              "ranking": 54,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 201
+                },
+                {
+                  "game_number": 2,
+                  "score": 178
+                },
+                {
+                  "game_number": 3,
+                  "score": 180
+                },
+                {
+                  "game_number": 4,
+                  "score": 242
+                },
+                {
+                  "game_number": 5,
+                  "score": 168
+                },
+                {
+                  "game_number": 6,
+                  "score": 202
+                },
+                {
+                  "game_number": 7,
+                  "score": 196
+                },
+                {
+                  "game_number": 8,
+                  "score": 194
+                }
+              ],
+              "source_aliases": [
+                "rookies_m_score_html",
+                "rookies_m_ab8g.pdf"
+              ],
+              "stage_total_pin": 1561,
+              "games_count": 8
+            },
+            {
+              "identity": "P:M00001499",
+              "license_no": "M00001499",
+              "display_name": "梅木 孝宏",
+              "is_amateur": false,
+              "ranking": 55,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 202
+                },
+                {
+                  "game_number": 2,
+                  "score": 187
+                },
+                {
+                  "game_number": 3,
+                  "score": 199
+                },
+                {
+                  "game_number": 4,
+                  "score": 197
+                },
+                {
+                  "game_number": 5,
+                  "score": 176
+                },
+                {
+                  "game_number": 6,
+                  "score": 199
+                },
+                {
+                  "game_number": 7,
+                  "score": 200
+                },
+                {
+                  "game_number": 8,
+                  "score": 195
+                }
+              ],
+              "source_aliases": [
+                "rookies_m_score_html",
+                "rookies_m_ab8g.pdf"
+              ],
+              "stage_total_pin": 1555,
+              "games_count": 8
+            },
+            {
+              "identity": "P:M00001458",
+              "license_no": "M00001458",
+              "display_name": "増田 優希",
+              "is_amateur": false,
+              "ranking": 56,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 189
+                },
+                {
+                  "game_number": 2,
+                  "score": 186
+                },
+                {
+                  "game_number": 3,
+                  "score": 191
+                },
+                {
+                  "game_number": 4,
+                  "score": 196
+                },
+                {
+                  "game_number": 5,
+                  "score": 204
+                },
+                {
+                  "game_number": 6,
+                  "score": 256
+                },
+                {
+                  "game_number": 7,
+                  "score": 177
+                },
+                {
+                  "game_number": 8,
+                  "score": 151
+                }
+              ],
+              "source_aliases": [
+                "rookies_m_score_html",
+                "rookies_m_ab8g.pdf"
+              ],
+              "stage_total_pin": 1550,
+              "games_count": 8
+            },
+            {
+              "identity": "P:M00001485",
+              "license_no": "M00001485",
+              "display_name": "山﨑 陸斗",
+              "is_amateur": false,
+              "ranking": 57,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 188
+                },
+                {
+                  "game_number": 2,
+                  "score": 157
+                },
+                {
+                  "game_number": 3,
+                  "score": 163
+                },
+                {
+                  "game_number": 4,
+                  "score": 181
+                },
+                {
+                  "game_number": 5,
+                  "score": 246
+                },
+                {
+                  "game_number": 6,
+                  "score": 254
+                },
+                {
+                  "game_number": 7,
+                  "score": 139
+                },
+                {
+                  "game_number": 8,
+                  "score": 202
+                }
+              ],
+              "source_aliases": [
+                "rookies_m_score_html",
+                "rookies_m_ab8g.pdf"
+              ],
+              "stage_total_pin": 1530,
+              "games_count": 8
+            },
+            {
+              "identity": "P:M00001498",
+              "license_no": "M00001498",
+              "display_name": "吉山 将太",
+              "is_amateur": false,
+              "ranking": 59,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 185
+                },
+                {
+                  "game_number": 2,
+                  "score": 226
+                },
+                {
+                  "game_number": 3,
+                  "score": 192
+                },
+                {
+                  "game_number": 4,
+                  "score": 211
+                },
+                {
+                  "game_number": 5,
+                  "score": 129
+                },
+                {
+                  "game_number": 6,
+                  "score": 202
+                },
+                {
+                  "game_number": 7,
+                  "score": 166
+                },
+                {
+                  "game_number": 8,
+                  "score": 204
+                }
+              ],
+              "source_aliases": [
+                "rookies_m_score_html",
+                "rookies_m_ab8g.pdf"
+              ],
+              "stage_total_pin": 1515,
+              "games_count": 8
+            },
+            {
+              "identity": "P:M00001446",
+              "license_no": "M00001446",
+              "display_name": "斎藤 祐太",
+              "is_amateur": false,
+              "ranking": 2,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 258
+                },
+                {
+                  "game_number": 2,
+                  "score": 265
+                },
+                {
+                  "game_number": 3,
+                  "score": 225
+                },
+                {
+                  "game_number": 4,
+                  "score": 185
+                },
+                {
+                  "game_number": 5,
+                  "score": 267
+                },
+                {
+                  "game_number": 6,
+                  "score": 248
+                },
+                {
+                  "game_number": 7,
+                  "score": 213
+                },
+                {
+                  "game_number": 8,
+                  "score": 235
+                }
+              ],
+              "source_aliases": [
+                "rookies_m_score_html",
+                "rookies_m_ab8g.pdf"
+              ],
+              "stage_total_pin": 1896,
+              "games_count": 8
+            },
+            {
+              "identity": "P:M00001464",
+              "license_no": "M00001464",
+              "display_name": "島田 卓也",
+              "is_amateur": false,
+              "ranking": 6,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 268
+                },
+                {
+                  "game_number": 2,
+                  "score": 211
+                },
+                {
+                  "game_number": 3,
+                  "score": 172
+                },
+                {
+                  "game_number": 4,
+                  "score": 227
+                },
+                {
+                  "game_number": 5,
+                  "score": 181
+                },
+                {
+                  "game_number": 6,
+                  "score": 276
+                },
+                {
+                  "game_number": 7,
+                  "score": 204
+                },
+                {
+                  "game_number": 8,
+                  "score": 237
+                }
+              ],
+              "source_aliases": [
+                "rookies_m_score_html",
+                "rookies_m_ab8g.pdf"
+              ],
+              "stage_total_pin": 1776,
+              "games_count": 8
+            },
+            {
+              "identity": "P:M00001469",
+              "license_no": "M00001469",
+              "display_name": "田野岡大夢",
+              "is_amateur": false,
+              "ranking": 7,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 196
+                },
+                {
+                  "game_number": 2,
+                  "score": 167
+                },
+                {
+                  "game_number": 3,
+                  "score": 227
+                },
+                {
+                  "game_number": 4,
+                  "score": 236
+                },
+                {
+                  "game_number": 5,
+                  "score": 236
+                },
+                {
+                  "game_number": 6,
+                  "score": 225
+                },
+                {
+                  "game_number": 7,
+                  "score": 265
+                },
+                {
+                  "game_number": 8,
+                  "score": 223
+                }
+              ],
+              "source_aliases": [
+                "rookies_m_score_html",
+                "rookies_m_ab8g.pdf"
+              ],
+              "stage_total_pin": 1775,
+              "games_count": 8
+            },
+            {
+              "identity": "P:M00001470",
+              "license_no": "M00001470",
+              "display_name": "安谷屋綱大",
+              "is_amateur": false,
+              "ranking": 9,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 222
+                },
+                {
+                  "game_number": 2,
+                  "score": 190
+                },
+                {
+                  "game_number": 3,
+                  "score": 213
+                },
+                {
+                  "game_number": 4,
+                  "score": 254
+                },
+                {
+                  "game_number": 5,
+                  "score": 192
+                },
+                {
+                  "game_number": 6,
+                  "score": 195
+                },
+                {
+                  "game_number": 7,
+                  "score": 267
+                },
+                {
+                  "game_number": 8,
+                  "score": 235
+                }
+              ],
+              "source_aliases": [
+                "rookies_m_score_html",
+                "rookies_m_ab8g.pdf"
+              ],
+              "stage_total_pin": 1768,
+              "games_count": 8
+            },
+            {
+              "identity": "P:M00001456",
+              "license_no": "M00001456",
+              "display_name": "太田 貴久",
+              "is_amateur": false,
+              "ranking": 10,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 234
+                },
+                {
+                  "game_number": 2,
+                  "score": 186
+                },
+                {
+                  "game_number": 3,
+                  "score": 229
+                },
+                {
+                  "game_number": 4,
+                  "score": 253
+                },
+                {
+                  "game_number": 5,
+                  "score": 226
+                },
+                {
+                  "game_number": 6,
+                  "score": 200
+                },
+                {
+                  "game_number": 7,
+                  "score": 245
+                },
+                {
+                  "game_number": 8,
+                  "score": 195
+                }
+              ],
+              "source_aliases": [
+                "rookies_m_score_html",
+                "rookies_m_ab8g.pdf"
+              ],
+              "stage_total_pin": 1768,
+              "games_count": 8
+            },
+            {
+              "identity": "P:M00001504",
+              "license_no": "M00001504",
+              "display_name": "熊沢 颯",
+              "is_amateur": false,
+              "ranking": 11,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 217
+                },
+                {
+                  "game_number": 2,
+                  "score": 201
+                },
+                {
+                  "game_number": 3,
+                  "score": 186
+                },
+                {
+                  "game_number": 4,
+                  "score": 225
+                },
+                {
+                  "game_number": 5,
+                  "score": 191
+                },
+                {
+                  "game_number": 6,
+                  "score": 244
+                },
+                {
+                  "game_number": 7,
+                  "score": 259
+                },
+                {
+                  "game_number": 8,
+                  "score": 237
+                }
+              ],
+              "source_aliases": [
+                "rookies_m_score_html",
+                "rookies_m_ab8g.pdf"
+              ],
+              "stage_total_pin": 1760,
+              "games_count": 8
+            },
+            {
+              "identity": "P:M00001502",
+              "license_no": "M00001502",
+              "display_name": "山本 青空",
+              "is_amateur": false,
+              "ranking": 12,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 222
+                },
+                {
+                  "game_number": 2,
+                  "score": 226
+                },
+                {
+                  "game_number": 3,
+                  "score": 238
+                },
+                {
+                  "game_number": 4,
+                  "score": 267
+                },
+                {
+                  "game_number": 5,
+                  "score": 235
+                },
+                {
+                  "game_number": 6,
+                  "score": 219
+                },
+                {
+                  "game_number": 7,
+                  "score": 198
+                },
+                {
+                  "game_number": 8,
+                  "score": 150
+                }
+              ],
+              "source_aliases": [
+                "rookies_m_score_html",
+                "rookies_m_ab8g.pdf"
+              ],
+              "stage_total_pin": 1755,
+              "games_count": 8
+            },
+            {
+              "identity": "P:M00001448",
+              "license_no": "M00001448",
+              "display_name": "木村 謙太",
+              "is_amateur": false,
+              "ranking": 15,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 197
+                },
+                {
+                  "game_number": 2,
+                  "score": 203
+                },
+                {
+                  "game_number": 3,
+                  "score": 231
+                },
+                {
+                  "game_number": 4,
+                  "score": 164
+                },
+                {
+                  "game_number": 5,
+                  "score": 280
+                },
+                {
+                  "game_number": 6,
+                  "score": 198
+                },
+                {
+                  "game_number": 7,
+                  "score": 252
+                },
+                {
+                  "game_number": 8,
+                  "score": 212
+                }
+              ],
+              "source_aliases": [
+                "rookies_m_score_html",
+                "rookies_m_ab8g.pdf"
+              ],
+              "stage_total_pin": 1737,
+              "games_count": 8
+            },
+            {
+              "identity": "P:M00001508",
+              "license_no": "M00001508",
+              "display_name": "潟手 孝義",
+              "is_amateur": false,
+              "ranking": 17,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 258
+                },
+                {
+                  "game_number": 2,
+                  "score": 214
+                },
+                {
+                  "game_number": 3,
+                  "score": 201
+                },
+                {
+                  "game_number": 4,
+                  "score": 205
+                },
+                {
+                  "game_number": 5,
+                  "score": 206
+                },
+                {
+                  "game_number": 6,
+                  "score": 209
+                },
+                {
+                  "game_number": 7,
+                  "score": 209
+                },
+                {
+                  "game_number": 8,
+                  "score": 221
+                }
+              ],
+              "source_aliases": [
+                "rookies_m_score_html",
+                "rookies_m_ab8g.pdf"
+              ],
+              "stage_total_pin": 1723,
+              "games_count": 8
+            },
+            {
+              "identity": "P:M00001466",
+              "license_no": "M00001466",
+              "display_name": "犬飼 健志",
+              "is_amateur": false,
+              "ranking": 18,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 208
+                },
+                {
+                  "game_number": 2,
+                  "score": 241
+                },
+                {
+                  "game_number": 3,
+                  "score": 192
+                },
+                {
+                  "game_number": 4,
+                  "score": 225
+                },
+                {
+                  "game_number": 5,
+                  "score": 217
+                },
+                {
+                  "game_number": 6,
+                  "score": 224
+                },
+                {
+                  "game_number": 7,
+                  "score": 183
+                },
+                {
+                  "game_number": 8,
+                  "score": 232
+                }
+              ],
+              "source_aliases": [
+                "rookies_m_score_html",
+                "rookies_m_ab8g.pdf"
+              ],
+              "stage_total_pin": 1722,
+              "games_count": 8
+            },
+            {
+              "identity": "P:M00001467",
+              "license_no": "M00001467",
+              "display_name": "菊田 樹",
+              "is_amateur": false,
+              "ranking": 19,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 203
+                },
+                {
+                  "game_number": 2,
+                  "score": 196
+                },
+                {
+                  "game_number": 3,
+                  "score": 254
+                },
+                {
+                  "game_number": 4,
+                  "score": 185
+                },
+                {
+                  "game_number": 5,
+                  "score": 179
+                },
+                {
+                  "game_number": 6,
+                  "score": 237
+                },
+                {
+                  "game_number": 7,
+                  "score": 235
+                },
+                {
+                  "game_number": 8,
+                  "score": 223
+                }
+              ],
+              "source_aliases": [
+                "rookies_m_score_html",
+                "rookies_m_ab8g.pdf"
+              ],
+              "stage_total_pin": 1712,
+              "games_count": 8
+            },
+            {
+              "identity": "P:M00001500",
+              "license_no": "M00001500",
+              "display_name": "畑 秀明",
+              "is_amateur": false,
+              "ranking": 21,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 227
+                },
+                {
+                  "game_number": 2,
+                  "score": 211
+                },
+                {
+                  "game_number": 3,
+                  "score": 181
+                },
+                {
+                  "game_number": 4,
+                  "score": 198
+                },
+                {
+                  "game_number": 5,
+                  "score": 257
+                },
+                {
+                  "game_number": 6,
+                  "score": 193
+                },
+                {
+                  "game_number": 7,
+                  "score": 238
+                },
+                {
+                  "game_number": 8,
+                  "score": 203
+                }
+              ],
+              "source_aliases": [
+                "rookies_m_score_html",
+                "rookies_m_ab8g.pdf"
+              ],
+              "stage_total_pin": 1708,
+              "games_count": 8
+            },
+            {
+              "identity": "P:M00001444",
+              "license_no": "M00001444",
+              "display_name": "内藤慎之介",
+              "is_amateur": false,
+              "ranking": 25,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 180
+                },
+                {
+                  "game_number": 2,
+                  "score": 221
+                },
+                {
+                  "game_number": 3,
+                  "score": 216
+                },
+                {
+                  "game_number": 4,
+                  "score": 245
+                },
+                {
+                  "game_number": 5,
+                  "score": 228
+                },
+                {
+                  "game_number": 6,
+                  "score": 180
+                },
+                {
+                  "game_number": 7,
+                  "score": 204
+                },
+                {
+                  "game_number": 8,
+                  "score": 224
+                }
+              ],
+              "source_aliases": [
+                "rookies_m_score_html",
+                "rookies_m_ab8g.pdf"
+              ],
+              "stage_total_pin": 1698,
+              "games_count": 8
+            },
+            {
+              "identity": "P:M00001491",
+              "license_no": "M00001491",
+              "display_name": "吉江奈津希",
+              "is_amateur": false,
+              "ranking": 26,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 193
+                },
+                {
+                  "game_number": 2,
+                  "score": 243
+                },
+                {
+                  "game_number": 3,
+                  "score": 224
+                },
+                {
+                  "game_number": 4,
+                  "score": 202
+                },
+                {
+                  "game_number": 5,
+                  "score": 223
+                },
+                {
+                  "game_number": 6,
+                  "score": 216
+                },
+                {
+                  "game_number": 7,
+                  "score": 159
+                },
+                {
+                  "game_number": 8,
+                  "score": 235
+                }
+              ],
+              "source_aliases": [
+                "rookies_m_score_html",
+                "rookies_m_ab8g.pdf"
+              ],
+              "stage_total_pin": 1695,
+              "games_count": 8
+            },
+            {
+              "identity": "P:M00001496",
+              "license_no": "M00001496",
+              "display_name": "濱名 晃司",
+              "is_amateur": false,
+              "ranking": 27,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 232
+                },
+                {
+                  "game_number": 2,
+                  "score": 238
+                },
+                {
+                  "game_number": 3,
+                  "score": 233
+                },
+                {
+                  "game_number": 4,
+                  "score": 249
+                },
+                {
+                  "game_number": 5,
+                  "score": 192
+                },
+                {
+                  "game_number": 6,
+                  "score": 185
+                },
+                {
+                  "game_number": 7,
+                  "score": 187
+                },
+                {
+                  "game_number": 8,
+                  "score": 179
+                }
+              ],
+              "source_aliases": [
+                "rookies_m_score_html",
+                "rookies_m_ab8g.pdf"
+              ],
+              "stage_total_pin": 1695,
+              "games_count": 8
+            },
+            {
+              "identity": "P:M00001494",
+              "license_no": "M00001494",
+              "display_name": "山﨑雄太郎",
+              "is_amateur": false,
+              "ranking": 28,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 212
+                },
+                {
+                  "game_number": 2,
+                  "score": 206
+                },
+                {
+                  "game_number": 3,
+                  "score": 166
+                },
+                {
+                  "game_number": 4,
+                  "score": 209
+                },
+                {
+                  "game_number": 5,
+                  "score": 204
+                },
+                {
+                  "game_number": 6,
+                  "score": 181
+                },
+                {
+                  "game_number": 7,
+                  "score": 290
+                },
+                {
+                  "game_number": 8,
+                  "score": 224
+                }
+              ],
+              "source_aliases": [
+                "rookies_m_score_html",
+                "rookies_m_ab8g.pdf"
+              ],
+              "stage_total_pin": 1692,
+              "games_count": 8
+            },
+            {
+              "identity": "P:M00001473",
+              "license_no": "M00001473",
+              "display_name": "米澤 佑哉",
+              "is_amateur": false,
+              "ranking": 29,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 243
+                },
+                {
+                  "game_number": 2,
+                  "score": 171
+                },
+                {
+                  "game_number": 3,
+                  "score": 226
+                },
+                {
+                  "game_number": 4,
+                  "score": 182
+                },
+                {
+                  "game_number": 5,
+                  "score": 216
+                },
+                {
+                  "game_number": 6,
+                  "score": 214
+                },
+                {
+                  "game_number": 7,
+                  "score": 192
+                },
+                {
+                  "game_number": 8,
+                  "score": 244
+                }
+              ],
+              "source_aliases": [
+                "rookies_m_score_html",
+                "rookies_m_ab8g.pdf"
+              ],
+              "stage_total_pin": 1688,
+              "games_count": 8
+            },
+            {
+              "identity": "P:M00001484",
+              "license_no": "M00001484",
+              "display_name": "熊木 大地",
+              "is_amateur": false,
+              "ranking": 30,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 202
+                },
+                {
+                  "game_number": 2,
+                  "score": 149
+                },
+                {
+                  "game_number": 3,
+                  "score": 163
+                },
+                {
+                  "game_number": 4,
+                  "score": 247
+                },
+                {
+                  "game_number": 5,
+                  "score": 259
+                },
+                {
+                  "game_number": 6,
+                  "score": 201
+                },
+                {
+                  "game_number": 7,
+                  "score": 219
+                },
+                {
+                  "game_number": 8,
+                  "score": 245
+                }
+              ],
+              "source_aliases": [
+                "rookies_m_score_html",
+                "rookies_m_ab8g.pdf"
+              ],
+              "stage_total_pin": 1685,
+              "games_count": 8
+            },
+            {
+              "identity": "P:M00001497",
+              "license_no": "M00001497",
+              "display_name": "山崎 昭太",
+              "is_amateur": false,
+              "ranking": 31,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 194
+                },
+                {
+                  "game_number": 2,
+                  "score": 212
+                },
+                {
+                  "game_number": 3,
+                  "score": 204
+                },
+                {
+                  "game_number": 4,
+                  "score": 219
+                },
+                {
+                  "game_number": 5,
+                  "score": 224
+                },
+                {
+                  "game_number": 6,
+                  "score": 257
+                },
+                {
+                  "game_number": 7,
+                  "score": 148
+                },
+                {
+                  "game_number": 8,
+                  "score": 215
+                }
+              ],
+              "source_aliases": [
+                "rookies_m_score_html",
+                "rookies_m_ab8g.pdf"
+              ],
+              "stage_total_pin": 1673,
+              "games_count": 8
+            },
+            {
+              "identity": "P:M00001479",
+              "license_no": "M00001479",
+              "display_name": "立花 仁貴",
+              "is_amateur": false,
+              "ranking": 34,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 213
+                },
+                {
+                  "game_number": 2,
+                  "score": 221
+                },
+                {
+                  "game_number": 3,
+                  "score": 219
+                },
+                {
+                  "game_number": 4,
+                  "score": 218
+                },
+                {
+                  "game_number": 5,
+                  "score": 172
+                },
+                {
+                  "game_number": 6,
+                  "score": 242
+                },
+                {
+                  "game_number": 7,
+                  "score": 191
+                },
+                {
+                  "game_number": 8,
+                  "score": 181
+                }
+              ],
+              "source_aliases": [
+                "rookies_m_score_html",
+                "rookies_m_ab8g.pdf"
+              ],
+              "stage_total_pin": 1657,
+              "games_count": 8
+            },
+            {
+              "identity": "P:M00001506",
+              "license_no": "M00001506",
+              "display_name": "諏訪間皆丞",
+              "is_amateur": false,
+              "ranking": 35,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 176
+                },
+                {
+                  "game_number": 2,
+                  "score": 226
+                },
+                {
+                  "game_number": 3,
+                  "score": 177
+                },
+                {
+                  "game_number": 4,
+                  "score": 170
+                },
+                {
+                  "game_number": 5,
+                  "score": 225
+                },
+                {
+                  "game_number": 6,
+                  "score": 186
+                },
+                {
+                  "game_number": 7,
+                  "score": 267
+                },
+                {
+                  "game_number": 8,
+                  "score": 214
+                }
+              ],
+              "source_aliases": [
+                "rookies_m_score_html",
+                "rookies_m_ab8g.pdf"
+              ],
+              "stage_total_pin": 1641,
+              "games_count": 8
+            },
+            {
+              "identity": "P:M00001454",
+              "license_no": "M00001454",
+              "display_name": "前田 祐輔",
+              "is_amateur": false,
+              "ranking": 36,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 159
+                },
+                {
+                  "game_number": 2,
+                  "score": 217
+                },
+                {
+                  "game_number": 3,
+                  "score": 268
+                },
+                {
+                  "game_number": 4,
+                  "score": 168
+                },
+                {
+                  "game_number": 5,
+                  "score": 222
+                },
+                {
+                  "game_number": 6,
+                  "score": 195
+                },
+                {
+                  "game_number": 7,
+                  "score": 204
+                },
+                {
+                  "game_number": 8,
+                  "score": 205
+                }
+              ],
+              "source_aliases": [
+                "rookies_m_score_html",
+                "rookies_m_ab8g.pdf"
+              ],
+              "stage_total_pin": 1638,
+              "games_count": 8
+            },
+            {
+              "identity": "P:M00001511",
+              "license_no": "M00001511",
+              "display_name": "菅原 奏",
+              "is_amateur": false,
+              "ranking": 37,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 156
+                },
+                {
+                  "game_number": 2,
+                  "score": 187
+                },
+                {
+                  "game_number": 3,
+                  "score": 213
+                },
+                {
+                  "game_number": 4,
+                  "score": 194
+                },
+                {
+                  "game_number": 5,
+                  "score": 200
+                },
+                {
+                  "game_number": 6,
+                  "score": 234
+                },
+                {
+                  "game_number": 7,
+                  "score": 217
+                },
+                {
+                  "game_number": 8,
+                  "score": 236
+                }
+              ],
+              "source_aliases": [
+                "rookies_m_score_html",
+                "rookies_m_ab8g.pdf"
+              ],
+              "stage_total_pin": 1637,
+              "games_count": 8
+            },
+            {
+              "identity": "P:M00001478",
+              "license_no": "M00001478",
+              "display_name": "倉持 悠人",
+              "is_amateur": false,
+              "ranking": 38,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 208
+                },
+                {
+                  "game_number": 2,
+                  "score": 183
+                },
+                {
+                  "game_number": 3,
+                  "score": 216
+                },
+                {
+                  "game_number": 4,
+                  "score": 255
+                },
+                {
+                  "game_number": 5,
+                  "score": 195
+                },
+                {
+                  "game_number": 6,
+                  "score": 185
+                },
+                {
+                  "game_number": 7,
+                  "score": 179
+                },
+                {
+                  "game_number": 8,
+                  "score": 215
+                }
+              ],
+              "source_aliases": [
+                "rookies_m_score_html",
+                "rookies_m_ab8g.pdf"
+              ],
+              "stage_total_pin": 1636,
+              "games_count": 8
+            },
+            {
+              "identity": "P:M00001472",
+              "license_no": "M00001472",
+              "display_name": "笹島新太郎",
+              "is_amateur": false,
+              "ranking": 40,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 176
+                },
+                {
+                  "game_number": 2,
+                  "score": 200
+                },
+                {
+                  "game_number": 3,
+                  "score": 227
+                },
+                {
+                  "game_number": 4,
+                  "score": 162
+                },
+                {
+                  "game_number": 5,
+                  "score": 246
+                },
+                {
+                  "game_number": 6,
+                  "score": 196
+                },
+                {
+                  "game_number": 7,
+                  "score": 213
+                },
+                {
+                  "game_number": 8,
+                  "score": 201
+                }
+              ],
+              "source_aliases": [
+                "rookies_m_score_html",
+                "rookies_m_ab8g.pdf"
+              ],
+              "stage_total_pin": 1621,
+              "games_count": 8
+            },
+            {
+              "identity": "P:M00001510",
+              "license_no": "M00001510",
+              "display_name": "佐藤 耀斗",
+              "is_amateur": false,
+              "ranking": 42,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 216
+                },
+                {
+                  "game_number": 2,
+                  "score": 169
+                },
+                {
+                  "game_number": 3,
+                  "score": 230
+                },
+                {
+                  "game_number": 4,
+                  "score": 165
+                },
+                {
+                  "game_number": 5,
+                  "score": 221
+                },
+                {
+                  "game_number": 6,
+                  "score": 234
+                },
+                {
+                  "game_number": 7,
+                  "score": 178
+                },
+                {
+                  "game_number": 8,
+                  "score": 191
+                }
+              ],
+              "source_aliases": [
+                "rookies_m_score_html",
+                "rookies_m_ab8g.pdf"
+              ],
+              "stage_total_pin": 1604,
+              "games_count": 8
+            },
+            {
+              "identity": "P:M00001486",
+              "license_no": "M00001486",
+              "display_name": "春木 悠里",
+              "is_amateur": false,
+              "ranking": 47,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 233
+                },
+                {
+                  "game_number": 2,
+                  "score": 198
+                },
+                {
+                  "game_number": 3,
+                  "score": 206
+                },
+                {
+                  "game_number": 4,
+                  "score": 201
+                },
+                {
+                  "game_number": 5,
+                  "score": 192
+                },
+                {
+                  "game_number": 6,
+                  "score": 163
+                },
+                {
+                  "game_number": 7,
+                  "score": 183
+                },
+                {
+                  "game_number": 8,
+                  "score": 211
+                }
+              ],
+              "source_aliases": [
+                "rookies_m_score_html",
+                "rookies_m_ab8g.pdf"
+              ],
+              "stage_total_pin": 1587,
+              "games_count": 8
+            },
+            {
+              "identity": "P:M00001483",
+              "license_no": "M00001483",
+              "display_name": "山中 麗",
+              "is_amateur": false,
+              "ranking": 53,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 163
+                },
+                {
+                  "game_number": 2,
+                  "score": 189
+                },
+                {
+                  "game_number": 3,
+                  "score": 191
+                },
+                {
+                  "game_number": 4,
+                  "score": 207
+                },
+                {
+                  "game_number": 5,
+                  "score": 226
+                },
+                {
+                  "game_number": 6,
+                  "score": 170
+                },
+                {
+                  "game_number": 7,
+                  "score": 228
+                },
+                {
+                  "game_number": 8,
+                  "score": 192
+                }
+              ],
+              "source_aliases": [
+                "rookies_m_score_html",
+                "rookies_m_ab8g.pdf"
+              ],
+              "stage_total_pin": 1566,
+              "games_count": 8
+            },
+            {
+              "identity": "P:M00001480",
+              "license_no": "M00001480",
+              "display_name": "石川 巧真",
+              "is_amateur": false,
+              "ranking": 58,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 193
+                },
+                {
+                  "game_number": 2,
+                  "score": 185
+                },
+                {
+                  "game_number": 3,
+                  "score": 195
+                },
+                {
+                  "game_number": 4,
+                  "score": 249
+                },
+                {
+                  "game_number": 5,
+                  "score": 172
+                },
+                {
+                  "game_number": 6,
+                  "score": 170
+                },
+                {
+                  "game_number": 7,
+                  "score": 146
+                },
+                {
+                  "game_number": 8,
+                  "score": 213
+                }
+              ],
+              "source_aliases": [
+                "rookies_m_score_html",
+                "rookies_m_ab8g.pdf"
+              ],
+              "stage_total_pin": 1523,
+              "games_count": 8
+            },
+            {
+              "identity": "P:M00001468",
+              "license_no": "M00001468",
+              "display_name": "佐藤 亜優",
+              "is_amateur": false,
+              "ranking": 60,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 199
+                },
+                {
+                  "game_number": 2,
+                  "score": 199
+                },
+                {
+                  "game_number": 3,
+                  "score": 223
+                },
+                {
+                  "game_number": 4,
+                  "score": 215
+                },
+                {
+                  "game_number": 5,
+                  "score": 179
+                },
+                {
+                  "game_number": 6,
+                  "score": 182
+                },
+                {
+                  "game_number": 7,
+                  "score": 132
+                },
+                {
+                  "game_number": 8,
+                  "score": 163
+                }
+              ],
+              "source_aliases": [
+                "rookies_m_score_html",
+                "rookies_m_ab8g.pdf"
+              ],
+              "stage_total_pin": 1492,
+              "games_count": 8
+            },
+            {
+              "identity": "P:M00001512",
+              "license_no": "M00001512",
+              "display_name": "廣岡 光希",
+              "is_amateur": false,
+              "ranking": 61,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 139
+                },
+                {
+                  "game_number": 2,
+                  "score": 158
+                },
+                {
+                  "game_number": 3,
+                  "score": 213
+                },
+                {
+                  "game_number": 4,
+                  "score": 204
+                },
+                {
+                  "game_number": 5,
+                  "score": 165
+                },
+                {
+                  "game_number": 6,
+                  "score": 197
+                },
+                {
+                  "game_number": 7,
+                  "score": 219
+                },
+                {
+                  "game_number": 8,
+                  "score": 192
+                }
+              ],
+              "source_aliases": [
+                "rookies_m_score_html",
+                "rookies_m_ab8g.pdf"
+              ],
+              "stage_total_pin": 1487,
+              "games_count": 8
+            }
+          ]
+        },
+        {
+          "stage": "準決勝",
+          "rows": [
+            {
+              "identity": "P:M00001443",
+              "license_no": "M00001443",
+              "display_name": "藤永 北斗",
+              "is_amateur": false,
+              "ranking": 1,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 234
+                },
+                {
+                  "game_number": 2,
+                  "score": 248
+                },
+                {
+                  "game_number": 3,
+                  "score": 265
+                },
+                {
+                  "game_number": 4,
+                  "score": 224
+                },
+                {
+                  "game_number": 5,
+                  "score": 235
+                }
+              ],
+              "source_aliases": [
+                "rookies_m_score_html"
+              ],
+              "stage_total_pin": 1206,
+              "games_count": 5
+            },
+            {
+              "identity": "P:M00001446",
+              "license_no": "M00001446",
+              "display_name": "斎藤 祐太",
+              "is_amateur": false,
+              "ranking": 2,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 232
+                },
+                {
+                  "game_number": 2,
+                  "score": 215
+                },
+                {
+                  "game_number": 3,
+                  "score": 198
+                },
+                {
+                  "game_number": 4,
+                  "score": 187
+                },
+                {
+                  "game_number": 5,
+                  "score": 225
+                }
+              ],
+              "source_aliases": [
+                "rookies_m_score_html"
+              ],
+              "stage_total_pin": 1057,
+              "games_count": 5
+            },
+            {
+              "identity": "P:M00001453",
+              "license_no": "M00001453",
+              "display_name": "石田 智輝",
+              "is_amateur": false,
+              "ranking": 3,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 247
+                },
+                {
+                  "game_number": 2,
+                  "score": 234
+                },
+                {
+                  "game_number": 3,
+                  "score": 216
+                },
+                {
+                  "game_number": 4,
+                  "score": 235
+                },
+                {
+                  "game_number": 5,
+                  "score": 215
+                }
+              ],
+              "source_aliases": [
+                "rookies_m_score_html"
+              ],
+              "stage_total_pin": 1147,
+              "games_count": 5
+            },
+            {
+              "identity": "P:M00001451",
+              "license_no": "M00001451",
+              "display_name": "小野 在由",
+              "is_amateur": false,
+              "ranking": 4,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 245
+                },
+                {
+                  "game_number": 2,
+                  "score": 171
+                },
+                {
+                  "game_number": 3,
+                  "score": 194
+                },
+                {
+                  "game_number": 4,
+                  "score": 175
+                },
+                {
+                  "game_number": 5,
+                  "score": 204
+                }
+              ],
+              "source_aliases": [
+                "rookies_m_score_html"
+              ],
+              "stage_total_pin": 989,
+              "games_count": 5
+            },
+            {
+              "identity": "P:M00001505",
+              "license_no": "M00001505",
+              "display_name": "久冨木 広",
+              "is_amateur": false,
+              "ranking": 5,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 256
+                },
+                {
+                  "game_number": 2,
+                  "score": 255
+                },
+                {
+                  "game_number": 3,
+                  "score": 237
+                },
+                {
+                  "game_number": 4,
+                  "score": 219
+                },
+                {
+                  "game_number": 5,
+                  "score": 188
+                }
+              ],
+              "source_aliases": [
+                "rookies_m_score_html"
+              ],
+              "stage_total_pin": 1155,
+              "games_count": 5
+            },
+            {
+              "identity": "P:M00001502",
+              "license_no": "M00001502",
+              "display_name": "山本 青空",
+              "is_amateur": false,
+              "ranking": 6,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 219
+                },
+                {
+                  "game_number": 2,
+                  "score": 268
+                },
+                {
+                  "game_number": 3,
+                  "score": 206
+                },
+                {
+                  "game_number": 4,
+                  "score": 205
+                },
+                {
+                  "game_number": 5,
+                  "score": 247
+                }
+              ],
+              "source_aliases": [
+                "rookies_m_score_html"
+              ],
+              "stage_total_pin": 1145,
+              "games_count": 5
+            },
+            {
+              "identity": "P:M00001504",
+              "license_no": "M00001504",
+              "display_name": "熊沢 颯",
+              "is_amateur": false,
+              "ranking": 7,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 200
+                },
+                {
+                  "game_number": 2,
+                  "score": 215
+                },
+                {
+                  "game_number": 3,
+                  "score": 212
+                },
+                {
+                  "game_number": 4,
+                  "score": 254
+                },
+                {
+                  "game_number": 5,
+                  "score": 212
+                }
+              ],
+              "source_aliases": [
+                "rookies_m_score_html"
+              ],
+              "stage_total_pin": 1093,
+              "games_count": 5
+            },
+            {
+              "identity": "P:M00001500",
+              "license_no": "M00001500",
+              "display_name": "畑 秀明",
+              "is_amateur": false,
+              "ranking": 8,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 211
+                },
+                {
+                  "game_number": 2,
+                  "score": 235
+                },
+                {
+                  "game_number": 3,
+                  "score": 228
+                },
+                {
+                  "game_number": 4,
+                  "score": 190
+                },
+                {
+                  "game_number": 5,
+                  "score": 275
+                }
+              ],
+              "source_aliases": [
+                "rookies_m_score_html"
+              ],
+              "stage_total_pin": 1139,
+              "games_count": 5
+            },
+            {
+              "identity": "P:M00001470",
+              "license_no": "M00001470",
+              "display_name": "安谷屋綱大",
+              "is_amateur": false,
+              "ranking": 9,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 199
+                },
+                {
+                  "game_number": 2,
+                  "score": 208
+                },
+                {
+                  "game_number": 3,
+                  "score": 176
+                },
+                {
+                  "game_number": 4,
+                  "score": 214
+                },
+                {
+                  "game_number": 5,
+                  "score": 270
+                }
+              ],
+              "source_aliases": [
+                "rookies_m_score_html"
+              ],
+              "stage_total_pin": 1067,
+              "games_count": 5
+            },
+            {
+              "identity": "P:M00001492",
+              "license_no": "M00001492",
+              "display_name": "横地 優輝",
+              "is_amateur": false,
+              "ranking": 10,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 193
+                },
+                {
+                  "game_number": 2,
+                  "score": 225
+                },
+                {
+                  "game_number": 3,
+                  "score": 256
+                },
+                {
+                  "game_number": 4,
+                  "score": 257
+                },
+                {
+                  "game_number": 5,
+                  "score": 223
+                }
+              ],
+              "source_aliases": [
+                "rookies_m_score_html"
+              ],
+              "stage_total_pin": 1154,
+              "games_count": 5
+            },
+            {
+              "identity": "P:M00001456",
+              "license_no": "M00001456",
+              "display_name": "太田 貴久",
+              "is_amateur": false,
+              "ranking": 11,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 188
+                },
+                {
+                  "game_number": 2,
+                  "score": 194
+                },
+                {
+                  "game_number": 3,
+                  "score": 205
+                },
+                {
+                  "game_number": 4,
+                  "score": 247
+                },
+                {
+                  "game_number": 5,
+                  "score": 218
+                }
+              ],
+              "source_aliases": [
+                "rookies_m_score_html"
+              ],
+              "stage_total_pin": 1052,
+              "games_count": 5
+            },
+            {
+              "identity": "P:M00001477",
+              "license_no": "M00001477",
+              "display_name": "西山 翔悟",
+              "is_amateur": false,
+              "ranking": 12,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 236
+                },
+                {
+                  "game_number": 2,
+                  "score": 220
+                },
+                {
+                  "game_number": 3,
+                  "score": 194
+                },
+                {
+                  "game_number": 4,
+                  "score": 269
+                },
+                {
+                  "game_number": 5,
+                  "score": 188
+                }
+              ],
+              "source_aliases": [
+                "rookies_m_score_html"
+              ],
+              "stage_total_pin": 1107,
+              "games_count": 5
+            },
+            {
+              "identity": "P:M00001503",
+              "license_no": "M00001503",
+              "display_name": "山下 秀人",
+              "is_amateur": false,
+              "ranking": 13,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 202
+                },
+                {
+                  "game_number": 2,
+                  "score": 248
+                },
+                {
+                  "game_number": 3,
+                  "score": 199
+                },
+                {
+                  "game_number": 4,
+                  "score": 239
+                },
+                {
+                  "game_number": 5,
+                  "score": 190
+                }
+              ],
+              "source_aliases": [
+                "rookies_m_score_html"
+              ],
+              "stage_total_pin": 1078,
+              "games_count": 5
+            },
+            {
+              "identity": "P:M00001467",
+              "license_no": "M00001467",
+              "display_name": "菊田 樹",
+              "is_amateur": false,
+              "ranking": 14,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 179
+                },
+                {
+                  "game_number": 2,
+                  "score": 229
+                },
+                {
+                  "game_number": 3,
+                  "score": 206
+                },
+                {
+                  "game_number": 4,
+                  "score": 233
+                },
+                {
+                  "game_number": 5,
+                  "score": 240
+                }
+              ],
+              "source_aliases": [
+                "rookies_m_score_html"
+              ],
+              "stage_total_pin": 1087,
+              "games_count": 5
+            },
+            {
+              "identity": "P:M00001445",
+              "license_no": "M00001445",
+              "display_name": "宮澤 拓哉",
+              "is_amateur": false,
+              "ranking": 15,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 190
+                },
+                {
+                  "game_number": 2,
+                  "score": 190
+                },
+                {
+                  "game_number": 3,
+                  "score": 212
+                },
+                {
+                  "game_number": 4,
+                  "score": 210
+                },
+                {
+                  "game_number": 5,
+                  "score": 256
+                }
+              ],
+              "source_aliases": [
+                "rookies_m_score_html"
+              ],
+              "stage_total_pin": 1058,
+              "games_count": 5
+            },
+            {
+              "identity": "P:M00001448",
+              "license_no": "M00001448",
+              "display_name": "木村 謙太",
+              "is_amateur": false,
+              "ranking": 16,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 189
+                },
+                {
+                  "game_number": 2,
+                  "score": 171
+                },
+                {
+                  "game_number": 3,
+                  "score": 227
+                },
+                {
+                  "game_number": 4,
+                  "score": 225
+                },
+                {
+                  "game_number": 5,
+                  "score": 246
+                }
+              ],
+              "source_aliases": [
+                "rookies_m_score_html"
+              ],
+              "stage_total_pin": 1058,
+              "games_count": 5
+            },
+            {
+              "identity": "P:M00001464",
+              "license_no": "M00001464",
+              "display_name": "島田 卓也",
+              "is_amateur": false,
+              "ranking": 17,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 227
+                },
+                {
+                  "game_number": 2,
+                  "score": 150
+                },
+                {
+                  "game_number": 3,
+                  "score": 176
+                },
+                {
+                  "game_number": 4,
+                  "score": 200
+                },
+                {
+                  "game_number": 5,
+                  "score": 256
+                }
+              ],
+              "source_aliases": [
+                "rookies_m_score_html"
+              ],
+              "stage_total_pin": 1009,
+              "games_count": 5
+            },
+            {
+              "identity": "P:M00001459",
+              "license_no": "M00001459",
+              "display_name": "山本 義達",
+              "is_amateur": false,
+              "ranking": 18,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 213
+                },
+                {
+                  "game_number": 2,
+                  "score": 181
+                },
+                {
+                  "game_number": 3,
+                  "score": 182
+                },
+                {
+                  "game_number": 4,
+                  "score": 191
+                },
+                {
+                  "game_number": 5,
+                  "score": 184
+                }
+              ],
+              "source_aliases": [
+                "rookies_m_score_html"
+              ],
+              "stage_total_pin": 951,
+              "games_count": 5
+            },
+            {
+              "identity": "P:M00001508",
+              "license_no": "M00001508",
+              "display_name": "潟手 孝義",
+              "is_amateur": false,
+              "ranking": 19,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 211
+                },
+                {
+                  "game_number": 2,
+                  "score": 150
+                },
+                {
+                  "game_number": 3,
+                  "score": 152
+                },
+                {
+                  "game_number": 4,
+                  "score": 232
+                },
+                {
+                  "game_number": 5,
+                  "score": 277
+                }
+              ],
+              "source_aliases": [
+                "rookies_m_score_html"
+              ],
+              "stage_total_pin": 1022,
+              "games_count": 5
+            },
+            {
+              "identity": "P:M00001466",
+              "license_no": "M00001466",
+              "display_name": "犬飼 健志",
+              "is_amateur": false,
+              "ranking": 20,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 185
+                },
+                {
+                  "game_number": 2,
+                  "score": 217
+                },
+                {
+                  "game_number": 3,
+                  "score": 243
+                },
+                {
+                  "game_number": 4,
+                  "score": 204
+                },
+                {
+                  "game_number": 5,
+                  "score": 168
+                }
+              ],
+              "source_aliases": [
+                "rookies_m_score_html"
+              ],
+              "stage_total_pin": 1017,
+              "games_count": 5
+            },
+            {
+              "identity": "P:M00001469",
+              "license_no": "M00001469",
+              "display_name": "田野岡大夢",
+              "is_amateur": false,
+              "ranking": 21,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 191
+                },
+                {
+                  "game_number": 2,
+                  "score": 210
+                },
+                {
+                  "game_number": 3,
+                  "score": 149
+                },
+                {
+                  "game_number": 4,
+                  "score": 213
+                },
+                {
+                  "game_number": 5,
+                  "score": 193
+                }
+              ],
+              "source_aliases": [
+                "rookies_m_score_html"
+              ],
+              "stage_total_pin": 956,
+              "games_count": 5
+            },
+            {
+              "identity": "P:M00001461",
+              "license_no": "M00001461",
+              "display_name": "鶴見 亮剛",
+              "is_amateur": false,
+              "ranking": 22,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 223
+                },
+                {
+                  "game_number": 2,
+                  "score": 169
+                },
+                {
+                  "game_number": 3,
+                  "score": 234
+                },
+                {
+                  "game_number": 4,
+                  "score": 171
+                },
+                {
+                  "game_number": 5,
+                  "score": 246
+                }
+              ],
+              "source_aliases": [
+                "rookies_m_score_html"
+              ],
+              "stage_total_pin": 1043,
+              "games_count": 5
+            },
+            {
+              "identity": "P:M00001490",
+              "license_no": "M00001490",
+              "display_name": "栗原 翔",
+              "is_amateur": false,
+              "ranking": 23,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 219
+                },
+                {
+                  "game_number": 2,
+                  "score": 171
+                },
+                {
+                  "game_number": 3,
+                  "score": 161
+                },
+                {
+                  "game_number": 4,
+                  "score": 202
+                },
+                {
+                  "game_number": 5,
+                  "score": 186
+                }
+              ],
+              "source_aliases": [
+                "rookies_m_score_html"
+              ],
+              "stage_total_pin": 939,
+              "games_count": 5
+            },
+            {
+              "identity": "P:M00001487",
+              "license_no": "M00001487",
+              "display_name": "御手洗彰彦",
+              "is_amateur": false,
+              "ranking": 24,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 211
+                },
+                {
+                  "game_number": 2,
+                  "score": 236
+                },
+                {
+                  "game_number": 3,
+                  "score": 200
+                },
+                {
+                  "game_number": 4,
+                  "score": 189
+                },
+                {
+                  "game_number": 5,
+                  "score": 176
+                }
+              ],
+              "source_aliases": [
+                "rookies_m_score_html"
+              ],
+              "stage_total_pin": 1012,
+              "games_count": 5
+            }
+          ]
+        },
+        {
+          "stage": "決勝ラウンドロビン",
+          "rows": [
+            {
+              "identity": "P:M00001446",
+              "license_no": "M00001446",
+              "display_name": "斎藤 祐太",
+              "is_amateur": false,
+              "ranking": 2,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 245
+                },
+                {
+                  "game_number": 2,
+                  "score": 267
+                },
+                {
+                  "game_number": 3,
+                  "score": 211
+                },
+                {
+                  "game_number": 4,
+                  "score": 218
+                },
+                {
+                  "game_number": 5,
+                  "score": 263
+                },
+                {
+                  "game_number": 6,
+                  "score": 245
+                },
+                {
+                  "game_number": 7,
+                  "score": 258
+                },
+                {
+                  "game_number": 8,
+                  "score": 188
+                }
+              ],
+              "source_aliases": [
+                "rookies_m_round_robin_image"
+              ],
+              "stage_total_pin": 1895,
+              "games_count": 8
+            },
+            {
+              "identity": "P:M00001505",
+              "license_no": "M00001505",
+              "display_name": "久冨木 広",
+              "is_amateur": false,
+              "ranking": 1,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 276
+                },
+                {
+                  "game_number": 2,
+                  "score": 220
+                },
+                {
+                  "game_number": 3,
+                  "score": 224
+                },
+                {
+                  "game_number": 4,
+                  "score": 258
+                },
+                {
+                  "game_number": 5,
+                  "score": 248
+                },
+                {
+                  "game_number": 6,
+                  "score": 247
+                },
+                {
+                  "game_number": 7,
+                  "score": 224
+                },
+                {
+                  "game_number": 8,
+                  "score": 259
+                }
+              ],
+              "source_aliases": [
+                "rookies_m_round_robin_image"
+              ],
+              "stage_total_pin": 1956,
+              "games_count": 8
+            },
+            {
+              "identity": "P:M00001443",
+              "license_no": "M00001443",
+              "display_name": "藤永 北斗",
+              "is_amateur": false,
+              "ranking": 3,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 268
+                },
+                {
+                  "game_number": 2,
+                  "score": 222
+                },
+                {
+                  "game_number": 3,
+                  "score": 237
+                },
+                {
+                  "game_number": 4,
+                  "score": 197
+                },
+                {
+                  "game_number": 5,
+                  "score": 245
+                },
+                {
+                  "game_number": 6,
+                  "score": 228
+                },
+                {
+                  "game_number": 7,
+                  "score": 233
+                },
+                {
+                  "game_number": 8,
+                  "score": 238
+                }
+              ],
+              "source_aliases": [
+                "rookies_m_round_robin_image"
+              ],
+              "stage_total_pin": 1868,
+              "games_count": 8
+            },
+            {
+              "identity": "P:M00001451",
+              "license_no": "M00001451",
+              "display_name": "小野 在由",
+              "is_amateur": false,
+              "ranking": 4,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 226
+                },
+                {
+                  "game_number": 2,
+                  "score": 217
+                },
+                {
+                  "game_number": 3,
+                  "score": 204
+                },
+                {
+                  "game_number": 4,
+                  "score": 224
+                },
+                {
+                  "game_number": 5,
+                  "score": 237
+                },
+                {
+                  "game_number": 6,
+                  "score": 220
+                },
+                {
+                  "game_number": 7,
+                  "score": 222
+                },
+                {
+                  "game_number": 8,
+                  "score": 175
+                }
+              ],
+              "source_aliases": [
+                "rookies_m_round_robin_image"
+              ],
+              "stage_total_pin": 1725,
+              "games_count": 8
+            },
+            {
+              "identity": "P:M00001504",
+              "license_no": "M00001504",
+              "display_name": "熊沢 颯",
+              "is_amateur": false,
+              "ranking": 5,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 268
+                },
+                {
+                  "game_number": 2,
+                  "score": 169
+                },
+                {
+                  "game_number": 3,
+                  "score": 220
+                },
+                {
+                  "game_number": 4,
+                  "score": 216
+                },
+                {
+                  "game_number": 5,
+                  "score": 196
+                },
+                {
+                  "game_number": 6,
+                  "score": 279
+                },
+                {
+                  "game_number": 7,
+                  "score": 181
+                },
+                {
+                  "game_number": 8,
+                  "score": 189
+                }
+              ],
+              "source_aliases": [
+                "rookies_m_round_robin_image"
+              ],
+              "stage_total_pin": 1718,
+              "games_count": 8
+            },
+            {
+              "identity": "P:M00001500",
+              "license_no": "M00001500",
+              "display_name": "畑 秀明",
+              "is_amateur": false,
+              "ranking": 6,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 246
+                },
+                {
+                  "game_number": 2,
+                  "score": 197
+                },
+                {
+                  "game_number": 3,
+                  "score": 188
+                },
+                {
+                  "game_number": 4,
+                  "score": 197
+                },
+                {
+                  "game_number": 5,
+                  "score": 202
+                },
+                {
+                  "game_number": 6,
+                  "score": 201
+                },
+                {
+                  "game_number": 7,
+                  "score": 255
+                },
+                {
+                  "game_number": 8,
+                  "score": 190
+                }
+              ],
+              "source_aliases": [
+                "rookies_m_round_robin_image"
+              ],
+              "stage_total_pin": 1676,
+              "games_count": 8
+            },
+            {
+              "identity": "P:M00001502",
+              "license_no": "M00001502",
+              "display_name": "山本 青空",
+              "is_amateur": false,
+              "ranking": 7,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 239
+                },
+                {
+                  "game_number": 2,
+                  "score": 203
+                },
+                {
+                  "game_number": 3,
+                  "score": 201
+                },
+                {
+                  "game_number": 4,
+                  "score": 198
+                },
+                {
+                  "game_number": 5,
+                  "score": 252
+                },
+                {
+                  "game_number": 6,
+                  "score": 160
+                },
+                {
+                  "game_number": 7,
+                  "score": 212
+                },
+                {
+                  "game_number": 8,
+                  "score": 207
+                }
+              ],
+              "source_aliases": [
+                "rookies_m_round_robin_image"
+              ],
+              "stage_total_pin": 1672,
+              "games_count": 8
+            },
+            {
+              "identity": "P:M00001453",
+              "license_no": "M00001453",
+              "display_name": "石田 智輝",
+              "is_amateur": false,
+              "ranking": 8,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 209
+                },
+                {
+                  "game_number": 2,
+                  "score": 181
+                },
+                {
+                  "game_number": 3,
+                  "score": 187
+                },
+                {
+                  "game_number": 4,
+                  "score": 200
+                },
+                {
+                  "game_number": 5,
+                  "score": 189
+                },
+                {
+                  "game_number": 6,
+                  "score": 215
+                },
+                {
+                  "game_number": 7,
+                  "score": 248
+                },
+                {
+                  "game_number": 8,
+                  "score": 200
+                }
+              ],
+              "source_aliases": [
+                "rookies_m_round_robin_image"
+              ],
+              "stage_total_pin": 1629,
+              "games_count": 8
+            }
+          ]
+        },
+        {
+          "stage": "決勝ステップラダー",
+          "rows": [
+            {
+              "identity": "P:M00001446",
+              "license_no": "M00001446",
+              "display_name": "斎藤 祐太",
+              "is_amateur": false,
+              "ranking": 1,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 218
+                },
+                {
+                  "game_number": 2,
+                  "score": 278
+                }
+              ],
+              "source_aliases": [
+                "rookies_m_final_pdf"
+              ],
+              "stage_total_pin": 496,
+              "games_count": 2
+            },
+            {
+              "identity": "P:M00001505",
+              "license_no": "M00001505",
+              "display_name": "久冨木 広",
+              "is_amateur": false,
+              "ranking": 2,
+              "games": [
+                {
+                  "game_number": 2,
+                  "score": 260
+                }
+              ],
+              "source_aliases": [
+                "rookies_m_final_pdf"
+              ],
+              "stage_total_pin": 260,
+              "games_count": 1
+            },
+            {
+              "identity": "P:M00001443",
+              "license_no": "M00001443",
+              "display_name": "藤永 北斗",
+              "is_amateur": false,
+              "ranking": 3,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 194
+                }
+              ],
+              "source_aliases": [
+                "rookies_m_final_pdf"
+              ],
+              "stage_total_pin": 194,
+              "games_count": 1
+            }
+          ]
+        }
+      ],
+      "expected_score_count": 676,
+      "expected_player_count": 61
+    },
+    {
+      "key": "korean_cup_2026",
+      "tournament": {
+        "name": "第28回DSD三湖コリアンカップ インターナショナルボウリングトーナメント",
+        "gender": "M",
+        "start_date": "2026-09-03",
+        "end_date": "2026-09-07",
+        "year": 2026,
+        "venue_name": "ボルトピアボウリング競技場（韓国・龍仁）",
+        "competition_type": "singles",
+        "official_type": "official",
+        "counts_for_official_points": true,
+        "counts_for_average": true,
+        "counts_for_prize": true,
+        "title_scope": "official",
+        "title_category": "normal",
+        "source_url": "https://www.jpba.or.jp/information/tournament/tournament2026/KOREAN/KoreanCup_2026.html"
+      },
+      "sources": [
+        {
+          "alias": "korean_day1_a.pdf",
+          "filename": "Korean_Day1_A.pdf",
+          "sha256": "49e57945bb90307815fc08edfcb6c444d702a3c2ac02c8f136ac5114d4939aa9",
+          "aggregate_hash_verified": true,
+          "url": "https://www.jpba.or.jp/information/tournament/tournament2026/KOREAN/Result/Day1_A.pdf"
+        },
+        {
+          "alias": "korean_day1_b.pdf",
+          "filename": "Korean_Day1_B.pdf",
+          "sha256": "14ff7b67a4c4bb5db2b1936b5e0f8b41ae27466f4b891c5c652805fc58d2f7de",
+          "aggregate_hash_verified": true,
+          "url": "https://www.jpba.or.jp/information/tournament/tournament2026/KOREAN/Result/Day1_B.pdf"
+        },
+        {
+          "alias": "korean_day1_c.pdf",
+          "filename": "Korean_Day1_C.pdf",
+          "sha256": "d45e4868619dfcbcb5aaa89afa71a74e88b97f0d5161a48a1a77ed3f097fe01c",
+          "aggregate_hash_verified": true,
+          "url": "https://www.jpba.or.jp/information/tournament/tournament2026/KOREAN/Result/Day1_C.pdf"
+        },
+        {
+          "alias": "korean_day1_d.pdf",
+          "filename": "Korean_Day1_D.pdf",
+          "sha256": "7a2e0729ff4a807a03a8cea3ef34394ddcfddb6c6ec75f93651268ed3641e175",
+          "aggregate_hash_verified": true,
+          "url": "https://www.jpba.or.jp/information/tournament/tournament2026/KOREAN/Result/Day1_D.pdf"
+        },
+        {
+          "alias": "korean_day2_a.pdf",
+          "filename": "Korean_Day2_A.pdf",
+          "sha256": "2b8b2937bb4707fc346ad9627745835d907286b0ef45867791e5411ec8b8d4b2",
+          "aggregate_hash_verified": true,
+          "url": "https://www.jpba.or.jp/information/tournament/tournament2026/KOREAN/Result/Day2_A.pdf"
+        },
+        {
+          "alias": "korean_day2_b.pdf",
+          "filename": "Korean_Day2_B.pdf",
+          "sha256": "6a6770bacadbb83bafc8ab4a2ee6a17ade60c4a826330b8d11d6f2629d67df45",
+          "aggregate_hash_verified": true,
+          "url": "https://www.jpba.or.jp/information/tournament/tournament2026/KOREAN/Result/Day2_B.pdf"
+        },
+        {
+          "alias": "korean_day2_c.pdf",
+          "filename": "Korean_Day2_C.pdf",
+          "sha256": "c490776bc43aefb976e15aa85ec3a38c49cd5bcbf8d74dd6ddc56709c32ba5cb",
+          "aggregate_hash_verified": true,
+          "url": "https://www.jpba.or.jp/information/tournament/tournament2026/KOREAN/Result/Day2_C.pdf"
+        },
+        {
+          "alias": "korean_day2_d.pdf",
+          "filename": "Korean_Day2_D.pdf",
+          "sha256": "fbc4017480ba3ae871ff4193f6948859a098e64c445127ac2425f68222c0ffb2",
+          "aggregate_hash_verified": true,
+          "url": "https://www.jpba.or.jp/information/tournament/tournament2026/KOREAN/Result/Day2_D.pdf"
+        },
+        {
+          "alias": "korean_semi_4th.pdf",
+          "filename": "Korean_Semi_4th.pdf",
+          "sha256": "0edeae31d404e22d1bdddfced0f7c510572d3bc816c81e9f62363a760c8630f1",
+          "aggregate_hash_verified": true,
+          "url": "https://www.jpba.or.jp/information/tournament/tournament2026/KOREAN/Result/Semi_4th.pdf"
+        }
+      ],
+      "stages": [
+        {
+          "stage": "予選",
+          "rows": [
+            {
+              "identity": "P:M00001446",
+              "license_no": "M00001446",
+              "display_name": "斎藤 祐太",
+              "is_amateur": false,
+              "ranking": 37,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 245
+                },
+                {
+                  "game_number": 2,
+                  "score": 278
+                },
+                {
+                  "game_number": 3,
+                  "score": 214
+                },
+                {
+                  "game_number": 4,
+                  "score": 203
+                },
+                {
+                  "game_number": 5,
+                  "score": 278
+                },
+                {
+                  "game_number": 6,
+                  "score": 234
+                },
+                {
+                  "game_number": 7,
+                  "score": 246
+                },
+                {
+                  "game_number": 8,
+                  "score": 214
+                },
+                {
+                  "game_number": 9,
+                  "score": 255
+                },
+                {
+                  "game_number": 10,
+                  "score": 277
+                }
+              ],
+              "source_aliases": [
+                "korean_day1_a.pdf",
+                "korean_day2_a.pdf"
+              ],
+              "stage_total_pin": 2444,
+              "games_count": 10,
+              "shift": "A"
+            },
+            {
+              "identity": "P:M00001431",
+              "license_no": "M00001431",
+              "display_name": "木村 晃",
+              "is_amateur": false,
+              "ranking": 89,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 223
+                },
+                {
+                  "game_number": 2,
+                  "score": 279
+                },
+                {
+                  "game_number": 3,
+                  "score": 279
+                },
+                {
+                  "game_number": 4,
+                  "score": 193
+                },
+                {
+                  "game_number": 5,
+                  "score": 224
+                },
+                {
+                  "game_number": 6,
+                  "score": 190
+                },
+                {
+                  "game_number": 7,
+                  "score": 242
+                },
+                {
+                  "game_number": 8,
+                  "score": 182
+                },
+                {
+                  "game_number": 9,
+                  "score": 216
+                },
+                {
+                  "game_number": 10,
+                  "score": 205
+                }
+              ],
+              "source_aliases": [
+                "korean_day1_a.pdf",
+                "korean_day2_a.pdf"
+              ],
+              "stage_total_pin": 2233,
+              "games_count": 10,
+              "shift": "A"
+            },
+            {
+              "identity": "P:M00001343",
+              "license_no": "M00001343",
+              "display_name": "平岡 勇人",
+              "is_amateur": false,
+              "ranking": 125,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 234
+                },
+                {
+                  "game_number": 2,
+                  "score": 191
+                },
+                {
+                  "game_number": 3,
+                  "score": 218
+                },
+                {
+                  "game_number": 4,
+                  "score": 235
+                },
+                {
+                  "game_number": 5,
+                  "score": 228
+                },
+                {
+                  "game_number": 6,
+                  "score": 222
+                },
+                {
+                  "game_number": 7,
+                  "score": 257
+                },
+                {
+                  "game_number": 8,
+                  "score": 238
+                },
+                {
+                  "game_number": 9,
+                  "score": 192
+                },
+                {
+                  "game_number": 10,
+                  "score": 187
+                }
+              ],
+              "source_aliases": [
+                "korean_day1_a.pdf",
+                "korean_day2_a.pdf"
+              ],
+              "stage_total_pin": 2202,
+              "games_count": 10,
+              "shift": "A"
+            },
+            {
+              "identity": "P:M00001345",
+              "license_no": "M00001345",
+              "display_name": "甘糟 翔太",
+              "is_amateur": false,
+              "ranking": 85,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 214
+                },
+                {
+                  "game_number": 2,
+                  "score": 234
+                },
+                {
+                  "game_number": 3,
+                  "score": 227
+                },
+                {
+                  "game_number": 4,
+                  "score": 212
+                },
+                {
+                  "game_number": 5,
+                  "score": 212
+                },
+                {
+                  "game_number": 6,
+                  "score": 237
+                },
+                {
+                  "game_number": 7,
+                  "score": 247
+                },
+                {
+                  "game_number": 8,
+                  "score": 225
+                },
+                {
+                  "game_number": 9,
+                  "score": 216
+                },
+                {
+                  "game_number": 10,
+                  "score": 212
+                }
+              ],
+              "source_aliases": [
+                "korean_day1_a.pdf",
+                "korean_day2_a.pdf"
+              ],
+              "stage_total_pin": 2236,
+              "games_count": 10,
+              "shift": "A"
+            },
+            {
+              "identity": "P:M00001395",
+              "license_no": "M00001395",
+              "display_name": "佐藤 貴啓",
+              "is_amateur": false,
+              "ranking": 369,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 205
+                },
+                {
+                  "game_number": 2,
+                  "score": 227
+                },
+                {
+                  "game_number": 3,
+                  "score": 222
+                },
+                {
+                  "game_number": 4,
+                  "score": 166
+                },
+                {
+                  "game_number": 5,
+                  "score": 213
+                },
+                {
+                  "game_number": 6,
+                  "score": 148
+                },
+                {
+                  "game_number": 7,
+                  "score": 202
+                },
+                {
+                  "game_number": 8,
+                  "score": 205
+                },
+                {
+                  "game_number": 9,
+                  "score": 166
+                },
+                {
+                  "game_number": 10,
+                  "score": 150
+                }
+              ],
+              "source_aliases": [
+                "korean_day1_a.pdf",
+                "korean_day2_a.pdf"
+              ],
+              "stage_total_pin": 1904,
+              "games_count": 10,
+              "shift": "A"
+            },
+            {
+              "identity": "P:M00001433",
+              "license_no": "M00001433",
+              "display_name": "井口 遼太",
+              "is_amateur": false,
+              "ranking": 30,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 268
+                },
+                {
+                  "game_number": 2,
+                  "score": 247
+                },
+                {
+                  "game_number": 3,
+                  "score": 244
+                },
+                {
+                  "game_number": 4,
+                  "score": 255
+                },
+                {
+                  "game_number": 5,
+                  "score": 202
+                },
+                {
+                  "game_number": 6,
+                  "score": 210
+                },
+                {
+                  "game_number": 7,
+                  "score": 206
+                },
+                {
+                  "game_number": 8,
+                  "score": 216
+                },
+                {
+                  "game_number": 9,
+                  "score": 259
+                },
+                {
+                  "game_number": 10,
+                  "score": 226
+                }
+              ],
+              "source_aliases": [
+                "korean_day1_b.pdf",
+                "korean_day2_b.pdf"
+              ],
+              "stage_total_pin": 2333,
+              "games_count": 10,
+              "shift": "B"
+            },
+            {
+              "identity": "P:M00001287",
+              "license_no": "M00001287",
+              "display_name": "藤井 信人",
+              "is_amateur": false,
+              "ranking": 9,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 192
+                },
+                {
+                  "game_number": 2,
+                  "score": 239
+                },
+                {
+                  "game_number": 3,
+                  "score": 210
+                },
+                {
+                  "game_number": 4,
+                  "score": 259
+                },
+                {
+                  "game_number": 5,
+                  "score": 192
+                },
+                {
+                  "game_number": 6,
+                  "score": 258
+                },
+                {
+                  "game_number": 7,
+                  "score": 233
+                },
+                {
+                  "game_number": 8,
+                  "score": 258
+                },
+                {
+                  "game_number": 9,
+                  "score": 222
+                },
+                {
+                  "game_number": 10,
+                  "score": 248
+                }
+              ],
+              "source_aliases": [
+                "korean_day1_b.pdf",
+                "korean_day2_b.pdf"
+              ],
+              "stage_total_pin": 2311,
+              "games_count": 10,
+              "shift": "B"
+            },
+            {
+              "identity": "P:M00001477",
+              "license_no": "M00001477",
+              "display_name": "西山 翔悟",
+              "is_amateur": false,
+              "ranking": 85,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 190
+                },
+                {
+                  "game_number": 2,
+                  "score": 226
+                },
+                {
+                  "game_number": 3,
+                  "score": 193
+                },
+                {
+                  "game_number": 4,
+                  "score": 215
+                },
+                {
+                  "game_number": 5,
+                  "score": 211
+                },
+                {
+                  "game_number": 6,
+                  "score": 224
+                },
+                {
+                  "game_number": 7,
+                  "score": 237
+                },
+                {
+                  "game_number": 8,
+                  "score": 245
+                },
+                {
+                  "game_number": 9,
+                  "score": 268
+                },
+                {
+                  "game_number": 10,
+                  "score": 224
+                }
+              ],
+              "source_aliases": [
+                "korean_day1_b.pdf",
+                "korean_day2_b.pdf"
+              ],
+              "stage_total_pin": 2233,
+              "games_count": 10,
+              "shift": "B"
+            },
+            {
+              "identity": "P:M00001267",
+              "license_no": "M00001267",
+              "display_name": "森本 健太",
+              "is_amateur": false,
+              "ranking": 113,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 193
+                },
+                {
+                  "game_number": 2,
+                  "score": 201
+                },
+                {
+                  "game_number": 3,
+                  "score": 230
+                },
+                {
+                  "game_number": 4,
+                  "score": 211
+                },
+                {
+                  "game_number": 5,
+                  "score": 195
+                },
+                {
+                  "game_number": 6,
+                  "score": 220
+                },
+                {
+                  "game_number": 7,
+                  "score": 257
+                },
+                {
+                  "game_number": 8,
+                  "score": 193
+                },
+                {
+                  "game_number": 9,
+                  "score": 276
+                },
+                {
+                  "game_number": 10,
+                  "score": 232
+                }
+              ],
+              "source_aliases": [
+                "korean_day1_b.pdf",
+                "korean_day2_b.pdf"
+              ],
+              "stage_total_pin": 2208,
+              "games_count": 10,
+              "shift": "B"
+            },
+            {
+              "identity": "P:M00001066",
+              "license_no": "M00001066",
+              "display_name": "加藤 祐哉",
+              "is_amateur": false,
+              "ranking": 153,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 168
+                },
+                {
+                  "game_number": 2,
+                  "score": 173
+                },
+                {
+                  "game_number": 3,
+                  "score": 234
+                },
+                {
+                  "game_number": 4,
+                  "score": 214
+                },
+                {
+                  "game_number": 5,
+                  "score": 216
+                },
+                {
+                  "game_number": 6,
+                  "score": 259
+                },
+                {
+                  "game_number": 7,
+                  "score": 233
+                },
+                {
+                  "game_number": 8,
+                  "score": 232
+                },
+                {
+                  "game_number": 9,
+                  "score": 217
+                },
+                {
+                  "game_number": 10,
+                  "score": 227
+                }
+              ],
+              "source_aliases": [
+                "korean_day1_b.pdf",
+                "korean_day2_b.pdf"
+              ],
+              "stage_total_pin": 2173,
+              "games_count": 10,
+              "shift": "B"
+            },
+            {
+              "identity": "P:M00001443",
+              "license_no": "M00001443",
+              "display_name": "藤永 北斗",
+              "is_amateur": false,
+              "ranking": 34,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 234
+                },
+                {
+                  "game_number": 2,
+                  "score": 257
+                },
+                {
+                  "game_number": 3,
+                  "score": 224
+                },
+                {
+                  "game_number": 4,
+                  "score": 265
+                },
+                {
+                  "game_number": 5,
+                  "score": 244
+                },
+                {
+                  "game_number": 6,
+                  "score": 226
+                },
+                {
+                  "game_number": 7,
+                  "score": 258
+                },
+                {
+                  "game_number": 8,
+                  "score": 259
+                },
+                {
+                  "game_number": 9,
+                  "score": 213
+                },
+                {
+                  "game_number": 10,
+                  "score": 176
+                }
+              ],
+              "source_aliases": [
+                "korean_day1_c.pdf",
+                "korean_day2_c.pdf"
+              ],
+              "stage_total_pin": 2356,
+              "games_count": 10,
+              "shift": "C"
+            },
+            {
+              "identity": "P:M00001452",
+              "license_no": "M00001452",
+              "display_name": "内藤 広人",
+              "is_amateur": false,
+              "ranking": 64,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 258
+                },
+                {
+                  "game_number": 2,
+                  "score": 209
+                },
+                {
+                  "game_number": 3,
+                  "score": 237
+                },
+                {
+                  "game_number": 4,
+                  "score": 196
+                },
+                {
+                  "game_number": 5,
+                  "score": 257
+                },
+                {
+                  "game_number": 6,
+                  "score": 235
+                },
+                {
+                  "game_number": 7,
+                  "score": 200
+                },
+                {
+                  "game_number": 8,
+                  "score": 243
+                },
+                {
+                  "game_number": 9,
+                  "score": 237
+                },
+                {
+                  "game_number": 10,
+                  "score": 212
+                }
+              ],
+              "source_aliases": [
+                "korean_day1_c.pdf",
+                "korean_day2_c.pdf"
+              ],
+              "stage_total_pin": 2284,
+              "games_count": 10,
+              "shift": "C"
+            },
+            {
+              "identity": "P:M00001458",
+              "license_no": "M00001458",
+              "display_name": "増田 優希",
+              "is_amateur": false,
+              "ranking": 177,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 234
+                },
+                {
+                  "game_number": 2,
+                  "score": 235
+                },
+                {
+                  "game_number": 3,
+                  "score": 240
+                },
+                {
+                  "game_number": 4,
+                  "score": 220
+                },
+                {
+                  "game_number": 5,
+                  "score": 192
+                },
+                {
+                  "game_number": 6,
+                  "score": 207
+                },
+                {
+                  "game_number": 7,
+                  "score": 169
+                },
+                {
+                  "game_number": 8,
+                  "score": 233
+                },
+                {
+                  "game_number": 9,
+                  "score": 174
+                },
+                {
+                  "game_number": 10,
+                  "score": 258
+                }
+              ],
+              "source_aliases": [
+                "korean_day1_c.pdf",
+                "korean_day2_c.pdf"
+              ],
+              "stage_total_pin": 2162,
+              "games_count": 10,
+              "shift": "C"
+            },
+            {
+              "identity": "P:M00001032",
+              "license_no": "M00001032",
+              "display_name": "工藤 貴志",
+              "is_amateur": false,
+              "ranking": 51,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 210
+                },
+                {
+                  "game_number": 2,
+                  "score": 211
+                },
+                {
+                  "game_number": 3,
+                  "score": 279
+                },
+                {
+                  "game_number": 4,
+                  "score": 192
+                },
+                {
+                  "game_number": 5,
+                  "score": 226
+                },
+                {
+                  "game_number": 6,
+                  "score": 218
+                },
+                {
+                  "game_number": 7,
+                  "score": 205
+                },
+                {
+                  "game_number": 8,
+                  "score": 222
+                },
+                {
+                  "game_number": 9,
+                  "score": 265
+                },
+                {
+                  "game_number": 10,
+                  "score": 259
+                }
+              ],
+              "source_aliases": [
+                "korean_day1_c.pdf",
+                "korean_day2_c.pdf"
+              ],
+              "stage_total_pin": 2287,
+              "games_count": 10,
+              "shift": "C"
+            },
+            {
+              "identity": "P:M00001429",
+              "license_no": "M00001429",
+              "display_name": "大久保雄矢",
+              "is_amateur": false,
+              "ranking": 26,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 199
+                },
+                {
+                  "game_number": 2,
+                  "score": 217
+                },
+                {
+                  "game_number": 3,
+                  "score": 258
+                },
+                {
+                  "game_number": 4,
+                  "score": 239
+                },
+                {
+                  "game_number": 5,
+                  "score": 198
+                },
+                {
+                  "game_number": 6,
+                  "score": 268
+                },
+                {
+                  "game_number": 7,
+                  "score": 227
+                },
+                {
+                  "game_number": 8,
+                  "score": 227
+                },
+                {
+                  "game_number": 9,
+                  "score": 279
+                },
+                {
+                  "game_number": 10,
+                  "score": 266
+                }
+              ],
+              "source_aliases": [
+                "korean_day1_c.pdf",
+                "korean_day2_c.pdf"
+              ],
+              "stage_total_pin": 2378,
+              "games_count": 10,
+              "shift": "C"
+            },
+            {
+              "identity": "P:M00001467",
+              "license_no": "M00001467",
+              "display_name": "菊田 樹",
+              "is_amateur": false,
+              "ranking": 77,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 195
+                },
+                {
+                  "game_number": 2,
+                  "score": 258
+                },
+                {
+                  "game_number": 3,
+                  "score": 222
+                },
+                {
+                  "game_number": 4,
+                  "score": 205
+                },
+                {
+                  "game_number": 5,
+                  "score": 225
+                },
+                {
+                  "game_number": 6,
+                  "score": 212
+                },
+                {
+                  "game_number": 7,
+                  "score": 227
+                },
+                {
+                  "game_number": 8,
+                  "score": 238
+                },
+                {
+                  "game_number": 9,
+                  "score": 246
+                },
+                {
+                  "game_number": 10,
+                  "score": 242
+                }
+              ],
+              "source_aliases": [
+                "korean_day1_c.pdf",
+                "korean_day2_c.pdf"
+              ],
+              "stage_total_pin": 2270,
+              "games_count": 10,
+              "shift": "C"
+            },
+            {
+              "identity": "P:M00001473",
+              "license_no": "M00001473",
+              "display_name": "米澤 佑哉",
+              "is_amateur": false,
+              "ranking": 297,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 214
+                },
+                {
+                  "game_number": 2,
+                  "score": 229
+                },
+                {
+                  "game_number": 3,
+                  "score": 203
+                },
+                {
+                  "game_number": 4,
+                  "score": 202
+                },
+                {
+                  "game_number": 5,
+                  "score": 217
+                },
+                {
+                  "game_number": 6,
+                  "score": 159
+                },
+                {
+                  "game_number": 7,
+                  "score": 191
+                },
+                {
+                  "game_number": 8,
+                  "score": 182
+                },
+                {
+                  "game_number": 9,
+                  "score": 237
+                },
+                {
+                  "game_number": 10,
+                  "score": 183
+                }
+              ],
+              "source_aliases": [
+                "korean_day1_c.pdf",
+                "korean_day2_c.pdf"
+              ],
+              "stage_total_pin": 2017,
+              "games_count": 10,
+              "shift": "C"
+            },
+            {
+              "identity": "P:M00001352",
+              "license_no": "M00001352",
+              "display_name": "ﾌﾞﾗｲｱﾝ･ｸﾞﾘｰﾝｳｯﾄﾞ",
+              "is_amateur": false,
+              "ranking": 261,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 223
+                },
+                {
+                  "game_number": 2,
+                  "score": 204
+                },
+                {
+                  "game_number": 3,
+                  "score": 195
+                },
+                {
+                  "game_number": 4,
+                  "score": 195
+                },
+                {
+                  "game_number": 5,
+                  "score": 229
+                },
+                {
+                  "game_number": 6,
+                  "score": 225
+                },
+                {
+                  "game_number": 7,
+                  "score": 215
+                },
+                {
+                  "game_number": 8,
+                  "score": 176
+                },
+                {
+                  "game_number": 9,
+                  "score": 194
+                },
+                {
+                  "game_number": 10,
+                  "score": 228
+                }
+              ],
+              "source_aliases": [
+                "korean_day1_c.pdf",
+                "korean_day2_c.pdf"
+              ],
+              "stage_total_pin": 2084,
+              "games_count": 10,
+              "shift": "C"
+            },
+            {
+              "identity": "P:M00001445",
+              "license_no": "M00001445",
+              "display_name": "宮澤 拓哉",
+              "is_amateur": false,
+              "ranking": 121,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 218
+                },
+                {
+                  "game_number": 2,
+                  "score": 244
+                },
+                {
+                  "game_number": 3,
+                  "score": 258
+                },
+                {
+                  "game_number": 4,
+                  "score": 193
+                },
+                {
+                  "game_number": 5,
+                  "score": 225
+                },
+                {
+                  "game_number": 6,
+                  "score": 200
+                },
+                {
+                  "game_number": 7,
+                  "score": 259
+                },
+                {
+                  "game_number": 8,
+                  "score": 161
+                },
+                {
+                  "game_number": 9,
+                  "score": 186
+                },
+                {
+                  "game_number": 10,
+                  "score": 235
+                }
+              ],
+              "source_aliases": [
+                "korean_day1_d.pdf",
+                "korean_day2_d.pdf"
+              ],
+              "stage_total_pin": 2179,
+              "games_count": 10,
+              "shift": "D"
+            },
+            {
+              "identity": "P:M00001423",
+              "license_no": "M00001423",
+              "display_name": "安里 秀策",
+              "is_amateur": false,
+              "ranking": 13,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 257
+                },
+                {
+                  "game_number": 2,
+                  "score": 196
+                },
+                {
+                  "game_number": 3,
+                  "score": 226
+                },
+                {
+                  "game_number": 4,
+                  "score": 256
+                },
+                {
+                  "game_number": 5,
+                  "score": 188
+                },
+                {
+                  "game_number": 6,
+                  "score": 214
+                },
+                {
+                  "game_number": 7,
+                  "score": 184
+                },
+                {
+                  "game_number": 8,
+                  "score": 279
+                },
+                {
+                  "game_number": 9,
+                  "score": 258
+                },
+                {
+                  "game_number": 10,
+                  "score": 300
+                }
+              ],
+              "source_aliases": [
+                "korean_day1_d.pdf",
+                "korean_day2_d.pdf"
+              ],
+              "stage_total_pin": 2358,
+              "games_count": 10,
+              "shift": "D"
+            },
+            {
+              "identity": "P:M00001479",
+              "license_no": "M00001479",
+              "display_name": "立花 仁貴",
+              "is_amateur": false,
+              "ranking": 81,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 267
+                },
+                {
+                  "game_number": 2,
+                  "score": 193
+                },
+                {
+                  "game_number": 3,
+                  "score": 228
+                },
+                {
+                  "game_number": 4,
+                  "score": 213
+                },
+                {
+                  "game_number": 5,
+                  "score": 202
+                },
+                {
+                  "game_number": 6,
+                  "score": 212
+                },
+                {
+                  "game_number": 7,
+                  "score": 244
+                },
+                {
+                  "game_number": 8,
+                  "score": 217
+                },
+                {
+                  "game_number": 9,
+                  "score": 225
+                },
+                {
+                  "game_number": 10,
+                  "score": 224
+                }
+              ],
+              "source_aliases": [
+                "korean_day1_d.pdf",
+                "korean_day2_d.pdf"
+              ],
+              "stage_total_pin": 2225,
+              "games_count": 10,
+              "shift": "D"
+            },
+            {
+              "identity": "P:M00001427",
+              "license_no": "M00001427",
+              "display_name": "田中 椋也",
+              "is_amateur": false,
+              "ranking": 157,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 234
+                },
+                {
+                  "game_number": 2,
+                  "score": 196
+                },
+                {
+                  "game_number": 3,
+                  "score": 224
+                },
+                {
+                  "game_number": 4,
+                  "score": 213
+                },
+                {
+                  "game_number": 5,
+                  "score": 222
+                },
+                {
+                  "game_number": 6,
+                  "score": 207
+                },
+                {
+                  "game_number": 7,
+                  "score": 248
+                },
+                {
+                  "game_number": 8,
+                  "score": 238
+                },
+                {
+                  "game_number": 9,
+                  "score": 192
+                },
+                {
+                  "game_number": 10,
+                  "score": 170
+                }
+              ],
+              "source_aliases": [
+                "korean_day1_d.pdf",
+                "korean_day2_d.pdf"
+              ],
+              "stage_total_pin": 2144,
+              "games_count": 10,
+              "shift": "D"
+            },
+            {
+              "identity": "P:M00001384",
+              "license_no": "M00001384",
+              "display_name": "水野 耕佑",
+              "is_amateur": false,
+              "ranking": 165,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 212
+                },
+                {
+                  "game_number": 2,
+                  "score": 259
+                },
+                {
+                  "game_number": 3,
+                  "score": 169
+                },
+                {
+                  "game_number": 4,
+                  "score": 251
+                },
+                {
+                  "game_number": 5,
+                  "score": 182
+                },
+                {
+                  "game_number": 6,
+                  "score": 266
+                },
+                {
+                  "game_number": 7,
+                  "score": 183
+                },
+                {
+                  "game_number": 8,
+                  "score": 232
+                },
+                {
+                  "game_number": 9,
+                  "score": 182
+                },
+                {
+                  "game_number": 10,
+                  "score": 203
+                }
+              ],
+              "source_aliases": [
+                "korean_day1_d.pdf",
+                "korean_day2_d.pdf"
+              ],
+              "stage_total_pin": 2139,
+              "games_count": 10,
+              "shift": "D"
+            },
+            {
+              "identity": "P:M00001435",
+              "license_no": "M00001435",
+              "display_name": "徳久 恵大",
+              "is_amateur": false,
+              "ranking": 109,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 198
+                },
+                {
+                  "game_number": 2,
+                  "score": 194
+                },
+                {
+                  "game_number": 3,
+                  "score": 279
+                },
+                {
+                  "game_number": 4,
+                  "score": 188
+                },
+                {
+                  "game_number": 5,
+                  "score": 214
+                },
+                {
+                  "game_number": 6,
+                  "score": 256
+                },
+                {
+                  "game_number": 7,
+                  "score": 222
+                },
+                {
+                  "game_number": 8,
+                  "score": 234
+                },
+                {
+                  "game_number": 9,
+                  "score": 161
+                },
+                {
+                  "game_number": 10,
+                  "score": 245
+                }
+              ],
+              "source_aliases": [
+                "korean_day1_d.pdf",
+                "korean_day2_d.pdf"
+              ],
+              "stage_total_pin": 2191,
+              "games_count": 10,
+              "shift": "D"
+            },
+            {
+              "identity": "P:M00001403",
+              "license_no": "M00001403",
+              "display_name": "柿沼 貴史",
+              "is_amateur": false,
+              "ranking": 153,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 208
+                },
+                {
+                  "game_number": 2,
+                  "score": 218
+                },
+                {
+                  "game_number": 3,
+                  "score": 164
+                },
+                {
+                  "game_number": 4,
+                  "score": 246
+                },
+                {
+                  "game_number": 5,
+                  "score": 223
+                },
+                {
+                  "game_number": 6,
+                  "score": 216
+                },
+                {
+                  "game_number": 7,
+                  "score": 192
+                },
+                {
+                  "game_number": 8,
+                  "score": 198
+                },
+                {
+                  "game_number": 9,
+                  "score": 233
+                },
+                {
+                  "game_number": 10,
+                  "score": 247
+                }
+              ],
+              "source_aliases": [
+                "korean_day1_d.pdf",
+                "korean_day2_d.pdf"
+              ],
+              "stage_total_pin": 2145,
+              "games_count": 10,
+              "shift": "D"
+            },
+            {
+              "identity": "P:M00001198",
+              "license_no": "M00001198",
+              "display_name": "小林 哲也",
+              "is_amateur": false,
+              "ranking": 149,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 193
+                },
+                {
+                  "game_number": 2,
+                  "score": 220
+                },
+                {
+                  "game_number": 3,
+                  "score": 205
+                },
+                {
+                  "game_number": 4,
+                  "score": 227
+                },
+                {
+                  "game_number": 5,
+                  "score": 211
+                },
+                {
+                  "game_number": 6,
+                  "score": 213
+                },
+                {
+                  "game_number": 7,
+                  "score": 242
+                },
+                {
+                  "game_number": 8,
+                  "score": 218
+                },
+                {
+                  "game_number": 9,
+                  "score": 213
+                },
+                {
+                  "game_number": 10,
+                  "score": 213
+                }
+              ],
+              "source_aliases": [
+                "korean_day1_d.pdf",
+                "korean_day2_d.pdf"
+              ],
+              "stage_total_pin": 2155,
+              "games_count": 10,
+              "shift": "D"
+            },
+            {
+              "identity": "P:M00001481",
+              "license_no": "M00001481",
+              "display_name": "福原 尊",
+              "is_amateur": false,
+              "ranking": 137,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 239
+                },
+                {
+                  "game_number": 2,
+                  "score": 176
+                },
+                {
+                  "game_number": 3,
+                  "score": 159
+                },
+                {
+                  "game_number": 4,
+                  "score": 236
+                },
+                {
+                  "game_number": 5,
+                  "score": 224
+                },
+                {
+                  "game_number": 6,
+                  "score": 255
+                },
+                {
+                  "game_number": 7,
+                  "score": 222
+                },
+                {
+                  "game_number": 8,
+                  "score": 212
+                },
+                {
+                  "game_number": 9,
+                  "score": 236
+                },
+                {
+                  "game_number": 10,
+                  "score": 203
+                }
+              ],
+              "source_aliases": [
+                "korean_day1_d.pdf",
+                "korean_day2_d.pdf"
+              ],
+              "stage_total_pin": 2162,
+              "games_count": 10,
+              "shift": "D"
+            }
+          ]
+        },
+        {
+          "stage": "準決勝トーナメント1回戦",
+          "rows": [
+            {
+              "identity": "P:M00001446",
+              "license_no": "M00001446",
+              "display_name": "斎藤 祐太",
+              "is_amateur": false,
+              "ranking": 37,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 201
+                },
+                {
+                  "game_number": 2,
+                  "score": 222
+                },
+                {
+                  "game_number": 3,
+                  "score": 207
+                }
+              ],
+              "source_aliases": [
+                "korean_semi_4th.pdf"
+              ],
+              "stage_total_pin": 630,
+              "games_count": 3
+            },
+            {
+              "identity": "P:M00001433",
+              "license_no": "M00001433",
+              "display_name": "井口 遼太",
+              "is_amateur": false,
+              "ranking": 30,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 204
+                },
+                {
+                  "game_number": 2,
+                  "score": 225
+                }
+              ],
+              "source_aliases": [
+                "korean_semi_4th.pdf"
+              ],
+              "stage_total_pin": 429,
+              "games_count": 2
+            },
+            {
+              "identity": "P:M00001032",
+              "license_no": "M00001032",
+              "display_name": "工藤 貴志",
+              "is_amateur": false,
+              "ranking": 51,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 205
+                },
+                {
+                  "game_number": 2,
+                  "score": 228
+                }
+              ],
+              "source_aliases": [
+                "korean_semi_4th.pdf"
+              ],
+              "stage_total_pin": 433,
+              "games_count": 2
+            },
+            {
+              "identity": "P:M00001287",
+              "license_no": "M00001287",
+              "display_name": "藤井 信人",
+              "is_amateur": false,
+              "ranking": 9,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 266
+                },
+                {
+                  "game_number": 2,
+                  "score": 233
+                },
+                {
+                  "game_number": 3,
+                  "score": 246
+                }
+              ],
+              "source_aliases": [
+                "korean_semi_4th.pdf"
+              ],
+              "stage_total_pin": 745,
+              "games_count": 3
+            },
+            {
+              "identity": "P:M00001452",
+              "license_no": "M00001452",
+              "display_name": "内藤 広人",
+              "is_amateur": false,
+              "ranking": 64,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 169
+                },
+                {
+                  "game_number": 2,
+                  "score": 192
+                }
+              ],
+              "source_aliases": [
+                "korean_semi_4th.pdf"
+              ],
+              "stage_total_pin": 361,
+              "games_count": 2
+            },
+            {
+              "identity": "P:M00001423",
+              "license_no": "M00001423",
+              "display_name": "安里 秀策",
+              "is_amateur": false,
+              "ranking": 13,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 235
+                },
+                {
+                  "game_number": 2,
+                  "score": 228
+                }
+              ],
+              "source_aliases": [
+                "korean_semi_4th.pdf"
+              ],
+              "stage_total_pin": 463,
+              "games_count": 2
+            },
+            {
+              "identity": "P:M00001443",
+              "license_no": "M00001443",
+              "display_name": "藤永 北斗",
+              "is_amateur": false,
+              "ranking": 34,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 191
+                },
+                {
+                  "game_number": 2,
+                  "score": 248
+                }
+              ],
+              "source_aliases": [
+                "korean_semi_4th.pdf"
+              ],
+              "stage_total_pin": 439,
+              "games_count": 2
+            },
+            {
+              "identity": "P:M00001429",
+              "license_no": "M00001429",
+              "display_name": "大久保雄矢",
+              "is_amateur": false,
+              "ranking": 26,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 248
+                },
+                {
+                  "game_number": 2,
+                  "score": 207
+                },
+                {
+                  "game_number": 3,
+                  "score": 245
+                }
+              ],
+              "source_aliases": [
+                "korean_semi_4th.pdf"
+              ],
+              "stage_total_pin": 700,
+              "games_count": 3
+            }
+          ]
+        },
+        {
+          "stage": "準決勝トーナメント2回戦",
+          "rows": [
+            {
+              "identity": "P:M00001433",
+              "license_no": "M00001433",
+              "display_name": "井口 遼太",
+              "is_amateur": false,
+              "ranking": 30,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 245
+                },
+                {
+                  "game_number": 2,
+                  "score": 186
+                }
+              ],
+              "source_aliases": [
+                "korean_semi_4th.pdf"
+              ],
+              "stage_total_pin": 431,
+              "games_count": 2
+            },
+            {
+              "identity": "P:M00001287",
+              "license_no": "M00001287",
+              "display_name": "藤井 信人",
+              "is_amateur": false,
+              "ranking": 9,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 268
+                },
+                {
+                  "game_number": 2,
+                  "score": 240
+                }
+              ],
+              "source_aliases": [
+                "korean_semi_4th.pdf"
+              ],
+              "stage_total_pin": 508,
+              "games_count": 2
+            },
+            {
+              "identity": "P:M00001423",
+              "license_no": "M00001423",
+              "display_name": "安里 秀策",
+              "is_amateur": false,
+              "ranking": 13,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 300
+                },
+                {
+                  "game_number": 2,
+                  "score": 255
+                }
+              ],
+              "source_aliases": [
+                "korean_semi_4th.pdf"
+              ],
+              "stage_total_pin": 555,
+              "games_count": 2
+            },
+            {
+              "identity": "P:M00001429",
+              "license_no": "M00001429",
+              "display_name": "大久保雄矢",
+              "is_amateur": false,
+              "ranking": 26,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 258
+                },
+                {
+                  "game_number": 2,
+                  "score": 192
+                }
+              ],
+              "source_aliases": [
+                "korean_semi_4th.pdf"
+              ],
+              "stage_total_pin": 450,
+              "games_count": 2
+            }
+          ]
+        },
+        {
+          "stage": "準決勝トーナメント3回戦",
+          "rows": [
+            {
+              "identity": "P:M00001287",
+              "license_no": "M00001287",
+              "display_name": "藤井 信人",
+              "is_amateur": false,
+              "ranking": 9,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 224
+                },
+                {
+                  "game_number": 2,
+                  "score": 257
+                },
+                {
+                  "game_number": 3,
+                  "score": 202
+                }
+              ],
+              "source_aliases": [
+                "korean_semi_4th.pdf"
+              ],
+              "stage_total_pin": 683,
+              "games_count": 3
+            },
+            {
+              "identity": "P:M00001423",
+              "license_no": "M00001423",
+              "display_name": "安里 秀策",
+              "is_amateur": false,
+              "ranking": 13,
+              "games": [
+                {
+                  "game_number": 1,
+                  "score": 217
+                },
+                {
+                  "game_number": 2,
+                  "score": 200
+                },
+                {
+                  "game_number": 3,
+                  "score": 219
+                }
+              ],
+              "source_aliases": [
+                "korean_semi_4th.pdf"
+              ],
+              "stage_total_pin": 636,
+              "games_count": 3
+            }
+          ]
+        }
+      ],
+      "expected_score_count": 303,
+      "expected_player_count": 27
     }
   ]
 }

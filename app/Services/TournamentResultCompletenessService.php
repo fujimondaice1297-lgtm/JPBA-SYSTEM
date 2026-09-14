@@ -231,6 +231,13 @@ final class TournamentResultCompletenessService
         $flowType = (string) $tournament->result_flow_type;
         $errors = [];
 
+        // This edition is not the existing double-elimination or two-match stepladder.
+        // Do not certify generic final totals until its RR + championship-reset workflow is implemented.
+        if (in_array(data_get($tournament->template_snapshot, 'japan_open.component_code'), ['masters', 'queens'], true)
+            && data_get($tournament->template_snapshot, 'japan_open.final_format') === 'round_robin_stepladder') {
+            return ['この年度のジャパンオープン決勝（8名ラウンドロビン・3名ステップラダー・再優勝決定戦）は運用対応待ちです。最終成績は確定公開できません。'];
+        }
+
         if (str_contains($flowType, 'shootout')) {
             $errors = array_merge($errors, $this->shootoutErrors($tournament, $snapshots, $scoreRows));
         }

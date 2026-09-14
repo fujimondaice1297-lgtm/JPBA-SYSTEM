@@ -1,0 +1,319 @@
+{
+  "database": "jpba_main",
+  "official_ranking_rows_checked": 540,
+  "stat_difference_count": 0,
+  "stat_differences": [],
+  "published_event_count": 28,
+  "completeness": [
+    {
+      "tournament_id": 144,
+      "complete": true,
+      "errors": []
+    },
+    {
+      "tournament_id": 124,
+      "complete": true,
+      "errors": []
+    },
+    {
+      "tournament_id": 125,
+      "complete": true,
+      "errors": []
+    },
+    {
+      "tournament_id": 126,
+      "complete": true,
+      "errors": []
+    },
+    {
+      "tournament_id": 127,
+      "complete": true,
+      "errors": []
+    },
+    {
+      "tournament_id": 128,
+      "complete": true,
+      "errors": []
+    },
+    {
+      "tournament_id": 129,
+      "complete": true,
+      "errors": []
+    },
+    {
+      "tournament_id": 130,
+      "complete": true,
+      "errors": []
+    },
+    {
+      "tournament_id": 131,
+      "complete": true,
+      "errors": []
+    },
+    {
+      "tournament_id": 132,
+      "complete": true,
+      "errors": []
+    },
+    {
+      "tournament_id": 133,
+      "complete": true,
+      "errors": []
+    },
+    {
+      "tournament_id": 134,
+      "complete": true,
+      "errors": []
+    },
+    {
+      "tournament_id": 135,
+      "complete": true,
+      "errors": []
+    },
+    {
+      "tournament_id": 109,
+      "complete": true,
+      "errors": []
+    },
+    {
+      "tournament_id": 110,
+      "complete": true,
+      "errors": []
+    },
+    {
+      "tournament_id": 111,
+      "complete": true,
+      "errors": []
+    },
+    {
+      "tournament_id": 112,
+      "complete": true,
+      "errors": []
+    },
+    {
+      "tournament_id": 113,
+      "complete": true,
+      "errors": []
+    },
+    {
+      "tournament_id": 114,
+      "complete": true,
+      "errors": []
+    },
+    {
+      "tournament_id": 115,
+      "complete": true,
+      "errors": []
+    },
+    {
+      "tournament_id": 116,
+      "complete": true,
+      "errors": []
+    },
+    {
+      "tournament_id": 117,
+      "complete": true,
+      "errors": []
+    },
+    {
+      "tournament_id": 61,
+      "complete": true,
+      "errors": []
+    },
+    {
+      "tournament_id": 118,
+      "complete": true,
+      "errors": []
+    },
+    {
+      "tournament_id": 189,
+      "complete": true,
+      "errors": []
+    },
+    {
+      "tournament_id": 119,
+      "complete": true,
+      "errors": []
+    },
+    {
+      "tournament_id": 208,
+      "complete": true,
+      "errors": []
+    },
+    {
+      "tournament_id": 209,
+      "complete": true,
+      "errors": []
+    }
+  ],
+  "japan_open_components": [
+    {
+      "id": 196,
+      "component": "overview",
+      "start": "2026-10-30T15:00:00.000000Z",
+      "end": "2026-11-02T15:00:00.000000Z",
+      "venue": "稲沢グランドボウル",
+      "status": "draft",
+      "final_format": null
+    },
+    {
+      "id": 197,
+      "component": "men_team",
+      "start": "2026-10-30T15:00:00.000000Z",
+      "end": "2026-11-02T15:00:00.000000Z",
+      "venue": "稲沢グランドボウル",
+      "status": "draft",
+      "final_format": null
+    },
+    {
+      "id": 198,
+      "component": "men_doubles",
+      "start": "2026-10-30T15:00:00.000000Z",
+      "end": "2026-11-02T15:00:00.000000Z",
+      "venue": "稲沢グランドボウル",
+      "status": "draft",
+      "final_format": null
+    },
+    {
+      "id": 199,
+      "component": "men_singles",
+      "start": "2026-10-30T15:00:00.000000Z",
+      "end": "2026-11-02T15:00:00.000000Z",
+      "venue": "稲沢グランドボウル",
+      "status": "draft",
+      "final_format": null
+    },
+    {
+      "id": 200,
+      "component": "men_all_events",
+      "start": "2026-10-30T15:00:00.000000Z",
+      "end": "2026-11-02T15:00:00.000000Z",
+      "venue": "稲沢グランドボウル",
+      "status": "draft",
+      "final_format": null
+    },
+    {
+      "id": 201,
+      "component": "masters",
+      "start": "2026-10-30T15:00:00.000000Z",
+      "end": "2026-11-02T15:00:00.000000Z",
+      "venue": "稲沢グランドボウル",
+      "status": "draft",
+      "final_format": "round_robin_stepladder"
+    },
+    {
+      "id": 202,
+      "component": "women_team",
+      "start": "2026-10-30T15:00:00.000000Z",
+      "end": "2026-11-02T15:00:00.000000Z",
+      "venue": "稲沢グランドボウル",
+      "status": "draft",
+      "final_format": null
+    },
+    {
+      "id": 203,
+      "component": "women_doubles",
+      "start": "2026-10-30T15:00:00.000000Z",
+      "end": "2026-11-02T15:00:00.000000Z",
+      "venue": "稲沢グランドボウル",
+      "status": "draft",
+      "final_format": null
+    },
+    {
+      "id": 204,
+      "component": "women_singles",
+      "start": "2026-10-30T15:00:00.000000Z",
+      "end": "2026-11-02T15:00:00.000000Z",
+      "venue": "稲沢グランドボウル",
+      "status": "draft",
+      "final_format": null
+    },
+    {
+      "id": 205,
+      "component": "women_all_events",
+      "start": "2026-10-30T15:00:00.000000Z",
+      "end": "2026-11-02T15:00:00.000000Z",
+      "venue": "稲沢グランドボウル",
+      "status": "draft",
+      "final_format": null
+    },
+    {
+      "id": 206,
+      "component": "queens",
+      "start": "2026-10-30T15:00:00.000000Z",
+      "end": "2026-11-02T15:00:00.000000Z",
+      "venue": "稲沢グランドボウル",
+      "status": "draft",
+      "final_format": "round_robin_stepladder"
+    }
+  ],
+  "japan_open_score_count": 0,
+  "public_pages": {
+    "/tournament/208/results": {
+      "status": 200,
+      "length": 59576
+    },
+    "/tournament/209/results": {
+      "status": 200,
+      "length": 32188
+    },
+    "/tournament/208/live": {
+      "status": 200,
+      "length": 14936
+    },
+    "/tournament/209/live": {
+      "status": 200,
+      "length": 14306
+    }
+  },
+  "integrity": {
+    "users": {
+      "count": 940,
+      "sha256": "879a188a90a8150ac2c71a7f78445429d88663d1306625483e89a9ca1061ed2f"
+    },
+    "pro_bowlers": {
+      "count": 2286,
+      "sha256": "bb297f7e2c6afecc9aec515e1b76f9f65ad9a2054182e4f44e209ebd8b3a4bc5"
+    },
+    "tournaments": {
+      "count": 43,
+      "sha256": "ef4c97c94783eb9f3b9bc75c025a410b7c891797b3ea443b1ea1a2f7c2c95e1c"
+    },
+    "tournament_entries": {
+      "count": 2044,
+      "sha256": "61a99763a63edfa7393499bdc3ce629612c9d76871ca385d47a7c68ab1a7b47a"
+    },
+    "tournament_participants": {
+      "count": 6110,
+      "sha256": "fabbbb7fcb6e19b600d16abf2edecf6f06e190c5c1df1ab75650303ddf6c5c59"
+    },
+    "game_scores": {
+      "count": 25992,
+      "sha256": "d1e17e84c5ae60f682f148f581cd366051eac7ce801dc202efbaa93cc9b207d3"
+    },
+    "tournament_result_publication_rows": {
+      "count": 17884,
+      "sha256": "69f9e174ba1b4851a2a58d8d1e2099112365020c7a335b178c4c8e0063d14d58"
+    }
+  },
+  "checked_at": "2026-09-15",
+  "tests": {
+    "passed": 314,
+    "assertions": 17111
+  },
+  "public_parity": {
+    "pages": 46,
+    "failed": 0,
+    "missing_assets": 0
+  },
+  "release_readiness": {
+    "ok": 14,
+    "warn": 7,
+    "ng": 0
+  },
+  "backup": {
+    "generation": "backup_20260915_082129",
+    "verified": true,
+    "rotated_generations": 0
+  }
+}
